@@ -1,29 +1,29 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import seedrandom from 'seedrandom';
+import { generateSeededGameData } from '../../utils/generateSeededGameData';
 
 type SeedContextType = {
   seed: string;
   rng: seedrandom.PRNG;
   setSeed: (newSeed: string) => void;
+  gameData: ReturnType<typeof generateSeededGameData>;
 };
 
 const SeedContext = createContext<SeedContextType | undefined>(undefined);
 
 export const SeedProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [seed, setSeedInternal] = useState(() => "hello");
+  const [seed, setSeed] = useState('default-seed');
   const [rng, setRng] = useState(() => seedrandom(seed));
-
-  const setSeed = (newSeed: string) => {
-    setSeedInternal(newSeed);
-    setRng(() => seedrandom(newSeed));
-  };
+  const [gameData, setGameData] = useState(() => generateSeededGameData(seed));
 
   useEffect(() => {
-    setRng(() => seedrandom(seed));
+    const newRng = seedrandom(seed);
+    setRng(() => newRng);
+    setGameData(() => generateSeededGameData(seed));
   }, [seed]);
 
   return (
-    <SeedContext.Provider value={{ seed, rng, setSeed }}>
+    <SeedContext.Provider value={{ seed, rng, setSeed, gameData }}>
       {children}
     </SeedContext.Provider>
   );

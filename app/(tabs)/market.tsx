@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Candy, generateCandyPriceTable } from '../../utils/generateCandyPriceTable';
+import GameHUD from '../components/GameHUD';
+import TransactionModal from '../components/TransactionModal';
+import { useGame } from '../context/GameContext';
+import { useInventory } from '../context/InventoryContext';
 import { useSeed } from '../context/SeedContext';
 import { useWallet } from '../context/WalletContext';
 
@@ -19,136 +23,149 @@ const baseCandies: Candy[] = [
   { name: 'Bubble Gum', baseMin: 0.1, baseMax: 0.5 },
 ];
 
-
 export default function Market() {
-
-  const { rng, seed } = useSeed();
-  const priceTable = generateCandyPriceTable(seed, baseCandies);
-
-  const [period, setPeriod] = useState(0);
+  const { rng, seed, gameData } = useSeed();
   const { balance, spend, add } = useWallet();
-  const [candies, setCandies] = useState<CandyForMarket[]>(() =>
-    baseCandies.map((candy) => {
-      console.log("what is candy", candy)
-      return ({
+  const { addToInventory, removeFromInventory } = useInventory();
+  const { day, period, incrementPeriod } = useGame();
+
+  useEffect(() => {
+    setCandies((prev) =>
+      prev.map((candy) => ({
         ...candy,
-        cost: priceTable[candy.name][period],
-        quantityOwned: 0,
-        averagePrice: null,
-      })
-    })
+        cost: priceTable[candy.name][period - 1], // period is 1-based in context
+      }))
+    );
+  }, [period]);
+
+  const priceTable = generateCandyPriceTable(seed, baseCandies);
+  console.log("this is sseed", seed)
+  console.log("this is game data", gameData.periodEvents)
+  console.log("what is period", period)
+
+
+  const [candies, setCandies] = useState<CandyForMarket[]>(() =>
+    baseCandies.map((candy) => ({
+      ...candy,
+      cost: priceTable[candy.name][period],
+      quantityOwned: 0,
+      averagePrice: null,
+    }))
   );
 
+  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(null);
+  const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
 
-  const price = Math.floor(rng() * 100) + 1;
-  console.log("what is price", price)
-
-  const handleBuy = (index: number) => {
-    const price = candies[index].cost;
-    if (!spend(price)) {
-      alert("Not enough money!");
-      return;
-    }
-
-    setCandies((prev) =>
-      prev.map((candy, i) =>
-        i === index
-          ? {
-            ...candy,
-            quantityOwned: candy.quantityOwned + 1,
-            averagePrice: candy.averagePrice === null
-              ? candy.cost
-              : (candy.averagePrice * candy.quantityOwned + candy.cost) / (candy.quantityOwned + 1),
-          }
-          : candy
-      )
-    );
+  const openModal = (index: number) => {
+    setSelectedCandyIndex(index);
+    setModalMode('buy'); // default to buy, but modal will let user pick
   };
 
-  const handleSell = (index: number) => {
+  const closeModal = () => {
+    setSelectedCandyIndex(null);
+  };
+
+  const handleTransaction = (quantity: number, mode: 'buy' | 'sell') => {
+    if (selectedCandyIndex === null) return;
+    const selectedCandy = candies[selectedCandyIndex];
+
     setCandies((prev) =>
-      prev.map((candy, i) =>
-        i === index && candy.quantityOwned > 0
-          ? {
+      prev.map((candy, i) => {
+        if (i !== selectedCandyIndex) return candy;
+
+        if (mode === 'buy') {
+          const totalCost = candy.cost * quantity;
+          if (balance < totalCost) return candy;
+
+          spend(totalCost);
+          addToInventory(candy.name, quantity); // ✅ Add to inventory
+
+          const newQty = candy.quantityOwned + quantity;
+          const newAvg =
+            candy.averagePrice === null
+              ? candy.cost
+              : (candy.averagePrice * candy.quantityOwned + candy.cost * quantity) / newQty;
+
+          return {
             ...candy,
-            quantityOwned: candy.quantityOwned - 1,
-            averagePrice:
-              candy.quantityOwned === 1
-                ? null
-                : ((candy.averagePrice! * candy.quantityOwned - candy.cost) / (candy.quantityOwned - 1)),
-          }
-          : candy
-      )
+            quantityOwned: newQty,
+            averagePrice: newAvg,
+          };
+        } else {
+          const totalGain = candy.cost * quantity;
+          add(totalGain);
+          removeFromInventory(candy.name, quantity); // ✅ Remove from inventory
+
+          return {
+            ...candy,
+            quantityOwned: candy.quantityOwned - quantity,
+          };
+        }
+      })
     );
-    add(candies[index].cost); // Instant resale at current price
+
+    closeModal();
   };
 
 
   const handleNextDay = () => {
-    const nextPeriod = period + 1;
-    setPeriod(nextPeriod);
-
+    incrementPeriod();
     setCandies((prev) =>
       prev.map((candy) => ({
         ...candy,
-        cost: priceTable[candy.name][nextPeriod],
+        cost: priceTable[candy.name][period + 1], // NOTE: you may need to refactor this slightly to avoid stale `period`
       }))
     );
   };
 
-
+  const selectedCandy = selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
+  const maxBuyQty =
+    selectedCandy && selectedCandy.cost > 0 ? Math.floor(balance / selectedCandy.cost) : 0;
+  const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   return (
     <>
-      <View style={styles.headerRow}>
-        <Text style={styles.dayPeriodText}>
-          Day {Math.floor(period / 8) + 1} – Period {period % 8 + 1}
-        </Text>
-        <Text style={styles.walletText}>💰 ${balance.toFixed(2)}</Text>
-      </View>
+      <GameHUD />
+
       <FlatList
         data={candies}
         keyExtractor={(item) => item.name}
         contentContainerStyle={styles.list}
         renderItem={({ item, index }) => (
-          <View style={styles.item}>
+          <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
             <Text style={styles.name}>{item.name}</Text>
-            <Text>Price: ${item.cost.toFixed(2)}</Text>
+            <Text>Price: ${item.cost ? item.cost.toFixed(2) : 0.00}</Text>
             <Text>Owned: {item.quantityOwned}</Text>
             <Text>
               Avg Price: {item.averagePrice !== null ? `$${item.averagePrice.toFixed(2)}` : '—'}
             </Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button title="BUY" onPress={() => handleBuy(index)} />
-              {item.quantityOwned > 0 && (
-                <Button title="SELL" onPress={() => handleSell(index)} />
-              )}
-            </View>
-          </View>
-
+          </TouchableOpacity>
         )}
       />
+
       <View style={styles.buttonContainer}>
         <Button title="Next Day" onPress={handleNextDay} />
       </View>
-    </>
 
+      {selectedCandy && (
+        <TransactionModal
+          visible={selectedCandyIndex !== null}
+          onClose={closeModal}
+          onConfirm={handleTransaction}
+          maxBuyQuantity={maxBuyQty}
+          maxSellQuantity={maxSellQty}
+          candy={selectedCandy}
+        />
+      )}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
+  header: {
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  walletText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2a4',
   },
   dayPeriodText: {
     fontSize: 16,
@@ -171,5 +188,11 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 20,
     paddingHorizontal: 20,
-  }
+    alignItems: 'center',
+  },
+  wallet: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
 });
