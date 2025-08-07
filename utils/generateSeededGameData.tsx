@@ -32,9 +32,27 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
   // Price table
   const candyPrices: CandyPriceTable = {};
   Object.entries(candyBasePrices).forEach(([candy, [min, max]]) => {
-    candyPrices[candy] = Array.from({ length: totalPeriods }, () =>
-      parseFloat((rng() * (max - min) + min).toFixed(2))
-    );
+    candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
+      const roll = rng();
+      let price: number;
+
+      if (roll < 0.1) {
+        // Crash event (super cheap)
+        const crashFactor = rng() * 0.4 + 0.1; // 0.1x–0.5x min
+        price = min * crashFactor;
+      } else if (roll < 0.2) {
+        // Spike event (super expensive)
+        const spikeFactor = rng() * 10 + 4; // 4x–8x max
+        price = max * spikeFactor;
+      } else {
+        // Aggressive normal range
+        const low = min * 0.5;
+        const high = max * 10;
+        price = rng() * (high - low) + low;
+      }
+
+      return parseFloat(price.toFixed(2));
+    });
   });
 
   // Special events

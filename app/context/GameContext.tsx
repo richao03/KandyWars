@@ -18,10 +18,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const day = Math.floor(periodCount / 8) + 1;
   const period = (periodCount % 8 + 1);
-  const currentEvent = gameData.periodEvents.find(e => e.period === period);
+  const currentEvent = gameData.periodEvents.find(e => e.period === periodCount);
 
-  console.log("what is current event", currentEvent)
   useEffect(() => {
+    console.log("checking for event for text")
     if (currentEvent?.effect) {
       setEvent(currentEvent.effect)
     } else {
@@ -30,12 +30,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [period]);
 
   const incrementPeriod = () => {
-    if (currentEvent) {
-      console.log("whts going on here?")
-      setEvent(currentEvent.effect)
-    } else {
-      setEvent('NEW_PERIOD');
-    }
+
     setPeriodCount((prev) => prev + 1);
 
   };

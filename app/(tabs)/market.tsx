@@ -39,10 +39,6 @@ export default function Market() {
   }, [period]);
 
   const priceTable = generateCandyPriceTable(seed, baseCandies);
-  console.log("this is sseed", seed)
-  console.log("this is game data", gameData.periodEvents)
-  console.log("what is period", period)
-
 
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
@@ -131,7 +127,9 @@ export default function Market() {
         data={candies}
         keyExtractor={(item) => item.name}
         contentContainerStyle={styles.list}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index }) => {
+          console.log("what is item", item.cost.toFixed(2))
+          return (
           <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
             <Text style={styles.name}>{item.name}</Text>
             <Text>Price: ${item.cost ? item.cost.toFixed(2) : 0.00}</Text>
@@ -140,7 +138,7 @@ export default function Market() {
               Avg Price: {item.averagePrice !== null ? `$${item.averagePrice.toFixed(2)}` : '—'}
             </Text>
           </TouchableOpacity>
-        )}
+        )}}
       />
 
       <View style={styles.buttonContainer}>
