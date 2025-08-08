@@ -2,12 +2,12 @@ import Slider from '@react-native-community/slider';
 import React, { useState } from 'react';
 import {
   Button,
-  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Modal from 'react-native-modal';
 import { Candy } from '../../utils/generateCandyPriceTable';
 
 type Props = {
@@ -44,45 +44,56 @@ export default function TransactionModal({
   };
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <Text style={styles.title}>{candy.name}</Text>
-          <Text>Current Price: ${candy.cost.toFixed(2)}</Text>
+    <Modal
+      isVisible={visible}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      animationInTiming={300}
+      animationOutTiming={200}
+      backdropTransitionInTiming={300}
+      backdropTransitionOutTiming={200}
+      onBackdropPress={onClose}
+      onBackButtonPress={onClose}
+      useNativeDriver={true}
+      hideModalContentWhileAnimating={true}
+      style={styles.modal}
+    >
+      <View style={styles.container}>
+        <Text style={styles.title}>{candy.name}</Text>
+        <Text>Current Price: ${candy.cost.toFixed(2)}</Text>
 
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tab, mode === 'buy' && styles.activeTab]}
-              onPress={() => changeMode('buy')}
-            >
-              <Text style={styles.tabText}>Buy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, mode === 'sell' && styles.activeTab]}
-              onPress={() => changeMode('sell')}
-            >
-              <Text style={styles.tabText}>Sell</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, mode === 'buy' && styles.activeTab]}
+            onPress={() => changeMode('buy')}
+          >
+            <Text style={styles.tabText}>Buy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, mode === 'sell' && styles.activeTab]}
+            onPress={() => changeMode('sell')}
+          >
+            <Text style={styles.tabText}>Sell</Text>
+          </TouchableOpacity>
+        </View>
 
-          <Text style={styles.quantityLabel}>
-            Quantity: {quantity} / {maxQuantity}
-          </Text>
-          <Slider
-            style={{ width: '100%' }}
-            minimumValue={0}
-            maximumValue={maxQuantity}
-            step={1}
-            value={quantity}
-            onValueChange={(val) => setQuantity(val)}
-            minimumTrackTintColor="#4caf50"
-            maximumTrackTintColor="#ccc"
-          />
+        <Text style={styles.quantityLabel}>
+          Quantity: {quantity} / {maxQuantity}
+        </Text>
+        <Slider
+          style={{ width: '100%' }}
+          minimumValue={0}
+          maximumValue={maxQuantity}
+          step={1}
+          value={quantity}
+          onValueChange={(val) => setQuantity(val)}
+          minimumTrackTintColor="#4caf50"
+          maximumTrackTintColor="#ccc"
+        />
 
-          <View style={styles.buttonRow}>
-            <Button title="Cancel" onPress={onClose} />
-            <Button title={`Confirm ${mode}`} onPress={handleConfirm} />
-          </View>
+        <View style={styles.buttonRow}>
+          <Button title="Cancel" onPress={onClose} />
+          <Button title={`Confirm ${mode}`} onPress={handleConfirm} />
         </View>
       </View>
     </Modal>
@@ -90,28 +101,44 @@ export default function TransactionModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: '#00000080',
+  modal: {
     justifyContent: 'center',
-    padding: 20,
+    margin: 20,
   },
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: '#fefaf5', // Warm paper background
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'stretch',
+    borderWidth: 3,
+    borderColor: '#d4a574', // Brown crayon border
+    shadowColor: '#8b4513',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 26,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+    color: '#6b4423', // Dark brown
+    textShadow: '1px 1px 0px #e6d4b7',
+    fontFamily: 'CrayonPastel',
   },
   quantityLabel: {
     marginTop: 20,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 17,
+    fontWeight: '600',
     alignSelf: 'center',
+    color: '#8b4513',
+    backgroundColor: '#fff9e6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#f4d03f',
   },
   buttonRow: {
     marginTop: 20,
@@ -123,20 +150,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     justifyContent: 'center',
+    gap: 12,
   },
   tab: {
-    padding: 10,
-    marginHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#888',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#cc7a00',
+    backgroundColor: '#fff',
   },
   activeTab: {
-    backgroundColor: '#4caf50',
-    borderColor: '#4caf50',
+    backgroundColor: '#ffcc99', // Orange crayon
+    borderColor: '#cc7a00',
   },
   tabText: {
-    color: 'black',
-    fontWeight: 'bold',
+    color: '#8b4513',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });

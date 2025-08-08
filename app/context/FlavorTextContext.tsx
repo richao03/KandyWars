@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 type FlavorTextContextType = {
   text: string;
   setEvent: (event: FlavorEvent) => void;
   setManual: (message: string) => void;
   setFlavorText: (text: string) => void;
+  setHint: (hintText: string) => void;
 };
 
 type FlavorEvent =
@@ -14,6 +15,7 @@ type FlavorEvent =
   | "PRICE_SPIKE"
   | "PRICE_DROP"
   | "JOKER_UNLOCKED"
+  | "HINT"
   | "DEFAULT"; // fallback for ambient
 
 const flavorLibrary: Record<FlavorEvent, string[]> = {
@@ -28,7 +30,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
   ],
   INVENTORY_FULL: [
     "You can't carry any more!",
-    "Your backpack’s bursting with sweets.",
+    "Your backpack's bursting with sweets.",
     "There is no space for candy in your backpack, unless we throw out some text books...?",
   ],
   PRICE_SPIKE: [
@@ -43,6 +45,11 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
     "You feel smarter... luckier... gum-ier.",
     "Things were never the same again",
     "That joker changed everything.",
+  ],
+  HINT: [
+    "You overhear something interesting...",
+    "There's buzz about something happening next period...",
+    "Someone whispers about an opportunity coming up...",
   ],
   DEFAULT: [
     "The halls smell like sour sugar.",
@@ -131,30 +138,39 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentEvent, setCurrentEvent] = useState("DEFAULT");
   const [text, setText] = useState(getRandomFlavor("DEFAULT"));
 
-  useEffect(() => {
-    if (currentEvent == "DEFAULT") {
-      const interval = setInterval(() => {
-        setEvent("DEFAULT");
-        return () => clearInterval(interval);
-      }, 30000);
-    } // every 30 seconds of idle?
-  }, []);
+  // Removed problematic interval that was causing unnecessary re-renders
 
   function getRandomFlavor(type: FlavorEvent): string {
     const lines = flavorLibrary[type];
     return lines[Math.floor(Math.random() * lines.length)];
   }
 
-  const setEvent = (event: FlavorEvent) => {
+  const setEvent = useCallback((event: FlavorEvent) => {
     setText(getRandomFlavor(event));
-  };
+  }, []);
 
-  const setManual = (message: string) => {
+  const setManual = useCallback((message: string) => {
     setText(message);
-  };
+  }, []);
+
+  const setFlavorText = useCallback((text: string) => {
+    setText(text);
+  }, []);
+
+  const setHint = useCallback((hintText: string) => {
+    setText(hintText);
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    text,
+    setEvent,
+    setManual,
+    setFlavorText,
+    setHint
+  }), [text, setEvent, setManual, setFlavorText, setHint]);
 
   return (
-    <FlavorTextContext.Provider value={{ text, setEvent, setManual }}>
+    <FlavorTextContext.Provider value={contextValue}>
       {children}
     </FlavorTextContext.Provider>
   );

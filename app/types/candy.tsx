@@ -7,3 +7,4 @@ export type Candy = {
   quantityOwned: number;
   averagePrice: number | null;
 };
+

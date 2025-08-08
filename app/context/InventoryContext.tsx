@@ -11,7 +11,7 @@ export type Inventory = Record<string, InventoryItem>;
 
 type InventoryContextType = {
   inventory: Inventory;
-  addToInventory: (name: string, price: number) => void;
+  addToInventory: (name: string, quantity: number, price: number) => boolean;
   removeFromInventory: (name: string, quantity: number) => boolean;
   getTotalInventoryCount: () => number;
   getInventoryLimit: () => number
@@ -23,13 +23,22 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [inventory, setInventory] = useState<Inventory>({});
   const [inventoryLimit, setInventoryLimit] = useState(30)
-  const addToInventory = (name: string, price: number) => {
+  const addToInventory = (name: string, quantity: number, price: number): boolean => {
+    // Calculate current total from current inventory state
+    const currentTotal = Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Check if adding this quantity would exceed inventory limit
+    if (currentTotal + quantity > inventoryLimit) {
+      return false; // Transaction rejected due to inventory limit
+    }
+    
     setInventory(prev => {
       const existing = prev[name];
       if (existing) {
-        const newQuantity = existing.quantity + 1;
-        const newAvgPrice =
-          (existing.averagePrice * existing.quantity + price) / newQuantity;
+        const newQuantity = existing.quantity + quantity;
+        const totalOldValue = existing.averagePrice * existing.quantity;
+        const totalNewValue = price * quantity;
+        const newAvgPrice = (totalOldValue + totalNewValue) / newQuantity;
         return {
           ...prev,
           [name]: {
@@ -43,12 +52,13 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ...prev,
           [name]: {
             name,
-            quantity: 1,
+            quantity: quantity,
             averagePrice: price,
           },
         };
       }
     });
+    return true; // Transaction successful
   };
 
   const removeFromInventory = (name: string, quantity: number): boolean => {

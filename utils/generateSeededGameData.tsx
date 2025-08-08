@@ -9,6 +9,9 @@ export type SpecialEventEffect = {
   candy?: string;
   effect: 'PRICE_DROP' | 'PRICE_SPIKE' | 'resale_bonus' | 'STASH_LOCKED';
   multiplier?: number;
+  location?: 'gym' | 'cafeteria' | 'home room' | 'library' | 'science lab' | 'school yard' | 'bathroom';
+  priceOverride?: number; // For setting specific prices like 0.01
+  hint?: string; // Hint to show in previous period
 };
 
 const candyBasePrices: Record<string, [number, number]> = {
@@ -55,47 +58,100 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
     });
   });
 
-  // Special events
+  // Special events with location-specific events
+  const locations = ['gym', 'cafeteria', 'home room', 'library', 'science lab', 'school yard', 'bathroom'] as const;
+  
   const eventTemplates: (() => Omit<SpecialEventEffect, 'period'>)[] = [
     () => ({
-      description: "Snickers discount!",
+      description: "Snickers discount at the vending machine!",
       candy: "Snickers",
       effect: "PRICE_DROP",
       multiplier: 0.5,
+      location: "cafeteria"
     }),
     () => ({
-      description: "Gum resale value doubled!",
+      description: "Gum resale value doubled in the gym!",
       candy: "Bubble Gum",
       effect: "resale_bonus",
       multiplier: 2,
+      location: "gym"
     }),
     () => ({
-      description: "Skittles prices skyrocketed!",
+      description: "Skittles are popular in the school yard!",
       candy: "Skittles",
       effect: "PRICE_SPIKE",
       multiplier: 2,
+      location: "school yard"
     }),
     () => ({
-      description: "Stash locked due to surprise audit!",
-      effect: "STASH_LOCKED"
+      description: "Teacher confiscated stash in home room!",
+      effect: "STASH_LOCKED",
+      location: "home room"
     }),
+    () => ({
+      description: "Science lab experiment creates demand for Warheads!",
+      candy: "Warheads", 
+      effect: "PRICE_SPIKE",
+      multiplier: 1.8,
+      location: "science lab"
+    }),
+    () => ({
+      description: "Library study group wants brain food!",
+      candy: "M&Ms",
+      effect: "PRICE_SPIKE", 
+      multiplier: 1.5,
+      location: "library"
+    }),
+    () => ({
+      description: "Bathroom black market deals going down!",
+      candy: "Sour Patch Kids",
+      effect: "resale_bonus",
+      multiplier: 1.3,
+      location: "bathroom"
+    }),
+    // General events without location requirements
     () => {
       const candies = Object.keys(candyBasePrices);
       const randomCandy = candies[Math.floor(rng() * candies.length)];
       return {
         description: `Rare batch of ${randomCandy} released!`,
         candy: randomCandy,
-        effect: "markup",
+        effect: "PRICE_SPIKE" as const,
         multiplier: 1.5,
       };
     }
   ];
 
   const periodEvents: SpecialEventEffect[] = [];
+  
+  // Always add the test event for library period 3 cheap gum
+  periodEvents.push({
+    period: 3,
+    description: "Library study group desperate for gum!",
+    candy: "Bubble Gum",
+    effect: "PRICE_DROP",
+    location: "library",
+    priceOverride: 0.01,
+    hint: "You hear whispers about students needing gum for tomorrow's study session at the library..."
+  });
+  
+  // Generate random events
   for (let i = 0; i < totalPeriods; i++) {
-    if (rng() < 0.1) {
+    if (rng() < 0.1 && !periodEvents.some(e => e.period === i)) { // Don't override existing events
       const template = eventTemplates[Math.floor(rng() * eventTemplates.length)];
-      periodEvents.push({ ...template(), period: i });
+      const event = { ...template(), period: i };
+      
+      // Randomly assign location if template doesn't have one
+      if (!event.location && rng() < 0.7) { // 70% chance to be location-specific
+        event.location = locations[Math.floor(rng() * locations.length)];
+        
+        // Generate hint for previous period
+        if (i > 0) {
+          event.hint = `You overhear students talking about something happening at the ${event.location} next period...`;
+        }
+      }
+      
+      periodEvents.push(event);
     }
   }
 
