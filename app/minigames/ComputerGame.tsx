@@ -318,8 +318,8 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
           <Text style={styles.instructionsButtonText}>📋 Mission Brief</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-          <Text style={styles.backButtonText}>🚪 Leave</Text>
+        <TouchableOpacity style={styles.instructionsButton} onPress={handleForfeit}>
+          <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.restartButton} onPress={() => initializeLevel(level)}>
           <Text style={styles.restartButtonText}>🔄 Reset Hack</Text>
@@ -335,6 +335,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0e1a',
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: 16,
     paddingBottom: 100,
   },

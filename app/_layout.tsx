@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import React from 'react';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -29,8 +30,10 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SeedProvider>
+    <SafeAreaProvider>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SeedProvider>
         <FlavorTextProvider>
           <GameProvider>
             <InventoryProvider>
@@ -62,13 +65,19 @@ export default function RootLayout() {
                       name="math-game" 
                       options={{ headerShown: false }} 
                     />
+                    <Stack.Screen 
+                      name="gym-game" 
+                      options={{ headerShown: false }} 
+                    />
                   </Stack>
                 </DailyStatsProvider>
               </WalletProvider>
             </InventoryProvider>
           </GameProvider>
         </FlavorTextProvider>
-      </SeedProvider>
-    </GestureHandlerRootView>
+          </SeedProvider>
+        </GestureHandlerRootView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

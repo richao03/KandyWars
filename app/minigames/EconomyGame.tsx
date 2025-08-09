@@ -175,6 +175,13 @@ function generatePuzzle(seed: string, steps: number): Puzzle {
     for (let v = 0; v < count && offPathItems.length > 0; v++) {
       const outItem = pick(rng, offPathItems);
       if (outItem === goal) continue;
+      
+      // Prevent one-shot solutions: Check if this decoy would allow reaching goal directly
+      const startHasGiveItem = (startInventory[solGive] || 0) >= solGiveQty;
+      if (startHasGiveItem && outItem === goal) {
+        continue; // Skip this decoy as it would create a one-shot solution
+      }
+      
       const getQty = randInt(rng, 1, 2);
       tiles.push({
         id: `d-${s}-${v}-${solGive}(${solGiveQty})->${outItem}(${getQty})`,
@@ -582,7 +589,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>💼 Stock Market Trading</Text>
+          <Text style={styles.title}>💱 Barter Trading</Text>
           <Text style={styles.subtitle}>
             Level {levelIndex + 1} / {LEVEL_SLOTS.length} • Slots: {puzzle.steps}
           </Text>
@@ -671,9 +678,12 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         </View>
 
         {/* Execute Button */}
-        <View style={styles.executeContainer}>
+        <View style={styles.footer}>
           <TouchableOpacity style={[styles.footerBtn, styles.footerPrimary]} onPress={executePlan}>
             <Text style={styles.footerPrimaryText}>💼 Execute Trade Plan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={clearAll}>
+            <Text style={styles.footerSecondaryText}>🔄 Clear</Text>
           </TouchableOpacity>
         </View>
         
@@ -683,10 +693,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             <Text style={styles.footerSecondaryText}>📋 Instructions</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.footerBtn, styles.footerBack]} onPress={handleForfeit}>
-            <Text style={styles.footerBackText}>🏛️ Leave</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={clearAll}>
-            <Text style={styles.footerSecondaryText}>🔄 Clear</Text>
+            <Text style={styles.footerBackText}>🚪 Leave</Text>
           </TouchableOpacity>
         </View>
 
@@ -710,6 +717,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a1929'
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: 16,
     paddingBottom: 100,
   },
@@ -725,12 +734,12 @@ const styles = StyleSheet.create({
   title: { 
     fontSize: 28, 
     fontWeight: '700',
-    color: '#1976d2',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     marginBottom: 8,
     textShadowColor: '#2196f3',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   subtitle: { 
     fontSize: 16, 
@@ -913,10 +922,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     marginTop: 4,
-  },
-
-  executeContainer: {
-    marginBottom: 16,
   },
   footer: { 
     flexDirection: 'row',

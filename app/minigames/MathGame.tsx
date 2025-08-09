@@ -574,14 +574,8 @@ export default function MathGame({ onComplete }: MathGameProps) {
         }}>
           <Text style={styles.instructionsButtonText}>📝 Instructions</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-          <Text style={styles.backButtonText}>📚 Leave</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.newGameButton} onPress={() => {
-          generatePuzzle();
-          startTimer();
-        }}>
-          <Text style={styles.newGameButtonText}>🧮 Reset Problem</Text>
+        <TouchableOpacity style={styles.instructionsButton} onPress={handleForfeit}>
+          <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
       </View>
     </GestureHandlerRootView>
@@ -594,6 +588,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#2d4a3e',
     padding: 16,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -661,7 +656,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   gameArea: {
-    flex: 1,
+    
     flexDirection: 'row',
     gap: 16,
     position: 'relative',
@@ -763,21 +758,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     paddingVertical: 16,
-  },
-  backButton: {
-    flex: 1,
-    backgroundColor: '#8b4513',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#daa520',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
   },
   newGameButton: {
     flex: 1,

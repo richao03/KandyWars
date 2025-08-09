@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
 import TransactionModal from '../components/TransactionModal';
 import { useGame } from '../context/GameContext';
 import { useInventory } from '../context/InventoryContext';
 import { useSeed } from '../context/SeedContext';
 import { useWallet } from '../context/WalletContext';
+import { Candy } from '../types';
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -27,6 +29,7 @@ export default function Deli() {
   const { gameData } = useSeed();
   const { balance, spend, add } = useWallet();
   const { addToInventory, removeFromInventory } = useInventory();
+  const { day } = useGame();
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
@@ -67,7 +70,7 @@ export default function Deli() {
           if (balance < totalCost) return candy;
 
           spend(totalCost);
-          addToInventory(candy.name, quantity);
+          addToInventory(candy.name, quantity, candy.cost);
 
           const newQty = candy.quantityOwned + quantity;
           const newAvg =
@@ -106,10 +109,15 @@ export default function Deli() {
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   return (
-    <>
-      <GameHUD />
+    <View style={styles.container}>
+      <StatusBar style="light" backgroundColor="#2a1845" />
+      <GameHUD 
+        theme="evening" 
+        customHeaderText={`After School - Day ${day}`}
+        customLocationText="Peaceful Evening"
+      />
       <View style={styles.header}>
-        <Text style={styles.title}>🏪 DELI</Text>
+        <Text style={styles.title}>🏪 Corner Deli</Text>
         <Text style={styles.subtitle}>Stable prices • Average market rates</Text>
       </View>
       
@@ -130,10 +138,9 @@ export default function Deli() {
       />
 
       <View style={styles.buttonContainer}>
-        <Button 
-          title="Back to After School" 
-          onPress={handleReturnToAfterSchool} 
-        />
+        <TouchableOpacity style={styles.backButton} onPress={handleReturnToAfterSchool}>
+          <Text style={styles.backButtonText}>🌅 Back to After School</Text>
+        </TouchableOpacity>
       </View>
 
       {selectedCandy && (
@@ -146,61 +153,107 @@ export default function Deli() {
           candy={selectedCandy}
         />
       )}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#2a1845', // Match after-school background
+  },
   header: {
-    backgroundColor: '#28a745',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
     alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+    backgroundColor: 'rgba(93, 76, 112, 0.85)',
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#8a7ca8',
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#f7e98e',
+    fontFamily: 'CrayonPastel',
+    textShadowColor: 'rgba(247,233,142,0.4)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 8,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#d4edda',
+    fontSize: 16,
+    color: '#b8a9c9',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   list: {
-    padding: 20,
+    padding: 16,
   },
   item: {
-    marginBottom: 20,
+    marginBottom: 12,
     padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#28a745',
+    flexDirection: 'column',
+    backgroundColor: 'rgba(93, 76, 112, 0.85)',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#8a7ca8',
+    shadowColor: '#2d1b3d',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   name: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#f7e98e',
+    marginBottom: 6,
+    fontFamily: 'CrayonPastel',
+    textShadowColor: 'rgba(247,233,142,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   price: {
     fontSize: 16,
-    color: '#28a745',
+    color: '#b8a9c9',
     fontWeight: '600',
+    marginBottom: 4,
   },
   owned: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#b8a9c9',
+    marginBottom: 4,
   },
   avgPrice: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#b8a9c9',
   },
   buttonContainer: {
-    marginTop: 20,
     paddingHorizontal: 20,
+    paddingBottom: 20,
     alignItems: 'center',
-    marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: '#ffcc99',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: '#cc7a00',
+    shadowColor: '#8b4513',
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
   },
 });

@@ -330,8 +330,11 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
       </View>
 
       <View style={styles.bottomButtons}>
+        <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
+          <Text style={styles.instructionsButtonText}>📜 Instructions</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-          <Text style={styles.backButtonText}>🚪 Back</Text>
+          <Text style={styles.backButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -342,11 +345,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fefaf5',
-    padding: 16,
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: 16,
-    paddingBottom: 100,
+    paddingTop: 40,
+    paddingBottom: 60,
   },
   header: {
     alignItems: 'center',
@@ -378,7 +383,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#D2B48C',
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 3 },
     shadowOpacity: 0.1,
@@ -510,16 +515,34 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   bottomButtons: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 16,
     marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  instructionsButton: {
+    flex: 1,
+    backgroundColor: '#DEB887',
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#CD853F',
+    alignItems: 'center',
+  },
+  instructionsButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
   },
   backButton: {
+    flex: 1,
     backgroundColor: '#D2691E',
     paddingVertical: 12,
-    paddingHorizontal: 24,
     borderRadius: 16,
     borderWidth: 2,
     borderColor: '#A0522D',
+    alignItems: 'center',
   },
   backButtonText: {
     fontSize: 16,

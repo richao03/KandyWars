@@ -1,30 +1,15 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { useSegments } from 'expo-router';
-import { useGame } from '../context/GameContext';
-
-function MarketScreenOptions() {
-  const { day, period } = useGame();
-  return {
-    title: `Day ${day} - Period ${period}`,
-    unmountOnBlur: false
-  };
-}
 
 export default function TabLayout() {
   const segments = useSegments();
-  const isAfterSchool = segments[segments.length - 1] === 'after-school';
+  const currentPage = segments[segments.length - 1];
+  const isAfterSchool = currentPage === 'after-school' || currentPage === 'study' || currentPage === 'deli';
   
   return (
     <Tabs screenOptions={{
-      headerStyle: {
-        height: 60, // Reduce header height
-        backgroundColor: isAfterSchool ? '#000000' : undefined,
-      },
-      headerTitleStyle: {
-        fontSize: 16,
-        color: isAfterSchool ? '#ffffff' : undefined,
-      },
+      headerShown: false, // Disable tab headers for consistent spacing
       tabBarStyle: {
         backgroundColor: isAfterSchool ? '#000000' : undefined,
       },
@@ -35,7 +20,7 @@ export default function TabLayout() {
         tintColor: isAfterSchool ? '#ffffff' : undefined,
       }
     }}>
-      <Tabs.Screen name="market" options={MarketScreenOptions} />
+      <Tabs.Screen name="market" options={{ unmountOnBlur: false }} />
       <Tabs.Screen name="study" options={{ 
         title: "Study", 
         href: null // Hide from tab bar

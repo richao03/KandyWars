@@ -430,8 +430,11 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
       {/* Controls */}
       <View style={styles.controls}>
+        <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
+          <Text style={styles.instructionsButtonText}>👩‍🍳 Instructions</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-          <Text style={styles.backButtonText}>🚪 Back</Text>
+          <Text style={styles.backButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
       </View>
     </GestureHandlerRootView>
@@ -442,6 +445,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FDF5E6',
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -572,16 +576,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   controls: {
-    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
+  instructionsButton: {
+    flex: 1,
+    backgroundColor: '#D2B48C',
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#F0E68C',
+    alignItems: 'center',
+  },
+  instructionsButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+  },
   backButton: {
+    flex: 1,
     backgroundColor: '#8B4513',
     paddingVertical: 12,
-    paddingHorizontal: 24,
     borderRadius: 20,
     borderWidth: 2,
     borderColor: '#A0522D',
+    alignItems: 'center',
   },
   backButtonText: {
     fontSize: 16,

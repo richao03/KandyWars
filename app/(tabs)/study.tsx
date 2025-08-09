@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useGame } from '../context/GameContext';
 import GameHUD from '../components/GameHUD';
+import { useGame } from '../context/GameContext';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
@@ -48,9 +49,7 @@ export default function StudyPage() {
 
         break;
       case 'Gym':
-        // TODO: router.push('/gym-game');
-        console.log('Gym minigame not implemented yet');
-        router.back();
+        router.push('/gym-game');
         break;
       default:
         router.back();
@@ -59,16 +58,18 @@ export default function StudyPage() {
 
   const handleGoBack = () => {
     // Go back to after school
-    router.push('/(tabs)/after-school');
+    router.push('/after-school');
   };
 
   return (
     <View style={styles.container}>
-      <GameHUD theme="evening" />
+      <StatusBar style="light" backgroundColor="#2a1845" />
+      <GameHUD         theme="evening" 
+          customHeaderText={`After School - Day ${day}`}
+          customLocationText="Peaceful Evening" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>Study Time - Day {day}</Text>
-        <Text style={styles.location}>📚 Peaceful Evening</Text>
+        <Text style={styles.title}>Study Time </Text>
       </View>
 
       <View style={styles.subjectsContainer}>
@@ -123,12 +124,13 @@ export default function StudyPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#4a3d5c', // Match after-school background
+    backgroundColor: '#2a1845', // Match after-school background
   },
   header: {
     alignItems: 'center',
     marginTop: 40,
-    marginBottom: 30,
+    marginBottom:20
+
   },
   title: {
     fontSize: 32,
@@ -141,16 +143,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
-  location: {
-    fontSize: 18,
-    color: '#c9b4d4', // Match after-school location color
-    fontFamily: 'CrayonPastel',
-    textAlign: 'center',
-  },
+
   subjectsContainer: {
     flex: 1,
     paddingHorizontal: 16,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   subjectsRow: {
     flexDirection: 'row',
