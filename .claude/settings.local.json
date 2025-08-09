@@ -7,7 +7,10 @@
       "Bash(npx expo:*)",
       "WebFetch(domain:www.1001fonts.com)",
       "Bash(curl:*)",
-      "Bash(unzip:*)"
+      "Bash(unzip:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

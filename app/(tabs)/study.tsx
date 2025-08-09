@@ -1,8 +1,7 @@
+import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { router } from 'expo-router';
 import GameHUD from '../components/GameHUD';
-import { useGame } from '../context/GameContext';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
@@ -25,24 +24,17 @@ export default function StudyPage() {
         router.push('/math-game');
         break;
       case 'History':
-        // TODO: router.push('/history-game');
-        console.log('History minigame not implemented yet');
-        router.back();
+        router.push('/history-game');
         break;
       case 'Home Ec':
-        // TODO: router.push('/home-ec-game');
-        console.log('Home Ec minigame not implemented yet');
-        router.back();
+        router.push('/home-ec-game');
+      
         break;
       case 'Social Studies':
-        // TODO: router.push('/social-studies-game');
-        console.log('Social Studies minigame not implemented yet');
-        router.back();
+        router.push('/social-studies-game');
         break;
       case 'Logic':
-        // TODO: router.push('/logic-game');
-        console.log('Logic minigame not implemented yet');
-        router.back();
+        router.push('/logic-game');
         break;
       case 'Creative Writing':
         // TODO: router.push('/writing-game');
@@ -50,9 +42,8 @@ export default function StudyPage() {
         router.back();
         break;
       case 'Computer':
-        // TODO: router.push('/computer-game');
-        console.log('Computer minigame not implemented yet');
-        router.back();
+       router.push('/computer-game');
+
         break;
       case 'Gym':
         // TODO: router.push('/gym-game');

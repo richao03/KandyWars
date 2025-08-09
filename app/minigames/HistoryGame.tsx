@@ -1,0 +1,623 @@
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import JokerSelection from '../components/JokerSelection';
+
+interface CaesarPuzzle {
+  id: number;
+  encrypted: string;
+  decrypted: string;
+  shift: number;
+  hint: string;
+}
+
+interface HistoryGameProps {
+  onComplete: () => void;
+}
+
+// Historical Caesar cipher puzzles
+const CAESAR_PUZZLES: CaesarPuzzle[] = [
+  {
+    id: 1,
+    encrypted: "TLOA FP LRQ LC ZXKAV",
+    decrypted: "WORD IS OUT OF CANDY",
+    shift: -3,
+    hint: "Rumors spreading about candy shortage"
+  },
+  {
+    id: 2,
+    encrypted: "PBIIFKD DRJ XQ OBZBPP",
+    decrypted: "SELLING GUM AT RECESS",
+    shift: -3,
+    hint: "A common way to make cash"
+  },
+  {
+    id: 3,
+    encrypted: "PKBXH QL QEB ABIF",
+    decrypted: "SNEAK TO THE DELI",
+    shift: -3,
+    hint: "A risky after-school run"
+  },
+  {
+    id: 4,
+    encrypted: "MOFZBP XOB EFDE QLAXV",
+    decrypted: "PRICES ARE HIGH TODAY",
+    shift: -3,
+    hint: "When candy costs skyrocket"
+  },
+  {
+    id: 5,
+    encrypted: "JXOHBQ FP COBPEIV OBPQLZHBA",
+    decrypted: "MARKET IS FRESHLY RESTOCKED",
+    shift: -3,
+    hint: "When new candy arrives"
+  },
+  {
+    id: 6,
+    encrypted: "ELJBTLOH ZXK TXFQ",
+    decrypted: "HOMEWORK CAN WAIT",
+    shift: -3,
+    hint: "When business comes first"
+  },
+  {
+    id: 7,
+    encrypted: "QOXAB JB PLRO MXQZE",
+    decrypted: "TRADE ME SOUR PATCH",
+    shift: -3,
+    hint: "Negotiating with classmates"
+  },
+  {
+    id: 8,
+    encrypted: "MLZHBQ FP CRII LC ZXPE",
+    decrypted: "POCKET IS FULL OF CASH",
+    shift: -3,
+    hint: "When sales have been good"
+  },
+  {
+    id: 9,
+    encrypted: "HBBM QEB QBXZEBO YRPV",
+    decrypted: "KEEP THE TEACHER BUSY",
+    shift: -3,
+    hint: "Classic distraction tactic"
+  },
+  {
+    id: 10,
+    encrypted: "OBJBJYBO QL PQXPE QEB MOLCFQP",
+    decrypted: "REMEMBER TO STASH THE PROFITS",
+    shift: -3,
+    hint: "Protecting your earnings"
+  },
+];
+
+
+
+// Placeholder jokers for history
+const HISTORY_JOKERS = [
+  { id: 1, name: "Time Machine", description: "Skip one period and keep all profits" },
+  { id: 2, name: "Ancient Wisdom", description: "See all events for current day" },
+  { id: 3, name: "Roman Coin", description: "Double your money instantly" },
+  { id: 4, name: "Egyptian Treasure", description: "Find rare candy worth 10x normal price" },
+  { id: 5, name: "Viking Raid", description: "Steal candy from other players (future)" },
+  { id: 6, name: "Medieval Shield", description: "Protect against one negative event" },
+  { id: 7, name: "Scholar's Scroll", description: "Get hints about next 3 periods" },
+  { id: 8, name: "Caesar's Cipher", description: "Decode secret market information" },
+];
+
+export default function HistoryGame({ onComplete }: HistoryGameProps) {
+  const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
+  const [currentPuzzle, setCurrentPuzzle] = useState(0);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [completedPuzzles, setCompletedPuzzles] = useState(0);
+  const [gameComplete, setGameComplete] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+
+  // Get current puzzle
+  const puzzle = CAESAR_PUZZLES[currentPuzzle];
+
+  // Caesar cipher decode function
+  const caesarDecode = (text: string, shift: number): string => {
+    return text
+      .split('')
+      .map(char => {
+        if (char.match(/[A-Z]/)) {
+          const charCode = char.charCodeAt(0);
+          const shifted = ((charCode - 65 - shift + 26) % 26) + 65;
+          return String.fromCharCode(shifted);
+        }
+        return char; // Keep spaces and punctuation
+      })
+      .join('');
+  };
+
+  // Initialize game
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [currentPuzzle]);
+
+  const handleSubmit = () => {
+    const normalizedAnswer = userAnswer.trim().toUpperCase();
+    const normalizedCorrect = puzzle.decrypted.toUpperCase();
+    
+    if (normalizedAnswer === normalizedCorrect) {
+      // Correct answer!
+      const newCompleted = completedPuzzles + 1;
+      setCompletedPuzzles(newCompleted);
+      
+      if (newCompleted >= 3) {
+        // Game complete after 3 puzzles
+        setGameComplete(true);
+        Alert.alert(
+          '🏛️ History Master!', 
+          'Excellent work decoding ancient messages!',
+          [
+            { text: 'Choose Reward', onPress: () => {
+              setTimeout(() => setGameState('jokerSelection'), 500);
+            }}
+          ]
+        );
+      } else {
+        // Move to next puzzle
+        Alert.alert(
+          '✅ Correct!', 
+          `Well done! Ready for cipher ${newCompleted + 1}?`,
+          [
+            { text: 'Next Cipher', onPress: () => {
+              setCurrentPuzzle(currentPuzzle + 1);
+              setUserAnswer('');
+            }}
+          ]
+        );
+      }
+    } else {
+      // Wrong answer
+      Alert.alert(
+        '❌ Not quite right', 
+        'Try decoding the message again. Remember to shift each letter!',
+        [{ text: 'Try Again', onPress: () => setUserAnswer('') }]
+      );
+    }
+  };
+
+  const handleShowHint = () => {
+    const decoded = caesarDecode(puzzle.encrypted, puzzle.shift);
+    Alert.alert(
+      '💡 Cipher Helper',
+      `Hint: ${puzzle.hint}\n\nFirst word decoded: "${decoded.split(' ')[0]}"`,
+      [{ text: 'Got it!' }]
+    );
+  };
+
+  const handleJokerChoice = (jokerId: number) => {
+    console.log(`Selected history joker: ${HISTORY_JOKERS.find(j => j.id === jokerId)?.name}`);
+    onComplete();
+  };
+
+  const handleForfeit = () => {
+    if (gameState === 'playing') {
+      Alert.alert(
+        '🚪 Leave History Study?',
+        'If you leave now, you\'ll forfeit your chance to study tonight and won\'t get a joker reward.',
+        [
+          { text: 'Keep Studying', style: 'cancel' },
+          { text: 'Back to Instructions', onPress: () => setGameState('instructions') },
+          { 
+            text: 'Leave', 
+            style: 'destructive',
+            onPress: () => router.back()
+          }
+        ]
+      );
+    } else {
+      router.back();
+    }
+  };
+
+  if (gameState === 'jokerSelection') {
+    return (
+      <JokerSelection 
+        jokers={HISTORY_JOKERS}
+        theme="social"
+        subject="History"
+        onComplete={onComplete}
+      />
+    );
+  }
+
+  if (gameState === 'instructions') {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsTitle}>🏛️ Ancient History Mystery 📜</Text>
+          
+          <View style={styles.instructionsCard}>
+            <Text style={styles.instructionsHeader}>🔍 How to Decode:</Text>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>1.</Text>
+              <Text style={styles.stepText}>Each message uses Caesar's cipher - letters are shifted in the alphabet</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>2.</Text>
+              <Text style={styles.stepText}>Look at the shift key to see how many positions to move back</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>3.</Text>
+              <Text style={styles.stepText}>For example: with shift -3, 'D' becomes 'A', 'E' becomes 'B'</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>4.</Text>
+              <Text style={styles.stepText}>Decode the encrypted text and type your answer</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>5.</Text>
+              <Text style={styles.stepText}>Complete 3 historical cipher puzzles to master the art!</Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.startGameButton} 
+            onPress={() => setGameState('playing')}
+          >
+            <Text style={styles.startGameButtonText}>📜 Start Decoding!</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.header}>
+        <Text style={styles.title}>🏛️ Caesar Ciphers</Text>
+        <Text style={styles.subtitle}>Decode ancient secrets</Text>
+        <Text style={styles.progress}>Cipher {completedPuzzles + 1}/3</Text>
+      </View>
+
+      <View style={styles.puzzleContainer}>
+        <View style={styles.shiftInfo}>
+          <Text style={styles.shiftLabel}>🔑 Shift Key: {puzzle.shift}</Text>
+          <Text style={styles.shiftHint}>Move each letter {puzzle.shift} places back in the alphabet</Text>
+        </View>
+
+        <View style={styles.encryptedContainer}>
+          <Text style={styles.encryptedLabel}>📜 Encrypted Message:</Text>
+          <Text style={styles.encryptedText}>{puzzle.encrypted}</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>✏️ Your Decoded Message:</Text>
+          <TextInput
+            ref={inputRef}
+            style={styles.textInput}
+            value={userAnswer}
+            onChangeText={setUserAnswer}
+            placeholder="Type the decoded message here..."
+            placeholderTextColor="#999"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            multiline={true}
+            numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.hintButton} onPress={handleShowHint}>
+            <Text style={styles.hintButtonText}>💡 Get Hint</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.submitButton, !userAnswer.trim() && styles.submitButtonDisabled]} 
+            onPress={handleSubmit}
+            disabled={!userAnswer.trim()}
+          >
+            <Text style={styles.submitButtonText}>🔍 Decode!</Text>
+          </TouchableOpacity>
+        </View>
+
+     <View style={styles.helpContainer}>
+      <Text style={styles.helpTitle}>🛡️ How Caesar Cipher Works:</Text>
+      <Text style={styles.helpText}>
+        • Example: "ABC" with shift +1 becomes "BCD"{'\n'}
+        • Example: "ABC" with shift -1 becomes "ZAB"
+      </Text>
+    </View>
+      </View>
+
+      <View style={styles.bottomButtons}>
+        <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
+          <Text style={styles.backButtonText}>🚪 Back</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fefaf5',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 100,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#CD853F',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  progress: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'CrayonPastel',
+  },
+  puzzleContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: '#D2B48C',
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  shiftInfo: {
+    backgroundColor: '#F5DEB3',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#DEB887',
+    marginBottom: 20,
+  },
+  shiftLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    marginBottom: 4,
+  },
+  shiftHint: {
+    fontSize: 14,
+    color: '#A0522D',
+    fontFamily: 'CrayonPastel',
+  },
+  encryptedContainer: {
+    marginBottom: 20,
+  },
+  encryptedLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    marginBottom: 8,
+  },
+  encryptedText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#654321',
+    fontFamily: 'CrayonPastel',
+    backgroundColor: '#F5F5DC',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#DDD',
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    marginBottom: 8,
+  },
+  textInput: {
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#DEB887',
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 18,
+    fontFamily: 'CrayonPastel',
+    color: '#654321',
+    textAlignVertical: 'top',
+    minHeight: 80,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  hintButton: {
+    flex: 1,
+    backgroundColor: '#FFE4B5',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#F0E68C',
+    alignItems: 'center',
+  },
+  hintButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#B8860B',
+    fontFamily: 'CrayonPastel',
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: '#DEB887',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#CD853F',
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#E5E5E5',
+    borderColor: '#CCC',
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+  },
+  helpContainer: {
+    backgroundColor: '#FFF8DC',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#F0E68C',
+  },
+  helpTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    marginBottom: 8,
+  },
+  helpText: {
+    fontSize: 14,
+    color: '#A0522D',
+    fontFamily: 'CrayonPastel',
+    lineHeight: 20,
+  },
+  bottomButtons: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  backButton: {
+    backgroundColor: '#D2691E',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#A0522D',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+  },
+  // Instructions Styles
+  instructionsContainer: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    backgroundColor: '#fefaf5',
+  },
+  instructionsTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 20,
+    textShadowColor: '#D2B48C',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  instructionsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 3,
+    borderColor: '#D2B48C',
+    marginBottom: 20,
+    shadowColor: '#8B4513',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  instructionsHeader: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  instructionStep: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  stepNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#DAA520',
+    fontFamily: 'CrayonPastel',
+    marginRight: 10,
+    minWidth: 20,
+  },
+  stepText: {
+    fontSize: 16,
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    flex: 1,
+    lineHeight: 22,
+  },
+  startGameButton: {
+    backgroundColor: '#F5DEB3',
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#DEB887',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#8B4513',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  startGameButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+  },
+  instructionsButton: {
+    flex: 1,
+    backgroundColor: '#F5DEB3',
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#DEB887',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  instructionsButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+  },
+});
