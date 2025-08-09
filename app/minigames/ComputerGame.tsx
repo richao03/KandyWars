@@ -226,10 +226,10 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>💻 Welcome to the Cyber Lab! ⚡</Text>
+          <Text style={styles.instructionsTitle}>💻 Computer Study Session! ⚡</Text>
           
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>🔍 Mission Brief:</Text>
+            <Text style={styles.instructionsHeader}>📝 How to Solve:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>Infiltrate the system by matching tech component pairs</Text>
@@ -244,12 +244,11 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>Complete 3 levels with increasing difficulty:</Text>
+              <Text style={styles.stepText}>Complete 3 levels with increasing difficulty</Text>
             </View>
-            <View style={styles.levelInfo}>
-              <Text style={styles.levelText}>🟢 Level 1: 6 pairs, 12 attempts</Text>
-              <Text style={styles.levelText}>🟡 Level 2: 8 pairs, 16 attempts</Text>
-              <Text style={styles.levelText}>🔴 Level 3: 12 pairs, 20 attempts</Text>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>5.</Text>
+              <Text style={styles.stepText}>Level 1: 6 pairs, Level 2: 8 pairs, Level 3: 12 pairs</Text>
             </View>
           </View>
           
@@ -261,11 +260,11 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
               initializeLevel(1);
             }}
           >
-            <Text style={styles.startGameButtonText}>🚀 Begin Infiltration!</Text>
+            <Text style={styles.startGameButtonText}>💻 Start Computer Challenge!</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Back</Text>
+          <TouchableOpacity style={styles.startGameButton} onPress={() => router.back()}>
+            <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -476,15 +475,6 @@ const styles = StyleSheet.create({
     color: '#00d4ff',
     fontFamily: 'CrayonPastel',
   },
-  backButton: {
-    flex: 1,
-    backgroundColor: '#2d1b3d',
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#ff073a',
-    alignItems: 'center',
-  },
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -604,7 +594,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     shadowColor: '#00d4ff',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
   },
   instructionsHeader: {
@@ -634,21 +624,6 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     flex: 1,
     lineHeight: 22,
-  },
-  levelInfo: {
-    backgroundColor: '#0a0e1a',
-    borderRadius: 12,
-    padding: 15,
-    marginTop: 10,
-    borderWidth: 2,
-    borderColor: '#00d4ff',
-  },
-  levelText: {
-    fontSize: 14,
-    color: '#00d4ff',
-    fontFamily: 'CrayonPastel',
-    marginBottom: 4,
-    textAlign: 'center',
   },
   startGameButton: {
     backgroundColor: '#16213e',

@@ -1,12 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View, ImageBackground } from 'react-native';
+import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EndOfDayModal from '../components/EndOfDayModal';
 import GameHUD from '../components/GameHUD';
 import LocationModal, { Location } from '../components/LocationModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
+import { useDailyStats } from '../context/DailyStatsContext';
 import { useGame } from '../context/GameContext';
 import { useInventory } from '../context/InventoryContext';
 import { useSeed } from '../context/SeedContext';
@@ -33,6 +35,7 @@ export default function Market() {
   const { balance, spend, add } = useWallet();
   const { addToInventory, removeFromInventory,getTotalInventoryCount, getInventoryLimit  } = useInventory();
   const { day, period, incrementPeriod, periodCount, currentLocation } = useGame();
+  const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
       ...candy,
@@ -69,6 +72,7 @@ export default function Market() {
   const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
   const [isTransactionModalOpening, setIsTransactionModalOpening] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [dayStatsModalVisible, setDayStatsModalVisible] = useState(false);
   const [endOfDayModalVisible, setEndOfDayModalVisible] = useState(false);
   const [stashMoneyModalVisible, setStashMoneyModalVisible] = useState(false);
   const [completedActivities, setCompletedActivities] = useState({
@@ -109,6 +113,7 @@ export default function Market() {
           }
 
           spend(totalCost);
+          addSpent(totalCost); // Track daily spending
 
           const newQty = candy.quantityOwned + quantity;
           const newAvg =
@@ -124,6 +129,8 @@ export default function Market() {
         } else {
           const totalGain = candy.cost * quantity;
           add(totalGain);
+          addProfit(totalGain); // Track daily profit
+          addCandySold(quantity); // Track daily candy sales
           removeFromInventory(candy.name, quantity);
 
           return {
@@ -139,13 +146,8 @@ export default function Market() {
 
   const handleNextDay = () => {
     if (period === 8) {
-      // End of day - reset completed activities and show modal
-      setCompletedActivities({
-        studiedHome: false,
-        stashedMoney: false,
-        visitedDeli: false,
-      });
-      setEndOfDayModalVisible(true);
+      // End of day - show day stats first
+      setDayStatsModalVisible(true);
     } else {
       // Regular period - show location modal
       setLocationModalVisible(true);
@@ -154,6 +156,13 @@ export default function Market() {
 
   const handleLocationSelect = (location: Location) => {
     incrementPeriod(location);
+  };
+
+  // Day stats modal handler
+  const handleDayStatsClose = () => {
+    setDayStatsModalVisible(false);
+    // Navigate to after school page
+    router.push('/(tabs)/after-school');
   };
 
   // End of day handlers
@@ -213,35 +222,48 @@ export default function Market() {
 
   return (
     <View style={styles.container}>
-      <GameHUD 
-        isModalOpening={isTransactionModalOpening}
-        isModalOpen={selectedCandyIndex !== null}
-      />
-      <FlatList
-        data={candies}
-        keyExtractor={(item) => item.name}
-        contentContainerStyle={styles.list}
-        renderItem={useCallback(({ item, index }) => {
-          return (
-          <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
-            <View style={styles.candyInfo}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.price}>${item.cost ? item.cost.toFixed(2) : '0.00'}</Text>
-            </View>
-          </TouchableOpacity>
-        )}, [openModal])}
-      />
-      <View style={styles.buttonContainer}>
-        <Button 
-          title={period === 8 ? "Leave School for the Day" : "Next Period"} 
-          onPress={handleNextDay} 
+      <ImageBackground
+        source={require('../../assets/images/school.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <GameHUD 
+          isModalOpening={isTransactionModalOpening}
+          isModalOpen={selectedCandyIndex !== null}
         />
-      </View>
+        <FlatList
+          data={candies}
+          keyExtractor={(item) => item.name}
+          contentContainerStyle={styles.list}
+          renderItem={useCallback(({ item, index }) => {
+            return (
+            <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
+              <View style={styles.candyInfo}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.price}>${item.cost ? item.cost.toFixed(2) : '0.00'}</Text>
+              </View>
+            </TouchableOpacity>
+          )}, [openModal])}
+        />
+        <View style={styles.buttonContainer}>
+          <Button 
+            title={period === 8 ? "Leave School for the Day" : "Next Period"} 
+            onPress={handleNextDay} 
+          />
+        </View>
+      </ImageBackground>
 
       <LocationModal
         visible={locationModalVisible}
         onClose={() => setLocationModalVisible(false)}
         onSelectLocation={handleLocationSelect}
+      />
+
+      <DayStatsModal
+        visible={dayStatsModalVisible}
+        onClose={handleDayStatsClose}
+        stats={getTotalStats()}
+        day={day}
       />
 
       <EndOfDayModal
@@ -283,7 +305,10 @@ export default function Market() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fefaf5', // Warm off-white paper
+    backgroundColor: '#fefaf5', // Warm off-white paper (fallback)
+  },
+  backgroundImage: {
+    flex: 1,
   },
   list: {
     padding: 16,

@@ -1,13 +1,14 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useGame } from '../context/GameContext';
 import GameHUD from '../components/GameHUD';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
   { name: 'History', color: { bg: '#fff2e8', border: '#fa8c16' } },
   { name: 'Home Ec', color: { bg: '#f6ffed', border: '#52c41a' } },
-  { name: 'Social Studies', color: { bg: '#fff1f0', border: '#f5222d' } },
+  { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' } },
   { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
   { name: 'Creative Writing', color: { bg: '#fff0f6', border: '#eb2f96' } },
   { name: 'Computer', color: { bg: '#f0f5ff', border: '#2f54eb' } },
@@ -15,6 +16,7 @@ const subjects = [
 ];
 
 export default function StudyPage() {
+  const { day } = useGame();
   const handleSubjectSelect = (subject: string) => {
     console.log(`Starting ${subject} minigame...`);
     
@@ -30,8 +32,8 @@ export default function StudyPage() {
         router.push('/home-ec-game');
       
         break;
-      case 'Social Studies':
-        router.push('/social-studies-game');
+      case 'Economy':
+        router.push('/economy-game');
         break;
       case 'Logic':
         router.push('/logic-game');
@@ -56,17 +58,17 @@ export default function StudyPage() {
   };
 
   const handleGoBack = () => {
-    // Go back without completing study
-    router.back();
+    // Go back to after school
+    router.push('/(tabs)/after-school');
   };
 
   return (
     <View style={styles.container}>
-      <GameHUD />
+      <GameHUD theme="evening" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>📚 Study Time!</Text>
-        <Text style={styles.subtitle}>Choose a subject to boost your knowledge</Text>
+        <Text style={styles.title}>Study Time - Day {day}</Text>
+        <Text style={styles.location}>📚 Peaceful Evening</Text>
       </View>
 
       <View style={styles.subjectsContainer}>
@@ -111,7 +113,7 @@ export default function StudyPage() {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Text style={styles.backButtonText}>🏠 Go Back Home</Text>
+          <Text style={styles.backButtonText}>🌅 Back to After School</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -121,25 +123,29 @@ export default function StudyPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fefaf5', // Warm paper background
+    backgroundColor: '#4a3d5c', // Match after-school background
   },
   header: {
-    padding: 20,
     alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
-    color: '#6b4423',
+    color: '#f7e98e', // Match after-school title color
     fontFamily: 'CrayonPastel',
-    textShadow: '1px 1px 0px #e6d4b7',
+    textShadowColor: 'rgba(247,233,142,0.4)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 8,
     marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#8b4513',
     textAlign: 'center',
+  },
+  location: {
+    fontSize: 18,
+    color: '#c9b4d4', // Match after-school location color
     fontFamily: 'CrayonPastel',
+    textAlign: 'center',
   },
   subjectsContainer: {
     flex: 1,

@@ -16,7 +16,15 @@ const locationNames = {
   'bathroom': 'Bathroom'
 } as const;
 
-export default function GameHUD() {
+interface GameHUDProps {
+  isModalOpening?: boolean;
+  isModalOpen?: boolean;
+  theme?: 'school' | 'evening';
+  customHeaderText?: string;
+  customLocationText?: string;
+}
+
+export default function GameHUD({ isModalOpening = false, isModalOpen = false, theme = 'school', customHeaderText, customLocationText }: GameHUDProps) {
   const { balance, piggyBank } = useWallet();
   const { day, period, currentLocation } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
@@ -25,27 +33,34 @@ export default function GameHUD() {
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
 
+  const containerStyle = theme === 'evening' ? styles.eveningContainer : styles.container;
+  const headerStyle = theme === 'evening' ? styles.eveningHeaderText : styles.headerText;
+  const statTitleStyle = theme === 'evening' ? styles.eveningStatTitle : styles.statTitle;
+
+  const headerText = customHeaderText || `Day ${day} • Period ${period}`;
+  const locationText = customLocationText || locationNames[currentLocation];
+
   return (
-    <View style={styles.container}>
+    <View style={containerStyle}>
       {/* Header with day/period */}
       <View style={styles.headerRow}>
-        <Text style={styles.headerText}>Day {day} • Period {period}</Text>
+        <Text style={headerStyle}>{headerText}</Text>
       </View>
       
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
         <View style={[styles.statBox, styles.cashBox]}>
-          <Text style={styles.statTitle}>My Money</Text>
+          <Text style={statTitleStyle}>My Money</Text>
           <Text style={styles.cashAmount}>${balance.toFixed(2)}</Text>
         </View>
         
         <View style={[styles.statBox, styles.piggyBox]}>
-          <Text style={styles.statTitle}>Saved</Text>
+          <Text style={statTitleStyle}>Saved</Text>
           <Text style={styles.piggyAmount}>${piggyBank ? piggyBank.toFixed(2) : '0.00'}</Text>
         </View>
         
         <View style={[styles.statBox, styles.inventoryBox]}>
-          <Text style={styles.statTitle}>Candy</Text>
+          <Text style={statTitleStyle}>Candy</Text>
           <Text style={styles.inventoryAmount}>{totalInventory}/{inventoryCapacity}</Text>
         </View>
       </View>
@@ -53,7 +68,7 @@ export default function GameHUD() {
       {/* Location badge */}
       <View style={styles.locationRow}>
         <View style={styles.locationBadge}>
-          <Text style={styles.locationText}>@ {locationNames[currentLocation]}</Text>
+          <Text style={styles.locationText}>@ {locationText}</Text>
         </View>
       </View>
 
@@ -82,6 +97,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
   },
+  eveningContainer: {
+    backgroundColor: 'rgba(93, 76, 112, 0.9)', // Evening theme background
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 3,
+    borderColor: '#8a7ca8', // Evening theme border
+  },
   headerRow: {
     alignItems: 'center',
     marginBottom: 12,
@@ -91,6 +113,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#8b4513', // Saddle brown
     textShadow: '1px 1px 0px #e6d4b7',
+    fontFamily: 'CrayonPastel',
+  },
+  eveningHeaderText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f7e98e', // Evening theme yellow
+    textShadowColor: 'rgba(247,233,142,0.4)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
     fontFamily: 'CrayonPastel',
   },
   statsRow: {
@@ -128,6 +159,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#5d4e37', // Dark brown
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'CrayonPastel',
+  },
+  eveningStatTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#c9b4d4', // Evening theme lavender
     marginBottom: 3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,

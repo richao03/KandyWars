@@ -9,7 +9,7 @@ interface Joker {
 
 interface JokerSelectionProps {
   jokers: Joker[];
-  theme: 'math' | 'computer' | 'homeec' | 'social' | 'candy';
+  theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy';
   subject: string;
   onComplete: () => void;
 }
@@ -69,7 +69,7 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
           skipButton: styles.homeecSkipButton,
           skipButtonText: styles.homeecSkipButtonText,
         };
-      case 'social':
+      case 'economy':
         return {
           container: styles.socialContainer,
           title: styles.socialTitle,

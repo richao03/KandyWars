@@ -16,6 +16,7 @@ type FlavorEvent =
   | "PRICE_DROP"
   | "JOKER_UNLOCKED"
   | "HINT"
+  | "AFTERNOON"
   | "DEFAULT"; // fallback for ambient
 
 const flavorLibrary: Record<FlavorEvent, string[]> = {
@@ -50,6 +51,34 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
     "You overhear something interesting...",
     "There's buzz about something happening next period...",
     "Someone whispers about an opportunity coming up...",
+  ],
+  AFTERNOON: [
+    "The afternoon sun streams through your window.",
+    "School's out, but the candy business never sleeps.",
+    "Time to count today's profits in the golden hour.",
+    "The street lamps flicker to life as evening approaches.",
+    "Your backpack feels lighter without textbooks, heavier with possibilities.",
+    "The neighborhood deli calls your name.",
+    "Homework can wait — there's money to be made.",
+    "The after-school crowd is your most loyal customers.",
+    "You catch the scent of dinner cooking next door.",
+    "This is when the real deals happen.",
+    "The candy market never closes in your mind.",
+    "Your piggy bank rattles with today's earnings.",
+    "Street lights dance shadows across your candy stash.",
+    "Tomorrow's another day to build your empire.",
+    "The evening air tastes sweeter with success.",
+    "You plot tomorrow's moves under the lamplight.",
+    "Time to study... the candy market, that is.",
+    "The after-school hustle begins now.",
+    "Your mom calls for dinner, but first — business.",
+    "The golden hour is perfect for counting coins.",
+    "You wonder what new flavors tomorrow will bring.",
+    "The deli owner knows your name and your order.",
+    "This quiet time is when legends are made.",
+    "The streetlights witness your candy empire growing.",
+    "Every wrapper tells a story of profit.",
+    "The evening breeze carries whispers of tomorrow's deals.",
   ],
   DEFAULT: [
     "The halls smell like sour sugar.",

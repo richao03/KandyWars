@@ -193,12 +193,12 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   if (gameState === 'instructions') {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>🍭 Welcome to Candy Wordle! 🧩</Text>
+          <Text style={styles.instructionsTitle}>🍭 Logic Study Session! 🧩</Text>
           
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>🎯 How to Play:</Text>
+            <Text style={styles.instructionsHeader}>📝 How to Solve:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>Guess the secret 4-candy sequence (no duplicates)</Text>
@@ -209,29 +209,15 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>Submit your guess to get color-coded feedback:</Text>
-            </View>
-            <View style={styles.feedbackGuide}>
-              <View style={styles.feedbackRow}>
-                <View style={[styles.feedbackSquare, styles.correctCandy]} />
-                <Text style={styles.feedbackText}>Green = Right candy, right position</Text>
-              </View>
-              <View style={styles.feedbackRow}>
-                <View style={[styles.feedbackSquare, styles.presentCandy]} />
-                <Text style={styles.feedbackText}>Yellow = Right candy, wrong position</Text>
-              </View>
-              <View style={styles.feedbackRow}>
-                <View style={[styles.feedbackSquare, styles.absentCandy]} />
-                <Text style={styles.feedbackText}>Gray = Candy not in sequence</Text>
-              </View>
+              <Text style={styles.stepText}>Submit your guess to get color-coded feedback</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>Use logic to deduce the correct sequence</Text>
+              <Text style={styles.stepText}>Green = Right candy in right position, Yellow = Right candy in wrong position</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>Solve it within 6 attempts to win!</Text>
+              <Text style={styles.stepText}>Use logic to deduce the correct sequence within 6 attempts!</Text>
             </View>
           </View>
           
@@ -242,14 +228,14 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
               generateSecretCode();
             }}
           >
-            <Text style={styles.startGameButtonText}>🎮 Start Puzzle!</Text>
+            <Text style={styles.startGameButtonText}>🎮 Start Logic Challenge!</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-            <Text style={styles.backButtonText}>Back</Text>
+          <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+            <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -604,7 +590,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'CrayonPastel',
   },
-  // Instructions Styles
+  // Instructions Styles (Matching Math game exactly)
   instructionsContainer: {
     flex: 1,
     padding: 20,
@@ -629,7 +615,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#666',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#ff6ec7',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -637,7 +623,7 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: '#ff6ec7',
     fontFamily: 'CrayonPastel',
     marginBottom: 15,
     textAlign: 'center',
@@ -661,32 +647,6 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     flex: 1,
     lineHeight: 22,
-  },
-  feedbackGuide: {
-    backgroundColor: '#2c2c2c',
-    borderRadius: 12,
-    padding: 15,
-    marginVertical: 10,
-    borderWidth: 2,
-    borderColor: '#555',
-  },
-  feedbackRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 12,
-  },
-  feedbackSquare: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  feedbackText: {
-    fontSize: 14,
-    color: '#ccc',
-    fontFamily: 'CrayonPastel',
-    flex: 1,
   },
   startGameButton: {
     backgroundColor: '#ff6ec7',

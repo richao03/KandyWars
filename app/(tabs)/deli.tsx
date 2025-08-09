@@ -96,8 +96,8 @@ export default function Deli() {
     closeModal();
   };
 
-  const handleReturnToSchool = () => {
-    router.push('/market');
+  const handleReturnToAfterSchool = () => {
+    router.push('/(tabs)/after-school');
   };
 
   const selectedCandy = selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
@@ -131,8 +131,8 @@ export default function Deli() {
 
       <View style={styles.buttonContainer}>
         <Button 
-          title="Return to School" 
-          onPress={handleReturnToSchool} 
+          title="Back to After School" 
+          onPress={handleReturnToAfterSchool} 
         />
       </View>
 

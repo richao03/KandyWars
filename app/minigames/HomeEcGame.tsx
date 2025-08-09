@@ -45,6 +45,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const [centerCandy, setCenterCandy] = useState('');
   const [nextCandy, setNextCandy] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [feedbackPosition, setFeedbackPosition] = useState<{x: string, y: string} | null>(null);
   const [isFlying, setIsFlying] = useState(false);
 
   // Refs
@@ -94,15 +95,27 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     
     setIsFlying(true);
 
-    // Animate candy flying to edge
+    // Animate candy flying to edge and set feedback position
     let targetX = 0;
     let targetY = 0;
     
     switch (direction) {
-      case 'up': targetY = -300; break;
-      case 'down': targetY = 300; break;
-      case 'left': targetX = -200; break;
-      case 'right': targetX = 200; break;
+      case 'up': 
+        targetY = -300;
+        setFeedbackPosition({ x: '50%', y: '10%' });
+        break;
+      case 'down': 
+        targetY = 300;
+        setFeedbackPosition({ x: '50%', y: '85%' });
+        break;
+      case 'left': 
+        targetX = -200;
+        setFeedbackPosition({ x: '15%', y: '50%' });
+        break;
+      case 'right': 
+        targetX = 200;
+        setFeedbackPosition({ x: '85%', y: '50%' });
+        break;
     }
 
     translateX.value = withTiming(targetX, { duration: 250 });
@@ -142,20 +155,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       });
       setFeedback('✅ +1');
     } else {
+      setScore(prev => Math.max(0, prev - 1)); // Subtract 1 but don't go below 0
       setFeedback('❌ -1');
-      // Game over on wrong match
-      setTimeout(() => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        Alert.alert(
-          '💥 Game Over!',
-          'Wrong match! Try again from Level 1?',
-          [
-            { text: 'Give Up', onPress: () => router.back(), style: 'destructive' },
-            { text: 'Restart', onPress: restartGame }
-          ]
-        );
-      }, 600);
-      return;
     }
 
     // Start new candy after brief delay to let first candy fly
@@ -166,6 +167,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     // Clear feedback after candy flies away
     setTimeout(() => {
       setFeedback('');
+      setFeedbackPosition(null);
     }, 400);
 
   }, [isFlying, centerCandy, gameState, level, startNewCandy]);
@@ -255,6 +257,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     setScore(0);
     setTimeLeft(15);
     setFeedback('');
+    setFeedbackPosition(null);
     if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
@@ -311,30 +314,50 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   if (gameState === 'instructions') {
     return (
-      <View style={styles.container}>
+      <GestureHandlerRootView style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.title}>🍭 Candy Kitchen 🍳</Text>
+          <Text style={styles.instructionsTitle}>🍭 Candy Kitchen Study! 🍳</Text>
           
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>How to Play:</Text>
-            <Text style={styles.instructionText}>• Swipe the center candy toward matching edge candy</Text>
-            <Text style={styles.instructionText}>• 🍭 Lollipop → Swipe UP</Text>
-            <Text style={styles.instructionText}>• 🍬 Candy → Swipe RIGHT</Text>
-            <Text style={styles.instructionText}>• 🧁 Cupcake → Swipe DOWN</Text>
-            <Text style={styles.instructionText}>• 🍫 Chocolate → Swipe LEFT</Text>
-            <Text style={styles.instructionText}>• Wrong match = Game Over!</Text>
-            <Text style={styles.instructionText}>• Complete all 3 levels to win!</Text>
+            <Text style={styles.instructionsHeader}>📝 How to Cook:</Text>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>1.</Text>
+              <Text style={styles.stepText}>Swipe the center candy toward the matching edge candy</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>2.</Text>
+              <Text style={styles.stepText}>🍭 Lollipop → Swipe UP</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>3.</Text>
+              <Text style={styles.stepText}>🍬 Candy → Swipe RIGHT</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>4.</Text>
+              <Text style={styles.stepText}>🧁 Cupcake → Swipe DOWN</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>5.</Text>
+              <Text style={styles.stepText}>🍫 Chocolate → Swipe LEFT</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>6.</Text>
+              <Text style={styles.stepText}>Wrong match loses points, complete all 3 levels!</Text>
+            </View>
           </View>
           
-          <TouchableOpacity style={styles.startButton} onPress={startGame}>
-            <Text style={styles.startButtonText}>👩‍🍳 Start Cooking!</Text>
+          <TouchableOpacity 
+            style={styles.startGameButton} 
+            onPress={startGame}
+          >
+            <Text style={styles.startGameButtonText}>👩‍🍳 Start Cooking Challenge!</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-            <Text style={styles.backButtonText}>Back</Text>
+          <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+            <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </GestureHandlerRootView>
     );
   }
 
@@ -391,8 +414,15 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         )}
 
         {/* Feedback */}
-        {feedback && (
-          <View style={styles.feedbackContainer}>
+        {feedback && feedbackPosition && (
+          <View style={[
+            styles.feedbackContainer,
+            {
+              left: feedbackPosition.x,
+              top: feedbackPosition.y,
+              transform: [{ translateX: -30 }, { translateY: -15 }],
+            }
+          ]}>
             <Text style={styles.feedbackText}>{feedback}</Text>
           </View>
         )}
@@ -563,6 +593,18 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
+    backgroundColor: '#FDF5E6',
+  },
+  instructionsTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 20,
+    textShadowColor: '#D2691E',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   instructionsCard: {
     backgroundColor: '#FFFFFF',
@@ -571,33 +613,57 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#D2691E',
     marginBottom: 20,
+    shadowColor: '#FF6347',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#FF6347',
+    fontFamily: 'CrayonPastel',
     marginBottom: 15,
     textAlign: 'center',
   },
-  instructionText: {
+  instructionStep: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  stepNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FF6347',
+    fontFamily: 'CrayonPastel',
+    marginRight: 10,
+    minWidth: 20,
+  },
+  stepText: {
     fontSize: 16,
     color: '#8B4513',
-    marginBottom: 8,
+    fontFamily: 'CrayonPastel',
+    flex: 1,
     lineHeight: 22,
   },
-  startButton: {
+  startGameButton: {
     backgroundColor: '#FF6347',
     paddingVertical: 18,
     paddingHorizontal: 40,
-    borderRadius: 30,
-    borderWidth: 4,
+    borderRadius: 12,
+    borderWidth: 3,
     borderColor: '#FF4500',
+    alignItems: 'center',
     marginBottom: 16,
+    shadowColor: '#FF6347',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
-  startButtonText: {
-    fontSize: 22,
+  startGameButtonText: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#FFFFFF',
-    textAlign: 'center',
+    fontFamily: 'CrayonPastel',
   },
 });

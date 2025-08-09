@@ -13,7 +13,7 @@ const subjectColors: Record<string, {bg: string, border: string}> = {
   'Math': {bg: '#e6f7ff', border: '#1890ff'}, // Light blue
   'History': {bg: '#fff2e8', border: '#fa8c16'}, // Light orange  
   'Home Ec': {bg: '#f6ffed', border: '#52c41a'}, // Light green
-  'Social Studies': {bg: '#fff1f0', border: '#f5222d'}, // Light red
+  'Economy': {bg: '#fff1f0', border: '#f5222d'}, // Light red
   'Logic': {bg: '#f9f0ff', border: '#722ed1'}, // Light purple
   'Creative Writing': {bg: '#fff0f6', border: '#eb2f96'}, // Light pink
   'Computer': {bg: '#f0f5ff', border: '#2f54eb'}, // Light indigo

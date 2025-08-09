@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import JokerSelection from '../components/JokerSelection';
 
 interface CaesarPuzzle {
@@ -218,7 +219,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
     return (
       <JokerSelection 
         jokers={HISTORY_JOKERS}
-        theme="social"
+        theme="economy"
         subject="History"
         onComplete={onComplete}
       />
@@ -227,46 +228,46 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
 
   if (gameState === 'instructions') {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <GestureHandlerRootView style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>🏛️ Ancient History Mystery 📜</Text>
-          
-          <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>🔍 How to Decode:</Text>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>1.</Text>
-              <Text style={styles.stepText}>Each message uses Caesar's cipher - letters are shifted in the alphabet</Text>
+          <Text style={styles.instructionsTitle}>🏛️ History Study Session! 📜</Text>
+        
+            <View style={styles.instructionsCard}>
+              <Text style={styles.instructionsHeader}>📝 How to Decode:</Text>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>1.</Text>
+                <Text style={styles.stepText}>Each message uses Caesar's cipher - letters are shifted in the alphabet</Text>
+              </View>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>2.</Text>
+                <Text style={styles.stepText}>Look at the shift key to see how many positions to move back</Text>
+              </View>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>3.</Text>
+                <Text style={styles.stepText}>For example: with shift -3, 'D' becomes 'A', 'E' becomes 'B'</Text>
+              </View>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>4.</Text>
+                <Text style={styles.stepText}>Decode the encrypted text and type your answer</Text>
+              </View>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>5.</Text>
+                <Text style={styles.stepText}>Complete 3 historical cipher puzzles to master the art!</Text>
+              </View>
             </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>2.</Text>
-              <Text style={styles.stepText}>Look at the shift key to see how many positions to move back</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>For example: with shift -3, 'D' becomes 'A', 'E' becomes 'B'</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>Decode the encrypted text and type your answer</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>Complete 3 historical cipher puzzles to master the art!</Text>
-            </View>
-          </View>
           
           <TouchableOpacity 
             style={styles.startGameButton} 
             onPress={() => setGameState('playing')}
           >
-            <Text style={styles.startGameButtonText}>📜 Start Decoding!</Text>
+            <Text style={styles.startGameButtonText}>📜 Start Decoding Challenge!</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-            <Text style={styles.backButtonText}>Back</Text>
+          <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+            <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </GestureHandlerRootView>
     );
   }
 
@@ -341,6 +342,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fefaf5',
+    padding: 16,
   },
   scrollContent: {
     padding: 16,
@@ -544,6 +546,10 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
+  scrollableCard: {
+    flex: 1,
+    marginBottom: 20,
+  },
   instructionsCard: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -551,15 +557,15 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#D2B48C',
     marginBottom: 20,
-    shadowColor: '#8B4513',
+    shadowColor: '#DEB887',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
   },
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#DEB887',
     fontFamily: 'CrayonPastel',
     marginBottom: 15,
     textAlign: 'center',
@@ -572,7 +578,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#DAA520',
+    color: '#DEB887',
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
@@ -585,17 +591,17 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#F5DEB3',
+    backgroundColor: '#DEB887',
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#DEB887',
+    borderColor: '#CD853F',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#8B4513',
+    shadowColor: '#DEB887',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
   },
   startGameButtonText: {

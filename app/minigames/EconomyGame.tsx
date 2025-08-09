@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   LayoutChangeEvent,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -40,7 +41,7 @@ type Puzzle = {
   steps: number;
 };
 
-interface SocialStudiesGameProps {
+interface EconomyGameProps {
   onComplete: () => void;
 }
 
@@ -58,8 +59,8 @@ const CATALOG: Record<Item, string> = {
 };
 const ALL_ITEMS: Item[] = Object.keys(CATALOG) as Item[];
 
-// Social Studies Trading jokers
-const SOCIAL_STUDIES_JOKERS = [
+// Economy Trading jokers
+const ECONOMY_JOKERS = [
   { id: 1, name: "Trade Route Map", description: "See all possible trade combinations" },
   { id: 2, name: "Merchant Network", description: "Unlock exclusive premium trades" },
   { id: 3, name: "Economic Forecast", description: "Predict market changes 3 steps ahead" },
@@ -302,7 +303,7 @@ function DraggableFromSlot({
  *  ========================= */
 const LEVEL_SLOTS = [4, 5, 6];
 
-export default function CandyTraderSequencer({ onComplete }: SocialStudiesGameProps) {
+export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const [seed] = useState('candy-seed');
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [levelIndex, setLevelIndex] = useState(0);
@@ -521,9 +522,9 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection 
-        jokers={SOCIAL_STUDIES_JOKERS}
-        theme="social"
-        subject="Social Studies"
+        jokers={ECONOMY_JOKERS}
+        theme="economy"
+        subject="Economy"
         onComplete={onComplete}
       />
     );
@@ -534,10 +535,10 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.container}>
           <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsTitle}>🏛️ Welcome to the Trading Post! 🏺</Text>
+            <Text style={styles.instructionsTitle}>💼 Economics Study Session! 📈</Text>
             
             <View style={styles.instructionsCard}>
-              <Text style={styles.instructionsHeader}>📜 How to Trade:</Text>
+              <Text style={styles.instructionsHeader}>📊 How to Trade:</Text>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>1.</Text>
                 <Text style={styles.stepText}>Drag trade tiles from the palette to plan your route</Text>
@@ -564,11 +565,11 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
               style={styles.startGameButton} 
               onPress={() => setGameState('playing')}
             >
-              <Text style={styles.startGameButtonText}>🏺 Start Trading!</Text>
+              <Text style={styles.startGameButtonText}>💼 Start Trading Challenge!</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-              <Text style={styles.backButtonText}>Back</Text>
+            <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+              <Text style={styles.startGameButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -577,11 +578,11 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Candy Trader</Text>
+          <Text style={styles.title}>💼 Stock Market Trading</Text>
           <Text style={styles.subtitle}>
             Level {levelIndex + 1} / {LEVEL_SLOTS.length} • Slots: {puzzle.steps}
           </Text>
@@ -669,21 +670,24 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
           </View>
         </View>
 
+        {/* Execute Button */}
+        <View style={styles.executeContainer}>
+          <TouchableOpacity style={[styles.footerBtn, styles.footerPrimary]} onPress={executePlan}>
+            <Text style={styles.footerPrimaryText}>💼 Execute Trade Plan</Text>
+          </TouchableOpacity>
+        </View>
+        
         {/* Footer */}
         <View style={styles.footer}>
-          <View style={styles.footerRow}>
-            <TouchableOpacity style={[styles.footerBtn, styles.footerPrimary]} onPress={executePlan}>
-              <Text style={styles.footerPrimaryText}>Start Trade</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={clearAll}>
-              <Text style={styles.footerSecondaryText}>Clear</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.footerRow}>
-            <TouchableOpacity style={[styles.footerBtn, styles.footerBack]} onPress={handleForfeit}>
-              <Text style={styles.footerBackText}>Back</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={() => setGameState('instructions')}>
+            <Text style={styles.footerSecondaryText}>📋 Instructions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.footerBtn, styles.footerBack]} onPress={handleForfeit}>
+            <Text style={styles.footerBackText}>🏛️ Leave</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={clearAll}>
+            <Text style={styles.footerSecondaryText}>🔄 Clear</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Floating drag overlay */}
@@ -692,7 +696,7 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
             <Text style={styles.dragOverlayText}>{dragLabelText}</Text>
           </View>
         </Animated.View>
-      </View>
+      </ScrollView>
     </GestureHandlerRootView>
   );
 }
@@ -703,24 +707,34 @@ export default function CandyTraderSequencer({ onComplete }: SocialStudiesGamePr
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#F5F5DC', 
-    padding: 16, 
-    paddingBottom: 140 
+    backgroundColor: '#0a1929'
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 100,
   },
   header: { 
-    marginBottom: 16, 
-    alignItems: 'center' 
+    alignItems: 'center',
+    marginBottom: 20,
+    backgroundColor: '#1e3a8a',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#2196f3',
   },
   title: { 
     fontSize: 28, 
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#1976d2',
     fontFamily: 'CrayonPastel',
     marginBottom: 8,
+    textShadowColor: '#2196f3',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
   subtitle: { 
     fontSize: 16, 
-    color: '#A0522D',
+    color: '#42a5f5',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
   },
@@ -729,16 +743,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     padding: 16, 
-    backgroundColor: '#FFF',
+    backgroundColor: '#1e3a8a',
     borderWidth: 3, 
-    borderColor: '#DEB887',
+    borderColor: '#2196f3',
     borderRadius: 16, 
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   hudSection: { 
     flex: 1, 
@@ -746,24 +760,31 @@ const styles = StyleSheet.create({
   },
   hudLabel: { 
     fontSize: 12, 
-    color: '#666',
+    color: '#90caf9',
     fontFamily: 'CrayonPastel',
-    marginBottom: 4 
+    marginBottom: 4,
+    fontWeight: '600'
   },
   hudValue: { 
     fontSize: 16, 
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
+    textShadowColor: '#2196f3',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   slotsWrapper: { marginBottom: 16 },
   sectionTitle: { 
     fontSize: 18, 
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#2196f3',
     fontFamily: 'CrayonPastel',
     marginBottom: 12,
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   slotsScrollContent: {
     paddingHorizontal: 8,
@@ -774,51 +795,56 @@ const styles = StyleSheet.create({
   },
   slot: { 
     width: 88,
-    height: 88,
+    height: 44 ,
     borderWidth: 3, 
-    borderColor: '#DDD',
+    borderColor: '#1565c0',
     borderRadius: 12, 
     padding: 8, 
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: '#0d47a1',
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   slotFilled: { 
-    backgroundColor: '#E6F7E6', 
-    borderColor: '#4CAF50',
-    shadowColor: '#4CAF50',
+    backgroundColor: '#1976d2', 
+    borderColor: '#42a5f5',
+    shadowColor: '#2196f3',
+    shadowOpacity: 0.5,
   },
   slotHighlighted: {
-    backgroundColor: '#FFF3E0',
-    borderColor: '#FF9800',
+    backgroundColor: '#1e88e5',
+    borderColor: '#64b5f6',
     borderWidth: 4,
-    shadowColor: '#FF9800',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowColor: '#2196f3',
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 10,
   },
   slotPlaceholder: { 
     textAlign: 'center', 
-    color: '#999',
+    color: '#90caf9',
     fontFamily: 'CrayonPastel',
     fontSize: 12,
     fontStyle: 'italic',
+    fontWeight: '600',
   },
   slotLabel: { 
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     fontSize: 13,
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   slotHint: { 
     fontSize: 8, 
-    color: '#666',
+    color: '#90caf9',
     fontFamily: 'CrayonPastel',
     textAlign: 'center', 
     marginTop: 2 
@@ -833,30 +859,33 @@ const styles = StyleSheet.create({
   },
   tile: { 
     width: 96,
-    height: 96,
+    height: 48,
     borderWidth: 3, 
-    borderColor: '#FFB74D',
+    borderColor: '#42a5f5',
     borderRadius: 12, 
     padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF0E6',
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: '#1565c0',
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
   },
   tileLabel: { 
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     fontSize: 13,
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   tileHint: { 
     fontSize: 8, 
-    color: '#666',
+    color: '#90caf9',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginTop: 2,
@@ -865,33 +894,34 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F0F8F0',
+    backgroundColor: '#0d47a1',
     borderWidth: 2,
-    borderColor: '#C8E6C9',
+    borderColor: '#42a5f5',
     borderRadius: 12,
     borderStyle: 'dashed',
   },
   emptyPaletteText: { 
-    color: '#4CAF50',
+    color: '#64b5f6',
     fontFamily: 'CrayonPastel',
     fontWeight: '700',
     textAlign: 'center',
     fontSize: 16,
   },
   emptyPaletteSubtext: {
-    color: '#666',
+    color: '#90caf9',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     fontSize: 12,
     marginTop: 4,
   },
 
+  executeContainer: {
+    marginBottom: 16,
+  },
   footer: { 
-    position: 'absolute', 
-    bottom: 16, 
-    left: 16, 
-    right: 16, 
-    gap: 8 
+    flexDirection: 'row',
+    gap: 16,
+    paddingVertical: 16,
   },
   footerRow: {
     flexDirection: 'row',
@@ -906,31 +936,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerPrimary: { 
-    borderColor: '#CD853F', 
-    backgroundColor: '#DEB887' 
+    borderColor: '#1976d2', 
+    backgroundColor: '#2196f3',
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   footerPrimaryText: { 
     fontWeight: '700', 
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   footerSecondary: { 
-    borderColor: '#DEB887', 
-    backgroundColor: '#FFE4B5' 
+    borderColor: '#42a5f5', 
+    backgroundColor: '#1565c0' 
   },
   footerSecondaryText: { 
     fontWeight: '600',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
   },
   footerBack: {
-    borderColor: '#DEB887',
-    backgroundColor: '#FFE4B5',
+    borderColor: '#42a5f5',
+    backgroundColor: '#1565c0',
   },
   footerBackText: {
     fontWeight: '600',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
   },
@@ -951,22 +989,25 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12, 
     borderWidth: 3, 
-    borderColor: '#FFB74D', 
-    backgroundColor: '#FFF0E6',
+    borderColor: '#64b5f6', 
+    backgroundColor: '#1976d2',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 15,
   },
   dragOverlayText: { 
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     fontSize: 13,
     textAlign: 'center',
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 
   // Instructions Styles
@@ -974,38 +1015,41 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#F5F5DC',
+    backgroundColor: '#0a1929',
   },
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#2196f3',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#DEB887',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 3,
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
   instructionsCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#1e3a8a',
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#DEB887',
+    borderColor: '#42a5f5',
     marginBottom: 20,
-    shadowColor: '#8B4513',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#64b5f6',
     fontFamily: 'CrayonPastel',
     marginBottom: 15,
     textAlign: 'center',
+    textShadowColor: '#2196f3',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   instructionStep: {
     flexDirection: 'row',
@@ -1015,51 +1059,39 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#CD853F',
+    color: '#42a5f5',
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
   },
   stepText: {
     fontSize: 16,
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
     flex: 1,
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#DEB887',
+    backgroundColor: '#2196f3',
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#CD853F',
+    borderColor: '#1976d2',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#8B4513',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowColor: '#2196f3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
   },
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#ffffff',
     fontFamily: 'CrayonPastel',
-  },
-  backButton: {
-    backgroundColor: '#FFE4B5',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#DEB887',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#8B4513',
-    fontFamily: 'CrayonPastel',
+    textShadowColor: '#1976d2',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
