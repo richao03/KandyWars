@@ -1,11 +1,10 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { useSegments } from 'expo-router';
+import { Text } from 'react-native';
+import { useGame } from '../context/GameContext';
 
 export default function TabLayout() {
-  const segments = useSegments();
-  const currentPage = segments[segments.length - 1];
-  const isAfterSchool = currentPage === 'after-school' || currentPage === 'study' || currentPage === 'deli';
+  const { isAfterSchool } = useGame();
   
   return (
     <Tabs screenOptions={{
@@ -20,7 +19,48 @@ export default function TabLayout() {
         tintColor: isAfterSchool ? '#ffffff' : undefined,
       }
     }}>
-      <Tabs.Screen name="market" options={{ unmountOnBlur: false }} />
+      {/* Main visible tabs */}
+      <Tabs.Screen 
+        name="home" 
+        options={{ 
+          title: "Home",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ color, fontSize: size }}>🏠</Text>
+          )
+        }} 
+      />
+      <Tabs.Screen 
+        name="jokers" 
+        options={{ 
+          title: "Jokers",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ color, fontSize: size }}>🃏</Text>
+          )
+        }} 
+      />
+      <Tabs.Screen 
+        name="price-history" 
+        options={{ 
+          title: "History",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ color, fontSize: size }}>📊</Text>
+          )
+        }} 
+      />
+      <Tabs.Screen 
+        name="settings" 
+        options={{ 
+          title: "Settings",
+          tabBarIcon: ({ color, size }) => (
+            <Text style={{ color, fontSize: size }}>⚙️</Text>
+          )
+        }} 
+      />
+      
+      {/* Hidden tabs - not shown in tab bar */}
+      <Tabs.Screen name="market" options={{ 
+        href: null // Hide from tab bar but keep accessible
+      }} />
       <Tabs.Screen name="study" options={{ 
         title: "Study", 
         href: null // Hide from tab bar
@@ -33,9 +73,6 @@ export default function TabLayout() {
         title: "Deli", 
         href: null // Hide from tab bar
       }} />
-      <Tabs.Screen name="upgrades" options={{ title: "Upgrades" }} />
-      <Tabs.Screen name="price-history" options={{ title: "History" }} />
-      <Tabs.Screen name="settings" options={{ title: "Settings" }} />
     </Tabs>
   );
 }

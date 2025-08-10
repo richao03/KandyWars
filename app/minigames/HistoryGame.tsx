@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import JokerSelection from '../components/JokerSelection';
+import { HISTORY_JOKERS } from '../data/jokers';
 
 interface CaesarPuzzle {
   id: number;
@@ -93,16 +94,6 @@ const CAESAR_PUZZLES: CaesarPuzzle[] = [
 
 
 // Placeholder jokers for history
-const HISTORY_JOKERS = [
-  { id: 1, name: "Time Machine", description: "Skip one period and keep all profits" },
-  { id: 2, name: "Ancient Wisdom", description: "See all events for current day" },
-  { id: 3, name: "Roman Coin", description: "Double your money instantly" },
-  { id: 4, name: "Egyptian Treasure", description: "Find rare candy worth 10x normal price" },
-  { id: 5, name: "Viking Raid", description: "Steal candy from other players (future)" },
-  { id: 6, name: "Medieval Shield", description: "Protect against one negative event" },
-  { id: 7, name: "Scholar's Scroll", description: "Get hints about next 3 periods" },
-  { id: 8, name: "Caesar's Cipher", description: "Decode secret market information" },
-];
 
 export default function HistoryGame({ onComplete }: HistoryGameProps) {
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'

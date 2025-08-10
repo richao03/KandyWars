@@ -21,6 +21,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
+import { ECONOMY_JOKERS } from '../data/jokers';
 
 /** =========================
  *  Types
@@ -60,16 +61,6 @@ const CATALOG: Record<Item, string> = {
 const ALL_ITEMS: Item[] = Object.keys(CATALOG) as Item[];
 
 // Economy Trading jokers
-const ECONOMY_JOKERS = [
-  { id: 1, name: "Trade Route Map", description: "See all possible trade combinations" },
-  { id: 2, name: "Merchant Network", description: "Unlock exclusive premium trades" },
-  { id: 3, name: "Economic Forecast", description: "Predict market changes 3 steps ahead" },
-  { id: 4, name: "Diplomatic Immunity", description: "Bypass trade restrictions once" },
-  { id: 5, name: "Resource Monopoly", description: "Control supply of one item type" },
-  { id: 6, name: "Ancient Currency", description: "Trade any item for any other item" },
-  { id: 7, name: "Cultural Exchange", description: "Double value on international trades" },
-  { id: 8, name: "Market Analysis", description: "Highlight most profitable trade paths" },
-];
 
 /** =========================
  *  Seeded RNG

@@ -32,7 +32,7 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
 
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
-
+  console.log("what is getInventoryLimit", inventoryCapacity)
   const containerStyle = theme === 'evening' ? styles.eveningContainer : styles.container;
   const headerStyle = theme === 'evening' ? styles.eveningHeaderText : styles.headerText;
   const statTitleStyle = theme === 'evening' ? styles.eveningStatTitle : styles.statTitle;
@@ -91,18 +91,18 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fef7e3', // Warm cream paper background
+    backgroundColor: 'rgba(254, 247, 227, 0.7)', // Warm cream paper background
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
   },
   eveningContainer: {
-    backgroundColor: 'rgba(93, 76, 112, 0.9)', // Evening theme background
+    backgroundColor: 'rgba(25,25,25, 0.7)', // Evening theme background
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 3,
-    borderColor: '#8a7ca8', // Evening theme border
+    borderColor: '#f7e98e', // Evening theme border
   },
   headerRow: {
     alignItems: 'center',

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
 import JokerSelection from '../components/JokerSelection';
+import { COMPUTER_JOKERS } from '../data/jokers';
 
 interface MemoryCard {
   id: string;
@@ -18,17 +19,6 @@ interface ComputerGameProps {
 // Computer/tech-themed emojis for memory game
 const TECH_EMOJIS = ['💻', '🖥️', '⌨️', '🖱️', '💾', '💿', '📱', '⚡', '🔌', '🔋', '📡', '🛰️', '🎮', '🕹️', '📺', '🎧'];
 
-// Computer jokers (hacker-themed)
-const COMPUTER_JOKERS = [
-  { id: 1, name: "Memory Buffer", description: "Remember market data from 3 periods ago" },
-  { id: 2, name: "Storage Overflow", description: "Store extra inventory without limits" },
-  { id: 3, name: "Overclock Mode", description: "Make trades twice as fast for 1 period" },
-  { id: 4, name: "Profit Calculator", description: "See exact profit margins on all trades" },
-  { id: 5, name: "Market Database", description: "Predict next period's trending items" },
-  { id: 6, name: "System Backup", description: "Duplicate any successful trade strategy" },
-  { id: 7, name: "Auto-Sort Algorithm", description: "Auto-organize inventory by profitability" },
-  { id: 8, name: "Data Compiler", description: "Combine 3 small items into 1 premium item" },
-];
 
 export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'

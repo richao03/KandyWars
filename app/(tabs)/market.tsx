@@ -1,18 +1,30 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View, ImageBackground } from 'react-native';
+import {
+  Button,
+  FlatList,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EndOfDayModal from '../components/EndOfDayModal';
+import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
 import LocationModal, { Location } from '../components/LocationModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
 import { useDailyStats } from '../context/DailyStatsContext';
+import { useEventHandler } from '../context/EventHandlerContext';
 import { useGame } from '../context/GameContext';
 import { useInventory } from '../context/InventoryContext';
+import { useJokers } from '../context/JokerContext';
 import { useSeed } from '../context/SeedContext';
 import { useWallet } from '../context/WalletContext';
+import { usePriceDoubling } from '../hooks/usePriceDoubling';
 
 type CandyForMarket = Candy & {
   cost: number;
@@ -30,12 +42,58 @@ const baseCandies = [
 ];
 
 export default function Market() {
-  const { rng, seed, gameData } = useSeed();
-  console.log("gameData",gameData)
+  const {
+    rng,
+    seed,
+    gameData,
+    modifyCandyPrice,
+    getOriginalCandyPrice,
+    restoreCandyPrice,
+  } = useSeed();
+
   const { balance, spend, add } = useWallet();
-  const { addToInventory, removeFromInventory,getTotalInventoryCount, getInventoryLimit  } = useInventory();
-  const { day, period, incrementPeriod, periodCount, currentLocation } = useGame();
+  const {
+    inventory,
+    addToInventory,
+    removeFromInventory,
+    getTotalInventoryCount,
+    getInventoryLimit,
+  } = useInventory();
+  const {
+    day,
+    period,
+    incrementPeriod,
+    periodCount,
+    currentLocation,
+    startAfterSchool,
+  } = useGame();
+  const { hasActiveEvent } = useEventHandler();
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
+  const [pendingLocationModal, setPendingLocationModal] = useState(false);
+  const { activeEffects } = useJokers();
+  console.log('periodCount', periodCount);
+  usePriceDoubling(); // This hook handles price restoration on period change
+
+  // Show location modal after event modal is dismissed
+  useEffect(() => {
+    if (pendingLocationModal && !hasActiveEvent) {
+      console.log('Market - Event dismissed, showing pending location modal');
+      // Small delay to ensure event modal is fully dismissed
+      setTimeout(() => {
+        setLocationModalVisible(true);
+        setPendingLocationModal(false);
+      }, 200);
+    }
+  }, [hasActiveEvent, pendingLocationModal]);
+
+  // Safety: Clear pending modal if location changes (period advanced)
+  useEffect(() => {
+    if (pendingLocationModal) {
+      console.log('Market - Location/period changed, clearing pending modal');
+      setPendingLocationModal(false);
+    }
+  }, [currentLocation, periodCount]);
+
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
       ...candy,
@@ -45,32 +103,43 @@ export default function Market() {
     }))
   );
 
-
   useEffect(() => {
     setCandies((prev) =>
       prev.map((candy) => {
         // Check for current location-specific events with price overrides
-        const currentEvent = gameData.periodEvents.find(e => 
-          e.period === periodCount && 
-          e.location === currentLocation &&
-          e.candy === candy.name &&
-          e.priceOverride !== undefined
+        const currentEvent = gameData.periodEvents.find(
+          (e) =>
+            e.period === periodCount &&
+            e.location === currentLocation &&
+            e.candy === candy.name &&
+            e.priceOverride !== undefined
         );
-        
-        const baseCost = gameData.candyPrices[candy.name][periodCount];
-        const finalCost = currentEvent?.priceOverride !== undefined ? currentEvent.priceOverride : baseCost;
-        
+
+        // Get the current price from game data (which may already be modified by joker)
+        const finalCost =
+          currentEvent?.priceOverride !== undefined
+            ? currentEvent.priceOverride
+            : gameData.candyPrices[candy.name][periodCount];
+
+        // Get inventory information for this candy
+        const inventoryItem = inventory[candy.name];
+
         return {
           ...candy,
           cost: finalCost,
+          quantityOwned: inventoryItem?.quantity || 0,
+          averagePrice: inventoryItem?.averagePrice || null,
         };
       })
     );
-  }, [periodCount, gameData, currentLocation]);
+  }, [periodCount, gameData, currentLocation, inventory]);
 
-  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(null);
+  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
+    null
+  );
   const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
-  const [isTransactionModalOpening, setIsTransactionModalOpening] = useState(false);
+  const [isTransactionModalOpening, setIsTransactionModalOpening] =
+    useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [dayStatsModalVisible, setDayStatsModalVisible] = useState(false);
   const [endOfDayModalVisible, setEndOfDayModalVisible] = useState(false);
@@ -106,7 +175,11 @@ export default function Market() {
           if (balance < totalCost) return candy;
 
           // Try to add to inventory first - this will check inventory limits
-          const inventorySuccess = addToInventory(candy.name, quantity, candy.cost);
+          const inventorySuccess = addToInventory(
+            candy.name,
+            quantity,
+            candy.cost
+          );
           if (!inventorySuccess) {
             // Inventory is full, transaction fails
             return candy;
@@ -119,7 +192,9 @@ export default function Market() {
           const newAvg =
             candy.averagePrice === null
               ? candy.cost
-              : (candy.averagePrice * candy.quantityOwned + candy.cost * quantity) / newQty;
+              : (candy.averagePrice * candy.quantityOwned +
+                  candy.cost * quantity) /
+                newQty;
 
           return {
             ...candy,
@@ -149,19 +224,32 @@ export default function Market() {
       // End of day - show day stats first
       setDayStatsModalVisible(true);
     } else {
-      // Regular period - show location modal
-      setLocationModalVisible(true);
+      // Check if there's an active event
+      if (hasActiveEvent) {
+        console.log(
+          'Market - Active event detected, will show location modal after event is dismissed'
+        );
+        setPendingLocationModal(true);
+      } else {
+        console.log(
+          'Market - No active event, showing location modal immediately'
+        );
+        setLocationModalVisible(true);
+      }
     }
   };
 
   const handleLocationSelect = (location: Location) => {
+    console.log('Market - Location selected:', location);
+    setLocationModalVisible(false); // Ensure modal closes
     incrementPeriod(location);
   };
 
   // Day stats modal handler
   const handleDayStatsClose = () => {
     setDayStatsModalVisible(false);
-    // Navigate to after school page
+    // Enter after school mode and navigate
+    startAfterSchool();
     router.push('/(tabs)/after-school');
   };
 
@@ -189,35 +277,36 @@ export default function Market() {
     incrementPeriod('home room'); // Start next day at home room
   };
 
-
   const handleMoneyStashed = () => {
     setStashMoneyModalVisible(false);
     // Mark stashing as completed and return to end-of-day modal
-    setCompletedActivities(prev => ({ ...prev, stashedMoney: true }));
+    setCompletedActivities((prev) => ({ ...prev, stashedMoney: true }));
     setEndOfDayModalVisible(true);
   };
 
   // Handle returning from deli
   const handleDeliReturn = () => {
     setDeliModalVisible(false);
-    setCompletedActivities(prev => ({ ...prev, visitedDeli: true }));
+    setCompletedActivities((prev) => ({ ...prev, visitedDeli: true }));
     setEndOfDayModalVisible(true);
   };
 
-  const selectedCandy = selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
-  
+  const selectedCandy =
+    selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
+
   // Calculate max buy quantity considering both money and inventory space
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
   const availableInventorySpace = inventoryCapacity - totalInventory;
-  
-  const maxBuyQty = selectedCandy && selectedCandy.cost > 0 
-    ? Math.min(
-        Math.floor(balance / selectedCandy.cost), // Money constraint
-        availableInventorySpace // Inventory space constraint
-      )
-    : 0;
-  
+
+  const maxBuyQty =
+    selectedCandy && selectedCandy.cost > 0
+      ? Math.min(
+          Math.floor(balance / selectedCandy.cost), // Money constraint
+          availableInventorySpace // Inventory space constraint
+        )
+      : 0;
+
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   return (
@@ -227,7 +316,7 @@ export default function Market() {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <GameHUD 
+        <GameHUD
           isModalOpening={isTransactionModalOpening}
           isModalOpen={selectedCandyIndex !== null}
         />
@@ -235,20 +324,38 @@ export default function Market() {
           data={candies}
           keyExtractor={(item) => item.name}
           contentContainerStyle={styles.list}
-          renderItem={useCallback(({ item, index }) => {
-            return (
-            <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
-              <View style={styles.candyInfo}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.price}>${item.cost ? item.cost.toFixed(2) : '0.00'}</Text>
-              </View>
-            </TouchableOpacity>
-          )}, [openModal])}
+          renderItem={useCallback(
+            ({ item, index }) => {
+              return (
+                <TouchableOpacity
+                  style={styles.item}
+                  onPress={() => openModal(index)}
+                >
+                  <View style={styles.candyInfo}>
+                    <View style={styles.candyNameRow}>
+                      <Text style={styles.name}>{item.name}</Text>
+                      {item.quantityOwned > 0 && (
+                        <View style={styles.ownedBadge}>
+                          <Text style={styles.ownedText}>
+                            {item.quantityOwned}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.price}>
+                      ${item.cost ? item.cost.toFixed(2) : '0.00'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            },
+            [openModal]
+          )}
         />
         <View style={styles.buttonContainer}>
-          <Button 
-            title={period === 8 ? "Leave School for the Day" : "Next Period"} 
-            onPress={handleNextDay} 
+          <Button
+            title={period === 8 ? 'Leave School for the Day' : 'Next Period'}
+            onPress={handleNextDay}
           />
         </View>
       </ImageBackground>
@@ -276,17 +383,13 @@ export default function Market() {
         completedActivities={completedActivities}
       />
 
-
       <StashMoneyModal
         visible={stashMoneyModalVisible}
         onClose={() => setStashMoneyModalVisible(false)}
         onConfirm={handleMoneyStashed}
       />
 
-      <DeliModal
-        visible={deliModalVisible}
-        onClose={handleDeliReturn}
-      />
+      <DeliModal visible={deliModalVisible} onClose={handleDeliReturn} />
 
       {selectedCandy && (
         <TransactionModal
@@ -298,6 +401,9 @@ export default function Market() {
           candy={selectedCandy}
         />
       )}
+
+      {/* EventModal for special events */}
+      <EventModal />
     </View>
   );
 }
@@ -316,7 +422,7 @@ const styles = StyleSheet.create({
   item: {
     marginBottom: 12,
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 16,
     borderWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
@@ -331,11 +437,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  candyNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   name: {
     fontWeight: '700',
     fontSize: 19,
     color: '#6b4423', // Dark brown crayon
     textShadow: '0.5px 0.5px 0px #d4a574',
+    fontFamily: 'CrayonPastel',
+  },
+  ownedBadge: {
+    backgroundColor: '#4ade80',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#22c55e',
+  },
+  ownedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
     fontFamily: 'CrayonPastel',
   },
   price: {

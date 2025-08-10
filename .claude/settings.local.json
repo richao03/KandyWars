@@ -10,7 +10,8 @@
       "Bash(unzip:*)",
       "Bash(npx tsc:*)",
       "Bash(node:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

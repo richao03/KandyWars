@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
+import { GYM_JOKERS } from '../data/jokers';
 
 interface Tile {
   id: string;
@@ -34,16 +35,6 @@ interface GymGameProps {
 }
 
 // Gym/Sports jokers for athletics
-const GYM_JOKERS = [
-  { id: 1, name: "Energy Drink", description: "Boost speed and reaction time for 2 periods" },
-  { id: 2, name: "Coach's Whistle", description: "Instantly motivate team for better performance" },
-  { id: 3, name: "Athletic Tape", description: "Prevent injuries from risky market moves" },
-  { id: 4, name: "Protein Shake", description: "Double strength for heavy lifting (big trades)" },
-  { id: 5, name: "Stopwatch", description: "Time trades perfectly for maximum profit" },
-  { id: 6, name: "Team Jersey", description: "Rally support from other students" },
-  { id: 7, name: "Gym Membership", description: "Access exclusive training (premium markets)" },
-  { id: 8, name: "Victory Medal", description: "Inspire confidence for bigger risks" },
-];
 
 // Discrete Shade Index System - Clear 10% increments for easy distinction
 const generateColorPalette = (hue: number, stageNum: number) => {

@@ -14,11 +14,19 @@ const subjects = [
   { name: 'Creative Writing', color: { bg: '#fff0f6', border: '#eb2f96' } },
   { name: 'Computer', color: { bg: '#f0f5ff', border: '#2f54eb' } },
   { name: 'Gym', color: { bg: '#feffe6', border: '#a0d911' } },
+  { name: '🐛 DEBUG', color: { bg: '#1a1a1a', border: '#ff0000' } },
 ];
 
 export default function StudyPage() {
-  const { day } = useGame();
+  const { day, hasStudiedTonight, markStudiedTonight } = useGame();
   const handleSubjectSelect = (subject: string) => {
+    if (hasStudiedTonight) {
+      // User has already studied tonight, prevent further studying
+      return;
+    }
+    
+    // Mark that user has studied tonight before starting the minigame
+    markStudiedTonight();
     console.log(`Starting ${subject} minigame...`);
     
     // Navigate to specific minigame based on subject
@@ -51,6 +59,10 @@ export default function StudyPage() {
       case 'Gym':
         router.push('/gym-game');
         break;
+      case '🐛 DEBUG':
+        console.log("fiund a debugers")
+        router.push('/debug-jokers');
+        break;
       default:
         router.back();
     }
@@ -69,7 +81,12 @@ export default function StudyPage() {
           customLocationText="Peaceful Evening" />
       
       <View style={styles.header}>
-        <Text style={styles.title}>Study Time </Text>
+        <Text style={styles.title}>Study Time</Text>
+        {hasStudiedTonight && (
+          <Text style={styles.alreadyStudiedText}>
+            📚 You've already studied tonight! Rest up for tomorrow.
+          </Text>
+        )}
       </View>
 
       <View style={styles.subjectsContainer}>
@@ -81,15 +98,42 @@ export default function StudyPage() {
               style={[
                 styles.subjectButton,
                 {
-                  backgroundColor: subject.color.bg,
-                  borderColor: subject.color.border,
+                  backgroundColor: hasStudiedTonight ? '#ccc' : subject.color.bg,
+                  borderColor: hasStudiedTonight ? '#999' : subject.color.border,
                 },
+                hasStudiedTonight && styles.disabledButton
               ]}
               onPress={() => handleSubjectSelect(subject.name)}
+              disabled={hasStudiedTonight}
             >
-              <Text style={styles.subjectText}>{subject.name}</Text>
+              <Text style={[
+                styles.subjectText,
+                hasStudiedTonight && styles.disabledText
+              ]}>
+                {subject.name}
+              </Text>
             </TouchableOpacity>
           ))}
+           <TouchableOpacity
+              key={"debug"}
+              style={[
+                styles.subjectButton,
+                {
+                  backgroundColor: hasStudiedTonight ? '#666' : "black",
+                  borderColor: hasStudiedTonight ? '#999' : "red",
+                },
+                hasStudiedTonight && styles.disabledButton
+              ]}
+              onPress={() => handleSubjectSelect("🐛 DEBUG")}
+              disabled={hasStudiedTonight}
+            >
+              <Text style={[
+                styles.subjectText,
+                hasStudiedTonight && styles.disabledText
+              ]}>
+                {"🐛 DEBUG"}
+              </Text>
+            </TouchableOpacity>
         </View>
 
         {/* Second Row - 4 subjects */}
@@ -100,13 +144,20 @@ export default function StudyPage() {
               style={[
                 styles.subjectButton,
                 {
-                  backgroundColor: subject.color.bg,
-                  borderColor: subject.color.border,
+                  backgroundColor: hasStudiedTonight ? '#ccc' : subject.color.bg,
+                  borderColor: hasStudiedTonight ? '#999' : subject.color.border,
                 },
+                hasStudiedTonight && styles.disabledButton
               ]}
               onPress={() => handleSubjectSelect(subject.name)}
+              disabled={hasStudiedTonight}
             >
-              <Text style={styles.subjectText}>{subject.name}</Text>
+              <Text style={[
+                styles.subjectText,
+                hasStudiedTonight && styles.disabledText
+              ]}>
+                {subject.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -143,6 +194,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
+  alreadyStudiedText: {
+    fontSize: 16,
+    color: '#b8a9c9',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
 
   subjectsContainer: {
     flex: 1,
@@ -177,6 +236,12 @@ const styles = StyleSheet.create({
     color: '#5d4e37',
     fontFamily: 'CrayonPastel',
     lineHeight: 16,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: '#999',
   },
   buttonContainer: {
     paddingHorizontal: 20,

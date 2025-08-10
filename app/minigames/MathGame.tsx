@@ -12,6 +12,7 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
+import { MATH_JOKERS } from '../data/jokers';
 
 
 interface Card {
@@ -102,18 +103,6 @@ const DraggableCard: React.FC<DraggableCardProps> = React.memo(
 );
 
 // Academic math jokers for the classroom
-const MATH_JOKERS = [
-  { id: 1, name: 'Golden Ratio Calculator', description: 'Optimize all trade ratios for maximum profit' },
-  { id: 2, name: 'Time Equation', description: 'Reverse one period using temporal mathematics' },
-  { id: 3, name: 'Geometric Expansion', description: 'Double inventory space using spatial geometry' },
-  { id: 4, name: 'Market Statistics', description: 'Apply probability theory to crash prices 30%' },
-  { id: 5, name: 'Fortune Algorithm', description: 'Use predictive modeling for market insights' },
-  { id: 6, name: 'Instant Calculus', description: 'Calculate optimal sell points in real-time' },
-  { id: 7, name: 'Exponential Growth', description: 'Apply compound interest to double money once' },
-  { id: 8, name: 'Logic Gate', description: 'Use boolean logic to bypass negative events' },
-  { id: 9, name: 'Infinity Theory', description: 'Break inventory limits with mathematical concepts' },
-  { id: 10, name: 'Prophet Equations', description: 'Forecast market trends 2 periods ahead' },
-];
 
 export default function MathGame({ onComplete }: MathGameProps) {
   // Game state management

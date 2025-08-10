@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useJokers, Joker as JokerType } from '../context/JokerContext';
 
 interface Joker {
   id: number;
   name: string;
   description: string;
+  type: 'one-time' | 'persistent';
+  effect: string;
 }
 
 interface JokerSelectionProps {
   jokers: Joker[];
-  theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy';
+  theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy' | 'gym';
   subject: string;
   onComplete: () => void;
 }
 
 export default function JokerSelection({ jokers, theme, subject, onComplete }: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
+  const { addJoker } = useJokers();
 
   const selectRandomJokers = () => {
     const shuffled = [...jokers].sort(() => Math.random() - 0.5);
@@ -24,7 +28,18 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
 
   const handleJokerChoice = (jokerId: number) => {
     const selectedJoker = jokers.find(j => j.id === jokerId);
-    console.log(`Selected ${subject} joker: ${selectedJoker?.name}`);
+    if (selectedJoker) {
+      // Add joker to inventory with theme information
+      const jokerToAdd: JokerType = {
+        ...selectedJoker,
+        subject: subject,
+        theme: theme,
+        type: selectedJoker.type,
+        effect: selectedJoker.effect
+      };
+      addJoker(jokerToAdd);
+      console.log(`Added ${subject} joker to inventory: ${selectedJoker.name}`);
+    }
     onComplete();
   };
 
@@ -82,6 +97,19 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
           skipButton: styles.socialSkipButton,
           skipButtonText: styles.socialSkipButtonText,
         };
+      case 'gym':
+        return {
+          container: styles.gymContainer,
+          title: styles.gymTitle,
+          subtitle: styles.gymSubtitle,
+          generateButton: styles.gymGenerateButton,
+          generateButtonText: styles.gymGenerateButtonText,
+          jokerCard: styles.gymJokerCard,
+          jokerName: styles.gymJokerName,
+          jokerDescription: styles.gymJokerDescription,
+          skipButton: styles.gymSkipButton,
+          skipButtonText: styles.gymSkipButtonText,
+        };
       default: // candy
         return {
           container: styles.candyContainer,
@@ -104,7 +132,8 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
       case 'math': return '🎓';
       case 'computer': return '🎭';
       case 'homeec': return '👩‍🍳';
-      case 'social': return '🏛️';
+      case 'economy': return '🏛️';
+      case 'gym': return '🏃‍♂️';
       default: return '🍭';
     }
   };
@@ -114,7 +143,8 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
       case 'math': return '📊 Show 3 Math Concepts';
       case 'computer': return '💻 Show 3 Hack Tools';
       case 'homeec': return '🍳 Show 3 Kitchen Tools';
-      case 'social': return '🏛️ Show 3 Trade Tools';
+      case 'economy': return '🏛️ Show 3 Trade Tools';
+      case 'gym': return '🏃‍♂️ Show 3 Fitness Tools';
       default: return '🍭 Show 3 Candy Tools';
     }
   };
@@ -436,5 +466,44 @@ const styles = StyleSheet.create({
   },
   candySkipButtonText: {
     color: '#a855f7',
+  },
+
+  // Gym Theme (Athletic)
+  gymContainer: {
+    backgroundColor: '#1a2332',
+  },
+  gymTitle: {
+    color: '#fff',
+    textShadowColor: '#ff6b35',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  gymSubtitle: {
+    color: '#fff',
+  },
+  gymGenerateButton: {
+    backgroundColor: '#2d4a3e',
+    borderColor: '#ff6b35',
+  },
+  gymGenerateButtonText: {
+    color: '#fff',
+  },
+  gymJokerCard: {
+    backgroundColor: '#0f1419',
+    borderColor: '#ff6b35',
+    shadowColor: '#ff6b35',
+  },
+  gymJokerName: {
+    color: '#ff6b35',
+  },
+  gymJokerDescription: {
+    color: '#fff',
+  },
+  gymSkipButton: {
+    backgroundColor: '#8b4513',
+    borderColor: '#daa520',
+  },
+  gymSkipButtonText: {
+    color: '#fff',
   },
 });

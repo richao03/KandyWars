@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
+import { HOME_EC_JOKERS } from '../data/jokers';
 
 interface HomeEcGameProps {
   onComplete: () => void;
@@ -24,17 +25,6 @@ const TARGET_POSITIONS = {
   '🍫': 'left',
 } as const;
 
-// Home Economics jokers
-const HOME_EC_JOKERS = [
-  { id: 1, name: "Master Recipe", description: "Double sorting points for 10 seconds" },
-  { id: 2, name: "Time Freeze", description: "Slow down kitchen rush for 15 seconds" },
-  { id: 3, name: "Extra Prep Time", description: "Add 30 seconds to cooking timer" },
-  { id: 4, name: "Perfect Technique", description: "Next 5 sorts are automatically perfect" },
-  { id: 5, name: "Crystal Ball", description: "See next 10 ingredients coming" },
-  { id: 6, name: "Lightning Hands", description: "Super fast sorting reflexes for 20 seconds" },
-  { id: 7, name: "Forgiveness", description: "Ignore next 3 sorting mistakes" },
-  { id: 8, name: "Ingredient Rain", description: "Bonus points for perfect combos" },
-];
 
 export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   // Game state
@@ -60,10 +50,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   // Level configurations
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
-      case 1: return { matches: 10, time: 15, name: 'Apprentice Chef' };
-      case 2: return { matches: 12, time: 15, name: 'Sous Chef' };
-      case 3: return { matches: 15, time: 15, name: 'Master Chef' };
-      default: return { matches: 10, time: 15, name: 'Apprentice Chef' };
+      case 1: return { matches: 10, time: 15 };
+      case 2: return { matches: 12, time: 15 };
+      case 3: return { matches: 15, time: 15 };
+      default: return { matches: 10, time: 15};
     }
   };
 
@@ -364,158 +354,233 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const levelConfig = getLevelConfig(level);
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>🍭 Candy Kitchen 🍳</Text>
-        <Text style={styles.levelText}>Level {level}: {levelConfig.name}</Text>
-        <Text style={styles.scoreText}>Score: {score}/{levelConfig.matches}</Text>
-        <Text style={styles.timerText}>Time: {timeLeft}s</Text>
-      </View>
-
-      {/* Game Area */}
-      <View style={styles.gameArea}>
-        {/* Edge candies */}
-        <View style={[styles.edgeCandy, styles.topCandy]}>
-          <Text style={styles.edgeCandyText}>🍭</Text>
-        </View>
-        <View style={[styles.edgeCandy, styles.rightCandy]}>
-          <Text style={styles.edgeCandyText}>🍬</Text>
-        </View>
-        <View style={[styles.edgeCandy, styles.bottomCandy]}>
-          <Text style={styles.edgeCandyText}>🧁</Text>
-        </View>
-        <View style={[styles.edgeCandy, styles.leftCandy]}>
-          <Text style={styles.edgeCandyText}>🍫</Text>
-        </View>
-
-        {/* Preview panel */}
-        {nextCandy && (
-          <View style={styles.previewPanel}>
-            <Text style={styles.previewLabel}>Next:</Text>
-            <Text style={styles.previewCandy}>{nextCandy}</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <GestureHandlerRootView style={styles.gameContainer}>
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>🍳 Kitchen Practice 🧑‍🍳</Text>
+          <View style={styles.gameInfo}>
+            <Text style={styles.levelText}> {level} / 3</Text>
+            <Text style={[styles.timerText, { color: timeLeft <= 5 ? '#ff4d4f' : '#52c41a' }]}>
+              ⏱️ {timeLeft}s
+            </Text>
           </View>
-        )}
+          <Text style={styles.scoreText}>Progress: {score}/{levelConfig.matches}</Text>
+          <Text style={styles.subtitle}>Sort ingredients to their designated stations</Text>
+        </View>
 
-        {/* Center candy */}
-        {centerCandy && !isFlying && (
-          <PanGestureHandler onGestureEvent={gestureHandler}>
+        {/* Game Area - Center Panel */}
+        <View style={styles.gameArea}>
+          {/* Edge candies - Kitchen Stations */}
+          <View style={[styles.edgeCandy, styles.topCandy]}>
+            <Text style={styles.edgeCandyText}>🍭</Text>
+            <Text style={styles.stationLabel}>PREP</Text>
+          </View>
+          <View style={[styles.edgeCandy, styles.rightCandy]}>
+            <Text style={styles.edgeCandyText}>🍬</Text>
+            <Text style={styles.stationLabel}>GRILL</Text>
+          </View>
+          <View style={[styles.edgeCandy, styles.bottomCandy]}>
+            <Text style={styles.edgeCandyText}>🧁</Text>
+            <Text style={styles.stationLabel}>OVEN</Text>
+          </View>
+          <View style={[styles.edgeCandy, styles.leftCandy]}>
+            <Text style={styles.edgeCandyText}>🍫</Text>
+            <Text style={styles.stationLabel}>COOL</Text>
+          </View>
+
+          {/* Preview panel */}
+          {nextCandy && (
+            <View style={styles.previewPanel}>
+              <Text style={styles.previewLabel}>NEXT:</Text>
+              <Text style={styles.previewCandy}>{nextCandy}</Text>
+            </View>
+          )}
+
+          {/* Center candy */}
+          {centerCandy && !isFlying && (
+            <PanGestureHandler onGestureEvent={gestureHandler}>
+              <Animated.View style={[styles.centerCandy, animatedStyle]}>
+                <Text style={styles.centerCandyText}>{centerCandy}</Text>
+              </Animated.View>
+            </PanGestureHandler>
+          )}
+
+          {/* Flying candy */}
+          {centerCandy && isFlying && (
             <Animated.View style={[styles.centerCandy, animatedStyle]}>
               <Text style={styles.centerCandyText}>{centerCandy}</Text>
             </Animated.View>
-          </PanGestureHandler>
-        )}
+          )}
 
-        {/* Flying candy */}
-        {centerCandy && isFlying && (
-          <Animated.View style={[styles.centerCandy, animatedStyle]}>
-            <Text style={styles.centerCandyText}>{centerCandy}</Text>
-          </Animated.View>
-        )}
+          {/* Feedback */}
+          {feedback && feedbackPosition && (
+            <View style={[
+              styles.feedbackContainer,
+              {
+                left: feedbackPosition.x,
+                top: feedbackPosition.y,
+                transform: [{ translateX: -30 }, { translateY: -15 }],
+              }
+            ]}>
+              <Text style={styles.feedbackText}>{feedback}</Text>
+            </View>
+          )}
+        </View>
 
-        {/* Feedback */}
-        {feedback && feedbackPosition && (
-          <View style={[
-            styles.feedbackContainer,
-            {
-              left: feedbackPosition.x,
-              top: feedbackPosition.y,
-              transform: [{ translateX: -30 }, { translateY: -15 }],
-            }
-          ]}>
-            <Text style={styles.feedbackText}>{feedback}</Text>
-          </View>
-        )}
-      </View>
+        {/* Footer - Bottom Buttons */}
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.footerBtn} onPress={() => setGameState('instructions')}>
+            <Text style={styles.footerBtnText}>📋 Instructions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.footerBtn, styles.leaveBtn]} onPress={handleForfeit}>
+            <Text style={styles.footerBtnText}>🚪 Leave</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.footerBtn} onPress={restartGame}>
+            <Text style={styles.footerBtnText}>🔄 Restart</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Controls */}
-      <View style={styles.controls}>
-        <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
-          <Text style={styles.instructionsButtonText}>👩‍🍳 Instructions</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
-          <Text style={styles.backButtonText}>🚪 Leave</Text>
-        </TouchableOpacity>
-      </View>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF5E6',
+    backgroundColor: '#1c1f26', // Dark metallic background
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+    padding: 16,
+    paddingBottom: 100,
+  },
+  gameContainer: {
+    flex: 1,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: '#F4A460',
-    borderBottomWidth: 3,
-    borderBottomColor: '#D2691E',
+    marginBottom: 20,
+    backgroundColor: '#2c3139', // Dark steel
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#495057', // Steel border
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#f8f9fa', // Light text
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 8,
+    textShadowColor: '#495057',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  gameInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 16,
     marginBottom: 8,
   },
   levelText: {
     fontSize: 16,
-    color: '#FFF8DC',
-    marginBottom: 4,
+    fontWeight: '600',
+    color: '#adb5bd', // Medium gray
+    fontFamily: 'CrayonPastel',
   },
   scoreText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#228B22',
+    color: '#28a745', // Success green
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
     marginBottom: 4,
   },
+  subtitle: {
+    fontSize: 14,
+    color: '#6c757d',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+  },
   timerText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#DC143C',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'CrayonPastel',
   },
   gameArea: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#FAEBD7',
+    backgroundColor: '#343a40', // Steel gray
     margin: 10,
-    borderRadius: 20,
+    borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#D2691E',
+    borderColor: '#495057', // Steel border
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+    minHeight: 400,
   },
   edgeCandy: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    backgroundColor: '#F0E68C',
-    borderRadius: 30,
-    borderWidth: 4,
-    borderColor: '#DAA520',
+    width: 70,
+    height: 70,
+    backgroundColor: '#6c757d', // Stainless steel
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: '#adb5bd', // Light steel border
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  stationLabel: {
+    position: 'absolute',
+    bottom: -18,
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#f8f9fa',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    backgroundColor: 'rgba(52, 58, 64, 0.8)',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   topCandy: {
     top: 20,
     left: '50%',
-    marginLeft: -30,
+    marginLeft: -35,
   },
   rightCandy: {
     right: 20,
     top: '50%',
-    marginTop: -30,
+    marginTop: -35,
   },
   bottomCandy: {
     bottom: 20,
     left: '50%',
-    marginLeft: -30,
+    marginLeft: -35,
   },
   leftCandy: {
     left: 20,
     top: '50%',
-    marginTop: -30,
+    marginTop: -35,
   },
   edgeCandyText: {
     fontSize: 30,
@@ -523,17 +588,24 @@ const styles = StyleSheet.create({
   previewPanel: {
     position: 'absolute',
     top: 20,
-    left: 15,
-    backgroundColor: '#F5DEB3',
+    right: 20,
+    backgroundColor: '#495057', // Steel background
     borderRadius: 8,
     padding: 8,
     borderWidth: 2,
-    borderColor: '#DEB887',
+    borderColor: '#6c757d',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   previewLabel: {
     fontSize: 10,
-    color: '#8B4513',
+    fontWeight: '700',
+    color: '#f8f9fa',
+    fontFamily: 'CrayonPastel',
     marginBottom: 2,
   },
   previewCandy: {
@@ -547,106 +619,132 @@ const styles = StyleSheet.create({
     marginLeft: -40,
     width: 80,
     height: 80,
-    backgroundColor: '#FFF',
-    borderRadius: 40,
+    backgroundColor: '#f8f9fa', // Light metallic
+    borderRadius: 12,
     borderWidth: 4,
-    borderColor: '#FF6347',
+    borderColor: '#dee2e6',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   centerCandyText: {
     fontSize: 40,
   },
   feedbackContainer: {
     position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginTop: -15,
-    marginLeft: -30,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 15,
+    backgroundColor: 'rgba(73, 80, 87, 0.95)', // Dark steel overlay
+    borderRadius: 12,
     padding: 8,
     borderWidth: 2,
-    borderColor: '#FF6347',
+    borderColor: '#adb5bd',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
   },
   feedbackText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#f8f9fa',
+    fontFamily: 'CrayonPastel',
     textAlign: 'center',
   },
-  controls: {
+  infoContainer: {
+    backgroundColor: '#2c3139',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    marginHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#495057',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#adb5bd',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  footer: {
     flexDirection: 'row',
     gap: 16,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingVertical: 16,
   },
-  instructionsButton: {
+  footerBtn: {
     flex: 1,
-    backgroundColor: '#D2B48C',
+    backgroundColor: '#495057', // Steel gray
     paddingVertical: 12,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#F0E68C',
+    borderColor: '#6c757d',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  instructionsButtonText: {
+  leaveBtn: {
+    backgroundColor: '#6c757d',
+    borderColor: '#adb5bd',
+  },
+  footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#f8f9fa',
     fontFamily: 'CrayonPastel',
-  },
-  backButton: {
-    flex: 1,
-    backgroundColor: '#8B4513',
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#A0522D',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
   },
   // Instructions styles
   instructionsContainer: {
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#FDF5E6',
+    backgroundColor: '#1c1f26',
   },
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#f8f9fa',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#D2691E',
+    textShadowColor: '#495057',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
   instructionsCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2c3139',
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#D2691E',
+    borderColor: '#495057',
     marginBottom: 20,
-    shadowColor: '#FF6347',
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 10,
+    elevation: 10,
   },
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FF6347',
+    color: '#adb5bd',
     fontFamily: 'CrayonPastel',
     marginBottom: 15,
     textAlign: 'center',
+    textShadowColor: '#495057',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   instructionStep: {
     flexDirection: 'row',
@@ -656,36 +754,40 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FF6347',
+    color: '#6c757d',
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
   },
   stepText: {
     fontSize: 16,
-    color: '#8B4513',
+    color: '#f8f9fa',
     fontFamily: 'CrayonPastel',
     flex: 1,
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#FF6347',
+    backgroundColor: '#495057',
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#FF4500',
+    borderColor: '#6c757d',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#FF6347',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
+    elevation: 8,
   },
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#f8f9fa',
     fontFamily: 'CrayonPastel',
+    textShadowColor: '#343a40',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });

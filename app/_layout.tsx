@@ -1,13 +1,16 @@
 import { Stack } from 'expo-router';
 import React from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import EventModal from './components/EventModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { DailyStatsProvider } from './context/DailyStatsContext';
+import { EventHandlerProvider } from './context/EventHandlerContext';
 import { FlavorTextProvider } from './context/FlavorTextContext';
 import { GameProvider } from './context/GameContext';
 import { InventoryProvider } from './context/InventoryContext';
+import { JokerProvider } from './context/JokerContext';
 import { SeedProvider } from './context/SeedContext';
 import { WalletProvider } from './context/WalletContext';
 
@@ -35,10 +38,12 @@ export default function RootLayout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SeedProvider>
         <FlavorTextProvider>
-          <GameProvider>
-            <InventoryProvider>
-              <WalletProvider>
-                <DailyStatsProvider>
+          <JokerProvider>
+            <GameProvider>
+              <InventoryProvider>
+                <WalletProvider>
+                  <DailyStatsProvider>
+                    <EventHandlerProvider>
                   <Stack>
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen 
@@ -69,11 +74,17 @@ export default function RootLayout() {
                       name="gym-game" 
                       options={{ headerShown: false }} 
                     />
+                    <Stack.Screen 
+                      name="debug-jokers" 
+                      options={{ headerShown: false }} 
+                    />
                   </Stack>
-                </DailyStatsProvider>
-              </WalletProvider>
-            </InventoryProvider>
-          </GameProvider>
+                    </EventHandlerProvider>
+                  </DailyStatsProvider>
+                </WalletProvider>
+              </InventoryProvider>
+            </GameProvider>
+          </JokerProvider>
         </FlavorTextProvider>
           </SeedProvider>
         </GestureHandlerRootView>

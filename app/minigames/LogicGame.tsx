@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import JokerSelection from '../components/JokerSelection';
+import { LOGIC_JOKERS } from '../data/jokers';
 
 interface Attempt {
   candies: string[];
@@ -17,17 +18,6 @@ const CANDY_TYPES_LEVEL_1 = ['🍭', '🍬', '🧁', '🍫', '🍩', '🍪', '�
 const CANDY_TYPES_LEVEL_2 = ['🍭', '🍬', '🧁', '🍫', '🍩', '🍪', '🍰', '🎂', '🍮', '🍯', '🍊', '🍓']; // 12 emojis  
 const CANDY_TYPES_LEVEL_3 = ['🍭', '🍬', '🧁', '🍫', '🍩', '🍪', '🍰', '🎂', '🍮', '🍯', '🍊', '🍓', '🍇', '🍉', '🍒', '🥧']; // 16 emojis
 
-// Placeholder jokers for logic
-const LOGIC_JOKERS = [
-  { id: 1, name: "Master Key", description: "Open any locked market instantly" },
-  { id: 2, name: "Safe Cracker", description: "Reveal one random candy location" },
-  { id: 3, name: "Lock Pick", description: "Bypass one negative event" },
-  { id: 4, name: "Security Bypass", description: "Access premium candy early" },
-  { id: 5, name: "Code Breaker", description: "See competitor's inventory (future)" },
-  { id: 6, name: "Digital Lock", description: "Double profits for one period" },
-  { id: 7, name: "Combination Finder", description: "Get hints about market changes" },
-  { id: 8, name: "Safe Deposit", description: "Protect money from theft events" },
-];
 
 export default function LogicGame({ onComplete }: LogicGameProps) {
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'

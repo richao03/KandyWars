@@ -60,7 +60,34 @@ export default function TransactionModal({
     >
       <View style={styles.container}>
         <Text style={styles.title}>{candy.name}</Text>
-        <Text>Current Price: ${candy.cost.toFixed(2)}</Text>
+        
+        <View style={styles.priceInfoContainer}>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Current Price:</Text>
+            <Text style={styles.priceValue}>${candy.cost.toFixed(2)}</Text>
+          </View>
+          
+          {candy.quantityOwned > 0 && (
+            <>
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>You Own:</Text>
+                <Text style={styles.priceValue}>{candy.quantityOwned}</Text>
+              </View>
+              
+              {candy.averagePrice !== null && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Avg Buy Price:</Text>
+                  <Text style={[
+                    styles.priceValue,
+                    { color: candy.averagePrice < candy.cost ? '#22c55e' : '#ef4444' }
+                  ]}>
+                    ${candy.averagePrice.toFixed(2)}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -77,19 +104,46 @@ export default function TransactionModal({
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.quantityLabel}>
-          Quantity: {quantity} / {maxQuantity}
-        </Text>
-        <Slider
-          style={{ width: '100%' }}
-          minimumValue={0}
-          maximumValue={maxQuantity}
-          step={1}
-          value={quantity}
-          onValueChange={(val) => setQuantity(val)}
-          minimumTrackTintColor="#4caf50"
-          maximumTrackTintColor="#ccc"
-        />
+        <View style={styles.sliderSection}>
+          <Text style={styles.quantityLabel}>
+            Quantity: {quantity} / {maxQuantity}
+          </Text>
+          
+          <Slider
+            style={{ width: '100%', height: 40 }}
+            minimumValue={0}
+            maximumValue={maxQuantity}
+            step={1}
+            value={quantity}
+            onValueChange={(val) => setQuantity(val)}
+            minimumTrackTintColor={mode === 'buy' ? "#ef4444" : "#4ade80"}
+            maximumTrackTintColor="#ccc"
+          />
+          
+          <View style={styles.totalValueContainer}>
+            <Text style={styles.totalValueLabel}>Total Value:</Text>
+            <Text style={[
+              styles.totalValueAmount,
+              { color: mode === 'buy' ? '#ef4444' : '#22c55e' }
+            ]}>
+              ${(quantity * candy.cost).toFixed(2)}
+            </Text>
+          </View>
+          
+          {mode === 'sell' && candy.averagePrice !== null && quantity > 0 && (
+            <View style={styles.profitContainer}>
+              <Text style={styles.profitLabel}>
+                {candy.cost > candy.averagePrice ? 'Profit:' : 'Loss:'}
+              </Text>
+              <Text style={[
+                styles.profitAmount,
+                { color: candy.cost > candy.averagePrice ? '#22c55e' : '#ef4444' }
+              ]}>
+                ${((candy.cost - candy.averagePrice) * quantity).toFixed(2)}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <View style={styles.buttonRow}>
           <Button title="Cancel" onPress={onClose} />
@@ -127,8 +181,35 @@ const styles = StyleSheet.create({
     textShadow: '1px 1px 0px #e6d4b7',
     fontFamily: 'CrayonPastel',
   },
-  quantityLabel: {
+  priceInfoContainer: {
+    backgroundColor: '#fff9e6',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#e6d4b7',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+  },
+  priceValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+  },
+  sliderSection: {
     marginTop: 20,
+  },
+  quantityLabel: {
     fontSize: 17,
     fontWeight: '600',
     alignSelf: 'center',
@@ -137,8 +218,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+    marginBottom: 10,
     borderWidth: 2,
     borderColor: '#f4d03f',
+  },
+  totalValueContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 15,
+    backgroundColor: '#f0f9ff',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#bae6fd',
+  },
+  totalValueLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    marginRight: 8,
+  },
+  totalValueAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'CrayonPastel',
+  },
+  profitContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    backgroundColor: '#f0fdf4',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  profitLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    marginRight: 8,
+  },
+  profitAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'CrayonPastel',
   },
   buttonRow: {
     marginTop: 20,

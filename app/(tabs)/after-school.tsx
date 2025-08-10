@@ -10,7 +10,7 @@ import { useWallet } from '../context/WalletContext';
 
 
 export default function AfterSchoolPage() {
-  const { day, incrementPeriod } = useGame();
+  const { day, startNewDay, hasStudiedTonight } = useGame();
   const { resetDailyStats } = useDailyStats();
   const { balance } = useWallet();
   const { setEvent } = useFlavorText();
@@ -21,12 +21,14 @@ export default function AfterSchoolPage() {
   }, [setEvent]);
 
   const handleStudy = () => {
+    if (hasStudiedTonight) {
+      return; // Don't navigate if already studied
+    }
     router.push('/(tabs)/study');
   };
 
   const handleStashMoney = () => {
-    // TODO: Navigate to stash money functionality
-    console.log('Navigate to stash money');
+    router.push('/(tabs)/piggy-bank');
   };
 
   const handleGoDeli = () => {
@@ -36,18 +38,40 @@ export default function AfterSchoolPage() {
   const handleGoToSleep = () => {
     // Reset daily stats and start new day
     resetDailyStats(balance);
-    // Start new day at period 1 (home room)
-    incrementPeriod('home room');
+    // Start new day (this will exit after-school mode and increment to next day)
+    startNewDay();
     // Navigate back to market (school)
     router.push('/(tabs)/market');
   };
 
 const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.option} onPress={item.onPress}>
-      <Text style={styles.optionEmoji}>{item.emoji}</Text>
+    <TouchableOpacity 
+      style={[
+        styles.option, 
+        item.disabled && styles.disabledOption
+      ]} 
+      onPress={item.disabled ? undefined : item.onPress}
+      disabled={item.disabled}
+    >
+      <Text style={[
+        styles.optionEmoji,
+        item.disabled && styles.disabledEmoji
+      ]}>
+        {item.emoji}
+      </Text>
       <View style={styles.optionText}>
-        <Text style={styles.optionTitle}>{item.title}</Text>
-        <Text style={styles.optionDesc}>{item.desc}</Text>
+        <Text style={[
+          styles.optionTitle,
+          item.disabled && styles.disabledText
+        ]}>
+          {item.title}
+        </Text>
+        <Text style={[
+          styles.optionDesc,
+          item.disabled && styles.disabledText
+        ]}>
+          {item.desc}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -57,14 +81,17 @@ const options = [
     id: 'study',
     emoji: '📚',
     title: 'Study at Home',
-    desc: 'Cozy up with your books by the warm lamplight',
+    desc: hasStudiedTonight 
+      ? 'You\'ve already studied tonight. Rest up!' 
+      : 'Cozy up with your books by the warm lamplight',
     onPress: () => handleStudy(),
+    disabled: hasStudiedTonight,
   },
   {
     id: 'stash',
     emoji: '🔐',
-    title: 'Stash Your Money',
-    desc: 'Hide your earnings in your secret piggy bank',
+    title: 'Go to Your Stash',
+    desc: 'Make sure no one is following you',
     onPress: () => handleStashMoney(),
   },
   {
@@ -127,10 +154,10 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(93, 76, 112, 0.85)',
+    backgroundColor: 'rgba(25,25,25, 0.6)',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#8a7ca8',
+    borderColor: '#f7e98e',
     shadowColor: '#2d1b3d',
     shadowOffset: { width: 2, height: 3 },
     shadowOpacity: 0.15,
@@ -165,76 +192,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontStyle: 'italic',
   },
+  disabledOption: {
+    opacity: 0.6,
+    backgroundColor: 'rgba(93, 76, 112, 0.4)',
+  },
+  disabledEmoji: {
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: '#666',
+  },
   
-  // Streetlamp styles
-  lamp: {
-    position: 'absolute',
-    width: 150,
-    bottom: 0,
-    zIndex: 5,
-  },
-  post: {
-    position: 'absolute',
-    height: '100%',
-    width: 10,
-    backgroundColor: '#070707',
-    left: 30,
-    borderRightWidth: 5,
-    borderRightColor: '#70643e',
-  },
-  curve: {
-    position: 'absolute',
-    width: '100%',
-    left: 0,
-    top: 20,
-    height: 100,
-    transform: [{ rotate: '-10deg' }],
-    overflow: 'hidden',
-  },
-  curveTop: {
-    position: 'absolute',
-    height: '100%',
-    width: 250,
-    left: -50,
-    borderRadius: 125,
-    borderTopWidth: 10,
-    borderTopColor: '#070707',
-    top: 0,
-  },
-  curveHighlight: {
-    position: 'absolute',
-    height: '100%',
-    width: 250,
-    left: -50,
-    borderRadius: 125,
-    borderTopWidth: 5,
-    borderTopColor: '#70643e',
-    top: 6,
-  },
-  socket: {
-    position: 'absolute',
-    width: 0,
-    height: 0,
-    borderStyle: 'solid',
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 20,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#070707',
-    top: 0,
-    right: 13,
-  },
-  light: {
-    position: 'absolute',
-    top: 14,
-    left: -17,
-    height: 50,
-    width: 50,
-    borderRadius: 25,
-    zIndex: -1,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    elevation: 10,
-  },
 });
