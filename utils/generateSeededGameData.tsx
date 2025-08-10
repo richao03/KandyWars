@@ -26,14 +26,13 @@ export type SpecialEventEffect = {
   hint?: string; // Hint to show in previous period
 
   // Modal display properties
-  category?: 'good' | 'neutral' | 'bad';
-  heading?: string;
-  title?: string;
-  subtitle?: string;
+  category: 'good' | 'neutral' | 'bad';
+  heading: string;
+  title: string;
+  subtitle: string;
   dollarAmount?: number;
-  backgroundImage?: any;
+  backgroundImage: any;
   dismissText?: string;
-  callback?: () => void;
 };
 
 const candyBasePrices: Record<string, [number, number]> = {
@@ -267,6 +266,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       candy: 'M&Ms',
       effect: 'PRICE_SPIKE',
       multiplier: 4,
+      category: 'neutral',
       location: 'library',
       heading: 'M&M Trending',
       title: '"The Finer Things Club"',
@@ -285,6 +285,12 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
         candy: randomCandy,
         effect: 'PRICE_SPIKE' as const,
         multiplier: 5,
+        category: 'neutral',
+        heading: `Price Hike!!`,
+        title: `${randomCandy} is like so hot right now!`,
+        subtitle: `People cant get enough of it`,
+        backgroundImage: require('../assets/images/pricehike.png'),
+        hint: '👀 Psst, I cannot tell you what, or where, but something is going to happen ... 👀',
       };
     },
   ];
@@ -300,6 +306,10 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
     location: 'library',
     category: 'neutral',
     priceOverride: 0.01,
+    heading: 'Gum Trending',
+    title: 'How to stay awake?',
+    subtitle: 'By non-stop chewing gum!!',
+    backgroundImage: require('../assets/images/pricedrop.png'),
     hint: '👀 You hear whispers about students needing gum for the study session at the library next period...👀',
   });
 

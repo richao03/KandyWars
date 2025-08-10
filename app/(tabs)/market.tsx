@@ -9,14 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DayStatsModal from '../components/DayStatsModal';
-import DeliModal from '../components/DeliModal';
-import EndOfDayModal from '../components/EndOfDayModal';
-import EventModal from '../components/EventModal';
-import GameHUD from '../components/GameHUD';
-import LocationModal, { Location } from '../components/LocationModal';
-import StashMoneyModal from '../components/StashMoneyModal';
-import TransactionModal from '../components/TransactionModal';
 import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useEventHandler } from '../../src/context/EventHandlerContext';
 import { useGame } from '../../src/context/GameContext';
@@ -25,6 +17,14 @@ import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
+import DayStatsModal from '../components/DayStatsModal';
+import DeliModal from '../components/DeliModal';
+import EndOfDayModal from '../components/EndOfDayModal';
+import EventModal from '../components/EventModal';
+import GameHUD from '../components/GameHUD';
+import LocationModal, { Location } from '../components/LocationModal';
+import StashMoneyModal from '../components/StashMoneyModal';
+import TransactionModal from '../components/TransactionModal';
 
 type CandyForMarket = Candy & {
   cost: number;
@@ -116,10 +116,11 @@ export default function Market() {
         );
 
         // Get the current price from game data (which may already be modified by joker)
+        const basePrice = gameData.candyPrices[candy.name]?.[periodCount];
         const finalCost =
           currentEvent?.priceOverride !== undefined
             ? currentEvent.priceOverride
-            : gameData.candyPrices[candy.name][periodCount];
+            : basePrice || 0;
 
         // Get inventory information for this candy
         const inventoryItem = inventory[candy.name];
@@ -172,7 +173,9 @@ export default function Market() {
 
         if (mode === 'buy') {
           const totalCost = candy.cost * quantity;
-          if (balance < totalCost) return candy;
+          if (balance < totalCost) {
+            return candy;
+          }
 
           // Try to add to inventory first - this will check inventory limits
           const inventorySuccess = addToInventory(

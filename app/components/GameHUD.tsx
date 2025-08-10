@@ -25,7 +25,7 @@ interface GameHUDProps {
 }
 
 export default function GameHUD({ isModalOpening = false, isModalOpen = false, theme = 'school', customHeaderText, customLocationText }: GameHUDProps) {
-  const { balance, piggyBank } = useWallet();
+  const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { text } = useFlavorText();
@@ -56,7 +56,7 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
         
         <View style={[styles.statBox, styles.piggyBox]}>
           <Text style={statTitleStyle}>Saved</Text>
-          <Text style={styles.piggyAmount}>${piggyBank ? piggyBank.toFixed(2) : '0.00'}</Text>
+          <Text style={styles.piggyAmount}>${stashedAmount ? stashedAmount.toFixed(2) : '0.00'}</Text>
         </View>
         
         <View style={[styles.statBox, styles.inventoryBox]}>

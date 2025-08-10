@@ -1,7 +1,7 @@
 // context/InventoryContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { loadInventory, saveInventory } from '../utils/persistence';
 import { useJokers } from './JokerContext';
-import { saveInventory, loadInventory } from '../utils/persistence';
 
 export type InventoryItem = {
   name: string;
@@ -16,18 +16,23 @@ type InventoryContextType = {
   addToInventory: (name: string, quantity: number, price: number) => boolean;
   removeFromInventory: (name: string, quantity: number) => boolean;
   getTotalInventoryCount: () => number;
-  getInventoryLimit: () => number
-  setNewInventoryLimit: (newLimit: number) => void
-  removeAllFromInventory:()=>void
+  getInventoryLimit: () => number;
+  setNewInventoryLimit: (newLimit: number) => void;
+  removeAllFromInventory: () => void;
 };
 
-const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
+const InventoryContext = createContext<InventoryContextType | undefined>(
+  undefined
+);
 
-export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [inventory, setInventory] = useState<Inventory>({});
-  const [inventoryLimit, setInventoryLimit] = useState(30)
+  const [inventoryLimit, setInventoryLimit] = useState(30);
   const [isLoaded, setIsLoaded] = useState(false);
-  console.log(";what is emoty inventory", inventory)
+  const { jokers } = useJokers();
+  console.log(';what is emoty inventory', inventory);
 
   // Load inventory on mount
   useEffect(() => {
@@ -47,16 +52,27 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!isLoaded) return; // Don't save during initial load
     saveInventory(inventory);
   }, [inventory, isLoaded]);
-  const addToInventory = (name: string, quantity: number, price: number): boolean => {
+  const addToInventory = (
+    name: string,
+    quantity: number,
+    price: number
+  ): boolean => {
+    console.log('name, :', name);
+
+    console.log('quantity, :', quantity);
     // Calculate current total from current inventory state
-    const currentTotal = Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
-    
+    const currentTotal = Object.values(inventory).reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+    const actualLimit = getInventoryLimit();
+    console.log('inventoryLimit :', actualLimit);
     // Check if adding this quantity would exceed inventory limit
-    if (currentTotal + quantity > inventoryLimit) {
+    if (currentTotal + quantity > actualLimit) {
       return false; // Transaction rejected due to inventory limit
     }
-    
-    setInventory(prev => {
+
+    setInventory((prev) => {
       const existing = prev[name];
       if (existing) {
         const newQuantity = existing.quantity + quantity;
@@ -84,14 +100,14 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
     return true; // Transaction successful
   };
-  const removeAllFromInventory=()=>{
-        setInventory({})
-  }
+  const removeAllFromInventory = () => {
+    setInventory({});
+  };
   const removeFromInventory = (name: string, quantity: number): boolean => {
     const existing = inventory[name];
     if (!existing || existing.quantity < quantity) return false;
 
-    setInventory(prev => {
+    setInventory((prev) => {
       const updatedQuantity = existing.quantity - quantity;
       if (updatedQuantity === 0) {
         const { [name]: _, ...rest } = prev;
@@ -111,22 +127,34 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const getInventoryLimit = () => {
     // Check for joker effects that modify inventory capacity
-    const { jokers } = useJokers();
     const hasGeometricExpansion = jokers.some(
-      joker => joker.effect === 'double_inventory_space' && joker.type === 'persistent'
+      (joker) =>
+        joker.effect === 'double_inventory_space' && joker.type === 'persistent'
     );
+
     return hasGeometricExpansion ? inventoryLimit * 2 : inventoryLimit;
-  }
+  };
   const setNewInventoryLimit = (newLimit: number) => {
-    setInventoryLimit(newLimit)
-  }
+    setInventoryLimit(newLimit);
+  };
   const getTotalInventoryCount = () => {
-    return Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+    return Object.values(inventory).reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
   };
 
   return (
     <InventoryContext.Provider
-      value={{ inventory, addToInventory, removeFromInventory, removeAllFromInventory, getTotalInventoryCount, getInventoryLimit, setNewInventoryLimit }}
+      value={{
+        inventory,
+        addToInventory,
+        removeFromInventory,
+        removeAllFromInventory,
+        getTotalInventoryCount,
+        getInventoryLimit,
+        setNewInventoryLimit,
+      }}
     >
       {children}
     </InventoryContext.Provider>

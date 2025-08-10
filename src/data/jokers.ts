@@ -3,7 +3,8 @@ export interface Joker {
   name: string;
   description: string;
   type: 'one-time' | 'persistent';
-  effect: string;
+  aoe: string;
+  effect: { name: string; amount?: number };
 }
 
 export const MATH_JOKERS: Joker[] = [
@@ -12,21 +13,24 @@ export const MATH_JOKERS: Joker[] = [
     name: 'Double Up',
     description: 'Double the price of one candy for one period',
     type: 'one-time',
-    effect: 'double_candy_price',
+    aoe: 'price',
+    effect: { name: 'double_candy_price' },
   },
   {
     id: 2,
     name: 'Time Equation',
     description: 'Reverse one period using temporal mathematics',
     type: 'one-time',
-    effect: 'revert_period',
+    aoe: 'price',
+    effect: { name: 'revert_period' },
   },
   {
     id: 3,
     name: 'Geometric Expansion',
-    description: 'Double inventory space using spatial geometry',
+    description: 'Increase inventory space using spatial geometry',
     type: 'persistent',
-    effect: 'double_inventory_space',
+    aoe: 'inventory',
+    effect: { name: 'incrase_inventory_limit', amount: 10 },
   },
   // { id: 4, name: 'Market Statistics', description: 'Half the price of one candy for one period' },
   // { id: 5, name: 'Fortune Algorithm', description: 'Use predictive modeling for market insights' },
@@ -41,14 +45,14 @@ export const COMPUTER_JOKERS: Joker[] = [
   {
     id: 11,
     name: 'Scout',
-    description: '25% chance to events before it happens',
+    description: '25% chance to hear about events before it happens',
     type: 'persistent',
     effect: '25%_hint',
   },
   {
     id: 12,
     name: 'Predictor',
-    description: '100% chance to events before it happens',
+    description: '100% chance to hear about events before it happens',
     type: 'persistent',
     effect: '100%_hint',
   },
@@ -61,8 +65,10 @@ export const COMPUTER_JOKERS: Joker[] = [
   },
   {
     id: 14,
-    name: 'Profit Calculator',
-    description: 'See exact profit margins on all trades',
+    name: 'Data Compression',
+    description: 'Candied no loss compression to save space',
+    type: 'persistent',
+    effect: 'double_inventory_space',
   },
   {
     id: 15,
@@ -89,8 +95,10 @@ export const COMPUTER_JOKERS: Joker[] = [
 export const HOME_EC_JOKERS: Joker[] = [
   {
     id: 19,
-    name: 'Master Recipe',
-    description: 'Double sorting points for 10 seconds',
+    name: 'Vacuum Sealer',
+    description: 'All candy, no air!',
+    type: 'persistent',
+    effect: 'double_inventory_space',
   },
   {
     id: 20,
