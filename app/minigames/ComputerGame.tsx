@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
 import JokerSelection from '../components/JokerSelection';
-import { COMPUTER_JOKERS } from '../data/jokers';
+import { COMPUTER_JOKERS } from '../../src/data/jokers';
 
 interface MemoryCard {
   id: string;

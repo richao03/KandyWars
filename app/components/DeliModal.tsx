@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 import TransactionModal from './TransactionModal';
-import { useSeed } from '../context/SeedContext';
-import { useWallet } from '../context/WalletContext';
-import { useInventory } from '../context/InventoryContext';
+import { useSeed } from '../../src/context/SeedContext';
+import { useWallet } from '../../src/context/WalletContext';
+import { useInventory } from '../../src/context/InventoryContext';
 
 type CandyForDeli = Candy & {
   cost: number;

@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
 import TransactionModal from '../components/TransactionModal';
-import { useGame } from '../context/GameContext';
-import { useInventory } from '../context/InventoryContext';
-import { useSeed } from '../context/SeedContext';
-import { useWallet } from '../context/WalletContext';
+import { useGame } from '../../src/context/GameContext';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useSeed } from '../../src/context/SeedContext';
+import { useWallet } from '../../src/context/WalletContext';
 import { Candy } from '../types';
 
 type CandyForDeli = Candy & {

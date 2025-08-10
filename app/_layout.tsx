@@ -5,14 +5,14 @@ import EventModal from './components/EventModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { DailyStatsProvider } from './context/DailyStatsContext';
-import { EventHandlerProvider } from './context/EventHandlerContext';
-import { FlavorTextProvider } from './context/FlavorTextContext';
-import { GameProvider } from './context/GameContext';
-import { InventoryProvider } from './context/InventoryContext';
-import { JokerProvider } from './context/JokerContext';
-import { SeedProvider } from './context/SeedContext';
-import { WalletProvider } from './context/WalletContext';
+import { DailyStatsProvider } from '../src/context/DailyStatsContext';
+import { EventHandlerProvider } from '../src/context/EventHandlerContext';
+import { FlavorTextProvider } from '../src/context/FlavorTextContext';
+import { GameProvider } from '../src/context/GameContext';
+import { InventoryProvider } from '../src/context/InventoryContext';
+import { JokerProvider } from '../src/context/JokerContext';
+import { SeedProvider } from '../src/context/SeedContext';
+import { WalletProvider } from '../src/context/WalletContext';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();

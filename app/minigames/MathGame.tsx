@@ -12,7 +12,7 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
-import { MATH_JOKERS } from '../data/jokers';
+import { MATH_JOKERS } from '../../src/data/jokers';
 
 
 interface Card {

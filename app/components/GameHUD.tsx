@@ -1,10 +1,10 @@
 import { Marquee } from '@animatereactnative/marquee';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useFlavorText } from '../context/FlavorTextContext';
-import { useGame } from '../context/GameContext';
-import { useInventory } from '../context/InventoryContext';
-import { useWallet } from '../context/WalletContext';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useGame } from '../../src/context/GameContext';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useWallet } from '../../src/context/WalletContext';
 
 const locationNames = {
   'gym': 'Gymnasium',

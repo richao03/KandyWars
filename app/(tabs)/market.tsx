@@ -17,14 +17,14 @@ import GameHUD from '../components/GameHUD';
 import LocationModal, { Location } from '../components/LocationModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
-import { useDailyStats } from '../context/DailyStatsContext';
-import { useEventHandler } from '../context/EventHandlerContext';
-import { useGame } from '../context/GameContext';
-import { useInventory } from '../context/InventoryContext';
-import { useJokers } from '../context/JokerContext';
-import { useSeed } from '../context/SeedContext';
-import { useWallet } from '../context/WalletContext';
-import { usePriceDoubling } from '../hooks/usePriceDoubling';
+import { useDailyStats } from '../../src/context/DailyStatsContext';
+import { useEventHandler } from '../../src/context/EventHandlerContext';
+import { useGame } from '../../src/context/GameContext';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useJokers } from '../../src/context/JokerContext';
+import { useSeed } from '../../src/context/SeedContext';
+import { useWallet } from '../../src/context/WalletContext';
+import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 
 type CandyForMarket = Candy & {
   cost: number;

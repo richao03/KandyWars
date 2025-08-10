@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../src/context/GameContext';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },

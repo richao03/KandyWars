@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../src/context/GameContext';
 
 export default function HomePage() {
   const { isAfterSchool } = useGame();

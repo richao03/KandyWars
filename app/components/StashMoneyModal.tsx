@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import Modal from 'react-native-modal';
-import { useWallet } from '../context/WalletContext';
+import { useWallet } from '../../src/context/WalletContext';
 
 interface StashMoneyModalProps {
   visible: boolean;

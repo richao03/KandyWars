@@ -2,9 +2,9 @@ import Slider from '@react-native-community/slider';
 import React, { useEffect, useState } from 'react';
 import { Alert, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
-import { useFlavorText } from '../context/FlavorTextContext';
-import { useGame } from '../context/GameContext';
-import { useWallet } from '../context/WalletContext';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useGame } from '../../src/context/GameContext';
+import { useWallet } from '../../src/context/WalletContext';
 
 export default function PiggyBankPage() {
   const { balance, stashedAmount, stashMoney, withdrawFromStash } = useWallet();

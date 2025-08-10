@@ -3,10 +3,10 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { FlatList, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
-import { useDailyStats } from '../context/DailyStatsContext';
-import { useFlavorText } from '../context/FlavorTextContext';
-import { useGame } from '../context/GameContext';
-import { useWallet } from '../context/WalletContext';
+import { useDailyStats } from '../../src/context/DailyStatsContext';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useGame } from '../../src/context/GameContext';
+import { useWallet } from '../../src/context/WalletContext';
 
 
 export default function AfterSchoolPage() {

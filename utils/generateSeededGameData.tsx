@@ -5,9 +5,14 @@ export type JokerDraft = { day: number; subject: string; jokers: string[] };
 
 export type SpecialEventEffect = {
   period: number;
-  description: string;
+  description?: string;
   candy?: string;
-  effect: 'PRICE_DROP' | 'PRICE_SPIKE' | 'resale_bonus' | 'STASH_LOCKED';
+  effect:
+    | 'PRICE_DROP'
+    | 'PRICE_SPIKE'
+    | 'resale_bonus'
+    | 'STASH_LOCKED'
+    | 'FOUND_MONEY';
   multiplier?: number;
   location?:
     | 'gym'
@@ -25,6 +30,7 @@ export type SpecialEventEffect = {
   heading?: string;
   title?: string;
   subtitle?: string;
+  dollarAmount?: number;
   backgroundImage?: any;
   dismissText?: string;
   callback?: () => void;
@@ -64,7 +70,6 @@ const allJokers = [
 
 export function generateSeededGameData(seed: string, totalPeriods = 40) {
   const rng = seedrandom(seed);
-
   // Price table
   const candyPrices: CandyPriceTable = {};
   Object.entries(candyBasePrices).forEach(([candy, [min, max]]) => {
@@ -107,17 +112,26 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       description: 'Snickers discount at the vending machine!',
       candy: 'Snickers',
       effect: 'PRICE_DROP',
+      category: 'neutral',
       multiplier: 0.2,
       location: 'cafeteria',
+      heading: 'Hot Sale!',
+      title: 'Snickers flood the market!',
+      subtitle: 'How did the new kid have so many snickers?',
       hint: '👀 Theres rumbling that the vending machine in cafeteria is giving out cheap snickers...👀',
+      backgroundImage: require('../assets/images/pricedrop.png'),
     }),
     () => ({
-      description: 'Gum resale value doubled in the gym!',
-      candy: 'Bubble Gum',
-      effect: 'resale_bonus',
-      multiplier: 5,
-      location: 'gym',
-      hint: "👀 There's a bubble blowing contest in the gym next period, people will PAY for some gum...👀",
+      description: 'Found some money!',
+      effect: 'FOUND_MONEY',
+      location: 'home room',
+      category: 'good',
+      heading: 'Lucky!',
+      title: 'You found some money laying around!',
+      subtitle: 'Street rules: Finders Keepers',
+      dollarAmount: 50,
+      hint: '👀 Someone said they left some money in the homeroom... 👀',
+      backgroundImage: require('../assets/images/foundmoney.png'),
     }),
     () => ({
       description: 'Skittles are popular in the school yard!',
@@ -125,13 +139,24 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       effect: 'PRICE_SPIKE',
       multiplier: 5,
       location: 'school yard',
+      category: 'neutral',
+      heading: 'Hut Hut Price HIKE!!',
+      title: 'Skittles prices rockets!',
+      subtitle:
+        'The football player wants to eat Skittles like their fravorite NFL running back',
+      backgroundImage: require('../assets/images/pricehike.png'),
       hint: '👀 psst, come to the school yard next period... make sure you bring skittles... lots of them... 👀',
     }),
     () => ({
-      description: 'Teacher confiscated stash in home room!',
       effect: 'STASH_LOCKED',
       location: 'home room',
-      hint: '👀 The dean is making round confiscating any and all candies, better avoid the home room next period... 👀',
+      category: 'bad',
+      heading: '🚨 BUSTED!',
+      title: 'Your candy inventory has been confiscated!',
+      subtitle: 'Sometimes it be your own teachers...',
+      backgroundImage: require('../assets/images/confiscate.png'),
+      dismissText: '😤 Dang it!',
+      hint: '👀 The dean is making rounds confiscating any and all candies, better avoid the home room next period... 👀',
     }),
     () => ({
       description: 'Science lab experiment creates demand for Warheads!',
@@ -139,7 +164,103 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       effect: 'PRICE_SPIKE',
       multiplier: 5,
       location: 'science lab',
+      category: 'neutral',
+      heading: 'ICBM to the moon!',
+      title: 'The jolt they need',
+      subtitle:
+        'Our lab friends are falling asleep, this spike of sour sugar is just what they need',
+      backgroundImage: require('../assets/images/pricehike.png'),
       hint: "👀 The lab folks can use some Warhead wake-me-ups next period, and they're willing to pay... 👀",
+    }),
+    () => ({
+      description: 'Bubble Gum chewing contest in the library!',
+      candy: 'Bubble Gum',
+      effect: 'PRICE_SPIKE',
+      multiplier: 4,
+      location: 'library',
+      category: 'neutral',
+      heading: 'Pop Off!',
+      title: 'Bubble Gum demand explodes!',
+      subtitle: 'Who can blow the biggest bubble? Everyone’s buying in!',
+      backgroundImage: require('../assets/images/pricehike.png'),
+      hint: '👀 Heard the library is hosting a “silent” bubble blowing contest next period... bring gum! 👀',
+    }),
+    () => ({
+      description: 'Teacher gives out free M&Ms in class!',
+      candy: 'M&Ms',
+      effect: 'PRICE_DROP',
+      multiplier: 0.3,
+      location: 'home room',
+      category: 'neutral',
+      heading: 'Too Many M&Ms!',
+      title: 'Candy rains from above!',
+      subtitle: 'The teacher brought a giant bag... now the price is tanking!',
+      backgroundImage: require('../assets/images/pricedrop.png'),
+      hint: '👀 M&Ms are falling into everyone’s hands in homeroom... 👀',
+    }),
+    () => ({
+      description: 'Someone drops their lunch money in the hallway!',
+      effect: 'FOUND_MONEY',
+      category: 'good',
+      heading: 'Jackpot!',
+      title: 'Cash on the floor!',
+      subtitle: 'Quick pocket move, nobody saw a thing.',
+      dollarAmount: 40,
+      backgroundImage: require('../assets/images/foundmoney.png'),
+      hint: '👀 There’s a commotion in the hallway... someone’s missing cash. 👀',
+    }),
+
+    () => ({
+      description: 'Sour Patch Kids banned in gym class!',
+      candy: 'Sour Patch Kids',
+      effect: 'PRICE_DROP',
+      multiplier: 0.5,
+      location: 'gym',
+      category: 'bad',
+      heading: 'Coach Says No!',
+      title: 'Candy ban after sticky shoes incident!',
+      subtitle: 'The floor’s still sticky... prices plummet!',
+      backgroundImage: require('../assets/images/pricedrop.png'),
+      hint: '👀 Coach is confiscating Sour Patch at the gym doors... 👀',
+    }),
+
+    () => ({
+      description: 'Bathroom Skittle Project!',
+      candy: 'Skittles',
+      effect: 'PRICE_SPIKE',
+      multiplier: 3.5,
+      location: 'bathroom',
+      category: 'neutral',
+      heading: 'Sweet Colors!',
+      title: 'Artists paying top dollar!',
+      subtitle: 'Skittles aren’t just for eating — they’re for painting!',
+      backgroundImage: require('../assets/images/pricehike.png'),
+      hint: '👀 Bathroom is buying Skittles for some “non-edible” art next period... 👀',
+    }),
+
+    () => ({
+      description: 'Student Council fundraiser in cafeteria!',
+      candy: 'Snickers',
+      effect: 'PRICE_SPIKE',
+      multiplier: 2.5,
+      location: 'cafeteria',
+      category: 'neutral',
+      heading: 'Snack for a Cause!',
+      title: 'Buy candy, fund the trip!',
+      subtitle: 'Suddenly, Snickers are selling like crazy.',
+      backgroundImage: require('../assets/images/pricehike.png'),
+      hint: '👀 The student council’s hoarding Snickers for the bake sale next period... 👀',
+    }),
+    () => ({
+      description: 'Principal checks lockers during lunch!',
+      effect: 'STASH_LOCKED',
+      category: 'bad',
+      heading: '🔒 Locker Check!',
+      title: 'Your stash is confiscated',
+      subtitle: 'Your stash was in the wrong place at the wrong time.',
+      backgroundImage: require('../assets/images/confiscate.png'),
+      dismissText: '😩 Busted again!',
+      hint: '👀 Principal’s patrolling lockers this lunch period... 👀',
     }),
     () => ({
       description: 'Library study group wants brain food!',
@@ -147,16 +268,14 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       effect: 'PRICE_SPIKE',
       multiplier: 4,
       location: 'library',
-      hint: "👀 The Finer Things Club is meeting in the library next period, they'll want some classy M&M's to go with their tea 👀",
+      heading: 'M&M Trending',
+      title: '"The Finer Things Club"',
+      subtitle:
+        '"M&Ms goes perfectly with out afternoon juice" - a club member',
+      backgroundImage: require('../assets/images/pricehike.png'),
+      hint: '👀 Theres a secret club M&Meeting in the library next period... 👀',
     }),
-    () => ({
-      description: 'Bathroom black market deals going down!',
-      candy: 'Sour Patch Kids',
-      effect: 'resale_bonus',
-      multiplier: 0.2,
-      location: 'bathroom',
-      hint: "👀 Someone found a case of Sour Patch Kids, and they are selling it dirt cheap in the bathroom... if you're ok with that... 👀 ",
-    }),
+
     // General events without location requirements
     () => {
       const candies = Object.keys(candyBasePrices);
@@ -165,7 +284,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
         description: `Rare batch of ${randomCandy} released!`,
         candy: randomCandy,
         effect: 'PRICE_SPIKE' as const,
-        multiplier: 1.5,
+        multiplier: 5,
       };
     },
   ];
@@ -179,36 +298,68 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
     candy: 'Bubble Gum',
     effect: 'PRICE_DROP',
     location: 'library',
+    category: 'neutral',
     priceOverride: 0.01,
     hint: '👀 You hear whispers about students needing gum for the study session at the library next period...👀',
   });
 
+  // periodEvents.push({
+  //   period: 2,
+  //   description: 'Found some money!',
+  //   effect: 'FOUND_MONEY',
+  //   location: 'home room',
+  //   category: 'good',
+  //   heading: '🍀 Lucky!',
+  //   title: 'You found some money laying around!',
+  //   dollarAmount: 50,
+  //   subtitle: 'Street rules: Finders Keepers',
+  //   hint: '👀 Someone said they left some money in the homeroom... 👀',
+  //   backgroundImage: require('../assets/images/foundmoney.png'),
+  // });
+  periodEvents.push({
+    period: 2,
+    description: 'Skittles are popular in the school yard!',
+    candy: 'Skittles',
+    effect: 'PRICE_SPIKE',
+    multiplier: 5,
+    category: 'neutral',
+    heading: 'Hut Hut Price HIKE!!',
+    title: 'Skittles price rockets!',
+    subtitle:
+      'The football team wants to eat Skittles like their fravorite NFL running back',
+    backgroundImage: require('../assets/images/pricehike.png'),
+    hint: '👀 psst, come to the school yard next period... make sure you bring skittles... lots of them... 👀',
+  });
+
   // Generate 10-15 random events
   const targetEventCount = Math.floor(rng() * 6) + 10; // 10-15 events
-  const availablePeriods = Array.from({ length: totalPeriods }, (_, i) => i)
-    .filter((period) => !periodEvents.some((e) => e.period === period));
-  
+  const availablePeriods = Array.from(
+    { length: totalPeriods },
+    (_, i) => i
+  ).filter((period) => !periodEvents.some((e) => e.period === period));
+
   // Shuffle available periods
   for (let i = availablePeriods.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [availablePeriods[i], availablePeriods[j]] = [availablePeriods[j], availablePeriods[i]];
+    [availablePeriods[i], availablePeriods[j]] = [
+      availablePeriods[j],
+      availablePeriods[i],
+    ];
   }
 
   // Generate events for the first targetEventCount periods
-  for (let i = 0; i < Math.min(targetEventCount, availablePeriods.length); i++) {
+  for (
+    let i = 0;
+    i < Math.min(targetEventCount, availablePeriods.length);
+    i++
+  ) {
     const period = availablePeriods[i];
     const template = eventTemplates[Math.floor(rng() * eventTemplates.length)];
     const event = { ...template(), period };
 
-    // Randomly assign location if template doesn't have one
-    if (!event.location && rng() < 0.7) {
-      // 70% chance to be location-specific
-      event.location = locations[Math.floor(rng() * locations.length)];
-
-      // Generate hint for previous period
-      if (period > 0) {
-        event.hint = `You overhear students talking about something happening at the ${event.location} next period...`;
-      }
+    // Only add generic hint for events without location if they don't have one
+    if (!event.location && !event.hint && period > 0) {
+      event.hint = `You overhear students talking about something happening next period...`;
     }
 
     periodEvents.push(event);

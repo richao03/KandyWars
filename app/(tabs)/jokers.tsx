@@ -1,8 +1,8 @@
 import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import JokerCard from '../components/JokerCard';
-import { useGame } from '../context/GameContext';
-import { useJokers } from '../context/JokerContext';
+import { useGame } from '../../src/context/GameContext';
+import { useJokers } from '../../src/context/JokerContext';
 
 export default function JokersPage() {
   const { isAfterSchool } = useGame();

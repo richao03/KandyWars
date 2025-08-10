@@ -19,6 +19,7 @@ type FlavorEvent =
   | 'NEW_DAY'
   | 'INVENTORY_FULL'
   | 'PRICE_SPIKE'
+  | 'FOUND_MONEY'
   | 'PRICE_DROP'
   | 'JOKER_UNLOCKED'
   | 'resale_bonus'
@@ -32,6 +33,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
     'Someone ratted you out, your stash was confiscated',
     'What a candy king without a couple of haters?, your stash was confiscated',
   ],
+  FOUND_MONEY: ['He who finds it keeps it - Confucious '],
   resale_bonus: ['what does this even mean?'],
   NEW_DAY: [
     'New day, new sugar rush.',

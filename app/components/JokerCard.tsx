@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useGame } from '../context/GameContext';
-import { useJokers } from '../context/JokerContext';
-import { useSeed } from '../context/SeedContext';
+import { useGame } from '../../src/context/GameContext';
+import { useJokers } from '../../src/context/JokerContext';
+import { useSeed } from '../../src/context/SeedContext';
 
 interface JokerCardProps {
   joker: {

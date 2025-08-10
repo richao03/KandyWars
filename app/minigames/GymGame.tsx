@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
-import { GYM_JOKERS } from '../data/jokers';
+import { GYM_JOKERS } from '../../src/data/jokers';
 
 interface Tile {
   id: string;

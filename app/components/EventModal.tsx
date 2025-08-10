@@ -1,15 +1,114 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
+  Animated,
   ImageBackground,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useEventHandler } from '../context/EventHandlerContext';
+import { useEventHandler } from '../../src/context/EventHandlerContext';
 
 export default function EventModal() {
   const { currentEvent, dismissEvent, getTheme } = useEventHandler();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (currentEvent) {
+      // Reset shake animation
+      shakeAnim.setValue(0);
+      
+      if (currentEvent.category === 'bad') {
+        // For BAD events: Immediate appearance with shake
+        fadeAnim.setValue(1);
+        scaleAnim.setValue(1);
+        
+        // Shake animation for 0.5 seconds
+        Animated.sequence([
+          Animated.timing(shakeAnim, {
+            toValue: 10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: -10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: -10,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 5,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: -5,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 5,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: -5,
+            duration: 50,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        // For GOOD/NEUTRAL events: Smooth fade in and scale up
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          })
+        ]).start();
+      }
+    }
+  }, [currentEvent, fadeAnim, scaleAnim, shakeAnim]);
+
+  const handleDismiss = () => {
+    // Fade out and scale down before dismissing
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.8,
+        duration: 300,
+        useNativeDriver: true,
+      })
+    ]).start(() => {
+      // Callback will be executed in dismissEvent
+      dismissEvent();
+    });
+  };
 
   if (!currentEvent) {
     return null;
@@ -17,21 +116,27 @@ export default function EventModal() {
   
   const theme = getTheme(currentEvent.category!);
 
-  const handleDismiss = () => {
-    // Callback will be executed in dismissEvent
-    dismissEvent();
-  };
-
   // Use absolute positioning for proper visibility
   return (
-    <View style={styles.modalOverlay} pointerEvents="auto">
+    <Animated.View 
+      style={[styles.modalOverlay, { opacity: fadeAnim }]} 
+      pointerEvents="auto"
+    >
       <TouchableOpacity
         style={styles.backgroundTouchable}
         onPress={handleDismiss}
         activeOpacity={1}
       />
 
-      <View style={styles.centeredContainer}>
+      <Animated.View style={[
+        styles.centeredContainer, 
+        { 
+          transform: [
+            { scale: scaleAnim },
+            { translateX: shakeAnim }
+          ] 
+        }
+      ]}>
         {currentEvent.backgroundImage ? (
           <View style={styles.modalWithBackground}>
             <ImageBackground
@@ -112,8 +217,8 @@ export default function EventModal() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 

@@ -3,8 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from './components/GameHUD';
-import { useGame } from './context/GameContext';
-import { useJokers } from './context/JokerContext';
+import { useGame } from '../src/context/GameContext';
+import { useJokers } from '../src/context/JokerContext';
 import { 
   MATH_JOKERS, 
   COMPUTER_JOKERS, 
@@ -13,7 +13,7 @@ import {
   HISTORY_JOKERS, 
   LOGIC_JOKERS, 
   GYM_JOKERS 
-} from './data/jokers';
+} from '../src/data/jokers';
 
 // Combine all jokers with subject information
 const ALL_DEBUG_JOKERS = [

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 
@@ -38,22 +38,35 @@ const locationColors: Record<Location, {bg: string, border: string}> = {
 };
 
 export default function LocationModal({ visible, onClose, onSelectLocation }: LocationModalProps) {
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+
   const handleLocationSelect = (location: Location) => {
-    onSelectLocation(location);
+    setSelectedLocation(location);
+    setIsClosing(true);
+  };
+
+  const handleModalHide = () => {
+    if (selectedLocation) {
+      onSelectLocation(selectedLocation);
+      setSelectedLocation(null);
+    }
+    setIsClosing(false);
     onClose();
   };
 
   return (
     <Modal
-      isVisible={visible}
+      isVisible={visible && !isClosing}
       animationIn="slideInUp"
       animationOut="slideOutDown"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
+      animationInTiming={400}
+      animationOutTiming={300}
+      backdropTransitionInTiming={400}
+      backdropTransitionOutTiming={300}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
+      onModalHide={handleModalHide}
       useNativeDriver={true}
       hideModalContentWhileAnimating={true}
       style={styles.modalContainer}

@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
-import { useGame } from '../context/GameContext';
+import { useGame } from '../../src/context/GameContext';
 
 export default function TabLayout() {
   const { isAfterSchool } = useGame();
