@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { saveWallet, loadWallet } from '../utils/persistence';
 
 type WalletContextType = {
   balance: number;
@@ -15,6 +16,28 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [balance, setBalance] = useState(20); // starting cash
   const [stashedAmount, setStashedAmount] = useState(0); // money in piggy bank
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load wallet data on mount
+  useEffect(() => {
+    const loadWalletData = async () => {
+      const defaultWallet = { balance: 20, stashedAmount: 0 };
+      const savedWallet = await loadWallet(defaultWallet);
+      setBalance(savedWallet.balance);
+      setStashedAmount(savedWallet.stashedAmount);
+      setIsLoaded(true);
+      console.log('Wallet loaded:', savedWallet);
+    };
+
+    loadWalletData();
+  }, []);
+
+  // Save wallet data whenever it changes
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save during initial load
+    const walletData = { balance, stashedAmount };
+    saveWallet(walletData);
+  }, [balance, stashedAmount, isLoaded]);
 
   const spend = (amount: number): boolean => {
     if (balance >= amount) {

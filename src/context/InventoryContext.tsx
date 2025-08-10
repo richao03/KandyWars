@@ -1,6 +1,7 @@
 // context/InventoryContext.tsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useJokers } from './JokerContext';
+import { saveInventory, loadInventory } from '../utils/persistence';
 
 export type InventoryItem = {
   name: string;
@@ -25,7 +26,27 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [inventory, setInventory] = useState<Inventory>({});
   const [inventoryLimit, setInventoryLimit] = useState(30)
+  const [isLoaded, setIsLoaded] = useState(false);
   console.log(";what is emoty inventory", inventory)
+
+  // Load inventory on mount
+  useEffect(() => {
+    const loadInventoryData = async () => {
+      const defaultInventory = {};
+      const savedInventory = await loadInventory(defaultInventory);
+      setInventory(savedInventory);
+      setIsLoaded(true);
+      console.log('Inventory loaded:', savedInventory);
+    };
+
+    loadInventoryData();
+  }, []);
+
+  // Save inventory whenever it changes
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save during initial load
+    saveInventory(inventory);
+  }, [inventory, isLoaded]);
   const addToInventory = (name: string, quantity: number, price: number): boolean => {
     // Calculate current total from current inventory state
     const currentTotal = Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);

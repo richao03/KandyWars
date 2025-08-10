@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { saveJokers, loadJokers } from '../utils/persistence';
 
 export interface Joker {
   id: number;
@@ -37,6 +38,28 @@ const JokerContext = createContext<JokerContextType | undefined>(undefined);
 export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [jokers, setJokers] = useState<Joker[]>([]);
   const [activeEffects, setActiveEffects] = useState<ActiveJokerEffect[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load jokers data on mount
+  useEffect(() => {
+    const loadJokersData = async () => {
+      const defaultJokers = { jokers: [], activeEffects: [] };
+      const savedJokers = await loadJokers(defaultJokers);
+      setJokers(savedJokers.jokers);
+      setActiveEffects(savedJokers.activeEffects);
+      setIsLoaded(true);
+      console.log('Jokers loaded:', savedJokers);
+    };
+
+    loadJokersData();
+  }, []);
+
+  // Save jokers data whenever it changes
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save during initial load
+    const jokersData = { jokers, activeEffects };
+    saveJokers(jokersData);
+  }, [jokers, activeEffects, isLoaded]);
 
   const addJoker = (joker: Joker) => {
     setJokers(prev => {

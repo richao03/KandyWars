@@ -4,6 +4,7 @@ import { useGame } from './GameContext';
 import { useInventory } from './InventoryContext';
 import { useSeed } from './SeedContext';
 import { useWallet } from './WalletContext';
+import { saveProcessedEvents, loadProcessedEvents } from '../utils/persistence';
 
 type EventHandlerContextType = {
   currentEvent: SpecialEventEffect | null;
@@ -78,6 +79,25 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const [lastDay, setLastDay] = useState(day);
   const [isProcessingEvent, setIsProcessingEvent] = useState(false);
+  const [isEventsLoaded, setIsEventsLoaded] = useState(false);
+
+  // Load processed events on mount
+  useEffect(() => {
+    const loadProcessedEventsData = async () => {
+      const savedEvents = await loadProcessedEvents();
+      setProcessedEvents(savedEvents);
+      setIsEventsLoaded(true);
+      console.log('Processed events loaded:', savedEvents);
+    };
+
+    loadProcessedEventsData();
+  }, []);
+
+  // Save processed events whenever they change
+  useEffect(() => {
+    if (!isEventsLoaded) return; // Don't save during initial load
+    saveProcessedEvents(processedEvents);
+  }, [processedEvents, isEventsLoaded]);
 
   // Reset processed events when a new day starts
   useEffect(() => {

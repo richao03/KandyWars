@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useFlavorText } from './FlavorTextContext';
 import { useJokers } from './JokerContext';
 import { useSeed } from './SeedContext';
+import { saveGameState, loadGameState, clearAllGameData } from '../utils/persistence';
 
 export type Location =
   | 'gym'
@@ -45,12 +46,54 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
   const [isAfterSchool, setIsAfterSchool] = useState(false); // Explicitly controlled after-school mode
   const [hasStudiedTonight, setHasStudiedTonight] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const { setEvent, setHint } = useFlavorText();
   const { gameData } = useSeed();
   const { jokers } = useJokers();
 
   const day = Math.floor(periodCount / 8) + 1;
   const period = (periodCount % 8) + 1;
+
+  // Load game state on mount
+  useEffect(() => {
+    const loadGameData = async () => {
+      const defaultState = {
+        periodCount: 0,
+        currentLocation: 'home room' as Location,
+        locationHistory: [{ period: 0, location: 'home room' as Location }],
+        isAfterSchool: false,
+        hasStudiedTonight: false,
+      };
+      
+      const savedState = await loadGameState(defaultState);
+      
+      setPeriodCount(savedState.periodCount);
+      setCurrentLocation(savedState.currentLocation);
+      setLocationHistory(savedState.locationHistory);
+      setIsAfterSchool(savedState.isAfterSchool);
+      setHasStudiedTonight(savedState.hasStudiedTonight);
+      setIsLoaded(true);
+      
+      console.log('Game state loaded:', savedState);
+    };
+
+    loadGameData();
+  }, []);
+
+  // Save game state whenever it changes
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save during initial load
+    
+    const gameState = {
+      periodCount,
+      currentLocation,
+      locationHistory,
+      isAfterSchool,
+      hasStudiedTonight,
+    };
+    
+    saveGameState(gameState);
+  }, [periodCount, currentLocation, locationHistory, isAfterSchool, hasStudiedTonight, isLoaded]);
 
   // Check for location-specific events
   const currentEvent = gameData.periodEvents.find(
@@ -113,12 +156,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     incrementPeriod('home room');
   };
 
-  const resetGame = () => {
+  const resetGame = async () => {
     setPeriodCount(0);
     setCurrentLocation('home room');
     setLocationHistory([{ period: 0, location: 'home room' }]);
     setIsAfterSchool(false);
     setHasStudiedTonight(false);
+    
+    // Clear all saved game data
+    await clearAllGameData();
+    console.log('Game reset and all saved data cleared');
   };
 
   const markStudiedTonight = () => {
