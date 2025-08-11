@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { saveWallet, loadWallet } from '../utils/persistence';
+import { JokerService } from '../utils/jokerService';
 
 type WalletContextType = {
   balance: number;
@@ -8,7 +9,8 @@ type WalletContextType = {
   add: (amount: number) => void;
   stashMoney: (amount: number) => boolean;
   withdrawFromStash: (amount: number) => boolean;
-  confiscateStash: () => number; // Returns amount confiscated
+  confiscateStash: (jokers?: any[], periodCount?: number) => number; // Returns amount confiscated
+  stealMoney: (amount: number, jokers?: any[], periodCount?: number) => number; // Returns amount stolen from balance
 };
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -23,8 +25,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const loadWalletData = async () => {
       const defaultWallet = { balance: 20, stashedAmount: 0 };
       const savedWallet = await loadWallet(defaultWallet);
-      setBalance(savedWallet.balance);
-      setStashedAmount(savedWallet.stashedAmount);
+      setBalance(savedWallet.balance ?? 20);
+      setStashedAmount(savedWallet.stashedAmount ?? 0);
       setIsLoaded(true);
       console.log('Wallet loaded:', savedWallet);
     };
@@ -69,10 +71,38 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return false;
   };
 
-  const confiscateStash = (): number => {
+  const confiscateStash = (jokers?: any[], periodCount?: number): number => {
+    // Check for money protection from Safe Deposit joker
+    if (jokers && periodCount !== undefined) {
+      const jokerService = JokerService.getInstance();
+      const hasMoneyProtection = jokerService.hasJokerEffect('money_protection', jokers, periodCount);
+      
+      if (hasMoneyProtection) {
+        console.log('💰 Safe Deposit protection activated - stash confiscation prevented!');
+        return 0; // No money confiscated due to protection
+      }
+    }
+    
     const confiscatedAmount = stashedAmount;
     setStashedAmount(0);
     return confiscatedAmount;
+  };
+
+  const stealMoney = (amount: number, jokers?: any[], periodCount?: number): number => {
+    // Check for money protection from Safe Deposit joker
+    if (jokers && periodCount !== undefined) {
+      const jokerService = JokerService.getInstance();
+      const hasMoneyProtection = jokerService.hasJokerEffect('money_protection', jokers, periodCount);
+      
+      if (hasMoneyProtection) {
+        console.log('💰 Safe Deposit protection activated - money theft prevented!');
+        return 0; // No money stolen due to protection
+      }
+    }
+    
+    const actualStolenAmount = Math.min(amount, balance);
+    setBalance(prev => prev - actualStolenAmount);
+    return actualStolenAmount;
   };
 
   return (
@@ -83,7 +113,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       add,
       stashMoney,
       withdrawFromStash,
-      confiscateStash
+      confiscateStash,
+      stealMoney
     }}>
       {children}
     </WalletContext.Provider>

@@ -32,13 +32,12 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
 
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
-  console.log("what is getInventoryLimit", inventoryCapacity)
   const containerStyle = theme === 'evening' ? styles.eveningContainer : styles.container;
   const headerStyle = theme === 'evening' ? styles.eveningHeaderText : styles.headerText;
   const statTitleStyle = theme === 'evening' ? styles.eveningStatTitle : styles.statTitle;
 
-  const headerText = customHeaderText || `Day ${day} • Period ${period}`;
-  const locationText = customLocationText || locationNames[currentLocation];
+  const headerText = customHeaderText || `Day ${day || 1} • Period ${period || 1}`;
+  const locationText = customLocationText || locationNames[currentLocation] || 'Home Room';
 
   return (
     <View style={containerStyle}>
@@ -51,17 +50,17 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
       <View style={styles.statsRow}>
         <View style={[styles.statBox, styles.cashBox]}>
           <Text style={statTitleStyle}>My Money</Text>
-          <Text style={styles.cashAmount}>${balance.toFixed(2)}</Text>
+          <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
         </View>
         
         <View style={[styles.statBox, styles.piggyBox]}>
           <Text style={statTitleStyle}>Saved</Text>
-          <Text style={styles.piggyAmount}>${stashedAmount ? stashedAmount.toFixed(2) : '0.00'}</Text>
+          <Text style={styles.piggyAmount}>${(stashedAmount || 0).toFixed(2)}</Text>
         </View>
         
         <View style={[styles.statBox, styles.inventoryBox]}>
           <Text style={statTitleStyle}>Candy</Text>
-          <Text style={styles.inventoryAmount}>{totalInventory}/{inventoryCapacity}</Text>
+          <Text style={styles.inventoryAmount}>{totalInventory || 0}/{inventoryCapacity || 30}</Text>
         </View>
       </View>
 

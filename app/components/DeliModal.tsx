@@ -123,10 +123,10 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
       isVisible={visible}
       animationIn="slideInUp"
       animationOut="slideOutDown"
-      animationInTiming={400}
-      animationOutTiming={300}
-      backdropTransitionInTiming={400}
-      backdropTransitionOutTiming={300}
+      animationInTiming={250}
+      animationOutTiming={200}
+      backdropTransitionInTiming={250}
+      backdropTransitionOutTiming={200}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
       useNativeDriver={true}

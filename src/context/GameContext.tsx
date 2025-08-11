@@ -47,12 +47,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isAfterSchool, setIsAfterSchool] = useState(false); // Explicitly controlled after-school mode
   const [hasStudiedTonight, setHasStudiedTonight] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { setEvent, setHint } = useFlavorText();
   const { gameData } = useSeed();
   const { jokers } = useJokers();
 
-  const day = Math.floor(periodCount / 8) + 1;
-  const period = (periodCount % 8) + 1;
+  const day = Math.max(1, Math.floor(periodCount / 8) + 1);
+  const period = Math.max(1, (periodCount % 8) + 1);
 
   // Load game state on mount
   useEffect(() => {
@@ -67,14 +68,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       
       const savedState = await loadGameState(defaultState);
       
-      setPeriodCount(savedState.periodCount);
-      setCurrentLocation(savedState.currentLocation);
-      setLocationHistory(savedState.locationHistory);
-      setIsAfterSchool(savedState.isAfterSchool);
-      setHasStudiedTonight(savedState.hasStudiedTonight);
+      setPeriodCount(savedState.periodCount ?? 0);
+      setCurrentLocation(savedState.currentLocation || 'home room');
+      setLocationHistory(savedState.locationHistory || [{ period: 0, location: 'home room' }]);
+      setIsAfterSchool(savedState.isAfterSchool ?? false);
+      setHasStudiedTonight(savedState.hasStudiedTonight ?? false);
       setIsLoaded(true);
-      
-      console.log('Game state loaded:', savedState);
+      setIsInitialized(true);
     };
 
     loadGameData();
@@ -107,25 +107,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     const nextPeriodEvent = gameData.periodEvents.find(
       (e) => e.period === periodCount + 1 && e.hint
     );
+    
+    // Debug logging for events
+    const allEventsWithHints = gameData.periodEvents.filter(e => e.hint);
+    console.log(`All events with hints:`, allEventsWithHints.map(e => `Period ${e.period}: ${e.effect}`));
+    console.log(`Looking for event at period ${periodCount + 1}:`, gameData.periodEvents.filter(e => e.period === periodCount + 1));
 
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
       const scoutJoker = jokers.find((j) => j.name === 'Scout');
       const predictorJoker = jokers.find((j) => j.name === 'Predictor');
 
+      console.log(`Hint Debug - Period ${periodCount}, Next event: ${nextPeriodEvent.effect}, Has hint: ${!!nextPeriodEvent.hint}`);
+      console.log(`Jokers:`, jokers.map(j => j.name));
+      console.log(`Scout found: ${!!scoutJoker}, Predictor found: ${!!predictorJoker}`);
+
       let hintChance = 0.25; // Base 25% chance
 
-      if (scoutJoker) {
-        hintChance = 1.0; // Scout joker shows all hints
-      } else if (predictorJoker) {
-        hintChance = 0.5; // Predictor joker increases hint chance
+      if (predictorJoker) {
+        hintChance = 1.0; // Predictor joker shows all hints (100% chance)
+        console.log('Predictor active - setting 100% hint chance');
+      } else if (scoutJoker) {
+        hintChance = 0.5; // Scout joker increases hint chance to 50%
+        console.log('Scout active - setting 50% hint chance');
+      } else {
+        console.log('No hint jokers - using base 25% chance');
       }
 
-      if (Math.random() < hintChance) {
+      const randomRoll = Math.random();
+      console.log(`Random roll: ${randomRoll}, Hint chance: ${hintChance}, Will show hint: ${randomRoll < hintChance}`);
+
+      if (randomRoll < hintChance) {
+        console.log(`Setting hint: "${nextPeriodEvent.hint}"`);
         setHint(nextPeriodEvent.hint);
       } else if (currentEvent?.effect) {
+        console.log('No hint shown, showing current event');
         setEvent(currentEvent.effect);
       } else {
+        console.log('No hint shown, showing DEFAULT');
         setEvent('DEFAULT');
       }
     } else if (currentEvent?.effect) {
@@ -143,6 +162,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       ...prev,
       { period: newPeriodCount, location },
     ]);
+    
+    // Trigger candy generation for "Something from Nothing" joker
+    // This will be handled by a separate effect in InventoryContext
   };
 
   const startAfterSchool = () => {
@@ -192,6 +214,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     return false; // Can't revert from period 0
   };
+
+  // Don't render children until initialized to prevent NaN values
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <GameContext.Provider

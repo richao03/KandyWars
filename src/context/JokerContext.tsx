@@ -1,14 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { saveJokers, loadJokers } from '../utils/persistence';
+import { loadJokers, saveJokers } from '../utils/persistence';
 
 export interface Joker {
   id: number;
   name: string;
   description: string;
   subject: string;
-  theme: string;
-  type: 'one-time' | 'persistent';
-  effect: string;
+  theme?: string;
+  type?: 'one-time' | 'persistent'; // Optional, can be inferred from effects
+  effect?: string; // Optional, legacy field
+  effects?: Array<{ // The actual effects array from jokerEffectEngine
+    target: string;
+    operation: string;
+    amount: number;
+    duration: string;
+  }>;
 }
 
 export interface ActiveJokerEffect {
@@ -27,15 +33,20 @@ type JokerContextType = {
   removeJoker: (jokerId: number) => void;
   hasJoker: (jokerId: number) => boolean;
   getJokersBySubject: (subject: string) => Joker[];
-  clearAllJokers: () => void;
-  activateJoker: (jokerId: number, candyType?: string, period?: number) => Promise<boolean>;
-  getPersistentEffects: () => ActiveJokerEffect[];
+  activateJoker: (
+    jokerId: number,
+    candyType?: string,
+    period?: number
+  ) => Promise<boolean>;
   clearActiveEffect: (jokerId: number) => void;
+  reorderJokers: (newOrder: Joker[]) => void;
 };
 
 const JokerContext = createContext<JokerContextType | undefined>(undefined);
 
-export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [jokers, setJokers] = useState<Joker[]>([]);
   const [activeEffects, setActiveEffects] = useState<ActiveJokerEffect[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -45,50 +56,60 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const loadJokersData = async () => {
       const defaultJokers = { jokers: [], activeEffects: [] };
       const savedJokers = await loadJokers(defaultJokers);
-      setJokers(savedJokers.jokers);
-      setActiveEffects(savedJokers.activeEffects);
+      
+      const loadedJokers = Array.isArray(savedJokers.jokers) ? savedJokers.jokers : [];
+      const loadedEffects = Array.isArray(savedJokers.activeEffects) ? savedJokers.activeEffects : [];
+      
+      setJokers(loadedJokers);
+      setActiveEffects(loadedEffects);
       setIsLoaded(true);
-      console.log('Jokers loaded:', savedJokers);
     };
 
     loadJokersData();
   }, []);
 
-  // Save jokers data whenever it changes
+  // Save jokers data whenever it changes (after initial load)
   useEffect(() => {
-    if (!isLoaded) return; // Don't save during initial load
+    if (!isLoaded) return;
     const jokersData = { jokers, activeEffects };
     saveJokers(jokersData);
   }, [jokers, activeEffects, isLoaded]);
 
   const addJoker = (joker: Joker) => {
-    setJokers(prev => {
+    setJokers((prev) => {
       // Prevent duplicates
-      if (prev.some(j => j.id === joker.id)) {
+      if (prev.some((j) => j.id === joker.id)) {
         return prev;
       }
-      return [...prev, joker];
+      const newJokers = [...prev, joker];
+      
+      // Immediately save when adding a new joker
+      if (isLoaded) {
+        const jokersData = { jokers: newJokers, activeEffects };
+        saveJokers(jokersData);
+      }
+      return newJokers;
     });
   };
 
   const removeJoker = (jokerId: number) => {
-    setJokers(prev => prev.filter(j => j.id !== jokerId));
+    setJokers((prev) => prev.filter((j) => j.id !== jokerId));
   };
 
   const hasJoker = (jokerId: number): boolean => {
-    return jokers.some(j => j.id === jokerId);
+    return jokers.some((j) => j.id === jokerId);
   };
 
   const getJokersBySubject = (subject: string): Joker[] => {
-    return jokers.filter(j => j.subject === subject);
+    return jokers.filter((j) => j.subject === subject);
   };
 
-  const clearAllJokers = () => {
-    setJokers([]);
-  };
-
-  const activateJoker = async (jokerId: number, candyType?: string, period?: number): Promise<boolean> => {
-    const joker = jokers.find(j => j.id === jokerId);
+  const activateJoker = async (
+    jokerId: number,
+    candyType?: string,
+    period?: number
+  ): Promise<boolean> => {
+    const joker = jokers.find((j) => j.id === jokerId);
     if (!joker) return false;
 
     const effect: ActiveJokerEffect = {
@@ -101,7 +122,7 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     // Add effect to active effects
-    setActiveEffects(prev => [...prev, effect]);
+    setActiveEffects((prev) => [...prev, effect]);
 
     // Remove joker if it's one-time use
     if (joker.type === 'one-time') {
@@ -111,32 +132,30 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return true;
   };
 
-  const getPersistentEffects = (): ActiveJokerEffect[] => {
-    return jokers
-      .filter(joker => joker.type === 'persistent')
-      .map(joker => ({
-        jokerId: joker.id,
-        effect: joker.effect,
-      }));
+  const clearActiveEffect = (jokerId: number) => {
+    setActiveEffects((prev) =>
+      prev.filter((effect) => effect.jokerId !== jokerId)
+    );
   };
 
-  const clearActiveEffect = (jokerId: number) => {
-    setActiveEffects(prev => prev.filter(effect => effect.jokerId !== jokerId));
+  const reorderJokers = (newOrder: Joker[]) => {
+    setJokers(newOrder);
   };
 
   return (
-    <JokerContext.Provider value={{
-      jokers,
-      activeEffects,
-      addJoker,
-      removeJoker,
-      hasJoker,
-      getJokersBySubject,
-      clearAllJokers,
-      activateJoker,
-      getPersistentEffects,
-      clearActiveEffect
-    }}>
+    <JokerContext.Provider
+      value={{
+        jokers,
+        activeEffects,
+        addJoker,
+        removeJoker,
+        hasJoker,
+        getJokersBySubject,
+        activateJoker,
+        clearActiveEffect,
+        reorderJokers,
+      }}
+    >
       {children}
     </JokerContext.Provider>
   );

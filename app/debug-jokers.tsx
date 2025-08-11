@@ -12,8 +12,9 @@ import {
   ECONOMY_JOKERS, 
   HISTORY_JOKERS, 
   LOGIC_JOKERS, 
-  GYM_JOKERS 
-} from '../src/data/jokers';
+  GYM_JOKERS,
+  StandardizedJoker 
+} from '../src/utils/jokerEffectEngine';
 
 // Combine all jokers with subject information
 const ALL_DEBUG_JOKERS = [
@@ -49,16 +50,27 @@ export default function DebugJokersPage() {
   };
 
   const handleAddSelected = () => {
+    console.log('=== DEBUG ADD SELECTED ===');
     selectedJokers.forEach(jokerId => {
       const joker = ALL_DEBUG_JOKERS.find(j => j.id === jokerId);
       if (joker) {
-        addJoker({
-          ...joker,
+        // Determine if joker is one-time or persistent
+        const isOneTime = joker.effects.every((e: any) => e.duration === 'one-time');
+        const jokerType = isOneTime ? 'one-time' : 'persistent';
+        
+        const jokerToAdd = {
+          id: joker.id,
+          name: joker.name,
+          description: joker.description,
           subject: joker.subject,
-          theme: joker.theme as any,
-          type: joker.type,
-          effect: joker.effect
-        });
+          theme: joker.theme,
+          type: jokerType,
+          effect: joker.effects[0] ? joker.effects[0].target : 'none',
+          effects: joker.effects // Include the full effects array
+        };
+        
+        console.log('Adding joker from debug:', jokerToAdd);
+        addJoker(jokerToAdd as any);
       }
     });
     
@@ -68,14 +80,25 @@ export default function DebugJokersPage() {
   };
 
   const handleAddAll = () => {
+    console.log('=== DEBUG ADD ALL ===');
     ALL_DEBUG_JOKERS.forEach(joker => {
-      addJoker({
-        ...joker,
+      // Determine if joker is one-time or persistent
+      const isOneTime = joker.effects.every((e: any) => e.duration === 'one-time');
+      const jokerType = isOneTime ? 'one-time' : 'persistent';
+      
+      const jokerToAdd = {
+        id: joker.id,
+        name: joker.name,
+        description: joker.description,
         subject: joker.subject,
-        theme: joker.theme as any,
-        type: joker.type,
-        effect: joker.effect
-      });
+        theme: joker.theme,
+        type: jokerType,
+        effect: joker.effects[0] ? joker.effects[0].target : 'none',
+        effects: joker.effects // Include the full effects array
+      };
+      
+      console.log('Adding joker from debug:', jokerToAdd.name, jokerToAdd.type);
+      addJoker(jokerToAdd as any);
     });
     
     console.log(`🐛 DEBUG: Added all ${ALL_DEBUG_JOKERS.length} jokers to inventory!`);
@@ -87,12 +110,16 @@ export default function DebugJokersPage() {
   };
 
   const handleSelectAllPersistent = () => {
-    const persistentJokers = ALL_DEBUG_JOKERS.filter(j => j.type === 'persistent');
+    const persistentJokers = ALL_DEBUG_JOKERS.filter(j => 
+      j.effects.some((e: any) => e.duration === 'persistent')
+    );
     setSelectedJokers(new Set(persistentJokers.map(j => j.id)));
   };
 
   const handleSelectAllOneTime = () => {
-    const oneTimeJokers = ALL_DEBUG_JOKERS.filter(j => j.type === 'one-time');
+    const oneTimeJokers = ALL_DEBUG_JOKERS.filter(j => 
+      j.effects.some((e: any) => e.duration === 'one-time')
+    );
     setSelectedJokers(new Set(oneTimeJokers.map(j => j.id)));
   };
 
@@ -117,11 +144,11 @@ export default function DebugJokersPage() {
               <Text style={[
                 styles.jokerType,
                 { 
-                  backgroundColor: item.type === 'persistent' ? '#4ade80' : '#f87171',
+                  backgroundColor: item.effects.some((e: any) => e.duration === 'persistent') ? '#4ade80' : '#f87171',
                   color: '#fff'
                 }
               ]}>
-                {item.type === 'persistent' ? '🔄 PERSISTENT' : '⚡ ONE-TIME'}
+                {item.effects.some((e: any) => e.duration === 'persistent') ? '🔄 PERSISTENT' : '⚡ ONE-TIME'}
               </Text>
               <Text style={styles.jokerSubject}>{item.subject}</Text>
             </View>
@@ -133,7 +160,13 @@ export default function DebugJokersPage() {
           isSelected && styles.jokerDescriptionSelected
         ]}>{item.description}</Text>
         
-        <Text style={styles.jokerEffect}>Effect: {item.effect}</Text>
+        {item.effects && item.effects.length > 0 && (
+          <Text style={styles.jokerEffect}>
+            Effects: {item.effects.map((e: any) => 
+              `${e.target} ${e.operation} ${e.amount}`
+            ).join(', ')}
+          </Text>
+        )}
         
         {isSelected && (
           <View style={styles.selectedIndicator}>

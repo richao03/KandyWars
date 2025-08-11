@@ -60,10 +60,10 @@ export default function LocationModal({ visible, onClose, onSelectLocation }: Lo
       isVisible={visible && !isClosing}
       animationIn="slideInUp"
       animationOut="slideOutDown"
-      animationInTiming={400}
-      animationOutTiming={300}
-      backdropTransitionInTiming={400}
-      backdropTransitionOutTiming={300}
+      animationInTiming={250}
+      animationOutTiming={200}
+      backdropTransitionInTiming={250}
+      backdropTransitionOutTiming={200}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
       onModalHide={handleModalHide}

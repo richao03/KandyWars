@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import JokerSelection from '../components/JokerSelection';
-import { LOGIC_JOKERS } from '../../src/data/jokers';
+import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
 
 interface Attempt {
   candies: string[];

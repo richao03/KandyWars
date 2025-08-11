@@ -12,7 +12,10 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
-import { MATH_JOKERS } from '../../src/data/jokers';
+import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
+import { useJokers } from '../../src/context/JokerContext';
+import { useGame } from '../../src/context/GameContext';
 
 
 interface Card {
@@ -105,6 +108,11 @@ const DraggableCard: React.FC<DraggableCardProps> = React.memo(
 // Academic math jokers for the classroom
 
 export default function MathGame({ onComplete }: MathGameProps) {
+  // Joker effects
+  const { jokers } = useJokers();
+  const { periodCount } = useGame();
+  const studyTimeMultiplier = useStudyTimeMultiplier(jokers, periodCount);
+  
   // Game state management
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'gameOver', 'jokerSelection'
   const [stage, setStage] = useState(1); // 1, 2, 3
@@ -168,12 +176,22 @@ export default function MathGame({ onComplete }: MathGameProps) {
 
   // Stage configuration - 5 pairs with decreasing time
   const getStageConfig = (stageNum: number) => {
-    switch (stageNum) {
-      case 1: return { time: 14, pairs: 5, maxTarget: 20 };
-      case 2: return { time: 12, pairs: 5, maxTarget: 20 };
-      case 3: return { time: 10, pairs: 5, maxTarget: 20 };
-      default: return { time: 14, pairs: 5, maxTarget: 20 };
-    }
+    const baseConfig = (() => {
+      switch (stageNum) {
+        case 1: return { time: 14, pairs: 5, maxTarget: 20 };
+        case 2: return { time: 12, pairs: 5, maxTarget: 20 };
+        case 3: return { time: 10, pairs: 5, maxTarget: 20 };
+        default: return { time: 14, pairs: 5, maxTarget: 20 };
+      }
+    })();
+    
+    // Apply study time multiplier from Pomodoro Timer joker
+    const modifiedTime = Math.round(baseConfig.time * studyTimeMultiplier);
+    
+    return {
+      ...baseConfig,
+      time: modifiedTime
+    };
   };
 
   // Start timer

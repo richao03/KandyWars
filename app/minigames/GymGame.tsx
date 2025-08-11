@@ -18,7 +18,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
-import { GYM_JOKERS } from '../../src/data/jokers';
+import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
+import { useJokers } from '../../src/context/JokerContext';
+import { useGame } from '../../src/context/GameContext';
 
 interface Tile {
   id: string;
@@ -67,6 +70,11 @@ const COLOR_SCHEMES = [
 ];
 
 export default function GymGame({ onComplete }: GymGameProps) {
+  // Joker effects
+  const { jokers } = useJokers();
+  const { periodCount } = useGame();
+  const studyTimeMultiplier = useStudyTimeMultiplier(jokers, periodCount);
+  
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [stage, setStage] = useState(1); // 1, 2, 3
   const [tiles, setTiles] = useState<Tile[]>([]);
@@ -86,15 +94,25 @@ export default function GymGame({ onComplete }: GymGameProps) {
   
   // Stage configuration
   const getStageConfig = (stageNum: number) => {
-    switch (stageNum) {
-      case 1: return { time: 20, gridSize: 6, pathsNeeded: 3 };
-      case 2: return { time: 15, gridSize: 7, pathsNeeded: 4 };
-      case 3: return { time: 10, gridSize: 8, pathsNeeded: 5 };
-      default: return { time: 20, gridSize: 6, pathsNeeded: 3 };
-    }
+    const baseConfig = (() => {
+      switch (stageNum) {
+        case 1: return { time: 20, gridSize: 6, pathsNeeded: 3 };
+        case 2: return { time: 15, gridSize: 7, pathsNeeded: 4 };
+        case 3: return { time: 10, gridSize: 8, pathsNeeded: 5 };
+        default: return { time: 20, gridSize: 6, pathsNeeded: 3 };
+      }
+    })();
+    
+    // Apply study time multiplier from Pomodoro Timer joker
+    const modifiedTime = Math.round(baseConfig.time * studyTimeMultiplier);
+    
+    return {
+      ...baseConfig,
+      time: modifiedTime
+    };
   };
 
-  const stageConfig = useMemo(() => getStageConfig(stage), [stage]);
+  const stageConfig = useMemo(() => getStageConfig(stage), [stage, studyTimeMultiplier]);
 
   // Calculate shortest possible path length (Manhattan distance)
   const shortestPathLength = useMemo(() => {

@@ -1,16 +1,54 @@
-import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import JokerCard from '../components/JokerCard';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
 
 export default function JokersPage() {
   const { isAfterSchool } = useGame();
-  const { jokers } = useJokers();
+  const { jokers, reorderJokers } = useJokers();
+  const [activeTab, setActiveTab] = useState<'persistent' | 'one-time'>('persistent');
   
-  const renderJoker = ({ item }: { item: any }) => (
-    <JokerCard joker={item} isAfterSchool={isAfterSchool} />
+  
+  // Separate jokers by their effect duration (not type)
+  // A joker is "persistent" if it has at least one persistent effect
+  const persistentJokers = useMemo(() => {
+    const persistent = jokers.filter(j => {
+      // Check if this joker should be treated as persistent
+      // This could be based on a type field, or we can infer from name/effect
+      return j.type === 'persistent' || !j.type?.includes('one-time');
+    });
+    return persistent;
+  }, [jokers]);
+  
+  const oneTimeJokers = useMemo(() => {
+    const oneTime = jokers.filter(j => {
+      return j.type === 'one-time';
+    });
+    return oneTime;
+  }, [jokers]);
+  
+  const currentJokers = activeTab === 'persistent' ? persistentJokers : oneTimeJokers;
+  
+  const renderJoker = ({ item, drag, isActive }: RenderItemParams<any>) => (
+    <JokerCard 
+      joker={item} 
+      isAfterSchool={isAfterSchool}
+      onLongPress={drag}
+      isDragging={isActive}
+      isCompact={true}
+    />
   );
+  
+  const handleReorder = (data: any[]) => {
+    // Merge reordered data with other type jokers
+    const otherJokers = activeTab === 'persistent' ? oneTimeJokers : persistentJokers;
+    const allJokers = activeTab === 'persistent' 
+      ? [...data, ...otherJokers]
+      : [...persistentJokers, ...data];
+    reorderJokers(allJokers);
+  };
 
   return (
     <View style={[
@@ -21,34 +59,98 @@ export default function JokersPage() {
         styles.header,
         isAfterSchool && styles.headerAfterSchool
       ]}>
-        <Text style={[
-          styles.title,
-          isAfterSchool && styles.titleAfterSchool
-        ]}>🃏 Your Jokers</Text>
-        <Text style={[
-          styles.subtitle,
-          isAfterSchool && styles.subtitleAfterSchool
-        ]}>Study rewards you've earned</Text>
+        <View style={styles.headerTop}>
+          <Text style={[
+            styles.title,
+            isAfterSchool && styles.titleAfterSchool
+          ]}>🃏 Jokers</Text>
+          <View style={styles.countBadge}>
+            <Text style={[
+              styles.countText,
+              isAfterSchool && styles.countTextAfterSchool
+            ]}>{jokers.length}</Text>
+          </View>
+        </View>
+        
+        <View style={[
+          styles.tabContainer,
+          isAfterSchool && styles.tabContainerAfterSchool
+        ]}>
+          <TouchableOpacity 
+            style={[
+              styles.tab,
+              activeTab === 'persistent' && styles.activeTab,
+              activeTab === 'persistent' && isAfterSchool && styles.activeTabAfterSchool
+            ]}
+            onPress={() => setActiveTab('persistent')}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === 'persistent' && styles.activeTabText,
+              isAfterSchool && styles.tabTextAfterSchool,
+              activeTab === 'persistent' && isAfterSchool && styles.activeTabTextAfterSchool
+            ]}>
+              🔄 Persistent ({persistentJokers.length})
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.tab,
+              activeTab === 'one-time' && styles.activeTab,
+              activeTab === 'one-time' && isAfterSchool && styles.activeTabAfterSchool
+            ]}
+            onPress={() => setActiveTab('one-time')}
+          >
+            <Text style={[
+              styles.tabText,
+              activeTab === 'one-time' && styles.activeTabText,
+              isAfterSchool && styles.tabTextAfterSchool,
+              activeTab === 'one-time' && isAfterSchool && styles.activeTabTextAfterSchool
+            ]}>
+              ⚡ One-Time ({oneTimeJokers.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
-      <FlatList
-        data={jokers}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderJoker}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
-      
-      {jokers.length === 0 && (
+      {currentJokers.length > 0 ? (
+        <>
+          {currentJokers.length > 1 && (
+            <Text style={[
+              styles.dragHint,
+              isAfterSchool && styles.dragHintAfterSchool
+            ]}>Hold & drag cards to reorder</Text>
+          )}
+          <DraggableFlatList
+            data={currentJokers}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderJoker}
+            onDragEnd={({ data }) => handleReorder(data)}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        </>
+      ) : (
         <View style={styles.emptyContainer}>
+          <Text style={[
+            styles.emptyIcon,
+            isAfterSchool && styles.emptyIconAfterSchool
+          ]}>
+            {activeTab === 'persistent' ? '🔄' : '⚡'}
+          </Text>
           <Text style={[
             styles.emptyText,
             isAfterSchool && styles.emptyTextAfterSchool
-          ]}>📚 Study to earn jokers!</Text>
+          ]}>
+            No {activeTab} jokers yet
+          </Text>
           <Text style={[
             styles.emptySubtext,
             isAfterSchool && styles.emptySubtextAfterSchool
-          ]}>Complete minigames to collect powerful rewards</Text>
+          ]}>
+            Study to earn {activeTab === 'persistent' ? 'permanent buffs' : 'powerful one-time abilities'}
+          </Text>
         </View>
       )}
     </View>
@@ -64,23 +166,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a1845',
   },
   header: {
-    padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
+    paddingBottom: 8,
     backgroundColor: '#fff',
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
     borderBottomColor: '#e6ccb3',
-    alignItems: 'center',
   },
   headerAfterSchool: {
     backgroundColor: '#000000',
     borderBottomColor: '#8a7ca8',
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
-    marginBottom: 4,
   },
   titleAfterSchool: {
     color: '#f7e98e',
@@ -88,16 +195,74 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  subtitle: {
-    fontSize: 16,
+  countBadge: {
+    backgroundColor: '#6b4423',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  countText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
+  },
+  countTextAfterSchool: {
+    color: '#f7e98e',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  tabContainerAfterSchool: {
+    borderTopColor: '#8a7ca8',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f5e6d3',
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#6b4423',
+  },
+  activeTabAfterSchool: {
+    backgroundColor: '#8a7ca8',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
   },
-  subtitleAfterSchool: {
+  tabTextAfterSchool: {
+    color: '#b8a9c9',
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  activeTabTextAfterSchool: {
+    color: '#f7e98e',
+  },
+  dragHint: {
+    fontSize: 11,
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    opacity: 0.7,
+  },
+  dragHintAfterSchool: {
     color: '#b8a9c9',
   },
   list: {
-    padding: 16,
+    padding: 12,
+    paddingTop: 4,
   },
   emptyContainer: {
     flex: 1,
@@ -105,8 +270,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyIconAfterSchool: {
+    opacity: 0.8,
+  },
   emptyText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
@@ -120,7 +292,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   emptySubtext: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',

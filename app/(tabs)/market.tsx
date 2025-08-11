@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useCandySales } from '../../src/context/CandySalesContext';
 import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useEventHandler } from '../../src/context/EventHandlerContext';
 import { useGame } from '../../src/context/GameContext';
@@ -16,7 +17,11 @@ import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
+import { useDiamondHand } from '../../src/hooks/useDiamondHand';
+import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
+import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
+import { JokerService } from '../../src/utils/jokerService';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EndOfDayModal from '../components/EndOfDayModal';
@@ -69,11 +74,16 @@ export default function Market() {
   } = useGame();
   const { hasActiveEvent } = useEventHandler();
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
+  const { addSale, resetSales } = useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
-  const { activeEffects } = useJokers();
-  console.log('periodCount', periodCount);
+  const { activeEffects, jokers } = useJokers();
+  const jokerService = JokerService.getInstance();
   usePriceDoubling(); // This hook handles price restoration on period change
+  useEmptyInventoryBonus(); // This hook handles Embrace the Grind joker bonus
+  const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
+  const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
 
+  // Removed debug code
   // Show location modal after event modal is dismissed
   useEffect(() => {
     if (pendingLocationModal && !hasActiveEvent) {
@@ -97,13 +107,15 @@ export default function Market() {
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
       ...candy,
-      cost: 0, // Will be set in useEffect
+      cost: candy.baseMin, // Initialize with base minimum price
       quantityOwned: 0,
       averagePrice: null,
     }))
   );
 
   useEffect(() => {
+    const currentInventoryLimit = getInventoryLimit();
+
     setCandies((prev) =>
       prev.map((candy) => {
         // Check for current location-specific events with price overrides
@@ -115,12 +127,27 @@ export default function Market() {
             e.priceOverride !== undefined
         );
 
-        // Get the current price from game data (which may already be modified by joker)
-        const basePrice = gameData.candyPrices[candy.name]?.[periodCount];
+        // Get the current price from game data, fallback to base range if not available
+        let basePrice = gameData.candyPrices[candy.name]?.[periodCount];
+        if (basePrice === undefined || basePrice === null) {
+          // Fallback to a random price in base range
+          basePrice =
+            candy.baseMin + Math.random() * (candy.baseMax - candy.baseMin);
+        }
+
+        // Apply joker effects to the price (like Even Stevens)
+        const modifiedPrice = jokerService.applyJokerEffects(
+          basePrice,
+          'candy_price',
+          jokers,
+          periodCount,
+          currentInventoryLimit
+        );
+
         const finalCost =
           currentEvent?.priceOverride !== undefined
             ? currentEvent.priceOverride
-            : basePrice || 0;
+            : modifiedPrice;
 
         // Get inventory information for this candy
         const inventoryItem = inventory[candy.name];
@@ -133,7 +160,14 @@ export default function Market() {
         };
       })
     );
-  }, [periodCount, gameData, currentLocation, inventory]);
+  }, [
+    periodCount,
+    gameData,
+    currentLocation,
+    inventory,
+    jokers,
+    getInventoryLimit,
+  ]);
 
   const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
     null
@@ -191,6 +225,9 @@ export default function Market() {
           spend(totalCost);
           addSpent(totalCost); // Track daily spending
 
+          // Reset consecutive sales tracking when buying
+          resetSales();
+
           const newQty = candy.quantityOwned + quantity;
           const newAvg =
             candy.averagePrice === null
@@ -205,11 +242,32 @@ export default function Market() {
             averagePrice: newAvg,
           };
         } else {
-          const totalGain = candy.cost * quantity;
+          // Record sale for Diamond Hand tracking
+          recordSale();
+
+          // Record sale for Drought Relief tracking
+          recordDroughtSale();
+
+          // Check if this sale should get the 5x Candy Salad bonus
+          const shouldApplyBonus = addSale(candy.name);
+          const multiplier = shouldApplyBonus ? 5 : 1;
+
+          const baseGain = candy.cost * quantity;
+          const totalGain = baseGain * multiplier;
+
           add(totalGain);
           addProfit(totalGain); // Track daily profit
           addCandySold(quantity); // Track daily candy sales
           removeFromInventory(candy.name, quantity);
+
+          // Show bonus notification if applied
+          if (shouldApplyBonus) {
+            setTimeout(() => {
+              alert(
+                `🥗 Candy Salad Bonus! 5x multiplier applied!\nBase gain: $${baseGain.toFixed(2)}\nBonus gain: $${totalGain.toFixed(2)}`
+              );
+            }, 100);
+          }
 
           return {
             ...candy,

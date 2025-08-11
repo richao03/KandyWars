@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import Modal from 'react-native-modal';
-import { Candy } from '../../utils/generateCandyPriceTable';
+import { Candy } from '../../src/types/candy';
 
 type Props = {
   visible: boolean;
@@ -48,10 +48,10 @@ export default function TransactionModal({
       isVisible={visible}
       animationIn="slideInUp"
       animationOut="slideOutDown"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
+      animationInTiming={200}
+      animationOutTiming={150}
+      backdropTransitionInTiming={200}
+      backdropTransitionOutTiming={150}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
       useNativeDriver={true}

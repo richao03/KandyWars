@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SpecialEventEffect } from '../../utils/generateSeededGameData';
 import { useGame } from './GameContext';
 import { useInventory } from './InventoryContext';
+import { useJokers } from './JokerContext';
 import { useSeed } from './SeedContext';
 import { useWallet } from './WalletContext';
 import { saveProcessedEvents, loadProcessedEvents } from '../utils/persistence';
@@ -70,6 +71,7 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
   const { periodCount, currentLocation, day } = useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
   const { removeAllFromInventory } = useInventory();
+  const { jokers } = useJokers();
   const { confiscateStash, add: addToWallet } = useWallet();
   const [currentEvent, setCurrentEvent] = useState<SpecialEventEffect | null>(
     null
@@ -190,7 +192,16 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
       // Handle effect-specific actions
       switch (currentEvent.effect) {
         case 'STASH_LOCKED':
-          removeAllFromInventory();
+          // Attempt to confiscate money, but respect Safe Deposit protection
+          const confiscatedAmount = confiscateStash(jokers, periodCount);
+          if (confiscatedAmount > 0) {
+            console.log(`💸 Confiscated $${confiscatedAmount} from stash`);
+            removeAllFromInventory(); // Also remove inventory
+          } else {
+            console.log('💰 Safe Deposit joker prevented money confiscation!');
+            // Still remove inventory even if money is protected
+            removeAllFromInventory();
+          }
           break;
         case 'FOUND_MONEY':
           addToWallet(currentEvent.dollarAmount);

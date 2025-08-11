@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useWallet } from '../../src/context/WalletContext';
 
 interface JokerCardProps {
   joker: {
@@ -15,15 +17,24 @@ interface JokerCardProps {
     effect: string;
   };
   isAfterSchool: boolean;
+  onLongPress?: () => void;
+  isDragging?: boolean;
+  isCompact?: boolean;
 }
 
 const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
 
-export default function JokerCard({ joker, isAfterSchool }: JokerCardProps) {
-  const { activateJoker } = useJokers();
-  const { periodCount, revertToPreviousPeriod } = useGame();
+export default function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }: JokerCardProps) {
+  const { jokers, activateJoker, addJoker } = useJokers();
+  const { periodCount, revertToPreviousPeriod, incrementPeriod } = useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
+  const { inventory, removeFromInventory, addToInventory } = useInventory();
+  const { addMoney } = useWallet();
   const [showCandySelector, setShowCandySelector] = useState(false);
+  const [showJokerSelector, setShowJokerSelector] = useState(false);
+  const [showConversionStep1, setShowConversionStep1] = useState(false); // Select source candy
+  const [showConversionStep2, setShowConversionStep2] = useState(false); // Select target candy
+  const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(null);
 
   const handleActivate = () => {
     if (joker.effect === 'double_candy_price') {
@@ -37,6 +48,32 @@ export default function JokerCard({ joker, isAfterSchool }: JokerCardProps) {
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Revert Time', style: 'destructive', onPress: () => handleTimeRevert() }
+        ]
+      );
+    } else if (joker.name === 'Glitch in the Matrix') {
+      // Show joker selector modal for duplication
+      setShowJokerSelector(true);
+    } else if (joker.name === 'Master of Trade') {
+      // Show candy conversion modal - step 1 (select source)
+      setShowConversionStep1(true);
+    } else if (joker.name === 'Temporary Emperor') {
+      // Show confirmation for time skip with auto profits
+      Alert.alert(
+        '👑 Temporary Emperor',
+        'Skip one period and automatically gain profits from selling 3 of every candy type at next period prices?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Rule the Market!', style: 'default', onPress: () => handleTemporaryEmperor() }
+        ]
+      );
+    } else if (joker.name === 'Market Crash') {
+      // Show confirmation for market crash
+      Alert.alert(
+        '📉 Market Crash',
+        'Crash all candy prices by 50% for this period? Perfect for bulk buying!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Crash the Market!', style: 'default', onPress: () => handleMarketCrash() }
         ]
       );
     }
@@ -83,6 +120,130 @@ export default function JokerCard({ joker, isAfterSchool }: JokerCardProps) {
     }
   };
 
+  const handleJokerSelection = async (selectedJoker: any) => {
+    // Create a copy of the selected joker with a new ID
+    const duplicatedJoker = {
+      ...selectedJoker,
+      id: Date.now() + Math.random(), // Generate unique ID
+      name: selectedJoker.name + ' (Copy)',
+    };
+
+    // Add the duplicated joker
+    addJoker(duplicatedJoker);
+    
+    // Remove the Glitch in the Matrix joker (it's one-time use)
+    const success = await activateJoker(joker.id);
+    
+    if (success) {
+      Alert.alert(
+        '🔄 Glitch Activated!',
+        `Successfully created a copy of "${selectedJoker.name}". The glitch has been consumed.`,
+        [{ text: 'OK' }]
+      );
+    }
+    
+    setShowJokerSelector(false);
+  };
+
+  // Get available jokers for duplication (exclude the Glitch in the Matrix card itself)
+  const availableJokersForDuplication = jokers.filter(j => j.name !== 'Glitch in the Matrix');
+
+  const handleSourceCandySelection = (candyType: string) => {
+    setSelectedSourceCandy(candyType);
+    setShowConversionStep1(false);
+    setShowConversionStep2(true);
+  };
+
+  const handleTargetCandySelection = async (targetCandyType: string) => {
+    if (!selectedSourceCandy) return;
+
+    const sourceInventoryItem = inventory[selectedSourceCandy];
+    if (!sourceInventoryItem || sourceInventoryItem.quantity === 0) {
+      Alert.alert('Error', 'No source candy available for conversion!');
+      return;
+    }
+
+    // Remove all source candy
+    const success = removeFromInventory(selectedSourceCandy, sourceInventoryItem.quantity);
+    if (!success) {
+      Alert.alert('Error', 'Failed to remove source candy!');
+      return;
+    }
+
+    // Get current target candy price for conversion
+    const targetPrice = gameData.candyPrices[targetCandyType][periodCount];
+    
+    // Add the same quantity as target candy
+    addToInventory(targetCandyType, sourceInventoryItem.quantity, targetPrice);
+
+    // Remove the Master of Trade joker (it's one-time use)
+    await activateJoker(joker.id);
+
+    Alert.alert(
+      '🔄 Trade Completed!',
+      `Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} into ${sourceInventoryItem.quantity} ${targetCandyType}!`,
+      [{ text: 'OK' }]
+    );
+
+    // Reset state
+    setShowConversionStep2(false);
+    setSelectedSourceCandy(null);
+  };
+
+  // Get available inventory candies for conversion
+  const availableCandiesForConversion = Object.keys(inventory).filter(
+    candyType => inventory[candyType].quantity > 0
+  );
+
+  // Get target candies (exclude the selected source)
+  const availableTargetCandies = CANDY_TYPES.filter(
+    candyType => candyType !== selectedSourceCandy
+  );
+
+  const handleTemporaryEmperor = async () => {
+    const skippedPeriod = periodCount + 1;
+    const targetPeriod = periodCount + 2; // Skip one period, go to period after next
+    let totalProfit = 0;
+    const profitBreakdown = [];
+
+    // Calculate profit from selling 3 of each candy type at target period prices
+    for (const candyType of CANDY_TYPES) {
+      const targetPeriodPrice = gameData.candyPrices[candyType][targetPeriod];
+      if (targetPeriodPrice) {
+        const profit = targetPeriodPrice * 3;
+        totalProfit += profit;
+        profitBreakdown.push(`${candyType}: $${profit.toFixed(2)}`);
+      }
+    }
+
+    // Add money to wallet
+    addMoney(totalProfit);
+
+    // Skip a period by advancing twice (period 5 -> period 7, skipping period 6)
+    incrementPeriod('market'); // First advance: period 5 -> period 6
+    incrementPeriod('market'); // Second advance: period 6 -> period 7 (skip period 6)
+
+    // Remove the joker (it's one-time use)
+    await activateJoker(joker.id);
+
+    Alert.alert(
+      '👑 Emperor\'s Decree Executed!',
+      `Time has been advanced by 2 periods (skipped period ${skippedPeriod}).\n\nAuto-profit from selling 3 of each candy:\n${profitBreakdown.join('\n')}\n\nTotal gained: $${totalProfit.toFixed(2)}`,
+      [{ text: 'Long live the Emperor!' }]
+    );
+  };
+
+  const handleMarketCrash = async () => {
+    // Remove the joker (it's one-time use)
+    await activateJoker(joker.id);
+
+    Alert.alert(
+      '📉 Market Crash Executed!',
+      'All candy prices have been reduced by 50% for this period. Time to stock up!',
+      [{ text: 'Buy the Dip!' }]
+    );
+  };
+
   const getTypeColor = () => {
     if (joker.type === 'persistent') {
       return isAfterSchool ? '#8a7ca8' : '#4ade80';
@@ -94,34 +255,48 @@ export default function JokerCard({ joker, isAfterSchool }: JokerCardProps) {
     return joker.type === 'persistent' ? '🔄 PERSISTENT' : '⚡ ONE-TIME';
   };
 
+  const CardWrapper = onLongPress ? TouchableOpacity : View;
+  const cardWrapperProps = onLongPress ? { onLongPress, activeOpacity: 0.8 } : {};
+
   return (
-    <View style={[
-      styles.jokerCard, 
-      isAfterSchool && styles.jokerCardAfterSchool
-    ]}>
-      <View style={styles.jokerHeader}>
+    <CardWrapper 
+      style={[
+        styles.jokerCard,
+        isCompact && styles.jokerCardCompact,
+        isAfterSchool && styles.jokerCardAfterSchool,
+        isDragging && styles.jokerCardDragging
+      ]}
+      {...cardWrapperProps}
+    >
+      <View style={[styles.jokerHeader, isCompact && styles.jokerHeaderCompact]}>
         <View style={styles.jokerTitleRow}>
-          <Text style={[
-            styles.jokerName,
-            isAfterSchool && styles.jokerNameAfterSchool
-          ]}>{joker.name}</Text>
+          <View style={styles.jokerTitleLeft}>
+            <Text style={[
+              styles.jokerName,
+              isCompact && styles.jokerNameCompact,
+              isAfterSchool && styles.jokerNameAfterSchool
+            ]}>{joker.name}</Text>
+            <Text style={[
+              styles.jokerSubject,
+              isCompact && styles.jokerSubjectCompact,
+              isAfterSchool && styles.jokerSubjectAfterSchool
+            ]}>{joker.subject}</Text>
+          </View>
           <Text style={[
             styles.jokerType,
+            isCompact && styles.jokerTypeCompact,
             { color: getTypeColor() }
           ]}>{getTypeText()}</Text>
         </View>
-        <Text style={[
-          styles.jokerSubject,
-          isAfterSchool && styles.jokerSubjectAfterSchool
-        ]}>{joker.subject}</Text>
       </View>
       
       <Text style={[
         styles.jokerDescription,
+        isCompact && styles.jokerDescriptionCompact,
         isAfterSchool && styles.jokerDescriptionAfterSchool
       ]}>{joker.description}</Text>
 
-      {joker.type === 'one-time' && (
+      {joker.type === 'one-time' && !isCompact && (
         <TouchableOpacity 
           style={[
             styles.activateButton,
@@ -136,7 +311,22 @@ export default function JokerCard({ joker, isAfterSchool }: JokerCardProps) {
         </TouchableOpacity>
       )}
 
-      {joker.type === 'persistent' && (
+      {joker.type === 'one-time' && isCompact && (
+        <TouchableOpacity 
+          style={[
+            styles.activateButtonCompact,
+            isAfterSchool && styles.activateButtonCompactAfterSchool
+          ]}
+          onPress={handleActivate}
+        >
+          <Text style={[
+            styles.activateButtonTextCompact,
+            isAfterSchool && styles.activateButtonTextCompactAfterSchool
+          ]}>ACTIVATE</Text>
+        </TouchableOpacity>
+      )}
+
+      {joker.type === 'persistent' && !isCompact && (
         <View style={[
           styles.persistentIndicator,
           isAfterSchool && styles.persistentIndicatorAfterSchool
@@ -195,7 +385,223 @@ export default function JokerCard({ joker, isAfterSchool }: JokerCardProps) {
           </View>
         </View>
       </Modal>
-    </View>
+
+      {/* Joker Selector Modal */}
+      <Modal
+        visible={showJokerSelector}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            styles.jokerModalContent,
+            isAfterSchool && styles.modalContentAfterSchool
+          ]}>
+            <Text style={[
+              styles.modalTitle,
+              isAfterSchool && styles.modalTitleAfterSchool
+            ]}>🔄 Choose Joker to Copy</Text>
+            
+            <ScrollView style={styles.jokerScrollView} showsVerticalScrollIndicator={false}>
+              {availableJokersForDuplication.length > 0 ? (
+                availableJokersForDuplication.map((availableJoker) => (
+                  <TouchableOpacity
+                    key={availableJoker.id}
+                    style={[
+                      styles.jokerOption,
+                      isAfterSchool && styles.jokerOptionAfterSchool
+                    ]}
+                    onPress={() => handleJokerSelection(availableJoker)}
+                  >
+                    <View style={styles.jokerOptionHeader}>
+                      <Text style={[
+                        styles.jokerOptionName,
+                        isAfterSchool && styles.jokerOptionNameAfterSchool
+                      ]}>{availableJoker.name}</Text>
+                      <Text style={[
+                        styles.jokerOptionType,
+                        { color: availableJoker.type === 'persistent' 
+                          ? (isAfterSchool ? '#8a7ca8' : '#4ade80')
+                          : (isAfterSchool ? '#f87171' : '#fb7185') }
+                      ]}>
+                        {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
+                      </Text>
+                    </View>
+                    <Text style={[
+                      styles.jokerOptionDescription,
+                      isAfterSchool && styles.jokerOptionDescriptionAfterSchool
+                    ]}>{availableJoker.description}</Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noJokersContainer}>
+                  <Text style={[
+                    styles.noJokersText,
+                    isAfterSchool && styles.noJokersTextAfterSchool
+                  ]}>No other jokers to copy!</Text>
+                  <Text style={[
+                    styles.noJokersSubtext,
+                    isAfterSchool && styles.noJokersSubtextAfterSchool
+                  ]}>Study to earn more jokers first</Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                isAfterSchool && styles.cancelButtonAfterSchool
+              ]}
+              onPress={() => setShowJokerSelector(false)}
+            >
+              <Text style={[
+                styles.cancelButtonText,
+                isAfterSchool && styles.cancelButtonTextAfterSchool
+              ]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Candy Conversion Step 1: Select Source Modal */}
+      <Modal
+        visible={showConversionStep1}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            styles.jokerModalContent,
+            isAfterSchool && styles.modalContentAfterSchool
+          ]}>
+            <Text style={[
+              styles.modalTitle,
+              isAfterSchool && styles.modalTitleAfterSchool
+            ]}>🍭 Select Candy to Convert</Text>
+            
+            <ScrollView style={styles.jokerScrollView} showsVerticalScrollIndicator={false}>
+              {availableCandiesForConversion.length > 0 ? (
+                availableCandiesForConversion.map((candyType) => (
+                  <TouchableOpacity
+                    key={candyType}
+                    style={[
+                      styles.candyOption,
+                      isAfterSchool && styles.candyOptionAfterSchool
+                    ]}
+                    onPress={() => handleSourceCandySelection(candyType)}
+                  >
+                    <View style={styles.candyOptionHeader}>
+                      <Text style={[
+                        styles.candyOptionText,
+                        isAfterSchool && styles.candyOptionTextAfterSchool
+                      ]}>{candyType}</Text>
+                      <Text style={[
+                        styles.candyQuantity,
+                        isAfterSchool && styles.candyQuantityAfterSchool
+                      ]}>×{inventory[candyType].quantity}</Text>
+                    </View>
+                    <Text style={[
+                      styles.candyAvgPrice,
+                      isAfterSchool && styles.candyAvgPriceAfterSchool
+                    ]}>Avg: ${inventory[candyType].averagePrice.toFixed(2)}</Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noJokersContainer}>
+                  <Text style={[
+                    styles.noJokersText,
+                    isAfterSchool && styles.noJokersTextAfterSchool
+                  ]}>No candy to convert!</Text>
+                  <Text style={[
+                    styles.noJokersSubtext,
+                    isAfterSchool && styles.noJokersSubtextAfterSchool
+                  ]}>Buy some candy first</Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                isAfterSchool && styles.cancelButtonAfterSchool
+              ]}
+              onPress={() => setShowConversionStep1(false)}
+            >
+              <Text style={[
+                styles.cancelButtonText,
+                isAfterSchool && styles.cancelButtonTextAfterSchool
+              ]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Candy Conversion Step 2: Select Target Modal */}
+      <Modal
+        visible={showConversionStep2}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            isAfterSchool && styles.modalContentAfterSchool
+          ]}>
+            <Text style={[
+              styles.modalTitle,
+              isAfterSchool && styles.modalTitleAfterSchool
+            ]}>🔄 Convert to Which Candy?</Text>
+            
+            {selectedSourceCandy && (
+              <Text style={[
+                styles.conversionSummary,
+                isAfterSchool && styles.conversionSummaryAfterSchool
+              ]}>
+                Converting: {inventory[selectedSourceCandy].quantity} {selectedSourceCandy}
+              </Text>
+            )}
+            
+            {availableTargetCandies.map((candyType) => (
+              <TouchableOpacity
+                key={candyType}
+                style={[
+                  styles.candyOption,
+                  isAfterSchool && styles.candyOptionAfterSchool
+                ]}
+                onPress={() => handleTargetCandySelection(candyType)}
+              >
+                <Text style={[
+                  styles.candyOptionText,
+                  isAfterSchool && styles.candyOptionTextAfterSchool
+                ]}>{candyType}</Text>
+                <Text style={[
+                  styles.targetPrice,
+                  isAfterSchool && styles.targetPriceAfterSchool
+                ]}>Current Price: ${gameData.candyPrices[candyType][periodCount].toFixed(2)}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                isAfterSchool && styles.cancelButtonAfterSchool
+              ]}
+              onPress={() => {
+                setShowConversionStep2(false);
+                setSelectedSourceCandy(null);
+              }}
+            >
+              <Text style={[
+                styles.cancelButtonText,
+                isAfterSchool && styles.cancelButtonTextAfterSchool
+              ]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </CardWrapper>
   );
 }
 
@@ -213,27 +619,48 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  jokerCardCompact: {
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+  },
   jokerCardAfterSchool: {
     backgroundColor: 'rgba(93, 76, 112, 0.85)',
     borderColor: '#8a7ca8',
     shadowColor: '#2d1b3d',
     shadowOpacity: 0.15,
   },
+  jokerCardDragging: {
+    opacity: 0.7,
+    transform: [{ scale: 1.05 }],
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   jokerHeader: {
     marginBottom: 12,
+  },
+  jokerHeaderCompact: {
+    marginBottom: 8,
   },
   jokerTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+  },
+  jokerTitleLeft: {
+    flex: 1,
+    marginRight: 8,
   },
   jokerName: {
     fontSize: 18,
     fontWeight: '700',
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
-    flex: 1,
+    marginBottom: 2,
+  },
+  jokerNameCompact: {
+    fontSize: 16,
   },
   jokerNameAfterSchool: {
     color: '#f7e98e',
@@ -249,19 +676,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontFamily: 'CrayonPastel',
   },
+  jokerTypeCompact: {
+    fontSize: 9,
+  },
   jokerSubject: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#8b4513',
-    backgroundColor: '#f5e6d3',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
     fontFamily: 'CrayonPastel',
-    alignSelf: 'flex-start',
+    opacity: 0.8,
+  },
+  jokerSubjectCompact: {
+    fontSize: 10,
   },
   jokerSubjectAfterSchool: {
-    color: '#2a1845',
-    backgroundColor: '#b8a9c9',
+    color: '#b8a9c9',
   },
   jokerDescription: {
     fontSize: 14,
@@ -269,6 +697,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: 'CrayonPastel',
     marginBottom: 12,
+  },
+  jokerDescriptionCompact: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 8,
   },
   jokerDescriptionAfterSchool: {
     color: '#b8a9c9',
@@ -293,6 +726,28 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
   },
   activateButtonTextAfterSchool: {
+    color: '#f7e98e',
+  },
+  activateButtonCompact: {
+    backgroundColor: '#4ade80',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#22c55e',
+  },
+  activateButtonCompactAfterSchool: {
+    backgroundColor: '#8a7ca8',
+    borderColor: '#6d5985',
+  },
+  activateButtonTextCompact: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
+  },
+  activateButtonTextCompactAfterSchool: {
     color: '#f7e98e',
   },
   persistentIndicator: {
@@ -387,5 +842,127 @@ const styles = StyleSheet.create({
   },
   cancelButtonTextAfterSchool: {
     color: '#f7e98e',
+  },
+  jokerModalContent: {
+    maxHeight: '80%',
+  },
+  jokerScrollView: {
+    maxHeight: 300,
+    marginBottom: 16,
+  },
+  jokerOption: {
+    backgroundColor: '#f5e6d3',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#d4a574',
+  },
+  jokerOptionAfterSchool: {
+    backgroundColor: 'rgba(184, 169, 201, 0.2)',
+    borderColor: '#8a7ca8',
+  },
+  jokerOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  jokerOptionName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    flex: 1,
+  },
+  jokerOptionNameAfterSchool: {
+    color: '#b8a9c9',
+  },
+  jokerOptionType: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  jokerOptionDescription: {
+    fontSize: 14,
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+    lineHeight: 18,
+  },
+  jokerOptionDescriptionAfterSchool: {
+    color: '#b8a9c9',
+  },
+  noJokersContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  noJokersText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  noJokersTextAfterSchool: {
+    color: '#f7e98e',
+  },
+  noJokersSubtext: {
+    fontSize: 14,
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+  },
+  noJokersSubtextAfterSchool: {
+    color: '#b8a9c9',
+  },
+  candyOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  candyQuantity: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+  },
+  candyQuantityAfterSchool: {
+    color: '#b8a9c9',
+  },
+  candyAvgPrice: {
+    fontSize: 12,
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+    opacity: 0.8,
+  },
+  candyAvgPriceAfterSchool: {
+    color: '#b8a9c9',
+  },
+  conversionSummary: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f5e6d3',
+    borderRadius: 8,
+  },
+  conversionSummaryAfterSchool: {
+    color: '#b8a9c9',
+    backgroundColor: 'rgba(184, 169, 201, 0.2)',
+  },
+  targetPrice: {
+    fontSize: 12,
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+    opacity: 0.8,
+    marginTop: 2,
+  },
+  targetPriceAfterSchool: {
+    color: '#b8a9c9',
   },
 });

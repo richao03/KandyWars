@@ -13,8 +13,8 @@ const STORAGE_KEYS = {
 // Generic save/load functions
 export const saveData = async (key: string, data: any): Promise<boolean> => {
   try {
-    await AsyncStorage.setItem(key, JSON.stringify(data));
-    console.log(`Saved ${key} successfully`);
+    const jsonString = JSON.stringify(data);
+    await AsyncStorage.setItem(key, jsonString);
     return true;
   } catch (error) {
     console.error(`Failed to save ${key}:`, error);
@@ -27,10 +27,8 @@ export const loadData = async <T>(key: string, defaultValue: T): Promise<T> => {
     const data = await AsyncStorage.getItem(key);
     if (data !== null) {
       const parsed = JSON.parse(data);
-      console.log(`Loaded ${key} successfully`);
       return parsed;
     }
-    console.log(`No data found for ${key}, using default`);
     return defaultValue;
   } catch (error) {
     console.error(`Failed to load ${key}:`, error);
@@ -99,28 +97,3 @@ export const loadProcessedEvents = async (): Promise<Set<string>> => {
   return new Set(events);
 };
 
-// Helper function to save all game data at once
-export const saveCompleteGameState = async (gameState: {
-  game: any;
-  inventory: any;
-  wallet: any;
-  jokers: any;
-  seed: string;
-  processedEvents: Set<string>;
-}): Promise<boolean> => {
-  try {
-    await Promise.all([
-      saveGameState(gameState.game),
-      saveInventory(gameState.inventory),
-      saveWallet(gameState.wallet),
-      saveJokers(gameState.jokers),
-      saveSeed(gameState.seed),
-      saveProcessedEvents(gameState.processedEvents),
-    ]);
-    console.log('Complete game state saved successfully');
-    return true;
-  } catch (error) {
-    console.error('Failed to save complete game state:', error);
-    return false;
-  }
-};

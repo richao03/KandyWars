@@ -5,6 +5,7 @@ import EventModal from './components/EventModal';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { CandySalesProvider } from '../src/context/CandySalesContext';
 import { DailyStatsProvider } from '../src/context/DailyStatsContext';
 import { EventHandlerProvider } from '../src/context/EventHandlerContext';
 import { FlavorTextProvider } from '../src/context/FlavorTextContext';
@@ -42,8 +43,9 @@ export default function RootLayout() {
             <GameProvider>
               <InventoryProvider>
                 <WalletProvider>
-                  <DailyStatsProvider>
-                    <EventHandlerProvider>
+                  <CandySalesProvider>
+                    <DailyStatsProvider>
+                      <EventHandlerProvider>
                   <Stack>
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen 
@@ -79,8 +81,9 @@ export default function RootLayout() {
                       options={{ headerShown: false }} 
                     />
                   </Stack>
-                    </EventHandlerProvider>
-                  </DailyStatsProvider>
+                      </EventHandlerProvider>
+                    </DailyStatsProvider>
+                  </CandySalesProvider>
                 </WalletProvider>
               </InventoryProvider>
             </GameProvider>

@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import JokerSelection from '../components/JokerSelection';
-import { HISTORY_JOKERS } from '../../src/data/jokers';
+import { HISTORY_JOKERS } from '../../src/utils/jokerEffectEngine';
 
 interface CaesarPuzzle {
   id: number;

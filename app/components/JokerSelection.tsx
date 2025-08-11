@@ -6,8 +6,15 @@ interface Joker {
   id: number;
   name: string;
   description: string;
-  type: 'one-time' | 'persistent';
-  effect: string;
+  subject?: string;
+  type?: 'one-time' | 'persistent';
+  effect?: string;
+  effects?: Array<{
+    target: string;
+    operation: string;
+    amount: number;
+    duration: string;
+  }>;
 }
 
 interface JokerSelectionProps {
@@ -29,16 +36,24 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
   const handleJokerChoice = (jokerId: number) => {
     const selectedJoker = jokers.find(j => j.id === jokerId);
     if (selectedJoker) {
-      // Add joker to inventory with theme information
+      // Determine type from the joker's effects duration
+      // If all effects are one-time, it's a one-time joker, otherwise persistent
+      const isOneTime = selectedJoker.effects?.every((e: any) => e.duration === 'one-time') ?? false;
+      const jokerType = isOneTime ? 'one-time' : 'persistent';
+      
+      // Add joker to inventory with full structure
       const jokerToAdd: JokerType = {
-        ...selectedJoker,
-        subject: subject,
+        id: selectedJoker.id,
+        name: selectedJoker.name,
+        description: selectedJoker.description,
+        subject: subject || selectedJoker.subject,
         theme: theme,
-        type: selectedJoker.type,
-        effect: selectedJoker.effect
+        type: jokerType, // Keep for backwards compatibility with jokers page
+        effect: selectedJoker.effect || selectedJoker.effects?.[0]?.target || '',
+        effects: selectedJoker.effects // Include the full effects array!
       };
+      
       addJoker(jokerToAdd);
-      console.log(`Added ${subject} joker to inventory: ${selectedJoker.name}`);
     }
     onComplete();
   };

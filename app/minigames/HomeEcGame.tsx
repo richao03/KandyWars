@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
-import { HOME_EC_JOKERS } from '../../src/data/jokers';
+import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 
 interface HomeEcGameProps {
   onComplete: () => void;

@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { loadInventory, saveInventory } from '../utils/persistence';
 import { useJokers } from './JokerContext';
+import { useGame } from './GameContext';
+import { JokerService } from '../utils/jokerService';
 
 export type InventoryItem = {
   name: string;
@@ -17,7 +19,6 @@ type InventoryContextType = {
   removeFromInventory: (name: string, quantity: number) => boolean;
   getTotalInventoryCount: () => number;
   getInventoryLimit: () => number;
-  setNewInventoryLimit: (newLimit: number) => void;
   removeAllFromInventory: () => void;
 };
 
@@ -31,8 +32,9 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   const [inventory, setInventory] = useState<Inventory>({});
   const [inventoryLimit, setInventoryLimit] = useState(30);
   const [isLoaded, setIsLoaded] = useState(false);
+  const jokerService = JokerService.getInstance();
   const { jokers } = useJokers();
-  console.log(';what is emoty inventory', inventory);
+  const { periodCount } = useGame();
 
   // Load inventory on mount
   useEffect(() => {
@@ -52,21 +54,35 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isLoaded) return; // Don't save during initial load
     saveInventory(inventory);
   }, [inventory, isLoaded]);
+
+  // Handle candy generation from "Something from Nothing" joker
+  useEffect(() => {
+    if (!isLoaded || periodCount === 0) return; // Don't generate on initial load or period 0
+    
+    const somethingFromNothing = jokers.find(j => j.name === 'Something from Nothing');
+    if (somethingFromNothing) {
+      const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
+      
+      // Add one of each candy type
+      CANDY_TYPES.forEach(candyType => {
+        addToInventory(candyType, 1, 0); // Add 1 candy at $0 cost
+      });
+      
+      console.log('Something from Nothing: Generated 1 of each candy type');
+    }
+  }, [periodCount, jokers, isLoaded]);
   const addToInventory = (
     name: string,
     quantity: number,
     price: number
   ): boolean => {
-    console.log('name, :', name);
-
-    console.log('quantity, :', quantity);
     // Calculate current total from current inventory state
     const currentTotal = Object.values(inventory).reduce(
       (sum, item) => sum + item.quantity,
       0
     );
     const actualLimit = getInventoryLimit();
-    console.log('inventoryLimit :', actualLimit);
+    
     // Check if adding this quantity would exceed inventory limit
     if (currentTotal + quantity > actualLimit) {
       return false; // Transaction rejected due to inventory limit
@@ -126,16 +142,8 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getInventoryLimit = () => {
-    // Check for joker effects that modify inventory capacity
-    const hasGeometricExpansion = jokers.some(
-      (joker) =>
-        joker.effect === 'double_inventory_space' && joker.type === 'persistent'
-    );
-
-    return hasGeometricExpansion ? inventoryLimit * 2 : inventoryLimit;
-  };
-  const setNewInventoryLimit = (newLimit: number) => {
-    setInventoryLimit(newLimit);
+    const currentLimit = jokerService.applyJokerEffects(inventoryLimit, 'inventory_limit', jokers, periodCount);
+    return currentLimit;
   };
   const getTotalInventoryCount = () => {
     return Object.values(inventory).reduce(
@@ -153,7 +161,6 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
         removeAllFromInventory,
         getTotalInventoryCount,
         getInventoryLimit,
-        setNewInventoryLimit,
       }}
     >
       {children}
