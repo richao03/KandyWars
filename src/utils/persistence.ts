@@ -59,11 +59,11 @@ export const clearAllGameData = async (): Promise<boolean> => {
 };
 
 // Specific save/load functions for each context
-export const saveGameState = (gameState: any) => 
-  saveData(STORAGE_KEYS.GAME_STATE, gameState);
+export const saveGameState = (gameState: any, customKey?: string) => 
+  saveData(customKey || STORAGE_KEYS.GAME_STATE, gameState);
 
-export const loadGameState = (defaultState: any) => 
-  loadData(STORAGE_KEYS.GAME_STATE, defaultState);
+export const loadGameState = (defaultState: any, customKey?: string) => 
+  loadData(customKey || STORAGE_KEYS.GAME_STATE, defaultState);
 
 export const saveInventory = (inventory: any) => 
   saveData(STORAGE_KEYS.INVENTORY, inventory);

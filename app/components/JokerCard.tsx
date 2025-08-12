@@ -28,8 +28,8 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
   const { jokers, activateJoker, addJoker } = useJokers();
   const { periodCount, revertToPreviousPeriod, incrementPeriod } = useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
-  const { inventory, removeFromInventory, addToInventory } = useInventory();
-  const { addMoney } = useWallet();
+  const { inventory, removeFromInventory, addToInventory, convertCandyType, getTotalInventoryCount, getInventoryLimit } = useInventory();
+  const { add: addMoney } = useWallet();
   const [showCandySelector, setShowCandySelector] = useState(false);
   const [showJokerSelector, setShowJokerSelector] = useState(false);
   const [showConversionStep1, setShowConversionStep1] = useState(false); // Select source candy
@@ -76,26 +76,98 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
           { text: 'Crash the Market!', style: 'default', onPress: () => handleMarketCrash() }
         ]
       );
+    } else if (joker.name === 'Market Manipulation') {
+      // Show candy selector modal for market manipulation
+      setShowCandySelector(true);
+    } else if (joker.name === 'The Big Short') {
+      // Show candy selector modal for big short
+      setShowCandySelector(true);
+    } else if (joker.name === 'Roman Coin') {
+      // Show confirmation for Roman Coin activation
+      Alert.alert(
+        '🪙 Roman Coin',
+        'Sell the ancient coin for $200?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sell Coin', style: 'default', onPress: () => handleRomanCoin() }
+        ]
+      );
     }
   };
 
   const handleCandySelection = async (candyType: string) => {
-    // Get the original price and double it
-    const originalPrice = gameData.candyPrices[candyType][periodCount];
-    const doubledPrice = originalPrice * 2;
-    
-    // Modify the actual game data for this period
-    modifyCandyPrice(candyType, periodCount, doubledPrice);
-    
-    // Activate the joker (this will remove it from inventory)
-    const success = await activateJoker(joker.id, candyType, periodCount);
-    
-    if (success) {
-      Alert.alert(
-        '✨ Joker Activated!',
-        `${joker.name} has been used to double the price of ${candyType} for this period.\n\nPrice: $${originalPrice.toFixed(2)} → $${doubledPrice.toFixed(2)}`,
-        [{ text: 'OK' }]
-      );
+    if (joker.name === 'Market Manipulation') {
+      // Handle Market Manipulation: set chosen candy to highest price
+      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
+      
+      // Get all current candy prices for this period
+      const allPrices: Record<string, number> = {};
+      const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
+      CANDY_TYPES.forEach(candy => {
+        allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
+      });
+      
+      // Find the highest price
+      const highestPrice = Math.max(...Object.values(allPrices));
+      
+      // Set the chosen candy to the highest price
+      modifyCandyPrice(candyType, periodCount, highestPrice);
+      
+      // Activate the joker (this will remove it from inventory)
+      const success = await activateJoker(joker.id, candyType, periodCount);
+      
+      if (success) {
+        Alert.alert(
+          '📈 Market Manipulation Activated!',
+          `${candyType} price has been set to the highest market price!\n\nPrice: $${originalPrice.toFixed(2)} → $${highestPrice.toFixed(2)}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } else if (joker.name === 'The Big Short') {
+      // Handle The Big Short: set chosen candy to lowest price
+      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
+      
+      // Get all current candy prices for this period
+      const allPrices: Record<string, number> = {};
+      const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
+      CANDY_TYPES.forEach(candy => {
+        allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
+      });
+      
+      // Find the lowest price
+      const lowestPrice = Math.min(...Object.values(allPrices));
+      
+      // Set the chosen candy to the lowest price
+      modifyCandyPrice(candyType, periodCount, lowestPrice);
+      
+      // Activate the joker (this will remove it from inventory)
+      const success = await activateJoker(joker.id, candyType, periodCount);
+      
+      if (success) {
+        Alert.alert(
+          '📉 The Big Short Activated!',
+          `${candyType} price has been set to the lowest market price!\n\nPrice: $${originalPrice.toFixed(2)} → $${lowestPrice.toFixed(2)}`,
+          [{ text: 'OK' }]
+        );
+      }
+    } else {
+      // Handle other price-doubling effects
+      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
+      const doubledPrice = originalPrice * 2;
+      
+      // Modify the actual game data for this period
+      modifyCandyPrice(candyType, periodCount, doubledPrice);
+      
+      // Activate the joker (this will remove it from inventory)
+      const success = await activateJoker(joker.id, candyType, periodCount);
+      
+      if (success) {
+        Alert.alert(
+          '✨ Joker Activated!',
+          `${joker.name} has been used to double the price of ${candyType} for this period.\n\nPrice: $${originalPrice.toFixed(2)} → $${doubledPrice.toFixed(2)}`,
+          [{ text: 'OK' }]
+        );
+      }
     }
     setShowCandySelector(false);
   };
@@ -163,18 +235,24 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       return;
     }
 
-    // Remove all source candy
-    const success = removeFromInventory(selectedSourceCandy, sourceInventoryItem.quantity);
-    if (!success) {
-      Alert.alert('Error', 'Failed to remove source candy!');
-      return;
-    }
+    const currentTotal = getTotalInventoryCount();
+    const inventoryLimit = getInventoryLimit();
+    console.log(`Master of Trade: Current inventory: ${currentTotal}/${inventoryLimit}`);
+    console.log(`Master of Trade: Converting ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`);
 
     // Get current target candy price for conversion
-    const targetPrice = gameData.candyPrices[targetCandyType][periodCount];
+    const targetPrice = gameData.candyPrices[targetCandyType]?.[periodCount] || 0;
+    console.log(`Master of Trade: Target price for ${targetCandyType}: ${targetPrice}`);
     
-    // Add the same quantity as target candy
-    addToInventory(targetCandyType, sourceInventoryItem.quantity, targetPrice);
+    // Use the dedicated convertCandyType function (bypasses inventory limits for 1:1 conversion)
+    const conversionSuccess = convertCandyType(selectedSourceCandy, sourceInventoryItem.quantity, targetCandyType, targetPrice);
+    
+    if (!conversionSuccess) {
+      Alert.alert('Error', 'Failed to convert candy!');
+      return;
+    }
+    
+    console.log(`Master of Trade: Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`);
 
     // Remove the Master of Trade joker (it's one-time use)
     await activateJoker(joker.id);
@@ -242,6 +320,44 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       'All candy prices have been reduced by 50% for this period. Time to stock up!',
       [{ text: 'Buy the Dip!' }]
     );
+  };
+
+  const handleRomanCoin = async () => {
+    console.log('🪙 Roman Coin: Starting activation');
+    
+    try {
+      // Add $200 to wallet
+      console.log('🪙 Roman Coin: Adding $200 to wallet');
+      addMoney(200);
+      
+      // Remove the joker (it's one-time use)
+      console.log('🪙 Roman Coin: Activating joker with ID:', joker.id);
+      const success = await activateJoker(joker.id);
+      console.log('🪙 Roman Coin: Activation result:', success);
+
+      if (success) {
+        console.log('🪙 Roman Coin: Showing success alert');
+        Alert.alert(
+          '🪙 Roman Coin Sold!',
+          'You sold the ancient Roman coin and received $200!',
+          [{ text: 'Nice!' }]
+        );
+      } else {
+        console.log('🪙 Roman Coin: Activation failed, showing error');
+        Alert.alert(
+          'Error',
+          'Failed to activate Roman Coin joker',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('🪙 Roman Coin: Error during activation:', error);
+      Alert.alert(
+        'Error',
+        'An error occurred while activating the Roman Coin',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const getTypeColor = () => {
@@ -352,7 +468,11 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
             <Text style={[
               styles.modalTitle,
               isAfterSchool && styles.modalTitleAfterSchool
-            ]}>🍭 Choose Candy to Double</Text>
+            ]}>
+              {joker.name === 'Market Manipulation' ? '📈 Choose Candy to Manipulate' : 
+               joker.name === 'The Big Short' ? '📉 Choose Candy to Short' : 
+               '🍭 Choose Candy to Double'}
+            </Text>
             
             {CANDY_TYPES.map((candyType) => (
               <TouchableOpacity
@@ -579,7 +699,7 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
                 <Text style={[
                   styles.targetPrice,
                   isAfterSchool && styles.targetPriceAfterSchool
-                ]}>Current Price: ${gameData.candyPrices[candyType][periodCount].toFixed(2)}</Text>
+                ]}>Current Price: ${(gameData.candyPrices[candyType]?.[periodCount] || 0).toFixed(2)}</Text>
               </TouchableOpacity>
             ))}
             

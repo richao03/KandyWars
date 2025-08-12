@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import { useFlavorText } from './FlavorTextContext';
 import { useJokers } from './JokerContext';
 import { useSeed } from './SeedContext';
+import { useWallet } from './WalletContext';
 import { saveGameState, loadGameState, clearAllGameData } from '../utils/persistence';
 
 export type Location =
@@ -51,9 +53,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const { setEvent, setHint } = useFlavorText();
   const { gameData } = useSeed();
   const { jokers } = useJokers();
+  const { balance, stealMoney } = useWallet();
 
   const day = Math.max(1, Math.floor(periodCount / 8) + 1);
   const period = Math.max(1, (periodCount % 8) + 1);
+  
+  // Debug logging for day/period calculation
+  console.log(`📅 Day/Period Debug: periodCount=${periodCount}, calculated day=${day}, calculated period=${period}`);
 
   // Load game state on mount
   useEffect(() => {
@@ -68,6 +74,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       
       const savedState = await loadGameState(defaultState);
       
+      console.log('💾 GameContext - Loading saved state:', savedState);
+      console.log('💾 GameContext - Default state was:', defaultState);
+      
       setPeriodCount(savedState.periodCount ?? 0);
       setCurrentLocation(savedState.currentLocation || 'home room');
       setLocationHistory(savedState.locationHistory || [{ period: 0, location: 'home room' }]);
@@ -75,6 +84,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       setHasStudiedTonight(savedState.hasStudiedTonight ?? false);
       setIsLoaded(true);
       setIsInitialized(true);
+      
+      console.log('💾 GameContext - Set periodCount to:', savedState.periodCount ?? 0);
     };
 
     loadGameData();
@@ -92,6 +103,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       hasStudiedTonight,
     };
     
+    console.log('💾 GameContext - Saving game state:', gameState);
     saveGameState(gameState);
   }, [periodCount, currentLocation, locationHistory, isAfterSchool, hasStudiedTonight, isLoaded]);
 
@@ -101,6 +113,36 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       e.period === periodCount &&
       (!e.location || e.location === currentLocation)
   );
+
+  // Process current event effects
+  useEffect(() => {
+    if (currentEvent && isInitialized) {
+      console.log(`🎭 Processing event: ${currentEvent.effect} at period ${periodCount}`);
+      
+      switch (currentEvent.effect) {
+        case 'LOSE_MONEY':
+          // Bully event: lose 75% of money
+          const currentBalance = balance;
+          const amountToLose = Math.floor(currentBalance * 0.75);
+          
+          console.log(`💸 LOSE_MONEY event: losing ${amountToLose} out of ${currentBalance}`);
+          
+          if (amountToLose > 0) {
+            const actualAmountLost = stealMoney(amountToLose, jokers, periodCount);
+            console.log(`💸 Actually lost: $${actualAmountLost} (after joker protection)`);
+          }
+          break;
+          
+        case 'FOUND_MONEY':
+          // Could implement other money events here
+          console.log('💰 FOUND_MONEY event (not implemented yet)');
+          break;
+          
+        default:
+          console.log(`⚠️ Unhandled event effect: ${currentEvent.effect}`);
+      }
+    }
+  }, [currentEvent, periodCount, balance, isInitialized]);
 
   useEffect(() => {
     // Check for hints about next period's events
@@ -115,8 +157,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
-      const scoutJoker = jokers.find((j) => j.name === 'Scout');
-      const predictorJoker = jokers.find((j) => j.name === 'Predictor');
+      const scoutJoker = jokers.find((j) => j.name.replace(' (Copy)', '') === 'Scout');
+      const predictorJoker = jokers.find((j) => j.name.replace(' (Copy)', '') === 'Predictor');
 
       console.log(`Hint Debug - Period ${periodCount}, Next event: ${nextPeriodEvent.effect}, Has hint: ${!!nextPeriodEvent.hint}`);
       console.log(`Jokers:`, jokers.map(j => j.name));

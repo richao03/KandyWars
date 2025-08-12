@@ -32,7 +32,7 @@ export const useDiamondHand = () => {
     if (lastPeriod === 0) return;
 
     // Check if player has Diamond Hand joker
-    const diamondHandJoker = jokers.find(j => j.name === 'Diamond Hand');
+    const diamondHandJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Diamond Hand');
     if (!diamondHandJoker) return;
 
     // Check if player had inventory and didn't sell

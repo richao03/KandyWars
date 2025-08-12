@@ -41,7 +41,7 @@ export const CandySalesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addSale = (candyName: string): boolean => {
     // Check if user has Candy Salad joker
-    const candySaladJoker = jokers.find(j => j.name === 'Candy Salad');
+    const candySaladJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Candy Salad');
     if (!candySaladJoker) {
       return false;
     }

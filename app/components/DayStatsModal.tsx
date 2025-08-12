@@ -14,11 +14,11 @@ interface DayStatsModalProps {
   day: number;
 }
 
-export default function DayStatsModal({ 
-  visible, 
-  onClose, 
+export default function DayStatsModal({
+  visible,
+  onClose,
   stats,
-  day
+  day,
 }: DayStatsModalProps) {
   return (
     <Modal
@@ -37,8 +37,10 @@ export default function DayStatsModal({
     >
       <View style={styles.modal}>
         <Text style={styles.title}>📊 Day {day} Summary</Text>
-        <Text style={styles.subtitle}>Here's how your candy business performed today!</Text>
-        
+        <Text style={styles.subtitle}>
+          Here's how your candy business performed today!
+        </Text>
+
         <View style={styles.statsContainer}>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>💰 Total Profit Made:</Text>
@@ -46,34 +48,38 @@ export default function DayStatsModal({
               ${stats.profit.toFixed(2)}
             </Text>
           </View>
-          
+
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>🛒 Total Spent Buying:</Text>
             <Text style={[styles.statValue, styles.spentValue]}>
               ${stats.spent.toFixed(2)}
             </Text>
           </View>
-          
+
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>🍬 Candies Sold:</Text>
             <Text style={[styles.statValue, styles.soldValue]}>
               {stats.candiesSold} pieces
             </Text>
           </View>
-          
+
           <View style={[styles.statRow, styles.netGainRow]}>
             <Text style={styles.netGainLabel}>📈 Net Gain:</Text>
-            <Text style={[
-              styles.netGainValue, 
-              stats.netGain >= 0 ? styles.positiveGain : styles.negativeGain
-            ]}>
+            <Text
+              style={[
+                styles.netGainValue,
+                stats.netGain >= 0 ? styles.positiveGain : styles.negativeGain,
+              ]}
+            >
               {stats.netGain >= 0 ? '+' : ''}${stats.netGain.toFixed(2)}
             </Text>
           </View>
         </View>
 
         <TouchableOpacity style={styles.continueButton} onPress={onClose}>
-          <Text style={styles.continueButtonText}>🌟 Continue to After School</Text>
+          <Text style={styles.continueButtonText}>
+            🌟 Continue to After School
+          </Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -177,11 +183,11 @@ const styles = StyleSheet.create({
     color: '#ef4444',
   },
   continueButton: {
-    backgroundColor: '#4ade80',
+    backgroundColor: 'rgba(154,193,118,1)',
     paddingVertical: 16,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: '#22c55e',
+    borderColor: 'rgba(123,169,101,1)',
     shadowColor: '#22c55e',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,

@@ -56,13 +56,16 @@ export interface StandardizedJoker {
 // Core effect resolution engine
 export class JokerEffectEngine {
   private activeEffects: Map<
-    number,
+    string,
     { joker: StandardizedJoker; activatedAt: number }
   > = new Map();
+  private nextInstanceId = 0;
 
-  // Add a joker to active effects
+  // Add a joker to active effects (allows multiple instances of same joker)
   addJoker(joker: StandardizedJoker, currentPeriod: number) {
-    this.activeEffects.set(joker.id, { joker, activatedAt: currentPeriod });
+    const uniqueKey = `${joker.id}_${this.nextInstanceId++}`;
+    this.activeEffects.set(uniqueKey, { joker, activatedAt: currentPeriod });
+    console.log(`🔧 JokerEffectEngine: Added "${joker.name}" with key "${uniqueKey}". Total effects: ${this.activeEffects.size}`);
   }
 
   // Remove a joker from active effects
@@ -137,6 +140,11 @@ export class JokerEffectEngine {
   ): number {
     const effects = this.getEffectsForTarget(target, context);
     let result = baseValue;
+
+    if (target === 'inventory_limit') {
+      console.log(`🔧 JokerEffectEngine: Processing ${effects.length} effects for ${target}`);
+      console.log(`   Effects found:`, effects.map(e => `${e.operation} ${e.amount}`));
+    }
 
     // Apply operations in order: set -> multiply -> add
     const setEffects = effects.filter((e) => e.operation === 'set');

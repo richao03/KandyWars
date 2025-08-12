@@ -39,10 +39,10 @@ export default function RootLayout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SeedProvider>
         <FlavorTextProvider>
-          <JokerProvider>
-            <GameProvider>
-              <InventoryProvider>
-                <WalletProvider>
+          <WalletProvider>
+            <JokerProvider>
+              <GameProvider>
+                <InventoryProvider>
                   <CandySalesProvider>
                     <DailyStatsProvider>
                       <EventHandlerProvider>
@@ -84,10 +84,10 @@ export default function RootLayout() {
                       </EventHandlerProvider>
                     </DailyStatsProvider>
                   </CandySalesProvider>
-                </WalletProvider>
-              </InventoryProvider>
-            </GameProvider>
-          </JokerProvider>
+                </InventoryProvider>
+              </GameProvider>
+            </JokerProvider>
+          </WalletProvider>
         </FlavorTextProvider>
           </SeedProvider>
         </GestureHandlerRootView>

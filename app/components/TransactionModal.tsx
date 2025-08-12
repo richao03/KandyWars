@@ -48,10 +48,10 @@ export default function TransactionModal({
       isVisible={visible}
       animationIn="slideInUp"
       animationOut="slideOutDown"
-      animationInTiming={200}
-      animationOutTiming={150}
-      backdropTransitionInTiming={200}
-      backdropTransitionOutTiming={150}
+      animationInTiming={300}
+      animationOutTiming={200}
+      backdropTransitionInTiming={300}
+      backdropTransitionOutTiming={200}
       onBackdropPress={onClose}
       onBackButtonPress={onClose}
       useNativeDriver={true}

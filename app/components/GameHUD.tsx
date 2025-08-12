@@ -7,13 +7,13 @@ import { useInventory } from '../../src/context/InventoryContext';
 import { useWallet } from '../../src/context/WalletContext';
 
 const locationNames = {
-  'gym': 'Gymnasium',
-  'cafeteria': 'Cafeteria', 
+  gym: 'Gymnasium',
+  cafeteria: 'Cafeteria',
   'home room': 'Home Room',
-  'library': 'Library',
+  library: 'Library',
   'science lab': 'Science Lab',
   'school yard': 'School Yard',
-  'bathroom': 'Bathroom'
+  bathroom: 'Bathroom',
 } as const;
 
 interface GameHUDProps {
@@ -24,7 +24,13 @@ interface GameHUDProps {
   customLocationText?: string;
 }
 
-export default function GameHUD({ isModalOpening = false, isModalOpen = false, theme = 'school', customHeaderText, customLocationText }: GameHUDProps) {
+export default function GameHUD({
+  isModalOpening = false,
+  isModalOpen = false,
+  theme = 'school',
+  customHeaderText,
+  customLocationText,
+}: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
@@ -32,12 +38,17 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
 
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
-  const containerStyle = theme === 'evening' ? styles.eveningContainer : styles.container;
-  const headerStyle = theme === 'evening' ? styles.eveningHeaderText : styles.headerText;
-  const statTitleStyle = theme === 'evening' ? styles.eveningStatTitle : styles.statTitle;
+  const containerStyle =
+    theme === 'evening' ? styles.eveningContainer : styles.container;
+  const headerStyle =
+    theme === 'evening' ? styles.eveningHeaderText : styles.headerText;
+  const statTitleStyle =
+    theme === 'evening' ? styles.eveningStatTitle : styles.statTitle;
 
-  const headerText = customHeaderText || `Day ${day || 1} • Period ${period || 1}`;
-  const locationText = customLocationText || locationNames[currentLocation] || 'Home Room';
+  const headerText =
+    customHeaderText || `Day ${day || 1} • Period ${period || 1}`;
+  const locationText =
+    customLocationText || locationNames[currentLocation] || 'Home Room';
 
   return (
     <View style={containerStyle}>
@@ -45,22 +56,26 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
       <View style={styles.headerRow}>
         <Text style={headerStyle}>{headerText}</Text>
       </View>
-      
+
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
         <View style={[styles.statBox, styles.cashBox]}>
           <Text style={statTitleStyle}>My Money</Text>
           <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
         </View>
-        
+
         <View style={[styles.statBox, styles.piggyBox]}>
           <Text style={statTitleStyle}>Saved</Text>
-          <Text style={styles.piggyAmount}>${(stashedAmount || 0).toFixed(2)}</Text>
+          <Text style={styles.piggyAmount}>
+            ${(stashedAmount || 0).toFixed(2)}
+          </Text>
         </View>
-        
+
         <View style={[styles.statBox, styles.inventoryBox]}>
           <Text style={statTitleStyle}>Candy</Text>
-          <Text style={styles.inventoryAmount}>{totalInventory || 0}/{inventoryCapacity || 30}</Text>
+          <Text style={styles.inventoryAmount}>
+            {totalInventory || 0}/{inventoryCapacity || 30}
+          </Text>
         </View>
       </View>
 
@@ -76,7 +91,7 @@ export default function GameHUD({ isModalOpening = false, isModalOpen = false, t
         <View style={styles.flavorContainer}>
           <Marquee
             spacing={250}
-            speed={.75}
+            speed={0.75}
             style={styles.marquee}
             delay={2000}
           >
@@ -97,7 +112,7 @@ const styles = StyleSheet.create({
     borderColor: '#d4a574', // Brown crayon border
   },
   eveningContainer: {
-    backgroundColor: 'rgba(25,25,25, 0.7)', // Evening theme background
+    backgroundColor: 'rgba(25,25,25, 0.3)', // Evening theme background
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 3,
@@ -147,7 +162,7 @@ const styles = StyleSheet.create({
     borderColor: '#4a7c4a',
   },
   piggyBox: {
-    backgroundColor: '#ffd6e8', // Light pink crayon  
+    backgroundColor: '#ffd6e8', // Light pink crayon
     borderColor: '#b85c8a',
   },
   inventoryBox: {
@@ -179,7 +194,7 @@ const styles = StyleSheet.create({
   },
   piggyAmount: {
     fontSize: 16,
-    fontWeight: '700', 
+    fontWeight: '700',
     color: '#8a4a6b',
   },
   inventoryAmount: {

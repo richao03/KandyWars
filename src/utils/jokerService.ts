@@ -13,6 +13,16 @@ export class JokerService {
 
   private constructor() {}
 
+  // Helper function to clean joker names (remove " (Copy)" suffix)
+  private cleanJokerName(name: string): string {
+    return name.replace(' (Copy)', '');
+  }
+
+  // Helper function to find joker by name (handles copied jokers)
+  private findJokerByName(jokers: any[], name: string): any {
+    return jokers.find(j => this.cleanJokerName(j.name) === name);
+  }
+
   public static getInstance(): JokerService {
     if (!JokerService.instance) {
       JokerService.instance = new JokerService();
@@ -28,31 +38,49 @@ export class JokerService {
     inventoryLimit?: number,
     candyCount?: number
   ): number {
+    // Debug logging for inventory_limit target
+    if (target === 'inventory_limit') {
+      console.log(`🔍 JokerService - Calculating inventory limit with base: ${baseValue}`);
+      console.log(`🃏 Available jokers:`, jokers.map(j => `${j.name} (type: ${j.type})`));
+    }
+
     // Clear previous effects
     this.jokerEngine.clearAllEffects();
     
     // Add current active jokers with conditional logic
     jokers.forEach((joker) => {
-      // Find the standardized joker by name (all jokers should have a name)
-      const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === joker.name);
+      // Find the standardized joker by name (handle copied jokers by removing " (Copy)" suffix)
+      const jokerName = this.cleanJokerName(joker.name);
+      const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === jokerName);
+      
+      if (target === 'inventory_limit') {
+        console.log(`🔍 Processing joker: "${joker.name}" -> cleaned: "${jokerName}"`);
+        console.log(`   Standardized joker found: ${!!standardizedJoker}`);
+        if (standardizedJoker) {
+          console.log(`   Effects: ${JSON.stringify(standardizedJoker.effects)}`);
+        }
+      }
       
       if (standardizedJoker) {
           // Handle conditional jokers like Even Stevens and Odd Todd
-          if (joker.name === 'Even Stevens' && target === 'candy_price') {
+          if (jokerName === 'Even Stevens' && target === 'candy_price') {
             // Only apply if inventory limit is even
             if (inventoryLimit && inventoryLimit % 2 === 0) {
               this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
             }
-          } else if (joker.name === 'Odd Todd' && target === 'candy_price') {
+          } else if (jokerName === 'Odd Todd' && target === 'candy_price') {
             // Only apply if inventory limit is odd
             if (inventoryLimit && inventoryLimit % 2 === 1) {
               this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
             }
-          } else if (joker.name === 'Market Crash' && target === 'candy_price') {
+          } else if (jokerName === 'Market Crash' && target === 'candy_price') {
             // Market Crash applies immediately when activated
             this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
           } else {
             // Add the joker normally
+            if (target === 'inventory_limit') {
+              console.log(`   ✅ Adding joker to engine: ${standardizedJoker.name}`);
+            }
             this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
           }
       }
@@ -63,15 +91,21 @@ export class JokerService {
       currentPeriod
     });
 
+    if (target === 'inventory_limit') {
+      console.log(`   🎯 After joker engine effects: ${result}`);
+    }
+
     // Handle special daily effects like Inductive Reasoning
     if (target === 'inventory_limit') {
-      const inductiveReasoning = jokers.find(j => j.name === 'Inductive Reasoning');
+      const inductiveReasoning = this.findJokerByName(jokers, 'Inductive Reasoning');
       if (inductiveReasoning) {
         // Add 3 inventory spaces for each completed day
         const completedDays = Math.floor(currentPeriod / 8);
         const dailyBonus = completedDays * 3;
         result += dailyBonus;
+        console.log(`   📚 Inductive Reasoning bonus: +${dailyBonus} (${completedDays} completed days)`);
       }
+      console.log(`   📊 Final inventory limit: ${result}`);
     }
 
     return result;
@@ -83,7 +117,7 @@ export class JokerService {
     currentPeriod: number,
     candyCount: number
   ): number {
-    const compoundInterestJoker = jokers.find(j => j.name === 'Compound Interest');
+    const compoundInterestJoker = this.findJokerByName(jokers, 'Compound Interest');
     if (!compoundInterestJoker) return 0;
 
     const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === 'Compound Interest');
@@ -105,7 +139,7 @@ export class JokerService {
     chosenCandyType: string,
     allCandyPrices: Record<string, number>
   ): number {
-    const manipulationJoker = jokers.find(j => j.name === 'Market Manipulation');
+    const manipulationJoker = this.findJokerByName(jokers, 'Market Manipulation');
     if (!manipulationJoker) return 0;
 
     const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === 'Market Manipulation');
@@ -126,7 +160,7 @@ export class JokerService {
     jokers: any[],
     currentPeriod: number
   ): boolean {
-    const manipulationJoker = jokers.find(j => j.name === 'Market Manipulation');
+    const manipulationJoker = this.findJokerByName(jokers, 'Market Manipulation');
     return !!manipulationJoker;
   }
 
@@ -137,7 +171,7 @@ export class JokerService {
     chosenCandyType: string,
     allCandyPrices: Record<string, number>
   ): number {
-    const bigShortJoker = jokers.find(j => j.name === 'The Big Short');
+    const bigShortJoker = this.findJokerByName(jokers, 'The Big Short');
     if (!bigShortJoker) return 0;
 
     const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === 'The Big Short');
@@ -158,7 +192,7 @@ export class JokerService {
     jokers: any[],
     currentPeriod: number
   ): boolean {
-    const bigShortJoker = jokers.find(j => j.name === 'The Big Short');
+    const bigShortJoker = this.findJokerByName(jokers, 'The Big Short');
     return !!bigShortJoker;
   }
 
@@ -173,7 +207,8 @@ export class JokerService {
     // Add current active jokers
     jokers.forEach((joker) => {
       if (joker.type === 'persistent') {
-        const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === joker.name);
+        const jokerName = this.cleanJokerName(joker.name);
+        const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.name === jokerName);
         if (standardizedJoker) {
           this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
         }

@@ -26,13 +26,11 @@ type FlavorEvent =
   | 'HINT'
   | 'AFTERNOON'
   | 'PIGGY_BANK'
+  | 'LOSE_MONEY'
   | 'DEFAULT'; // fallback for ambient
 
 const flavorLibrary: Record<FlavorEvent, string[]> = {
-  STASH_LOCKED: [
-    'Someone ratted you out, your stash was confiscated',
-    'What a candy king without a couple of haters?, your stash was confiscated',
-  ],
+  STASH_LOCKED: ['Someone ratted you out, your stash was confiscated'],
   FOUND_MONEY: ['He who finds it keeps it - Confucious '],
   resale_bonus: ['what does this even mean?'],
   NEW_DAY: [
@@ -40,6 +38,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
     'You zip up your backpack. Time to hustle.',
     'New day, same kingpin',
   ],
+  LOSE_MONEY: ['Whats a Candy King without a couple of haters?'],
   INVENTORY_FULL: [
     "You can't carry any more!",
     "Your backpack's bursting with sweets.",

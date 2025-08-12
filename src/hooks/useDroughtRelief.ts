@@ -29,7 +29,7 @@ export const useDroughtRelief = () => {
     if (lastPeriod < 3) return;
 
     // Check if player has Drought Relief joker
-    const droughtReliefJoker = jokers.find(j => j.name === 'Drought Relief');
+    const droughtReliefJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Drought Relief');
     if (!droughtReliefJoker) return;
 
     // Check if the last 3 periods had no sales

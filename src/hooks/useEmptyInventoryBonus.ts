@@ -16,7 +16,7 @@ export const useEmptyInventoryBonus = () => {
     if (periodCount === 0) return;
 
     // Check if player has Embrace the Grind joker
-    const embraceGrindJoker = jokers.find(j => j.name === 'Embrace the Grind');
+    const embraceGrindJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Embrace the Grind');
     if (!embraceGrindJoker) return;
 
     // Check if inventory is empty

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Button,
+  Alert,
   FlatList,
   ImageBackground,
   StyleSheet,
@@ -28,6 +28,7 @@ import EndOfDayModal from '../components/EndOfDayModal';
 import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
 import LocationModal, { Location } from '../components/LocationModal';
+import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
 
@@ -185,6 +186,7 @@ export default function Market() {
     visitedDeli: false,
   });
   const [deliModalVisible, setDeliModalVisible] = useState(false);
+  const [sleepConfirmModalVisible, setSleepConfirmModalVisible] = useState(false);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -333,9 +335,21 @@ export default function Market() {
   };
 
   const handleGoToSleep = () => {
-    // End the day and start new day
+    // Show confirmation modal instead of immediately ending the day
     setEndOfDayModalVisible(false);
+    setSleepConfirmModalVisible(true);
+  };
+
+  const handleSleepConfirm = () => {
+    // End the day and start new day
+    setSleepConfirmModalVisible(false);
     incrementPeriod('home room'); // Start next day at home room
+  };
+
+  const handleSleepCancel = () => {
+    // Return to end of day modal
+    setSleepConfirmModalVisible(false);
+    setEndOfDayModalVisible(true);
   };
 
   const handleMoneyStashed = () => {
@@ -413,11 +427,22 @@ export default function Market() {
             [openModal]
           )}
         />
+
         <View style={styles.buttonContainer}>
-          <Button
-            title={period === 8 ? 'Leave School for the Day' : 'Next Period'}
+          <TouchableOpacity
+            style={styles.nextPeriodButton}
             onPress={handleNextDay}
-          />
+            activeOpacity={0.8}
+          >
+            <Text style={styles.nextPeriodButtonText}>
+              {period === 8 ? '🏠 Leave School for the Day' : '⏰ Next Period'}
+            </Text>
+            <Text style={styles.nextPeriodSubtext}>
+              {period === 8
+                ? 'Time to head home!'
+                : `Going to period ${period + 1}`}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ImageBackground>
 
@@ -451,6 +476,13 @@ export default function Market() {
       />
 
       <DeliModal visible={deliModalVisible} onClose={handleDeliReturn} />
+
+      <SleepConfirmModal
+        visible={sleepConfirmModalVisible}
+        onConfirm={handleSleepConfirm}
+        onCancel={handleSleepCancel}
+        currentDay={day}
+      />
 
       {selectedCandy && (
         <TransactionModal
@@ -536,8 +568,43 @@ const styles = StyleSheet.create({
     borderColor: '#ffb3b3',
   },
   buttonContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    borderTopWidth: 3,
+    borderColor: '#d4a574',
+    padding: 10,
     alignItems: 'center',
+  },
+  nextPeriodButton: {
+    backgroundColor: 'rgba(154,193,118,1)',
+    paddingVertical: 8,
+    paddingHorizontal: 32,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(123,169,101,1)',
+    shadowColor: '#166534',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    minWidth: 280,
+    alignItems: 'center',
+  },
+  nextPeriodButtonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    textShadowColor: '#166534',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  nextPeriodSubtext: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#f0fdf4',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginTop: 2,
+    opacity: 0.9,
   },
 });

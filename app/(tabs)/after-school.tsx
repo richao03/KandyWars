@@ -1,19 +1,28 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
-import { FlatList, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import GameHUD from '../components/GameHUD';
+import React, { useEffect, useState } from 'react';
+import {
+  FlatList,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
 import { useWallet } from '../../src/context/WalletContext';
-
+import GameHUD from '../components/GameHUD';
+import SleepConfirmModal from '../components/SleepConfirmModal';
 
 export default function AfterSchoolPage() {
   const { day, startNewDay, hasStudiedTonight } = useGame();
   const { resetDailyStats } = useDailyStats();
   const { balance } = useWallet();
   const { setEvent } = useFlavorText();
+  const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
+    useState(false);
 
   // Set afternoon flavor text when component loads
   useEffect(() => {
@@ -36,6 +45,13 @@ export default function AfterSchoolPage() {
   };
 
   const handleGoToSleep = () => {
+    // Show confirmation modal instead of immediately ending the day
+    setSleepConfirmModalVisible(true);
+  };
+
+  const handleSleepConfirm = () => {
+    // Close the modal first
+    setSleepConfirmModalVisible(false);
     // Reset daily stats and start new day
     resetDailyStats(balance);
     // Start new day (this will exit after-school mode and increment to next day)
@@ -44,72 +60,66 @@ export default function AfterSchoolPage() {
     router.push('/(tabs)/market');
   };
 
-const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.option, 
-        item.disabled && styles.disabledOption
-      ]} 
+  const handleSleepCancel = () => {
+    // Just close the modal
+    setSleepConfirmModalVisible(false);
+  };
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.option, item.disabled && styles.disabledOption]}
       onPress={item.disabled ? undefined : item.onPress}
       disabled={item.disabled}
     >
-      <Text style={[
-        styles.optionEmoji,
-        item.disabled && styles.disabledEmoji
-      ]}>
+      <Text style={[styles.optionEmoji, item.disabled && styles.disabledEmoji]}>
         {item.emoji}
       </Text>
       <View style={styles.optionText}>
-        <Text style={[
-          styles.optionTitle,
-          item.disabled && styles.disabledText
-        ]}>
+        <Text
+          style={[styles.optionTitle, item.disabled && styles.disabledText]}
+        >
           {item.title}
         </Text>
-        <Text style={[
-          styles.optionDesc,
-          item.disabled && styles.disabledText
-        ]}>
+        <Text style={[styles.optionDesc, item.disabled && styles.disabledText]}>
           {item.desc}
         </Text>
       </View>
     </TouchableOpacity>
   );
 
-const options = [
-  {
-    id: 'study',
-    emoji: '📚',
-    title: 'Study at Home',
-    desc: hasStudiedTonight 
-      ? 'You\'ve already studied tonight. Rest up!' 
-      : 'Cozy up with your books by the warm lamplight',
-    onPress: () => handleStudy(),
-    disabled: hasStudiedTonight,
-  },
-  {
-    id: 'stash',
-    emoji: '🔐',
-    title: 'Go to Your Stash',
-    desc: 'Make sure no one is following you',
-    onPress: () => handleStashMoney(),
-  },
-  {
-    id: 'deli',
-    emoji: '🏪',
-    title: 'Visit the Corner Deli',
-    desc: 'Take an evening stroll to the neighborhood store',
-    onPress: () => handleGoDeli(),
-  },
-  {
-    id: 'sleep',
-    emoji: '😴',
-    title: 'Go to Sleep',
-    desc: 'Rest up and start a new day at school tomorrow',
-    onPress: () => handleGoToSleep(),
-  },
-];
-
+  const options = [
+    {
+      id: 'study',
+      emoji: '📚',
+      title: 'Study at Home',
+      desc: hasStudiedTonight
+        ? "You've already studied tonight. Rest up!"
+        : 'Cozy up with your books by the warm lamplight',
+      onPress: () => handleStudy(),
+      disabled: hasStudiedTonight,
+    },
+    {
+      id: 'stash',
+      emoji: '🔐',
+      title: 'Go to Your Stash',
+      desc: 'Make sure no one is following you',
+      onPress: () => handleStashMoney(),
+    },
+    {
+      id: 'deli',
+      emoji: '🏪',
+      title: 'Visit the Corner Deli',
+      desc: 'Take an evening stroll to the neighborhood store',
+      onPress: () => handleGoDeli(),
+    },
+    {
+      id: 'sleep',
+      emoji: '😴',
+      title: 'Go to Sleep',
+      desc: 'Rest up and start a new day at school tomorrow',
+      onPress: () => handleGoToSleep(),
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -119,8 +129,8 @@ const options = [
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <GameHUD 
-          theme="evening" 
+        <GameHUD
+          theme="evening"
           customHeaderText={`After School - Day ${day}`}
           customLocationText="Peaceful Evening"
         />
@@ -134,6 +144,13 @@ const options = [
           {/* Optional: Add a button here if needed */}
         </View>
       </ImageBackground>
+
+      <SleepConfirmModal
+        visible={sleepConfirmModalVisible}
+        onConfirm={handleSleepConfirm}
+        onCancel={handleSleepCancel}
+        currentDay={day}
+      />
     </View>
   );
 }
@@ -154,7 +171,7 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(25,25,25, 0.6)',
+    backgroundColor: 'rgba(120, 120, 120, 0.3)', // Darker background for better contrast
     borderRadius: 16,
     borderWidth: 2,
     borderColor: '#f7e98e',
@@ -182,15 +199,18 @@ const styles = StyleSheet.create({
     color: '#f7e98e',
     marginBottom: 6,
     fontFamily: 'CrayonPastel',
-    textShadowColor: 'rgba(247,233,142,0.3)',
+    textShadowColor: 'rgba(125,125,125,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   optionDesc: {
     fontSize: 16,
-    color: '#b8a9c9',
+    color: '#f5f5dc', // Changed from purple to beige/cream for better contrast
     lineHeight: 22,
     fontStyle: 'italic',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   disabledOption: {
     opacity: 0.6,
@@ -202,5 +222,4 @@ const styles = StyleSheet.create({
   disabledText: {
     color: '#666',
   },
-  
 });

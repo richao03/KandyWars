@@ -12,7 +12,8 @@ export type SpecialEventEffect = {
     | 'PRICE_SPIKE'
     | 'resale_bonus'
     | 'STASH_LOCKED'
-    | 'FOUND_MONEY';
+    | 'FOUND_MONEY'
+    | 'LOSE_MONEY';
   multiplier?: number;
   location?:
     | 'gym'
@@ -119,6 +120,16 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       subtitle: 'How did the new kid have so many snickers?',
       hint: '👀 Theres rumbling that the vending machine in cafeteria is giving out cheap snickers...👀',
       backgroundImage: require('../assets/images/pricedrop.png'),
+    }),
+    () => ({
+      description: 'Bullying is an epidemic',
+      effect: 'LOSE_MONEY',
+      category: 'bad',
+      heading: 'Give me your lunch money!',
+      title: 'A bully took all your money',
+      subtitle: 'Better hit the weights to get your weight up!',
+      hint: '👀 Rumor is someone is out looking for you....👀',
+      backgroundImage: require('../assets/images/bully.png'),
     }),
     () => ({
       description: 'Found some money!',
@@ -299,18 +310,15 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
 
   // Always add the test event for library period 3 cheap gum
   periodEvents.push({
-    period: 3,
-    description: 'Library study group desperate for gum!',
-    candy: 'Bubble Gum',
-    effect: 'PRICE_DROP',
-    location: 'library',
-    category: 'neutral',
-    priceOverride: 0.01,
-    heading: 'Gum Trending',
-    title: 'How to stay awake?',
-    subtitle: 'By non-stop chewing gum!!',
-    backgroundImage: require('../assets/images/pricedrop.png'),
-    hint: '👀 You hear whispers about students needing gum for the study session at the library next period...👀',
+    period: 2,
+    description: 'Bullying is an epidemic',
+    effect: 'LOSE_MONEY',
+    category: 'bad',
+    heading: 'Give me your lunch money!',
+    title: 'A bully took all your money',
+    subtitle: 'Better hit the weights to get your weight up!',
+    hint: '👀 Rumor is someone is out looking for you....👀',
+    backgroundImage: require('../assets/images/bully.png'),
   });
 
   // periodEvents.push({
