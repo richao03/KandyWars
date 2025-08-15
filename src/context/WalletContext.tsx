@@ -11,6 +11,7 @@ type WalletContextType = {
   withdrawFromStash: (amount: number) => boolean;
   confiscateStash: (jokers?: any[], periodCount?: number) => number; // Returns amount confiscated
   stealMoney: (amount: number, jokers?: any[], periodCount?: number) => number; // Returns amount stolen from balance
+  resetWallet: () => void;
 };
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -105,6 +106,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return actualStolenAmount;
   };
 
+  const resetWallet = () => {
+    setBalance(20); // Reset to starting cash
+    setStashedAmount(0); // Reset stash
+    console.log('Wallet reset to initial state');
+  };
+
   return (
     <WalletContext.Provider value={{ 
       balance, 
@@ -114,7 +121,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       stashMoney,
       withdrawFromStash,
       confiscateStash,
-      stealMoney
+      stealMoney,
+      resetWallet
     }}>
       {children}
     </WalletContext.Provider>

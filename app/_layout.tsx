@@ -77,6 +77,10 @@ export default function RootLayout() {
                       options={{ headerShown: false }} 
                     />
                     <Stack.Screen 
+                      name="recess-game" 
+                      options={{ headerShown: false }} 
+                    />
+                    <Stack.Screen 
                       name="debug-jokers" 
                       options={{ headerShown: false }} 
                     />

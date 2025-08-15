@@ -40,6 +40,7 @@ type JokerContextType = {
   ) => Promise<boolean>;
   clearActiveEffect: (jokerId: number) => void;
   reorderJokers: (newOrder: Joker[]) => void;
+  resetJokers: () => void;
 };
 
 const JokerContext = createContext<JokerContextType | undefined>(undefined);
@@ -142,6 +143,12 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
     setJokers(newOrder);
   };
 
+  const resetJokers = () => {
+    setJokers([]);
+    setActiveEffects([]);
+    console.log('Jokers and active effects reset to initial state');
+  };
+
   return (
     <JokerContext.Provider
       value={{
@@ -154,6 +161,7 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
         activateJoker,
         clearActiveEffect,
         reorderJokers,
+        resetJokers,
       }}
     >
       {children}

@@ -21,6 +21,7 @@ type InventoryContextType = {
   getTotalInventoryCount: () => number;
   getInventoryLimit: () => number;
   removeAllFromInventory: () => void;
+  resetInventory: () => void;
 };
 
 const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -201,6 +202,12 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const resetInventory = () => {
+    setInventory({});
+    setInventoryLimit(30); // Reset to default limit
+    console.log('Inventory reset to initial state');
+  };
+
   return (
     <InventoryContext.Provider
       value={{
@@ -211,6 +218,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
         removeAllFromInventory,
         getTotalInventoryCount,
         getInventoryLimit,
+        resetInventory,
       }}
     >
       {children}

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useInventory } from '../../src/context/InventoryContext';
 import { useWallet } from '../../src/context/WalletContext';
+import ConfirmationModal from './ConfirmationModal';
 
 interface JokerCardProps {
   joker: {
@@ -35,6 +36,39 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
   const [showConversionStep1, setShowConversionStep1] = useState(false); // Select source candy
   const [showConversionStep2, setShowConversionStep2] = useState(false); // Select target candy
   const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    emoji: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
+
+  const showConfirm = (title: string, message: string, emoji: string, onConfirm: () => void, confirmText = 'OK', cancelText = 'Cancel', onCancel?: () => void) => {
+    setConfirmModal({
+      visible: true,
+      title,
+      message,
+      emoji,
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        onConfirm();
+      },
+      onCancel: onCancel ? () => {
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        onCancel();
+      } : () => setConfirmModal(prev => ({ ...prev, visible: false })),
+      confirmText,
+      cancelText: onCancel ? cancelText : undefined
+    });
+  };
+
+  const showAlert = (title: string, message: string, emoji = '✨') => {
+    showConfirm(title, message, emoji, () => {}, 'OK');
+  };
 
   const handleActivate = () => {
     if (joker.effect === 'double_candy_price') {
@@ -42,13 +76,14 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       setShowCandySelector(true);
     } else if (joker.effect === 'revert_period') {
       // Show confirmation for time revert
-      Alert.alert(
-        '⏰ Time Equation',
+      showConfirm(
+        'Time Equation',
         'Are you sure you want to revert to the previous period? This cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Revert Time', style: 'destructive', onPress: () => handleTimeRevert() }
-        ]
+        '⏰',
+        () => handleTimeRevert(),
+        'Revert Time',
+        'Cancel',
+        () => {}
       );
     } else if (joker.name === 'Glitch in the Matrix') {
       // Show joker selector modal for duplication
@@ -58,23 +93,25 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       setShowConversionStep1(true);
     } else if (joker.name === 'Temporary Emperor') {
       // Show confirmation for time skip with auto profits
-      Alert.alert(
-        '👑 Temporary Emperor',
+      showConfirm(
+        'Temporary Emperor',
         'Skip one period and automatically gain profits from selling 3 of every candy type at next period prices?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Rule the Market!', style: 'default', onPress: () => handleTemporaryEmperor() }
-        ]
+        '👑',
+        () => handleTemporaryEmperor(),
+        'Rule the Market!',
+        'Cancel',
+        () => {}
       );
     } else if (joker.name === 'Market Crash') {
       // Show confirmation for market crash
-      Alert.alert(
-        '📉 Market Crash',
+      showConfirm(
+        'Market Crash',
         'Crash all candy prices by 50% for this period? Perfect for bulk buying!',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Crash the Market!', style: 'default', onPress: () => handleMarketCrash() }
-        ]
+        '📉',
+        () => handleMarketCrash(),
+        'Crash the Market!',
+        'Cancel',
+        () => {}
       );
     } else if (joker.name === 'Market Manipulation') {
       // Show candy selector modal for market manipulation
@@ -84,13 +121,14 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       setShowCandySelector(true);
     } else if (joker.name === 'Roman Coin') {
       // Show confirmation for Roman Coin activation
-      Alert.alert(
-        '🪙 Roman Coin',
+      showConfirm(
+        'Roman Coin',
         'Sell the ancient coin for $200?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sell Coin', style: 'default', onPress: () => handleRomanCoin() }
-        ]
+        '🪙',
+        () => handleRomanCoin(),
+        'Sell Coin',
+        'Cancel',
+        () => {}
       );
     }
   };
@@ -117,10 +155,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       const success = await activateJoker(joker.id, candyType, periodCount);
       
       if (success) {
-        Alert.alert(
-          '📈 Market Manipulation Activated!',
+        showAlert(
+          'Market Manipulation Activated!',
           `${candyType} price has been set to the highest market price!\n\nPrice: $${originalPrice.toFixed(2)} → $${highestPrice.toFixed(2)}`,
-          [{ text: 'OK' }]
+          '📈'
         );
       }
     } else if (joker.name === 'The Big Short') {
@@ -144,10 +182,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       const success = await activateJoker(joker.id, candyType, periodCount);
       
       if (success) {
-        Alert.alert(
-          '📉 The Big Short Activated!',
+        showAlert(
+          'The Big Short Activated!',
           `${candyType} price has been set to the lowest market price!\n\nPrice: $${originalPrice.toFixed(2)} → $${lowestPrice.toFixed(2)}`,
-          [{ text: 'OK' }]
+          '📉'
         );
       }
     } else {
@@ -162,10 +200,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
       const success = await activateJoker(joker.id, candyType, periodCount);
       
       if (success) {
-        Alert.alert(
-          '✨ Joker Activated!',
+        showAlert(
+          'Joker Activated!',
           `${joker.name} has been used to double the price of ${candyType} for this period.\n\nPrice: $${originalPrice.toFixed(2)} → $${doubledPrice.toFixed(2)}`,
-          [{ text: 'OK' }]
+          '✨'
         );
       }
     }
@@ -177,16 +215,16 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     if (jokerActivated) {
       const timeReverted = revertToPreviousPeriod();
       if (timeReverted) {
-        Alert.alert(
-          '⏰ Time Reversed!',
+        showAlert(
+          'Time Reversed!',
           'You have successfully reverted to the previous period. Use this knowledge wisely!',
-          [{ text: 'OK' }]
+          '⏰'
         );
       } else {
-        Alert.alert(
-          '⏰ Time Revert Failed',
+        showAlert(
+          'Time Revert Failed',
           'Cannot revert time from the first period.',
-          [{ text: 'OK' }]
+          '⏰'
         );
       }
     }
@@ -207,10 +245,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     const success = await activateJoker(joker.id);
     
     if (success) {
-      Alert.alert(
-        '🔄 Glitch Activated!',
+      showAlert(
+        'Glitch Activated!',
         `Successfully created a copy of "${selectedJoker.name}". The glitch has been consumed.`,
-        [{ text: 'OK' }]
+        '🔄'
       );
     }
     
@@ -231,7 +269,7 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
 
     const sourceInventoryItem = inventory[selectedSourceCandy];
     if (!sourceInventoryItem || sourceInventoryItem.quantity === 0) {
-      Alert.alert('Error', 'No source candy available for conversion!');
+      showAlert('Error', 'No source candy available for conversion!', '⚠️');
       return;
     }
 
@@ -248,7 +286,7 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     const conversionSuccess = convertCandyType(selectedSourceCandy, sourceInventoryItem.quantity, targetCandyType, targetPrice);
     
     if (!conversionSuccess) {
-      Alert.alert('Error', 'Failed to convert candy!');
+      showAlert('Error', 'Failed to convert candy!', '❌');
       return;
     }
     
@@ -257,10 +295,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     // Remove the Master of Trade joker (it's one-time use)
     await activateJoker(joker.id);
 
-    Alert.alert(
-      '🔄 Trade Completed!',
+    showAlert(
+      'Trade Completed!',
       `Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} into ${sourceInventoryItem.quantity} ${targetCandyType}!`,
-      [{ text: 'OK' }]
+      '🔄'
     );
 
     // Reset state
@@ -304,10 +342,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     // Remove the joker (it's one-time use)
     await activateJoker(joker.id);
 
-    Alert.alert(
-      '👑 Emperor\'s Decree Executed!',
+    showAlert(
+      'Emperor\'s Decree Executed!',
       `Time has been advanced by 2 periods (skipped period ${skippedPeriod}).\n\nAuto-profit from selling 3 of each candy:\n${profitBreakdown.join('\n')}\n\nTotal gained: $${totalProfit.toFixed(2)}`,
-      [{ text: 'Long live the Emperor!' }]
+      '👑'
     );
   };
 
@@ -315,10 +353,10 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     // Remove the joker (it's one-time use)
     await activateJoker(joker.id);
 
-    Alert.alert(
-      '📉 Market Crash Executed!',
+    showAlert(
+      'Market Crash Executed!',
       'All candy prices have been reduced by 50% for this period. Time to stock up!',
-      [{ text: 'Buy the Dip!' }]
+      '📉'
     );
   };
 
@@ -337,25 +375,25 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
 
       if (success) {
         console.log('🪙 Roman Coin: Showing success alert');
-        Alert.alert(
-          '🪙 Roman Coin Sold!',
+        showAlert(
+          'Roman Coin Sold!',
           'You sold the ancient Roman coin and received $200!',
-          [{ text: 'Nice!' }]
+          '🪙'
         );
       } else {
         console.log('🪙 Roman Coin: Activation failed, showing error');
-        Alert.alert(
+        showAlert(
           'Error',
           'Failed to activate Roman Coin joker',
-          [{ text: 'OK' }]
+          '❌'
         );
       }
     } catch (error) {
       console.error('🪙 Roman Coin: Error during activation:', error);
-      Alert.alert(
+      showAlert(
         'Error',
         'An error occurred while activating the Roman Coin',
-        [{ text: 'OK' }]
+        '❌'
       );
     }
   };
@@ -721,6 +759,19 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
           </View>
         </View>
       </Modal>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        emoji={confirmModal.emoji}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || (() => setConfirmModal(prev => ({ ...prev, visible: false })))}
+        theme="market"
+      />
     </CardWrapper>
   );
 }

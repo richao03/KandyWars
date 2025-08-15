@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   LayoutChangeEvent,
   ScrollView,
   StyleSheet,
@@ -20,19 +19,28 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import JokerSelection from '../components/JokerSelection';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
+import GameModal, { useGameModal } from '../components/GameModal';
+import JokerSelection from '../components/JokerSelection';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 
 /** =========================
  *  Types
  *  ========================= */
-type Item = 'Chocolate' | 'Lollipop' | 'Cookie' | 'Cake' | 'Candy' | 'Donut' | 'Cupcake';
+type Item =
+  | 'Chocolate'
+  | 'Lollipop'
+  | 'Cookie'
+  | 'Cake'
+  | 'Candy'
+  | 'Donut'
+  | 'Cupcake';
 type Inventory = Partial<Record<Item, number>>;
 type TradeTile = {
   id: string;
   give: Inventory;
   get: Inventory;
-  label: string;    // "1 🍫 → 1 🍰"
+  label: string; // "1 🍫 → 1 🍰"
   source: 'palette' | 'slot';
 };
 type Puzzle = {
@@ -76,7 +84,7 @@ function strHash32(s: string): number {
 function mulberry32(seed: number) {
   let t = seed >>> 0;
   return function () {
-    t += 0x6D2B79F5;
+    t += 0x6d2b79f5;
     let r = Math.imul(t ^ (t >>> 15), 1 | t);
     r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
@@ -89,14 +97,16 @@ function randInt(rng: () => number, min: number, max: number) {
   return Math.floor(rng() * (max - min + 1)) + min;
 }
 function pick<T>(rng: () => number, arr: T[], exclude: T[] = []): T {
-  const pool = arr.filter(a => !exclude.includes(a));
+  const pool = arr.filter((a) => !exclude.includes(a));
   return pool[Math.floor(rng() * pool.length)];
 }
 
 /** =========================
  *  Inventory helpers
  *  ========================= */
-function qty(n: number, it: Item) { return `${n} ${CATALOG[it]}`; }
+function qty(n: number, it: Item) {
+  return `${n} ${CATALOG[it]}`;
+}
 function fmtInv(inv: Inventory): string {
   const parts: string[] = [];
   for (const [item, amount] of Object.entries(inv)) {
@@ -134,7 +144,12 @@ function generatePuzzle(seed: string, steps: number): Puzzle {
   const goal: Item = pick(rng, ALL_ITEMS);
   let currentNeed: Inventory = { [goal]: 1 };
 
-  const solution: { id: string; give: Inventory; get: Inventory; label: string }[] = [];
+  const solution: {
+    id: string;
+    give: Inventory;
+    get: Inventory;
+    label: string;
+  }[] = [];
   const chainItems = new Set<Item>([goal]);
 
   for (let i = steps - 1; i >= 0; i--) {
@@ -155,8 +170,8 @@ function generatePuzzle(seed: string, steps: number): Puzzle {
   }
 
   const startInventory = currentNeed;
-  const tiles: TradeTile[] = solution.map(t => ({ ...t, source: 'palette' }));
-  const offPathItems = ALL_ITEMS.filter(i => !chainItems.has(i));
+  const tiles: TradeTile[] = solution.map((t) => ({ ...t, source: 'palette' }));
+  const offPathItems = ALL_ITEMS.filter((i) => !chainItems.has(i));
 
   for (let s = 0; s < steps; s++) {
     const sol = solution[s];
@@ -166,13 +181,13 @@ function generatePuzzle(seed: string, steps: number): Puzzle {
     for (let v = 0; v < count && offPathItems.length > 0; v++) {
       const outItem = pick(rng, offPathItems);
       if (outItem === goal) continue;
-      
+
       // Prevent one-shot solutions: Check if this decoy would allow reaching goal directly
       const startHasGiveItem = (startInventory[solGive] || 0) >= solGiveQty;
       if (startHasGiveItem && outItem === goal) {
         continue; // Skip this decoy as it would create a one-shot solution
       }
-      
+
       const getQty = randInt(rng, 1, 2);
       tiles.push({
         id: `d-${s}-${v}-${solGive}(${solGiveQty})->${outItem}(${getQty})`,
@@ -221,7 +236,14 @@ type PaletteDragProps = CommonDragProps & {
   style?: any;
 };
 function DraggableFromPalette({
-  tile, dragX, dragY, dragScale, onStartJS, onMoveJS, onEndFromPaletteJS, style,
+  tile,
+  dragX,
+  dragY,
+  dragScale,
+  onStartJS,
+  onMoveJS,
+  onEndFromPaletteJS,
+  style,
 }: PaletteDragProps) {
   const gesture = useAnimatedGestureHandler({
     onStart: (e) => {
@@ -258,10 +280,22 @@ function DraggableFromPalette({
 
 type SlotDragProps = CommonDragProps & {
   slotIndex: number;
-  onEndFromSlotJS: (slotIndex: number, tile: TradeTile, x: number, y: number) => void;
+  onEndFromSlotJS: (
+    slotIndex: number,
+    tile: TradeTile,
+    x: number,
+    y: number
+  ) => void;
 };
 function DraggableFromSlot({
-  tile, slotIndex, dragX, dragY, dragScale, onStartJS, onMoveJS, onEndFromSlotJS,
+  tile,
+  slotIndex,
+  dragX,
+  dragY,
+  dragScale,
+  onStartJS,
+  onMoveJS,
+  onEndFromSlotJS,
 }: SlotDragProps) {
   const gesture = useAnimatedGestureHandler({
     onStart: (e) => {
@@ -289,7 +323,9 @@ function DraggableFromSlot({
       activeOffsetX={[-10, 10]}
       activeOffsetY={[-10, 10]}
     >
-      <Animated.View style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+      <Animated.View
+        style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
+      >
         <Text style={styles.slotLabel}>{tile.label}</Text>
       </Animated.View>
     </PanGestureHandler>
@@ -302,6 +338,8 @@ function DraggableFromSlot({
 const LEVEL_SLOTS = [4, 5, 6];
 
 export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
+  const { modal, showModal, hideModal } = useGameModal();
+
   const [seed] = useState('candy-seed');
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [levelIndex, setLevelIndex] = useState(0);
@@ -309,7 +347,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const [puzzle, setPuzzle] = useState<Puzzle>(() =>
     generatePuzzle(`${seed}::L${0}`, LEVEL_SLOTS[0])
   );
-  const [slots, setSlots] = useState<(TradeTile | null)[]>(() => Array(puzzle.steps).fill(null));
+  const [slots, setSlots] = useState<(TradeTile | null)[]>(() =>
+    Array(puzzle.steps).fill(null)
+  );
   const [available, setAvailable] = useState<TradeTile[]>(puzzle.tiles);
 
   // measure refs
@@ -334,7 +374,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     slotRects.current = Array(p.steps).fill(null);
     paletteRect.current = null;
   };
-  
+
   // Force remeasure when slots or available tiles change
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -346,15 +386,17 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           });
         }
       });
-      
+
       // Remeasure palette position
       if (paletteRef.current) {
-        paletteRef.current.measureInWindow((x: number, y: number, w: number, h: number) => {
-          paletteRect.current = { x, y, w, h };
-        });
+        paletteRef.current.measureInWindow(
+          (x: number, y: number, w: number, h: number) => {
+            paletteRect.current = { x, y, w, h };
+          }
+        );
       }
     }, 100);
-    
+
     return () => clearTimeout(timer);
   }, [slots, available]);
 
@@ -364,20 +406,24 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     setTimeout(() => {
       const ref = slotRefs.current[index];
       if (ref) {
-        ref.measureInWindow((absoluteX: number, absoluteY: number, w: number, h: number) => {
-          slotRects.current[index] = { x: absoluteX, y: absoluteY, w, h };
-        });
+        ref.measureInWindow(
+          (absoluteX: number, absoluteY: number, w: number, h: number) => {
+            slotRects.current[index] = { x: absoluteX, y: absoluteY, w, h };
+          }
+        );
       }
     }, 0);
   };
-  
+
   const onPaletteLayout = (_e: LayoutChangeEvent) => {
     setTimeout(() => {
       const ref = paletteRef.current;
       if (ref) {
-        ref.measureInWindow((absoluteX: number, absoluteY: number, w: number, h: number) => {
-          paletteRect.current = { x: absoluteX, y: absoluteY, w, h };
-        });
+        ref.measureInWindow(
+          (absoluteX: number, absoluteY: number, w: number, h: number) => {
+            paletteRect.current = { x: absoluteX, y: absoluteY, w, h };
+          }
+        );
       }
     }, 0);
   };
@@ -385,25 +431,27 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   /** ---------- placement helpers ---------- */
   const placeIntoSlot = (tile: TradeTile, idx: number) => {
     const occupying = slots[idx];
-    setSlots(prev => {
+    setSlots((prev) => {
       const copy = [...prev];
       copy[idx] = { ...tile, source: 'slot' };
       return copy;
     });
-    setAvailable(prev => {
-      const filtered = prev.filter(t => t.id !== tile.id);
-      return occupying ? [...filtered, { ...occupying, source: 'palette' }] : filtered;
+    setAvailable((prev) => {
+      const filtered = prev.filter((t) => t.id !== tile.id);
+      return occupying
+        ? [...filtered, { ...occupying, source: 'palette' }]
+        : filtered;
     });
   };
   const removeFromSlot = (i: number) => {
     const tile = slots[i];
     if (!tile) return;
-    setSlots(prev => {
+    setSlots((prev) => {
       const copy = [...prev];
       copy[i] = null;
       return copy;
     });
-    setAvailable(prev => [...prev, { ...tile, source: 'palette' }]);
+    setAvailable((prev) => [...prev, { ...tile, source: 'palette' }]);
   };
 
   /** ---------- drag overlay ---------- */
@@ -411,19 +459,28 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     transform: [
       { translateX: dragX.value - 48 }, // center on finger (half of 96px width)
       { translateY: dragY.value - 48 }, // center on finger (half of 96px height)
-      { scale: dragScale.value ? withTiming(1.05, { duration: 150 }) : withTiming(0, { duration: 150 }) },
+      {
+        scale: dragScale.value
+          ? withTiming(1.05, { duration: 150 })
+          : withTiming(0, { duration: 150 }),
+      },
     ],
-    opacity: dragScale.value ? withTiming(0.9, { duration: 150 }) : withTiming(0, { duration: 150 }),
+    opacity: dragScale.value
+      ? withTiming(0.9, { duration: 150 })
+      : withTiming(0, { duration: 150 }),
   }));
-  
+
   // JS helpers shared by all draggables
   const onStartJS = useCallback((tile: TradeTile) => {
     setHoveredSlotIndex(null);
     setDragLabelText(tile.label);
   }, []);
   const onMoveJS = useCallback((absX: number, absY: number) => {
-    if (absX < 0 || absY < 0) { setHoveredSlotIndex(null); return; }
-    const idx = slotRects.current.findIndex(r => inRect(absX, absY, r));
+    if (absX < 0 || absY < 0) {
+      setHoveredSlotIndex(null);
+      return;
+    }
+    const idx = slotRects.current.findIndex((r) => inRect(absX, absY, r));
     setHoveredSlotIndex(idx >= 0 ? idx : null);
   }, []);
 
@@ -439,7 +496,10 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       const tile = slots[i];
       if (!tile) continue;
       if (!canAfford(inv, tile.give)) {
-        Alert.alert('❌ Plan Failed', `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`);
+        showModal(
+          '❌ Plan Failed',
+          `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`
+        );
         return;
       }
       inv = applyTrade(inv, tile);
@@ -447,35 +507,37 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     const success = (inv[puzzle.goal] || 0) >= 1;
     if (success) {
       const isLast = levelIndex === LEVEL_SLOTS.length - 1;
-      Alert.alert(
+      showModal(
         '🎉 Congrats!',
-        `✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nStart: ${fmtInv(puzzle.startInventory) || 'Empty'}\nEnd: ${fmtInv(inv) || 'Empty'}`,
-        [
-          isLast
-            ? { text: 'Choose Trade Tool', onPress: () => setGameState('jokerSelection') }
-            : { text: 'Next Level ➡️', onPress: () => { const next = levelIndex + 1; setLevelIndex(next); resetLevel(next); } },
-          { text: 'Close', style: 'cancel' },
-        ]
+        `✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nStart: ${fmtInv(puzzle.startInventory) || 'Empty'}\nEnd: ${fmtInv(inv) || 'Empty'}`
       );
     } else {
-      Alert.alert('📉 Not There Yet', `❌ Did not reach 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nEnd: ${fmtInv(inv) || 'Empty'}`);
+      showModal(
+        '📉 Not There Yet',
+        `❌ Did not reach 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nEnd: ${fmtInv(inv) || 'Empty'}`
+      );
     }
   };
 
   /** ---------- Drop logic (JS side) ---------- */
   const dropFromPalette = (tile: TradeTile, absX: number, absY: number) => {
-    const idx = slotRects.current.findIndex(r => inRect(absX, absY, r));
+    const idx = slotRects.current.findIndex((r) => inRect(absX, absY, r));
     if (idx >= 0) {
       placeIntoSlot(tile, idx);
     }
   };
-  
-  const dropFromSlot = (slotIndex: number, tile: TradeTile, absX: number, absY: number) => {
+
+  const dropFromSlot = (
+    slotIndex: number,
+    tile: TradeTile,
+    absX: number,
+    absY: number
+  ) => {
     // Check if dropping on another slot (for swapping)
-    const targetIdx = slotRects.current.findIndex(r => inRect(absX, absY, r));
+    const targetIdx = slotRects.current.findIndex((r) => inRect(absX, absY, r));
     if (targetIdx >= 0 && targetIdx !== slotIndex) {
       // Swap slots
-      setSlots(prev => {
+      setSlots((prev) => {
         const copy = [...prev];
         const target = copy[targetIdx];
         copy[targetIdx] = { ...tile, source: 'slot' };
@@ -499,18 +561,13 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   const handleForfeit = () => {
     if (gameState === 'playing') {
-      Alert.alert(
+      showModal(
         '🏛️ Leave Trading Post?',
-        "If you leave now, you\\'ll forfeit your chance to study tonight and won\\'t get a trade tool reward.",
-        [
-          { text: 'Stay', style: 'cancel' },
-          { text: 'Back to Instructions', onPress: () => setGameState('instructions') },
-          { 
-            text: 'Leave', 
-            style: 'destructive',
-            onPress: () => router.back()
-          }
-        ]
+        "If you leave now, you'll forfeit your chance to study tonight and won't get a trade tool reward.",
+        '🏛️',
+        () => {
+          router.back();
+        }
       );
     } else {
       router.back();
@@ -519,7 +576,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   if (gameState === 'jokerSelection') {
     return (
-      <JokerSelection 
+      <JokerSelection
         jokers={ECONOMY_JOKERS}
         theme="economy"
         subject="Economy"
@@ -533,40 +590,57 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={styles.container}>
           <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsTitle}>💼 Economics Study Session! 📈</Text>
-            
+            <Text style={styles.instructionsTitle}>
+              💼 Economics Study Session! 📈
+            </Text>
+
             <View style={styles.instructionsCard}>
               <Text style={styles.instructionsHeader}>📊 How to Trade:</Text>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>1.</Text>
-                <Text style={styles.stepText}>Drag trade tiles from the palette to plan your route</Text>
+                <Text style={styles.stepText}>
+                  Drag trade tiles from the palette to plan your route
+                </Text>
               </View>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>2.</Text>
-                <Text style={styles.stepText}>Each tile shows what you give and what you get</Text>
+                <Text style={styles.stepText}>
+                  Each tile shows what you give and what you get
+                </Text>
               </View>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>3.</Text>
-                <Text style={styles.stepText}>Arrange trades in sequence to reach your goal item</Text>
+                <Text style={styles.stepText}>
+                  Arrange trades in sequence to reach your goal item
+                </Text>
               </View>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>4.</Text>
-                <Text style={styles.stepText}>Execute your plan to see if it works!</Text>
+                <Text style={styles.stepText}>
+                  Execute your plan to see if it works!
+                </Text>
               </View>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>5.</Text>
-                <Text style={styles.stepText}>Complete all 3 levels of increasing complexity</Text>
+                <Text style={styles.stepText}>
+                  Complete all 3 levels of increasing complexity
+                </Text>
               </View>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.startGameButton} 
+
+            <TouchableOpacity
+              style={styles.startGameButton}
               onPress={() => setGameState('playing')}
             >
-              <Text style={styles.startGameButtonText}>💼 Start Trading Challenge!</Text>
+              <Text style={styles.startGameButtonText}>
+                💼 Start Trading Challenge!
+              </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+
+            <TouchableOpacity
+              style={styles.startGameButton}
+              onPress={handleForfeit}
+            >
               <Text style={styles.startGameButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
@@ -577,31 +651,36 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={[styles.container, {
+        padding: ResponsiveSpacing.containerPadding(),
+        paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+      }]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>💱 Barter Trading</Text>
-          <Text style={styles.subtitle}>
-            Level {levelIndex + 1} / {LEVEL_SLOTS.length} • Slots: {puzzle.steps}
-          </Text>
-        </View>
-
-        {/* HUD */}
-        <View style={styles.hud}>
-          <View style={styles.hudSection}>
-            <Text style={styles.hudLabel}>Start</Text>
-            <Text style={styles.hudValue}>{fmtInv(puzzle.startInventory) || 'Empty'}</Text>
+          <Text style={styles.subtitle}>Trade your way to the goal candy!</Text>
+          <View style={styles.gameInfo}>
+            <Text style={styles.level}>
+              Level {levelIndex + 1}/{LEVEL_SLOTS.length}
+            </Text>
+            <Text style={styles.steps}>Slots: {puzzle.steps}</Text>
           </View>
-          <View style={styles.hudSection}>
-            <Text style={styles.hudLabel}>Goal</Text>
-            <Text style={styles.hudValue}>{CATALOG[puzzle.goal]} {puzzle.goal}</Text>
+          <View style={styles.gameInfo}>
+            <Text style={styles.hudValue}>
+              Start: {fmtInv(puzzle.startInventory) || 'Empty'}
+            </Text>
+            <Text style={styles.hudValue}>
+              Goal: {CATALOG[puzzle.goal]} {puzzle.goal}
+            </Text>
           </View>
         </View>
 
         {/* Slots */}
         <View style={styles.slotsWrapper}>
-          <Text style={styles.sectionTitle}>Arrange your plan (drag into slots)</Text>
-          <ScrollView 
+          <Text style={styles.sectionTitle}>
+            Arrange your plan (drag into slots)
+          </Text>
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.slotsScrollContent}
@@ -610,11 +689,11 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
               {slots.map((slot, i) => (
                 <View
                   key={`slot-${i}`}
-                  ref={el => (slotRefs.current[i] = el)}
+                  ref={(el) => (slotRefs.current[i] = el)}
                   style={[
-                    styles.slot, 
+                    styles.slot,
                     !!slot && styles.slotFilled,
-                    hoveredSlotIndex === i && styles.slotHighlighted
+                    hoveredSlotIndex === i && styles.slotHighlighted,
                   ]}
                   onLayout={onSlotLayout(i)}
                 >
@@ -630,7 +709,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
                       onEndFromSlotJS={dropFromSlot}
                     />
                   ) : (
-                    <Text style={styles.slotPlaceholder}>{i+1}</Text>
+                    <Text style={styles.slotPlaceholder}>{i + 1}</Text>
                   )}
                 </View>
               ))}
@@ -639,14 +718,14 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         </View>
 
         {/* Palette */}
-        <View 
-          ref={paletteRef} 
-          style={styles.paletteWrapper} 
+        <View
+          ref={paletteRef}
+          style={styles.paletteWrapper}
           onLayout={onPaletteLayout}
         >
           <Text style={styles.sectionTitle}>Available Trades</Text>
           <View style={styles.paletteGrid}>
-            {paletteTiles.map(tile => (
+            {paletteTiles.map((tile) => (
               <DraggableFromPalette
                 key={tile.id}
                 tile={tile}
@@ -662,39 +741,71 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             {paletteTiles.length === 0 && (
               <View style={styles.emptyPaletteContainer}>
                 <Text style={styles.emptyPaletteText}>All tiles placed!</Text>
-                <Text style={styles.emptyPaletteSubtext}>Drag tiles back here to remove them</Text>
+                <Text style={styles.emptyPaletteSubtext}>
+                  Drag tiles back here to remove them
+                </Text>
               </View>
             )}
           </View>
         </View>
 
         {/* Execute Button */}
-        <View style={styles.footer}>
-          <TouchableOpacity style={[styles.footerBtn, styles.footerPrimary]} onPress={executePlan}>
+        <View style={[styles.footer, {
+          gap: ResponsiveSpacing.buttonGap(),
+          paddingVertical: ResponsiveSpacing.buttonPadding(),
+        }]}>
+          <TouchableOpacity
+            style={[styles.footerBtn, styles.footerPrimary]}
+            onPress={executePlan}
+          >
             <Text style={styles.footerPrimaryText}>💼 Execute Trade Plan</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={clearAll}>
+          <TouchableOpacity
+            style={[styles.footerBtn, styles.footerSecondary]}
+            onPress={clearAll}
+          >
             <Text style={styles.footerSecondaryText}>🔄 Clear</Text>
           </TouchableOpacity>
         </View>
-        
+
         {/* Footer */}
-        <View style={styles.footer}>
-          <TouchableOpacity style={[styles.footerBtn, styles.footerSecondary]} onPress={() => setGameState('instructions')}>
+        <View style={[styles.footer, {
+          gap: ResponsiveSpacing.buttonGap(),
+          paddingVertical: ResponsiveSpacing.buttonPadding(),
+        }]}>
+          <TouchableOpacity
+            style={[styles.footerBtn, styles.footerSecondary]}
+            onPress={() => setGameState('instructions')}
+          >
             <Text style={styles.footerSecondaryText}>📋 Instructions</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.footerBtn, styles.footerBack]} onPress={handleForfeit}>
+          <TouchableOpacity
+            style={[styles.footerBtn, styles.footerBack]}
+            onPress={handleForfeit}
+          >
             <Text style={styles.footerBackText}>🚪 Leave</Text>
           </TouchableOpacity>
         </View>
 
         {/* Floating drag overlay */}
-        <Animated.View pointerEvents="none" style={[styles.dragOverlay, overlayStyle]}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.dragOverlay, overlayStyle]}
+        >
           <View style={styles.dragOverlayCard}>
             <Text style={styles.dragOverlayText}>{dragLabelText}</Text>
+
+            <GameModal
+              visible={modal.visible}
+              title={modal.title}
+              message={modal.message}
+              emoji={modal.emoji}
+              onClose={hideModal}
+              onConfirm={modal.onConfirm}
+            />
           </View>
         </Animated.View>
-      </ScrollView>
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -703,50 +814,59 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
  *  Styles
  *  ========================= */
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#0a1929'
+  container: {
+    flex: 1,
+    backgroundColor: '#0a1929',
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-    paddingBottom: 100,
-  },
-  header: { 
+  header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     backgroundColor: '#1e3a8a',
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#2196f3',
+    borderColor: '#64b5f6',
   },
-  title: { 
-    fontSize: 28, 
+  title: {
+    fontSize: 28,
     fontWeight: '700',
-    color: '#ffffff',
-    fontFamily: 'CrayonPastel',
-    marginBottom: 8,
-    textShadowColor: '#2196f3',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  subtitle: { 
-    fontSize: 16, 
-    color: '#42a5f5',
+    color: '#64b5f6',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#bbdefb',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  gameInfo: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  level: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffeb3b',
+    fontFamily: 'CrayonPastel',
+  },
+  steps: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#90caf9',
+    fontFamily: 'CrayonPastel',
   },
 
-  hud: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    padding: 16, 
+  hud: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
     backgroundColor: '#1e3a8a',
-    borderWidth: 3, 
+    borderWidth: 3,
     borderColor: '#2196f3',
-    borderRadius: 16, 
+    borderRadius: 16,
     marginBottom: 16,
     shadowColor: '#2196f3',
     shadowOffset: { width: 0, height: 4 },
@@ -754,19 +874,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  hudSection: { 
-    flex: 1, 
-    alignItems: 'center' 
+  hudSection: {
+    flex: 1,
+    alignItems: 'center',
   },
-  hudLabel: { 
-    fontSize: 12, 
+  hudLabel: {
+    fontSize: 12,
     color: '#90caf9',
     fontFamily: 'CrayonPastel',
     marginBottom: 4,
-    fontWeight: '600'
+    fontWeight: '600',
   },
-  hudValue: { 
-    fontSize: 16, 
+  hudValue: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     fontFamily: 'CrayonPastel',
@@ -776,8 +896,8 @@ const styles = StyleSheet.create({
   },
 
   slotsWrapper: { marginBottom: 16 },
-  sectionTitle: { 
-    fontSize: 18, 
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#2196f3',
     fontFamily: 'CrayonPastel',
@@ -789,17 +909,17 @@ const styles = StyleSheet.create({
   slotsScrollContent: {
     paddingHorizontal: 8,
   },
-  slotsRow: { 
-    flexDirection: 'row', 
+  slotsRow: {
+    flexDirection: 'row',
     gap: 8,
   },
-  slot: { 
+  slot: {
     width: 88,
-    height: 44 ,
-    borderWidth: 3, 
+    height: 44,
+    borderWidth: 3,
     borderColor: '#1565c0',
-    borderRadius: 12, 
-    padding: 8, 
+    borderRadius: 12,
+    padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#0d47a1',
@@ -809,8 +929,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  slotFilled: { 
-    backgroundColor: '#1976d2', 
+  slotFilled: {
+    backgroundColor: '#1976d2',
     borderColor: '#42a5f5',
     shadowColor: '#2196f3',
     shadowOpacity: 0.5,
@@ -824,15 +944,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  slotPlaceholder: { 
-    textAlign: 'center', 
+  slotPlaceholder: {
+    textAlign: 'center',
     color: '#90caf9',
     fontFamily: 'CrayonPastel',
     fontSize: 12,
     fontStyle: 'italic',
     fontWeight: '600',
   },
-  slotLabel: { 
+  slotLabel: {
     fontWeight: '700',
     color: '#ffffff',
     fontFamily: 'CrayonPastel',
@@ -842,27 +962,27 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  slotHint: { 
-    fontSize: 8, 
+  slotHint: {
+    fontSize: 8,
     color: '#90caf9',
     fontFamily: 'CrayonPastel',
-    textAlign: 'center', 
-    marginTop: 2 
+    textAlign: 'center',
+    marginTop: 2,
   },
 
   paletteWrapper: { marginBottom: 16 },
-  paletteGrid: { 
-    flexDirection: 'row', 
+  paletteGrid: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'center',
   },
-  tile: { 
+  tile: {
     width: 96,
     height: 48,
-    borderWidth: 3, 
+    borderWidth: 3,
     borderColor: '#42a5f5',
-    borderRadius: 12, 
+    borderRadius: 12,
     padding: 8,
     justifyContent: 'center',
     alignItems: 'center',
@@ -873,7 +993,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  tileLabel: { 
+  tileLabel: {
     fontWeight: '700',
     color: '#ffffff',
     fontFamily: 'CrayonPastel',
@@ -883,8 +1003,8 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  tileHint: { 
-    fontSize: 8, 
+  tileHint: {
+    fontSize: 8,
     color: '#90caf9',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
@@ -900,7 +1020,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderStyle: 'dashed',
   },
-  emptyPaletteText: { 
+  emptyPaletteText: {
     color: '#64b5f6',
     fontFamily: 'CrayonPastel',
     fontWeight: '700',
@@ -914,25 +1034,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-  footer: { 
+  footer: {
     flexDirection: 'row',
     gap: 16,
-    paddingVertical: 16,
+    paddingVertical: 8,
   },
   footerRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8,
   },
-  footerBtn: { 
-    flex: 1, 
-    paddingVertical: 12, 
-    borderWidth: 3, 
-    borderRadius: 16, 
+  footerBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderWidth: 3,
+    borderRadius: 16,
     alignItems: 'center',
   },
-  footerPrimary: { 
-    borderColor: '#1976d2', 
+  footerPrimary: {
+    borderColor: '#1976d2',
     backgroundColor: '#2196f3',
     shadowColor: '#2196f3',
     shadowOffset: { width: 0, height: 4 },
@@ -940,19 +1060,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  footerPrimaryText: { 
-    fontWeight: '700', 
+  footerPrimaryText: {
+    fontWeight: '700',
     color: '#ffffff',
     fontFamily: 'CrayonPastel',
     textShadowColor: '#1976d2',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  footerSecondary: { 
-    borderColor: '#42a5f5', 
-    backgroundColor: '#1565c0' 
+  footerSecondary: {
+    borderColor: '#42a5f5',
+    backgroundColor: '#1565c0',
   },
-  footerSecondaryText: { 
+  footerSecondaryText: {
     fontWeight: '600',
     color: '#ffffff',
     fontFamily: 'CrayonPastel',
@@ -970,22 +1090,22 @@ const styles = StyleSheet.create({
   },
 
   // Floating overlay
-  dragOverlay: { 
-    position: 'absolute', 
-    left: 0, 
-    top: 0, 
+  dragOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
     width: 96,
     height: 96,
     zIndex: 999,
     pointerEvents: 'none',
   },
-  dragOverlayCard: { 
+  dragOverlayCard: {
     width: 96,
     height: 96,
     padding: 8,
-    borderRadius: 12, 
-    borderWidth: 3, 
-    borderColor: '#64b5f6', 
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#64b5f6',
     backgroundColor: '#1976d2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -995,7 +1115,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 15,
   },
-  dragOverlayText: { 
+  dragOverlayText: {
     fontWeight: '700',
     color: '#ffffff',
     fontFamily: 'CrayonPastel',

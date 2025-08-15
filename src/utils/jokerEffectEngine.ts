@@ -4,6 +4,7 @@
 export type EffectTarget =
   | 'inventory_limit' // affects inventory capacity
   | 'candy_price' // affects candy prices
+  | 'sell_multiplier' // multiplies selling profits only
   | 'period_count' // affects time/periods
   | 'money' // affects wallet balance
   | 'hint_chance' // affects event hint visibility
@@ -552,14 +553,14 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 48,
     name: 'Digital Lock',
-    description: 'Double profits for one period',
+    description: 'Double profits for one sale (one-time use)',
     subject: 'Logic',
     effects: [
       {
-        target: 'candy_price',
+        target: 'sell_multiplier',
         operation: 'multiply',
         amount: 2,
-        duration: 1, // Lasts 1 period
+        duration: 'one-time',
       },
     ],
   },

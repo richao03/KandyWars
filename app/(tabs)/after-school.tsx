@@ -13,6 +13,7 @@ import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
 import { useWallet } from '../../src/context/WalletContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 

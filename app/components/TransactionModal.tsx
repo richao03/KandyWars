@@ -10,6 +10,17 @@ import {
 import Modal from 'react-native-modal';
 import { Candy } from '../../src/types/candy';
 
+type PriceBreakdown = {
+  basePrice: number;
+  jokerEffects: Array<{
+    jokerName: string;
+    jokerEmoji: string;
+    effect: string;
+    amount: number;
+  }>;
+  finalPrice: number;
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -17,6 +28,7 @@ type Props = {
   maxBuyQuantity: number;
   maxSellQuantity: number;
   candy: Candy & { cost: number; quantityOwned: number; averagePrice: number | null };
+  priceBreakdown?: PriceBreakdown;
 };
 
 export default function TransactionModal({
@@ -26,6 +38,7 @@ export default function TransactionModal({
   maxBuyQuantity,
   maxSellQuantity,
   candy,
+  priceBreakdown,
 }: Props) {
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [quantity, setQuantity] = useState(1);
@@ -88,6 +101,40 @@ export default function TransactionModal({
             </>
           )}
         </View>
+
+        {priceBreakdown && priceBreakdown.jokerEffects.length > 0 && (
+          <View style={styles.priceBreakdownContainer}>
+            <Text style={styles.breakdownTitle}>💰 Price Breakdown</Text>
+            
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Base Price:</Text>
+              <Text style={styles.breakdownValue}>${priceBreakdown.basePrice.toFixed(2)}</Text>
+            </View>
+            
+            <View style={styles.divider} />
+            
+            {priceBreakdown.jokerEffects.map((effect, index) => (
+              <View key={index} style={styles.breakdownRow}>
+                <Text style={styles.jokerEffectLabel}>
+                  {effect.jokerEmoji} {effect.jokerName}:
+                </Text>
+                <Text style={[
+                  styles.jokerEffectValue,
+                  { color: effect.amount >= 0 ? '#22c55e' : '#ef4444' }
+                ]}>
+                  {effect.effect}
+                </Text>
+              </View>
+            ))}
+            
+            <View style={styles.divider} />
+            
+            <View style={styles.breakdownRow}>
+              <Text style={styles.finalPriceLabel}>Final Price:</Text>
+              <Text style={styles.finalPriceValue}>${priceBreakdown.finalPrice.toFixed(2)}</Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -296,5 +343,68 @@ const styles = StyleSheet.create({
     color: '#8b4513',
     fontWeight: '700',
     fontSize: 16,
+  },
+  priceBreakdownContainer: {
+    backgroundColor: '#f0f8ff',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 10,
+    borderWidth: 2,
+    borderColor: '#4a90e2',
+  },
+  breakdownTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4a90e2',
+    textAlign: 'center',
+    marginBottom: 12,
+    fontFamily: 'CrayonPastel',
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  breakdownLabel: {
+    fontSize: 14,
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    fontWeight: '600',
+  },
+  breakdownValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+  },
+  jokerEffectLabel: {
+    fontSize: 13,
+    color: '#4a90e2',
+    fontFamily: 'CrayonPastel',
+    fontWeight: '600',
+    flex: 1,
+  },
+  jokerEffectValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'CrayonPastel',
+  },
+  finalPriceLabel: {
+    fontSize: 16,
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    fontWeight: '700',
+  },
+  finalPriceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#22c55e',
+    fontFamily: 'CrayonPastel',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#bae6fd',
+    marginVertical: 8,
   },
 });

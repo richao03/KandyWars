@@ -1,7 +1,8 @@
 import Slider from '@react-native-community/slider';
 import React, { useEffect, useState } from 'react';
-import { Alert, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
 import { useWallet } from '../../src/context/WalletContext';
@@ -12,6 +13,13 @@ export default function PiggyBankPage() {
   const { setEvent } = useFlavorText();
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState(0);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    emoji: string;
+    onConfirm: () => void;
+  }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
 
   // Set piggy bank flavor text when component loads
   useEffect(() => {
@@ -22,7 +30,13 @@ export default function PiggyBankPage() {
 
   const handleTransaction = () => {
     if (amount <= 0) {
-      Alert.alert('Invalid Amount', 'Please select an amount greater than 0');
+      setConfirmModal({
+        visible: true,
+        title: 'Invalid Amount',
+        message: 'Please select an amount greater than 0',
+        emoji: '⚠️',
+        onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+      });
       return;
     }
 
@@ -31,13 +45,18 @@ export default function PiggyBankPage() {
       : withdrawFromStash(amount);
 
     if (success) {
-      Alert.alert(
-        mode === 'deposit' ? '💰 Money Stashed!' : '💸 Money Withdrawn!',
-        mode === 'deposit' 
+      setConfirmModal({
+        visible: true,
+        title: mode === 'deposit' ? 'Money Stashed!' : 'Money Withdrawn!',
+        message: mode === 'deposit' 
           ? `You've safely stashed $${amount.toFixed(2)} in your piggy bank!`
           : `You've withdrawn $${amount.toFixed(2)} from your piggy bank!`,
-        [{ text: 'OK', onPress: () => setAmount(0) }]
-      );
+        emoji: mode === 'deposit' ? '💰' : '💸',
+        onConfirm: () => {
+          setAmount(0);
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+        }
+      });
     }
   };
 
@@ -146,6 +165,17 @@ export default function PiggyBankPage() {
         </Text>
       </View>
       </ImageBackground>
+
+      <ConfirmationModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        emoji={confirmModal.emoji}
+        confirmText="OK"
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, visible: false }))}
+        theme="evening"
+      />
     </View>
   );
 }

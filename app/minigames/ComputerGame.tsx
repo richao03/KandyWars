@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import GameModal, { useGameModal } from '../components/GameModal';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 import FlipCard from 'react-native-flip-card';
 import JokerSelection from '../components/JokerSelection';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -21,6 +23,8 @@ const TECH_EMOJIS = ['💻', '🖥️', '⌨️', '🖱️', '💾', '💿', '�
 
 
 export default function ComputerGame({ onComplete }: ComputerGameProps) {
+  const { modal, showModal, hideModal } = useGameModal();
+  
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1);
   const [cards, setCards] = useState<MemoryCard[]>([]);
@@ -28,6 +32,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [turns, setTurns] = useState(0);
   const [maxTurns, setMaxTurns] = useState(0);
   const [isGameActive, setIsGameActive] = useState(false);
+  const [showingAllCards, setShowingAllCards] = useState(false);
 
   // Level configuration: [pairs, maxTurns]
   const levelConfig = {
@@ -47,13 +52,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       cardPairs.push({
         id: `${emoji}-1`,
         emoji,
-        isFlipped: false,
+        isFlipped: true, // Start with all cards face up
         isMatched: false,
       });
       cardPairs.push({
         id: `${emoji}-2`,
         emoji,
-        isFlipped: false,
+        isFlipped: true, // Start with all cards face up
         isMatched: false,
       });
     });
@@ -65,7 +70,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     setFlippedCards([]);
     setTurns(0);
     setMaxTurns(config.maxTurns);
-    setIsGameActive(true);
+    setShowingAllCards(true);
+    setIsGameActive(false); // Don't allow clicks yet
+    
+    // After 2.5 seconds, flip all cards back and activate game
+    setTimeout(() => {
+      setCards(prev => prev.map(c => ({ ...c, isFlipped: false })));
+      setShowingAllCards(false);
+      setIsGameActive(true);
+    }, 2500);
   };
 
   useEffect(() => {
@@ -75,7 +88,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   }, [level, gameState]);
 
   const handleCardPress = (cardId: string) => {
-    if (!isGameActive) return;
+    if (!isGameActive || showingAllCards) return;
     
     const card = cards.find(c => c.id === cardId);
     if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
@@ -94,14 +107,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       const secondCard = cards.find(c => c.id === secondCardId);
 
       if (firstCard && secondCard && firstCard.emoji === secondCard.emoji) {
-        // Match found!
+        // Match found! Allow new clicks immediately
+        setFlippedCards([]);
+        
         setTimeout(() => {
           setCards(prev => prev.map(c => 
             (c.id === firstCardId || c.id === secondCardId) 
               ? { ...c, isMatched: true }
               : c
           ));
-          setFlippedCards([]);
           
           // Check if all cards are matched
           const updatedCards = cards.map(c => 
@@ -115,15 +129,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           }
         }, 1000);
       } else {
-        // No match, flip back after delay
+        // No match, clear flipped cards immediately but flip back after delay
+        setFlippedCards([]); // Allow new clicks immediately
         setTimeout(() => {
           setCards(prev => prev.map(c => 
             (c.id === firstCardId || c.id === secondCardId) 
               ? { ...c, isFlipped: false }
               : c
           ));
-          setFlippedCards([]);
-        }, 1500);
+        }, 400); // Set back to 400ms but allow immediate new clicks
       }
       
       setTurns(prev => prev + 1);
@@ -132,14 +146,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       if (turns + 1 >= maxTurns) {
         setTimeout(() => {
           setIsGameActive(false);
-          Alert.alert(
-            '💥 System Breach Failed!'
-            `You ran out of turns! Try again?`,
-            [
-              { text: 'Try Again', onPress: () => initializeLevel(level) },
-              { text: 'Give Up', onPress: () => router.back(), style: 'destructive' }
-            ]
-          );
+          showModal('💥 System Breach Failed!', 'You ran out of turns! Try again?');
         }, 2000);
       }
     }
@@ -149,23 +156,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     setIsGameActive(false);
     
     if (level < 3) {
-      Alert.alert(
-        `🎉 Level ${level} Complete!`,
-        `Great memory work! Ready for Level ${level + 1}?`,
-        [
-          { text: `Level ${level + 1}`, onPress: () => setLevel(level + 1) }
-        ]
-      );
+      showModal(`🎉 Level ${level} Complete!`, `Great memory work! Ready for Level ${level + 1}?`, '🎉', () => {
+        setLevel(level + 1);
+      });
     } else {
-      Alert.alert(
-        '🏆 System Infiltrated!',
-        'Incredible! You\'ve hacked all network nodes!'
-        [
-          { text: 'Choose Reward', onPress: () => {
-            setTimeout(() => setGameState('jokerSelection'), 500);
-          }}
-        ]
-      );
+      showModal('🏆 System Infiltrated!', 'Incredible! You\'ve hacked through all security layers!', '🏆', () => {
+        setGameState('jokerSelection');
+      });
     }
   };
 
@@ -180,18 +177,9 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   };
 
   const handleForfeit = () => {
-    Alert.alert(
-      '🚪 Abort Hack Session?',
-      'If you leave now, you\'ll forfeit your chance to study tonight and won\'t get a joker reward.'
-      [
-        { text: 'Stay', style: 'cancel' },
-        { 
-          text: 'Leave', 
-          style: 'destructive',
-          onPress: () => router.back()
-        }
-      ]
-    );
+    showModal('🚪 Abort Hack Session?', 'If you leave now, you\'ll lose your hacking progress!', '🚪', () => {
+      router.back();
+    });
   };
 
   const getGridStyle = () => {
@@ -262,7 +250,10 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <View style={[styles.container, {
+      padding: ResponsiveSpacing.containerPadding(),
+      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+    }]}>
       <View style={styles.header}>
         <Text style={styles.title}>💻 Hack the System</Text>
         <Text style={styles.subtitle}>Match the tech pairs to infiltrate the network!</Text>
@@ -304,7 +295,10 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         </View>
       </View>
 
-      <View style={styles.bottomButtons}>
+      <View style={[styles.bottomButtons, {
+        gap: ResponsiveSpacing.buttonGap(),
+        paddingVertical: ResponsiveSpacing.buttonPadding(),
+      }]}>
         <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
           <Text style={styles.instructionsButtonText}>📋 Mission Brief</Text>
         </TouchableOpacity>
@@ -314,8 +308,17 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         <TouchableOpacity style={styles.restartButton} onPress={() => initializeLevel(level)}>
           <Text style={styles.restartButtonText}>🔄 Reset Hack</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      /></View>
+    </View>
   );
 }
 
@@ -324,15 +327,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0e1a',
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-    paddingBottom: 100,
-  },
   header: {
     alignItems: 'center',
     marginBottom: 24,
+    backgroundColor: '#0a0e1a',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#00ff41',
   },
   title: {
     fontSize: 28,
@@ -341,9 +343,6 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: '#00ff41',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
   },
   subtitle: {
     fontSize: 16,

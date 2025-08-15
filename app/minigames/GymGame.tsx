@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import GameModal, { useGameModal } from '../components/GameModal';
 import {
-  Alert,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   Vibration,
   View,
 } from 'react-native';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -27,25 +28,26 @@ interface Tile {
   id: string;
   row: number;
   col: number;
-  shadeIndex: number;
+  shadeValue: number; // Now stores the actual shade value (0, 0.5, 1, 1.5, etc.)
   color: string;
   isStart?: boolean;
   isGoal?: boolean;
 }
 
-interface GymGameProps {
+interface ArtGameProps {
   onComplete: () => void;
 }
 
-// Gym/Sports jokers for athletics
+// Art jokers for creativity
 
-// Discrete Shade Index System - Clear 10% increments for easy distinction
+// Fine-tuned Shade Index System - 0.5 grade increments for path, 1 grade for decoys
 const generateColorPalette = (hue: number, stageNum: number) => {
   const colors: string[] = [];
   const saturation = 80; // Fixed saturation for consistency
   
-  // Generate enough shades for each stage (with buffer for longer paths)
-  const totalShades = stageNum === 1 ? 15 : stageNum === 2 ? 18 : 22;
+  // Generate more fine-grained shades for precise color gradation
+  // Need many more shades since decoys now use 0.25 increments
+  const totalShades = stageNum === 1 ? 50 : stageNum === 2 ? 60 : 80;
   const minLight = 8;   // Start very dark (but still visible)
   const maxLight = 92;  // End very light (but not white)
   
@@ -69,7 +71,9 @@ const COLOR_SCHEMES = [
   { name: 'Cyan', hue: 180 },
 ];
 
-export default function GymGame({ onComplete }: GymGameProps) {
+export default function ArtGame({ onComplete }: ArtGameProps) {
+  const { modal, showModal, hideModal } = useGameModal();
+  
   // Joker effects
   const { jokers } = useJokers();
   const { periodCount } = useGame();
@@ -80,7 +84,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [currentPosition, setCurrentPosition] = useState<{ row: number; col: number } | null>(null);
   const [goalPosition, setGoalPosition] = useState<{ row: number; col: number } | null>(null);
-  const [timeLeft, setTimeLeft] = useState(20); // Start with stage 1 time
+  const [mistakesLeft, setMistakesLeft] = useState(5); // 5 chances per level
   const [gameRunning, setGameRunning] = useState(false);
   const [currentPath, setCurrentPath] = useState<{row: number, col: number}[]>([]);
   const [pathStartTime, setPathStartTime] = useState<number | null>(null);
@@ -88,31 +92,22 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const [isGameActive, setIsGameActive] = useState(false);
   const [pathDirection, setPathDirection] = useState<'darker' | 'lighter' | null>(null);
   
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Removed timer reference as we're using mistake-based system
   const shakeValue = useSharedValue(0);
   const flashValue = useSharedValue(0);
   
   // Stage configuration
   const getStageConfig = (stageNum: number) => {
-    const baseConfig = (() => {
-      switch (stageNum) {
-        case 1: return { time: 20, gridSize: 6, pathsNeeded: 3 };
-        case 2: return { time: 15, gridSize: 7, pathsNeeded: 4 };
-        case 3: return { time: 10, gridSize: 8, pathsNeeded: 5 };
-        default: return { time: 20, gridSize: 6, pathsNeeded: 3 };
-      }
-    })();
-    
-    // Apply study time multiplier from Pomodoro Timer joker
-    const modifiedTime = Math.round(baseConfig.time * studyTimeMultiplier);
-    
-    return {
-      ...baseConfig,
-      time: modifiedTime
-    };
+    switch (stageNum) {
+      case 1: return { gridSize: 6, pathsNeeded: 3, mistakes: 5 };
+      case 2: return { gridSize: 7, pathsNeeded: 4, mistakes: 5 };
+      case 3: return { gridSize: 8, pathsNeeded: 5, mistakes: 5 };
+      default: return { gridSize: 6, pathsNeeded: 3, mistakes: 5 };
+    }
   };
 
-  const stageConfig = useMemo(() => getStageConfig(stage), [stage, studyTimeMultiplier]);
+  const stageConfig = useMemo(() => getStageConfig(stage), [stage]);
 
   // Calculate shortest possible path length (Manhattan distance)
   const shortestPathLength = useMemo(() => {
@@ -201,7 +196,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
           id: `${row}-${col}`,
           row,
           col,
-          shadeIndex: -1, // Will be filled
+          shadeValue: -1, // Will be filled with actual shade values (0, 0.5, 1, etc.)
           color: '',
         };
       }
@@ -217,66 +212,66 @@ export default function GymGame({ onComplete }: GymGameProps) {
     // Create a monotonic path (only increasing or decreasing)
     const pathLength = pathCoords.length;
     
-    // Calculate total shades for this stage (must match generateColorPalette)
-    const totalShades = stage === 1 ? 15 : stage === 2 ? 18 : 22;
-    const maxShadeIndex = totalShades - 1;
-    
-    // Decide direction: true = getting darker (max→0), false = getting lighter (0→max)
+    // Decide direction: true = getting darker (high→low), false = getting lighter (low→high)
     const goingDarker = Math.random() < 0.5;
     
-    // Start and goal must be at opposite extremes of the spectrum
-    let startShade: number;
-    let targetShade: number;
+    // Calculate the maximum shade value we can reach given path length
+    // Each step is 0.5, so max value = (pathLength - 1) * 0.5
+    const maxPossibleShade = (pathLength - 1) * 0.5;
+    
+    // Set start and end shade values
+    let startShadeValue: number;
+    let endShadeValue: number;
     
     if (goingDarker) {
-      // Start at lightest (max), end at darkest (0)
-      startShade = maxShadeIndex;
-      targetShade = 0;
+      // Start at high value, decrease by 0.5 each step
+      startShadeValue = maxPossibleShade;
+      endShadeValue = 0;
     } else {
-      // Start at darkest (0), end at lightest (max)
-      startShade = 0;
-      targetShade = maxShadeIndex;
+      // Start at 0, increase by 0.5 each step
+      startShadeValue = 0;
+      endShadeValue = maxPossibleShade;
     }
     
-    // Assign shades along the path - ensure each step has a unique consecutive shade
-    const pathShades = new Set<number>();
+    // Track all shade values used in the path
+    const pathShadeValues = new Set<number>();
     
-    // Check if we have enough shades for the path length
-    if (pathLength > totalShades) {
-      console.warn(`Path length ${pathLength} exceeds available shades ${totalShades}. This should not happen.`);
-    }
-    
-    // Assign consecutive shades along the path
+    // Assign shade values with exact 0.5 increments along the path
     for (let i = 0; i < pathCoords.length; i++) {
       const coord = pathCoords[i];
-      let shade: number;
+      let shadeValue: number;
       
       if (goingDarker) {
-        // Start at max, decrease by 1 each step
-        shade = startShade - i;
-        // Ensure we don't go below 0
-        shade = Math.max(0, shade);
+        // Start high, decrease by exactly 0.5 each step
+        shadeValue = startShadeValue - (i * 0.5);
       } else {
-        // Start at 0, increase by 1 each step
-        shade = startShade + i;
-        // Ensure we don't exceed max
-        shade = Math.min(maxShadeIndex, shade);
+        // Start at 0, increase by exactly 0.5 each step
+        shadeValue = i * 0.5;
       }
       
-      grid[coord.row][coord.col].shadeIndex = shade;
-      pathShades.add(shade);
+      // Ensure precise 0.5 increments by rounding to nearest 0.5
+      shadeValue = Math.round(shadeValue * 2) / 2;
+      
+      grid[coord.row][coord.col].shadeValue = shadeValue;
+      pathShadeValues.add(shadeValue);
+      
+      // Debug: Log path progression to ensure correct 0.5 increments
+      console.log(`Path step ${i}: [${coord.row},${coord.col}] = shade ${shadeValue}`);
     }
     
     // Store the path direction for decoy generation and validation
     const currentPathDirection = goingDarker ? 'darker' : 'lighter';
     setPathDirection(currentPathDirection);
     
-    // Fill remaining tiles ensuring only one correct path exists
+    // Debug: Log all path shade values
+    console.log(`Path direction: ${currentPathDirection}, path values: [${Array.from(pathShadeValues).sort((a,b) => a-b).join(', ')}]`);
+    
+    // Fill remaining tiles with decoy values
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
-        if (grid[row][col].shadeIndex === -1) {
+        if (grid[row][col].shadeValue === -1) {
           // For each non-path tile, find all adjacent path tiles
-          const adjacentPathTiles: number[] = [];
+          const adjacentPathValues: number[] = [];
           const adjacentPositions = [
             {row: row - 1, col}, {row: row + 1, col}, // up, down
             {row, col: col - 1}, {row, col: col + 1}  // left, right
@@ -286,52 +281,69 @@ export default function GymGame({ onComplete }: GymGameProps) {
             if (adjPos.row >= 0 && adjPos.row < gridSize && 
                 adjPos.col >= 0 && adjPos.col < gridSize) {
               const adjTile = grid[adjPos.row][adjPos.col];
-              if (adjTile.shadeIndex !== -1) { // It's a path tile
-                adjacentPathTiles.push(adjTile.shadeIndex);
+              if (adjTile.shadeValue !== -1) { // It's a path tile
+                adjacentPathValues.push(adjTile.shadeValue);
               }
             }
           }
           
-          // Find shades that are exactly 1 away in the OPPOSITE direction of the path
-          const totalShades = stage === 1 ? 15 : stage === 2 ? 18 : 22;
-          const validDecoyShades: number[] = [];
+          // Create decoy values that are much closer to the path to increase difficulty
+          const validDecoyValues: number[] = [];
           
-          // For each adjacent path tile, add the shade 1 step in the wrong direction
-          for (const adjPathShade of adjacentPathTiles) {
-            let wrongDirectionShade: number;
+          // For each adjacent path tile, add values that are slightly off
+          for (const adjPathValue of adjacentPathValues) {
+            // Generate multiple decoy options with 28% larger offsets for better distinction
+            const decoyOffsets = [
+              0.352, // 28% more than 0.275 (0.275 * 1.28)
+              -0.352,
+              1.056, // 28% more than 0.825 (0.825 * 1.28)
+              -1.056,
+              0.704, // 28% more than 0.55 (0.55 * 1.28)
+              -0.704,
+            ];
             
-            if (currentPathDirection === 'darker') {
-              // Path goes darker, so decoys should go lighter (+1)
-              wrongDirectionShade = adjPathShade + 1;
-            } else {
-              // Path goes lighter, so decoys should go darker (-1)
-              wrongDirectionShade = adjPathShade - 1;
-            }
-            
-            // Make sure the wrong direction shade is valid
-            if (wrongDirectionShade >= 0 && wrongDirectionShade < totalShades) {
-              validDecoyShades.push(wrongDirectionShade);
+            for (const offset of decoyOffsets) {
+              const decoyValue = adjPathValue + offset;
+              
+              // Make sure the decoy values are valid (≥0) and not exactly on the correct path
+              if (decoyValue >= 0 && !pathShadeValues.has(decoyValue)) {
+                validDecoyValues.push(decoyValue);
+              }
             }
           }
           
-          // Assign a decoy shade (1 step in wrong direction)
-          if (validDecoyShades.length > 0) {
+          // Assign a decoy value (very close to path - 0.25 to 0.75 grade off)
+          if (validDecoyValues.length > 0) {
             // Remove duplicates and pick randomly
-            const uniqueDecoyShades = [...new Set(validDecoyShades)];
-            grid[row][col].shadeIndex = uniqueDecoyShades[Math.floor(Math.random() * uniqueDecoyShades.length)];
+            const uniqueDecoyValues = [...new Set(validDecoyValues)];
+            grid[row][col].shadeValue = uniqueDecoyValues[Math.floor(Math.random() * uniqueDecoyValues.length)];
           } else {
-            // Fallback: if no wrong-direction shades exist, use random far shade
-            const totalShades = stage === 1 ? 15 : stage === 2 ? 18 : 22;
-            let fallbackShade;
-            do {
-              fallbackShade = Math.floor(Math.random() * totalShades);
-            } while (adjacentPathTiles.some(pathShade => Math.abs(fallbackShade - pathShade) <= 1));
-            grid[row][col].shadeIndex = fallbackShade;
+            // Fallback: use a random value that's not too close to path values
+            let fallbackValue = Math.random() * maxPossibleShade * 2;
+            // Round to nearest 0.5
+            fallbackValue = Math.round(fallbackValue * 2) / 2;
+            grid[row][col].shadeValue = fallbackValue;
           }
         }
         
-        // Apply color based on shade
-        grid[row][col].color = palette[grid[row][col].shadeIndex];
+        // Map shade value to color index in palette
+        // Ensure path values are well-distributed across the palette
+        const maxShadeInGame = Math.max(...Array.from(pathShadeValues), maxPossibleShade);
+        
+        // Scale shade value to use more of the palette range
+        const normalizedShade = grid[row][col].shadeValue / Math.max(maxShadeInGame, 1);
+        const paletteIndex = Math.min(
+          palette.length - 1,
+          Math.floor(normalizedShade * (palette.length - 1))
+        );
+        
+        // Debug logging for path tiles to ensure they get different colors
+        const isOnPath = pathShadeValues.has(grid[row][col].shadeValue);
+        if (isOnPath) {
+          console.log(`Path tile [${row},${col}]: shadeValue=${grid[row][col].shadeValue}, normalized=${normalizedShade}, paletteIndex=${paletteIndex}`);
+        }
+        
+        grid[row][col].color = palette[Math.max(0, paletteIndex)];
       }
     }
     
@@ -357,40 +369,23 @@ export default function GymGame({ onComplete }: GymGameProps) {
   // Initialize stage
   const initializeStage = (stageNum: number) => {
     const config = getStageConfig(stageNum);
-    setTimeLeft(config.time);
+    setMistakesLeft(config.mistakes);
     setStageComplete(false);
     setIsGameActive(true);
     generateGrid();
-    startTimer();
   };
 
-  // Start timer
-  const startTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          handleTimeUp();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  // Handle when time runs out
-  const handleTimeUp = () => {
+  // Handle when mistakes run out
+  const handleMistakesUp = () => {
     setIsGameActive(false);
-    if (timerRef.current) clearInterval(timerRef.current);
     
-    Alert.alert(
-      '⏰ Time\'s Up!',
-      'You ran out of time! Try again?',
-      [
-        { text: 'Try Again', onPress: () => initializeStage(stage) },
-        { text: 'Give Up', onPress: () => router.back(), style: 'destructive' }
-      ]
+    showModal(
+      '❌ No More Chances!',
+      'You\'ve used all your chances! Try again?',
+      '❌',
+      () => {
+        initializeStage(stage);
+      }
     );
   };
 
@@ -407,24 +402,21 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const nextStage = () => {
     if (stage >= 3) {
       // All stages complete!
-      if (timerRef.current) clearInterval(timerRef.current);
-      Alert.alert(
-        '🏆 Champion Athlete!',
-        'Incredible! You\'ve completed all training levels!',
-        [
-          { text: 'Choose Reward', onPress: () => {
-            setTimeout(() => setGameState('jokerSelection'), 500);
-          }}
-        ]
+      showModal(
+        '🎨 Master Artist!',
+        'Incredible! You\'ve completed all artistic challenges!',
+        '🎨'
       );
     } else {
       const newStage = stage + 1;
       setStage(newStage);
+      // Ensure mistakes are reset for new level
+      setMistakesLeft(5);
       initializeStage(newStage);
     }
   };
 
-  // Check if move is valid - must be adjacent AND monotonic in correct direction
+  // Check if move is valid - must be adjacent AND monotonic in correct direction with 0.5 increments
   const isValidMove = (fromRow: number, fromCol: number, toRow: number, toCol: number): boolean => {
     // Step 1: Check if tiles are adjacent (not diagonal)
     const rowDiff = Math.abs(toRow - fromRow);
@@ -439,15 +431,15 @@ export default function GymGame({ onComplete }: GymGameProps) {
     
     if (!fromTile || !toTile || !pathDirection) return false;
     
-    // Step 3: Check shade difference is EXACTLY 1 AND in the correct direction
-    const shadeDiff = toTile.shadeIndex - fromTile.shadeIndex;
+    // Step 3: Check shade value difference is EXACTLY 0.5 AND in the correct direction
+    const valueDiff = toTile.shadeValue - fromTile.shadeValue;
     
     if (pathDirection === 'darker') {
-      // Path goes darker: shade indices should decrease by exactly 1
-      return shadeDiff === -1;
+      // Path goes darker: shade values should decrease by exactly 0.5
+      return Math.abs(valueDiff + 0.5) < 0.001; // Use small epsilon for floating point comparison
     } else {
-      // Path goes lighter: shade indices should increase by exactly 1
-      return shadeDiff === 1;
+      // Path goes lighter: shade values should increase by exactly 0.5
+      return Math.abs(valueDiff - 0.5) < 0.001; // Use small epsilon for floating point comparison
     }
   };
 
@@ -467,7 +459,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
       // Check if reached goal
       if (goalPosition && row === goalPosition.row && col === goalPosition.col) {
         // Stage complete!
-        if (timerRef.current) clearInterval(timerRef.current);
         setStageComplete(true);
         setIsGameActive(false);
         
@@ -475,28 +466,28 @@ export default function GymGame({ onComplete }: GymGameProps) {
         setTimeout(() => {
           if (stage < 3) {
             const nextConfig = getStageConfig(stage + 1);
-            Alert.alert(
+            showModal(
               `🎉 Level ${stage} Complete!`,
-              `Great fitness! Ready for Level ${stage + 1}? (${nextConfig.time} seconds, ${nextConfig.gridSize}x${nextConfig.gridSize} grid)`,
-              [
-                { text: 'Next Level', onPress: nextStage }
-              ]
+              `Beautiful artwork! Ready for Level ${stage + 1}? (${nextConfig.gridSize}x${nextConfig.gridSize} canvas, ${nextConfig.mistakes} chances)`,
+              '🎉',
+              () => {
+                nextStage();
+              }
             );
           } else {
-            Alert.alert(
-              '🏆 Champion Athlete!',
-              'Incredible! You\'ve completed all training levels!',
-              [
-                { text: 'Choose Reward', onPress: () => {
-                  setTimeout(() => setGameState('jokerSelection'), 500);
-                }}
-              ]
+            showModal(
+              '🎨 Master Artist!',
+              'Incredible! You\'ve completed all artistic challenges!',
+              '🎨',
+              () => {
+                setGameState('jokerSelection');
+              }
             );
           }
         }, 500);
       }
     } else {
-      // Invalid move - shake and reset
+      // Invalid move - shake, decrease mistakes, and reset
       shakeValue.value = withSequence(
         withSpring(-10, { duration: 50 }),
         withSpring(10, { duration: 50 }),
@@ -505,6 +496,16 @@ export default function GymGame({ onComplete }: GymGameProps) {
       );
       
       Vibration.vibrate(100);
+      
+      // Decrease mistakes
+      setMistakesLeft(prev => {
+        const newMistakes = prev - 1;
+        if (newMistakes <= 0) {
+          handleMistakesUp();
+          return 0;
+        }
+        return newMistakes;
+      });
       
       // Reset to start
       if (tiles.length > 0) {
@@ -516,35 +517,17 @@ export default function GymGame({ onComplete }: GymGameProps) {
     }
   };
 
-  // Cleanup timer
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, []);
+  // No cleanup needed for mistake-based system
 
   const handleForfeit = () => {
     if (gameState === 'playing') {
-      Alert.alert(
-        '🏃‍♂️ Leave Gym Session?',
-        "If you leave now, you\\'ll forfeit your chance to study tonight and won\\'t get a fitness reward.",
-        [
-          { text: 'Keep Training', style: 'cancel' },
-          { text: 'Back to Instructions', onPress: () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-            setGameState('instructions');
-          }},
-          { 
-            text: 'Leave', 
-            style: 'destructive',
-            onPress: () => {
-              if (timerRef.current) clearInterval(timerRef.current);
-              router.back();
-            }
-          }
-        ]
+      showModal(
+        '🎨 Leave Art Session?',
+        "If you leave now, you'll forfeit your chance to study tonight and won't get an artistic reward.",
+        '🎨',
+        () => {
+          router.back();
+        }
       );
     } else {
       router.back();
@@ -563,8 +546,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
     return (
       <JokerSelection 
         jokers={GYM_JOKERS}
-        theme="gym"
-        subject="Gym"
+        theme="art"
+        subject="Art"
         onComplete={onComplete}
       />
     );
@@ -574,29 +557,29 @@ export default function GymGame({ onComplete }: GymGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>🏃‍♂️ Gym Study Session! 💪</Text>
+          <Text style={styles.instructionsTitle}>🎨 Art Study Session! 🖌️</Text>
           
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>🎯 How to Train:</Text>
+            <Text style={styles.instructionsHeader}>🎯 How to Create:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>Navigate from START to GOAL by tapping adjacent tiles</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
-              <Text style={styles.stepText}>Move only to adjacent tiles with the next shade in sequence (no numbers shown - use color key!)</Text>
+              <Text style={styles.stepText}>Move only to adjacent tiles with the next shade in sequence (use the color key for guidance!)</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>Wrong move = instant reset to START (no time penalty)</Text>
+              <Text style={styles.stepText}>Wrong move = lose 1 chance and reset to START (5 chances per level)</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>Reach the GOAL tile to complete each level</Text>
+              <Text style={styles.stepText}>Reach the GOAL tile to complete each artistic challenge</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>Complete 3 levels with increasingly complex shade progressions!</Text>
+              <Text style={styles.stepText}>Complete 3 levels with increasingly complex color progressions!</Text>
             </View>
           </View>
           
@@ -604,13 +587,14 @@ export default function GymGame({ onComplete }: GymGameProps) {
             style={styles.startGameButton} 
             onPress={() => setGameState('playing')}
           >
-            <Text style={styles.startGameButtonText}>🏋️‍♀️ Start Training!</Text>
+            <Text style={styles.startGameButtonText}>🎨 Start Creating!</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
+        
       </View>
     );
   }
@@ -619,20 +603,23 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const tileSize = Math.floor((screenWidth - 16 - (stageConfig.gridSize - 1) * 2) / stageConfig.gridSize) - 2;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <View style={[styles.container, {
+      padding: ResponsiveSpacing.containerPadding(),
+      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+    }]}>
       <Animated.View style={[styles.gameContainer, shakeStyle]}>
         <Animated.View style={flashStyle} />
         
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>🏃‍♂️ Gym Training</Text>
+          <Text style={styles.title}>🎨 Art Creation</Text>
           <View style={styles.gameInfo}>
             <Text style={styles.level}>Level {stage}/3</Text>
-            <Text style={[styles.timer, { color: timeLeft <= 10 ? '#ff4d4f' : '#52c41a' }]}>
-              ⏱️ {timeLeft}s
+            <Text style={[styles.mistakes, { color: mistakesLeft <= 2 ? '#ff4d4f' : '#52c41a' }]}>
+              ❤️ {mistakesLeft}/5
             </Text>
           </View>
-          <Text style={styles.subtitle}>Follow the monotonic color path - no visual hints!</Text>
+          <Text style={styles.subtitle}>Follow the subtle color gradation path - artistic precision required!</Text>
           
           {/* Color Key - matches current grid colors exactly */}
           <View style={styles.colorKeyContainer}>
@@ -643,21 +630,27 @@ export default function GymGame({ onComplete }: GymGameProps) {
                   // Generate the full palette for current stage and show all shades
                   const currentScheme = COLOR_SCHEMES.find(scheme => {
                     const testPalette = generateColorPalette(scheme.hue, stage);
-                    return tiles.some(tile => tile.color === testPalette[tile.shadeIndex]);
+                    return tiles.some(tile => tile.color === testPalette[Math.floor(tile.shadeValue * 2)]);
                   }) || COLOR_SCHEMES[0];
                   
                   const fullPalette = generateColorPalette(currentScheme.hue, stage);
                   
-                  return Array.from({ length: fullPalette.length }, (_, index) => {
+                  // Show the palette with shade values
+                  const maxShadeValue = Math.max(...tiles.map(t => t.shadeValue));
+                  const numSteps = Math.floor(maxShadeValue * 2) + 1;
+                  
+                  return Array.from({ length: numSteps }, (_, index) => {
+                    const shadeValue = index * 0.5;
+                    const paletteIndex = Math.min(fullPalette.length - 1, index);
                     return (
                       <View 
                         key={index} 
                         style={[
                           styles.colorKeySwatch,
-                          { backgroundColor: fullPalette[index] }
+                          { backgroundColor: fullPalette[paletteIndex] }
                         ]}
                       >
-                        <Text style={styles.colorKeyNumber}>{index}</Text>
+                        <Text style={styles.colorKeyNumber}>{shadeValue}</Text>
                       </View>
                     );
                   });
@@ -699,7 +692,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
                   >
                     {tile.isStart && <Text style={styles.tileLabel}>START</Text>}
                     {tile.isGoal && <Text style={styles.tileLabel}>GOAL</Text>}
-                    {isCurrentPosition && <Text style={styles.playerMarker}>🏃</Text>}
+                    {isCurrentPosition && <Text style={styles.playerMarker}>🖌️</Text>}
                   </TouchableOpacity>
                 );
               })}
@@ -713,19 +706,30 @@ export default function GymGame({ onComplete }: GymGameProps) {
       </Animated.View>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, {
+        gap: ResponsiveSpacing.buttonGap(),
+        paddingVertical: ResponsiveSpacing.buttonPadding(),
+      }]}>
         <TouchableOpacity style={styles.footerBtn} onPress={() => {
-          if (timerRef.current) clearInterval(timerRef.current);
           setGameState('instructions');
         }}>
           <Text style={styles.footerBtnText}>📋 Instructions</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.footerBtn, styles.leaveBtn]} onPress={handleForfeit}>
-          <Text style={styles.footerBtnText}>🏃‍♂️ Leave</Text>
+          <Text style={styles.footerBtnText}>🎨 Leave</Text>
         </TouchableOpacity>
        
-      </View>
-    </ScrollView>
+      
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      /></View>
+    </View>
   );
 }
 
@@ -733,12 +737,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a2332',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-    paddingBottom: 100,
   },
   gameContainer: {
     flex: 1,
@@ -782,7 +780,7 @@ const styles = StyleSheet.create({
     color: '#52c41a',
     fontFamily: 'CrayonPastel',
   },
-  timer: {
+  mistakes: {
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'CrayonPastel',

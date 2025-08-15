@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import GameModal, { useGameModal } from '../components/GameModal';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import JokerSelection from '../components/JokerSelection';
 import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 
 interface Attempt {
   candies: string[];
@@ -20,6 +22,12 @@ const CANDY_TYPES_LEVEL_3 = ['🍭', '🍬', '🧁', '🍫', '🍩', '🍪', '�
 
 
 export default function LogicGame({ onComplete }: LogicGameProps) {
+  const { modal, showModal, hideModal } = useGameModal();
+  
+  // Screen dimensions - responsive sizing
+  const { height: screenHeight } = Dimensions.get('window');
+  const isSmallScreen = screenHeight < 750; // iPhone 15 Pro and smaller
+  
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1); // 1, 2, 3
   const [secretCode, setSecretCode] = useState<string[]>([]);
@@ -29,8 +37,6 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const [allLevelsComplete, setAllLevelsComplete] = useState(false);
   const [maxAttempts] = useState(6);
   
-  // Ref for auto-scrolling attempts
-  const attemptsScrollRef = useRef<ScrollView>(null);
 
   // Get candy types for current level
   const getCurrentCandyTypes = () => {
@@ -51,19 +57,19 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     console.log(`Level ${level} secret code (for testing):`, code.join(''));
   };
 
+  // Initialize level - reset state and generate new code
+  const initializeLevel = (levelNum: number) => {
+    setCurrentGuess(['', '', '', '']);
+    setAttempts([]);
+    setGameComplete(false);
+    generateSecretCode();
+  };
+
   useEffect(() => {
     generateSecretCode();
   }, [level]);
 
-  // Auto-scroll to bottom when new attempts are added
-  useEffect(() => {
-    if (attempts.length > 0 && attemptsScrollRef.current) {
-      // Small delay to ensure the new attempt is rendered
-      setTimeout(() => {
-        attemptsScrollRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }
-  }, [attempts]);
+  // Remove auto-scroll functionality since we're no longer using ScrollView
 
   // Calculate Wordle-style feedback
   const calculateFeedback = (guess: string[]): ('correct' | 'present' | 'absent')[] => {
@@ -98,7 +104,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const handleSubmitGuess = () => {
     // Validate input
     if (currentGuess.some(candy => candy === '')) {
-      Alert.alert('⚠️ Incomplete Pattern', 'Please select all 4 candies');
+      showModal('⚠️ Incomplete Pattern', 'Please select all 4 candies');
       return;
     }
 
@@ -119,45 +125,20 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       
       if (level < 3) {
         // Level complete, move to next level
-        Alert.alert(
-          `🎉 Level ${level} Complete!`, 
-          `Excellent! You solved Level ${level} in ${newAttempts.length} attempts! Ready for Level ${level + 1}?`,
-          [
-            { text: 'Next Level', onPress: () => {
-              setLevel(level + 1);
-              setAttempts([]);
-              setCurrentGuess(['', '', '', '']);
-              setGameComplete(false);
-            }}
-          ]
-        );
+        showModal(`🎉 Level ${level} Complete!`, `Excellent! You solved Level ${level} in ${newAttempts.length} attempts! Ready for Level ${level + 1}?`, '🎉', () => {
+          setLevel(level + 1);
+          initializeLevel(level + 1);
+        });
       } else {
         // All levels complete!
         setAllLevelsComplete(true);
-        Alert.alert(
-          '🏆 Master Candy Detective!', 
-          `Incredible! You've solved all 3 difficulty levels! You are a true Logic Master!`,
-          [
-            { text: 'Choose Reward', onPress: () => {
-              setTimeout(() => setGameState('jokerSelection'), 500);
-            }}
-          ]
-        );
+        showModal('🏆 Master Candy Detective!', `Incredible! You've solved all 3 difficulty levels! You are a true Logic Master!`, '🏆', () => {
+          setGameState('jokerSelection');
+        });
       }
     } else if (newAttempts.length >= maxAttempts) {
       // Game over - too many attempts
-      Alert.alert(
-        '🚨 Game Over!', 
-        `You've used all ${maxAttempts} attempts. The answer was: ${secretCode.join('')}`,
-        [
-          { text: 'Try Again', onPress: () => {
-            setAttempts([]);
-            setCurrentGuess(['', '', '', '']);
-            generateSecretCode();
-          }},
-          { text: 'Give Up', onPress: () => router.back(), style: 'destructive' }
-        ]
-      );
+      showModal('🚨 Game Over!', `You've used all ${maxAttempts} attempts. The answer was: ${secretCode.join('')}`);
     } else {
       // Continue guessing
       setCurrentGuess(['', '', '', '']);
@@ -190,18 +171,13 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   const handleForfeit = () => {
     if (gameState === 'playing') {
-      Alert.alert(
-        '🚪 Leave Candy Riddle?',
-        'If you leave now, you\'ll forfeit your chance to study tonight and won\'t get a joker reward.',
-        [
-          { text: 'Stay', style: 'cancel' },
-          { text: 'Back to Instructions', onPress: () => setGameState('instructions') },
-          { 
-            text: 'Leave', 
-            style: 'destructive',
-            onPress: () => router.back()
-          }
-        ]
+      showModal(
+        '🚪 Leave Candy Riddle?', 
+        'If you leave now, you\'ll miss your chance to solve logic puzzles!',
+        '🚪',
+        () => {
+          router.back();
+        }
       );
     } else {
       router.back();
@@ -290,12 +266,22 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {
+      padding: ResponsiveSpacing.containerPadding(),
+      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+    }]}>
       {/* Fixed Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, {
+        marginBottom: ResponsiveSpacing.headerMargin(),
+        paddingVertical: ResponsiveSpacing.headerPadding(),
+        paddingHorizontal: ResponsiveSpacing.headerPadding(),
+      }]}>
         <Text style={styles.title}>🍭 Candy Riddle</Text>
-        <Text style={styles.levelText}>Level {level}/3 ({getCurrentCandyTypes().length} candies)</Text>
-        <Text style={styles.attempts}>Attempts: {attempts.length}/{maxAttempts}</Text>
+        <Text style={styles.subtitle}>Crack the secret candy code!</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.levelText}>Level {level}/3</Text>
+          <Text style={styles.attempts}>Attempts: {attempts.length}/{maxAttempts}</Text>
+        </View>
       </View>
 
       {/* Scrollable Content Area */}
@@ -351,10 +337,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
       <View style={styles.attemptsContainer}>
         <Text style={styles.attemptsTitle}>📋 Previous Attempts:</Text>
-        <ScrollView 
-          ref={attemptsScrollRef}
-          style={styles.attemptsScrollView} 
-          showsVerticalScrollIndicator={true}
+        <View 
+          style={styles.attemptsScrollView}
         >
           {attempts.length === 0 ? (
             <Text style={styles.noAttempts}>No attempts yet. Good luck!</Text>
@@ -375,11 +359,14 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
               </View>
             ))
           )}
-        </ScrollView>
+        </View>
       </View>
 
       {/* Fixed Bottom Buttons */}
-      <View style={styles.bottomButtons}>
+      <View style={[styles.bottomButtons, {
+        gap: ResponsiveSpacing.buttonGap(),
+        paddingVertical: ResponsiveSpacing.buttonPadding(),
+      }]}>
         <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
           <Text style={styles.instructionsButtonText}>📖 Instructions</Text>
         </TouchableOpacity>
@@ -387,7 +374,16 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      /></View>
   );
 }
 
@@ -405,36 +401,42 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#2c2c2c',
+    marginBottom: 24,
+    backgroundColor: '#2d1b69',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#ff6ec7',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: '#ff6ec7',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#ccc',
+    color: '#ff9a8b',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
+  },
+  gameInfo: {
+    flexDirection: 'row',
+    gap: 20,
   },
   levelText: {
-    fontSize: 16,
-    color: '#52c41a',
-    fontFamily: 'CrayonPastel',
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
+    color: '#9c88ff',
+    fontFamily: 'CrayonPastel',
   },
   attempts: {
-    fontSize: 14,
-    color: '#ffa940',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ff9a8b',
     fontFamily: 'CrayonPastel',
   },
   inputContainer: {
@@ -542,7 +544,6 @@ const styles = StyleSheet.create({
     height: 200, // Prevent growing too tall
   },
   attemptsScrollView: {
-    maxHeight: 200, // Fixed height for scrollable area
     marginTop: 10,
   },
   attemptsTitle: {

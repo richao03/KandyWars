@@ -1,52 +1,87 @@
 // app/(tabs)/settings.tsx
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import GameHUD from '../components/GameHUD';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { useGame } from '../../src/context/GameContext';
 import { useSeed } from '../../src/context/SeedContext';
+import { useWallet } from '../../src/context/WalletContext';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useJokers } from '../../src/context/JokerContext';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
 
 export default function Settings() {
   const { resetGame } = useGame();
   const { setSeed } = useSeed();
+  const { resetWallet } = useWallet();
+  const { resetInventory } = useInventory();
+  const { resetJokers } = useJokers();
+  const { resetFlavorText } = useFlavorText();
   const [isRestarting, setIsRestarting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    emoji: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
 
   const handleRestartGame = () => {
-    Alert.alert(
-      'Restart Game',
-      'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Restart',
-          style: 'destructive',
-          onPress: async () => {
-            setIsRestarting(true);
-            try {
-              // Reset all game data
-              await resetGame();
-              
-              // Generate new seed for fresh game
-              const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-              setSeed(newSeed);
-              
-              // Navigate back to market (home)
-              router.push('/(tabs)/market');
-              
-              Alert.alert('Game Restarted', 'A fresh game has started with a new seed!');
-            } catch (error) {
-              console.error('Error restarting game:', error);
-              Alert.alert('Error', 'Failed to restart the game. Please try again.');
-            } finally {
-              setIsRestarting(false);
-            }
-          },
-        },
-      ]
-    );
+    setConfirmModal({
+      visible: true,
+      title: 'Restart Game',
+      message: 'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
+      emoji: '🔄',
+      confirmText: 'Restart',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        setIsRestarting(true);
+        try {
+          // Reset all game data
+          await resetGame();
+          
+          // Reset all contexts
+          resetWallet();
+          resetInventory();
+          resetJokers();
+          resetFlavorText();
+          
+          // Generate new seed for fresh game
+          const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          setSeed(newSeed);
+          
+          // Navigate back to market (home)
+          router.push('/(tabs)/market');
+          
+          setTimeout(() => {
+            setConfirmModal({
+              visible: true,
+              title: 'Game Restarted',
+              message: 'A fresh game has started with a new seed!',
+              emoji: '✨',
+              onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+            });
+          }, 500);
+        } catch (error) {
+          console.error('Error restarting game:', error);
+          setConfirmModal({
+            visible: true,
+            title: 'Error',
+            message: 'Failed to restart the game. Please try again.',
+            emoji: '❌',
+            onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+          });
+        } finally {
+          setIsRestarting(false);
+        }
+      },
+      onCancel: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+    });
   };
 
   return (
@@ -84,6 +119,18 @@ export default function Settings() {
           </Text>
         </View>
       </View>
+
+      <ConfirmationModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        emoji={confirmModal.emoji}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || (() => setConfirmModal(prev => ({ ...prev, visible: false })))}
+        theme="school"
+      />
     </View>
   );
 }

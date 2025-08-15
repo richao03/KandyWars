@@ -1,9 +1,18 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Dimensions,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import JokerSelection from '../components/JokerSelection';
 import { HISTORY_JOKERS } from '../../src/utils/jokerEffectEngine';
+import GameModal, { useGameModal } from '../components/GameModal';
+import JokerSelection from '../components/JokerSelection';
 
 interface CaesarPuzzle {
   id: number;
@@ -21,81 +30,85 @@ interface HistoryGameProps {
 const CAESAR_PUZZLES: CaesarPuzzle[] = [
   {
     id: 1,
-    encrypted: "TLOA FP LRQ LC ZXKAV",
-    decrypted: "WORD IS OUT OF CANDY",
+    encrypted: 'TLOA FP LRQ LC ZXKAV',
+    decrypted: 'WORD IS OUT OF CANDY',
     shift: -3,
-    hint: "Rumors spreading about candy shortage"
+    hint: 'Rumors spreading about candy shortage',
   },
   {
     id: 2,
-    encrypted: "PBIIFKD DRJ XQ OBZBPP",
-    decrypted: "SELLING GUM AT RECESS",
+    encrypted: 'PBIIFKD DRJ XQ OBZBPP',
+    decrypted: 'SELLING GUM AT RECESS',
     shift: -3,
-    hint: "A common way to make cash"
+    hint: 'A common way to make cash',
   },
   {
     id: 3,
-    encrypted: "PKBXH QL QEB ABIF",
-    decrypted: "SNEAK TO THE DELI",
+    encrypted: 'PKBXH QL QEB ABIF',
+    decrypted: 'SNEAK TO THE DELI',
     shift: -3,
-    hint: "A risky after-school run"
+    hint: 'A risky after-school run',
   },
   {
     id: 4,
-    encrypted: "MOFZBP XOB EFDE QLAXV",
-    decrypted: "PRICES ARE HIGH TODAY",
+    encrypted: 'MOFZBP XOB EFDE QLAXV',
+    decrypted: 'PRICES ARE HIGH TODAY',
     shift: -3,
-    hint: "When candy costs skyrocket"
+    hint: 'When candy costs skyrocket',
   },
   {
     id: 5,
-    encrypted: "JXOHBQ FP COBPEIV OBPQLZHBA",
-    decrypted: "MARKET IS FRESHLY RESTOCKED",
+    encrypted: 'JXOHBQ FP COBPEIV OBPQLZHBA',
+    decrypted: 'MARKET IS FRESHLY RESTOCKED',
     shift: -3,
-    hint: "When new candy arrives"
+    hint: 'When new candy arrives',
   },
   {
     id: 6,
-    encrypted: "ELJBTLOH ZXK TXFQ",
-    decrypted: "HOMEWORK CAN WAIT",
+    encrypted: 'ELJBTLOH ZXK TXFQ',
+    decrypted: 'HOMEWORK CAN WAIT',
     shift: -3,
-    hint: "When business comes first"
+    hint: 'When business comes first',
   },
   {
     id: 7,
-    encrypted: "QOXAB JB PLRO MXQZE",
-    decrypted: "TRADE ME SOUR PATCH",
+    encrypted: 'QOXAB JB PLRO MXQZE',
+    decrypted: 'TRADE ME SOUR PATCH',
     shift: -3,
-    hint: "Negotiating with classmates"
+    hint: 'Negotiating with classmates',
   },
   {
     id: 8,
-    encrypted: "MLZHBQ FP CRII LC ZXPE",
-    decrypted: "POCKET IS FULL OF CASH",
+    encrypted: 'MLZHBQ FP CRII LC ZXPE',
+    decrypted: 'POCKET IS FULL OF CASH',
     shift: -3,
-    hint: "When sales have been good"
+    hint: 'When sales have been good',
   },
   {
     id: 9,
-    encrypted: "HBBM QEB QBXZEBO YRPV",
-    decrypted: "KEEP THE TEACHER BUSY",
+    encrypted: 'HBBM QEB QBXZEBO YRPV',
+    decrypted: 'KEEP THE TEACHER BUSY',
     shift: -3,
-    hint: "Classic distraction tactic"
+    hint: 'Classic distraction tactic',
   },
   {
     id: 10,
-    encrypted: "OBJBJYBO QL PQXPE QEB MOLCFQP",
-    decrypted: "REMEMBER TO STASH THE PROFITS",
+    encrypted: 'OBJBJYBO QL PQXPE QEB MOLCFQP',
+    decrypted: 'REMEMBER TO STASH THE PROFITS',
     shift: -3,
-    hint: "Protecting your earnings"
+    hint: 'Protecting your earnings',
   },
 ];
-
-
 
 // Placeholder jokers for history
 
 export default function HistoryGame({ onComplete }: HistoryGameProps) {
+  const { modal, showModal, hideModal } = useGameModal();
+
+  // Screen dimensions - responsive sizing
+  const { height: screenHeight } = Dimensions.get('window');
+  const isSmallScreen = screenHeight < 750; // iPhone 15 Pro and smaller
+
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [currentPuzzle, setCurrentPuzzle] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -110,7 +123,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   const caesarDecode = (text: string, shift: number): string => {
     return text
       .split('')
-      .map(char => {
+      .map((char) => {
         if (char.match(/[A-Z]/)) {
           const charCode = char.charCodeAt(0);
           const shifted = ((charCode - 65 - shift + 26) % 26) + 65;
@@ -119,6 +132,18 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
         return char; // Keep spaces and punctuation
       })
       .join('');
+  };
+
+  // Generate next puzzle
+  const generatePuzzle = () => {
+    setCurrentPuzzle((prev) => prev + 1);
+    setUserAnswer('');
+    // Focus input after state update
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
   };
 
   // Initialize game
@@ -131,75 +156,67 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   const handleSubmit = () => {
     const normalizedAnswer = userAnswer.trim().toUpperCase();
     const normalizedCorrect = puzzle.decrypted.toUpperCase();
-    
+
     if (normalizedAnswer === normalizedCorrect) {
       // Correct answer!
       const newCompleted = completedPuzzles + 1;
       setCompletedPuzzles(newCompleted);
-      
+
       if (newCompleted >= 3) {
         // Game complete after 3 puzzles
         setGameComplete(true);
-        Alert.alert(
-          '🏛️ History Master!', 
+        showModal(
+          '🏛️ History Master!',
           'Excellent work decoding ancient messages!',
-          [
-            { text: 'Choose Reward', onPress: () => {
-              setTimeout(() => setGameState('jokerSelection'), 500);
-            }}
-          ]
+          '🏛️',
+          () => {
+            setGameState('jokerSelection');
+          }
         );
       } else {
         // Move to next puzzle
-        Alert.alert(
-          '✅ Correct!', 
+        showModal(
+          '✅ Correct!',
           `Well done! Ready for cipher ${newCompleted + 1}?`,
-          [
-            { text: 'Next Cipher', onPress: () => {
-              setCurrentPuzzle(currentPuzzle + 1);
-              setUserAnswer('');
-            }}
-          ]
+          '✅',
+          () => {
+            generatePuzzle();
+          }
         );
       }
     } else {
       // Wrong answer
-      Alert.alert(
-        '❌ Not quite right', 
-        'Try decoding the message again. Remember to shift each letter!',
-        [{ text: 'Try Again', onPress: () => setUserAnswer('') }]
+      showModal(
+        '❌ Not quite right',
+        'Try decoding the message again. Remember to shift each letter!'
       );
     }
   };
 
   const handleShowHint = () => {
     const decoded = caesarDecode(puzzle.encrypted, puzzle.shift);
-    Alert.alert(
+    showModal(
       '💡 Cipher Helper',
-      `Hint: ${puzzle.hint}\n\nFirst word decoded: "${decoded.split(' ')[0]}"`,
-      [{ text: 'Got it!' }]
+      `Hint: ${puzzle.hint}\n\nFirst word decoded: "${decoded.split(' ')[0]}"`
     );
   };
 
   const handleJokerChoice = (jokerId: number) => {
-    console.log(`Selected history joker: ${HISTORY_JOKERS.find(j => j.id === jokerId)?.name}`);
+    console.log(
+      `Selected history joker: ${HISTORY_JOKERS.find((j) => j.id === jokerId)?.name}`
+    );
     onComplete();
   };
 
   const handleForfeit = () => {
     if (gameState === 'playing') {
-      Alert.alert(
+      showModal(
         '🚪 Leave History Study?',
-        'If you leave now, you\'ll forfeit your chance to study tonight and won\'t get a joker reward.',
-        [
-          { text: 'Keep Studying', style: 'cancel' },
-          { text: 'Back to Instructions', onPress: () => setGameState('instructions') },
-          { 
-            text: 'Leave', 
-            style: 'destructive',
-            onPress: () => router.back()
-          }
-        ]
+        "If you leave now, you'll miss your chance to study history!",
+        '🚪',
+        () => {
+          router.back();
+        }
       );
     } else {
       router.back();
@@ -208,7 +225,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
 
   if (gameState === 'jokerSelection') {
     return (
-      <JokerSelection 
+      <JokerSelection
         jokers={HISTORY_JOKERS}
         theme="economy"
         subject="History"
@@ -221,40 +238,56 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
     return (
       <GestureHandlerRootView style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>🏛️ History Study Session! 📜</Text>
-        
-            <View style={styles.instructionsCard}>
-              <Text style={styles.instructionsHeader}>📝 How to Decode:</Text>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>1.</Text>
-                <Text style={styles.stepText}>Each message uses Caesar's cipher - letters are shifted in the alphabet</Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>2.</Text>
-                <Text style={styles.stepText}>Look at the shift key to see how many positions to move back</Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>3.</Text>
-                <Text style={styles.stepText}>For example: with shift -3, 'D' becomes 'A', 'E' becomes 'B'</Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>4.</Text>
-                <Text style={styles.stepText}>Decode the encrypted text and type your answer</Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>5.</Text>
-                <Text style={styles.stepText}>Complete 3 historical cipher puzzles to master the art!</Text>
-              </View>
+          <Text style={styles.instructionsTitle}>
+            🏛️ History Study Session! 📜
+          </Text>
+
+          <View style={styles.instructionsCard}>
+            <Text style={styles.instructionsHeader}>📝 How to Decode:</Text>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>1.</Text>
+              <Text style={styles.stepText}>
+                Each message uses Caesar's cipher - letters are shifted in the
+                alphabet
+              </Text>
             </View>
-          
-          <TouchableOpacity 
-            style={styles.startGameButton} 
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>2.</Text>
+              <Text style={styles.stepText}>
+                Look at the shift key to see how many positions to move back
+              </Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>3.</Text>
+              <Text style={styles.stepText}>
+                For example: with shift -3, 'D' becomes 'A', 'E' becomes 'B'
+              </Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>4.</Text>
+              <Text style={styles.stepText}>
+                Decode the encrypted text and type your answer
+              </Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>5.</Text>
+              <Text style={styles.stepText}>
+                Complete 3 historical cipher puzzles to master the art!
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.startGameButton}
             onPress={() => setGameState('playing')}
           >
-            <Text style={styles.startGameButtonText}>📜 Start Decoding Challenge!</Text>
+            <Text style={styles.startGameButtonText}>📜 Start Decoding!</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+
+          <TouchableOpacity
+            style={styles.startGameButton}
+            onPress={handleForfeit}
+          >
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -263,17 +296,40 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <View style={styles.header}>
+    <View style={[styles.container, {
+      padding: ResponsiveSpacing.containerPadding(),
+      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+    }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            marginBottom: ResponsiveSpacing.headerMargin(),
+            padding: ResponsiveSpacing.headerPadding(),
+          },
+        ]}
+      >
         <Text style={styles.title}>🏛️ Caesar Ciphers</Text>
         <Text style={styles.subtitle}>Decode ancient secrets</Text>
-        <Text style={styles.progress}>Cipher {completedPuzzles + 1}/3</Text>
+        <View style={styles.gameInfo}>
+          <Text style={styles.progress}>Cipher {completedPuzzles + 1}/3</Text>
+        </View>
       </View>
 
-      <View style={styles.puzzleContainer}>
+      <View
+        style={[
+          styles.puzzleContainer,
+          {
+            padding: ResponsiveSpacing.sectionPadding(),
+            marginBottom: ResponsiveSpacing.sectionMargin(),
+          },
+        ]}
+      >
         <View style={styles.shiftInfo}>
           <Text style={styles.shiftLabel}>🔑 Shift Key: {puzzle.shift}</Text>
-          <Text style={styles.shiftHint}>Move each letter {puzzle.shift} places back in the alphabet</Text>
+          <Text style={styles.shiftHint}>
+            Move each letter {puzzle.shift} places back in the alphabet
+          </Text>
         </View>
 
         <View style={styles.encryptedContainer}>
@@ -301,34 +357,44 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
           <TouchableOpacity style={styles.hintButton} onPress={handleShowHint}>
             <Text style={styles.hintButtonText}>💡 Get Hint</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.submitButton, !userAnswer.trim() && styles.submitButtonDisabled]} 
+
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              !userAnswer.trim() && styles.submitButtonDisabled,
+            ]}
             onPress={handleSubmit}
             disabled={!userAnswer.trim()}
           >
             <Text style={styles.submitButtonText}>🔍 Decode!</Text>
           </TouchableOpacity>
         </View>
-
-     <View style={styles.helpContainer}>
-      <Text style={styles.helpTitle}>🛡️ How Caesar Cipher Works:</Text>
-      <Text style={styles.helpText}>
-        • Example: "ABC" with shift +1 becomes "BCD"{'\n'}
-        • Example: "ABC" with shift -1 becomes "ZAB"
-      </Text>
-    </View>
       </View>
 
-      <View style={styles.bottomButtons}>
-        <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
+      <View style={[styles.bottomButtons, {
+        gap: ResponsiveSpacing.buttonGap(),
+        paddingVertical: ResponsiveSpacing.buttonPadding(),
+      }]}>
+        <TouchableOpacity
+          style={styles.instructionsButton}
+          onPress={() => setGameState('instructions')}
+        >
           <Text style={styles.instructionsButtonText}>📜 Instructions</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
           <Text style={styles.backButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
+
+        <GameModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          emoji={modal.emoji}
+          onClose={hideModal}
+          onConfirm={modal.onConfirm}
+        />
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -337,35 +403,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fefaf5',
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-    paddingTop: 40,
-    paddingBottom: 60,
-  },
   header: {
     alignItems: 'center',
     marginBottom: 24,
+    backgroundColor: '#f5f5dc',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#DEB887',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#8B4513',
+    color: '#DEB887',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#CD853F',
+    color: '#F4A460',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
+  },
+  gameInfo: {
+    flexDirection: 'row',
+    gap: 20,
   },
   progress: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8B4513',
     fontFamily: 'CrayonPastel',
   },
   puzzleContainer: {

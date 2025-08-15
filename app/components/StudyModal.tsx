@@ -9,41 +9,40 @@ interface StudyModalProps {
   availableSubjects: string[];
 }
 
-const subjectColors: Record<string, {bg: string, border: string}> = {
-  'Math': {bg: '#e6f7ff', border: '#1890ff'}, // Light blue
-  'History': {bg: '#fff2e8', border: '#fa8c16'}, // Light orange  
-  'Home Ec': {bg: '#f6ffed', border: '#52c41a'}, // Light green
-  'Economy': {bg: '#fff1f0', border: '#f5222d'}, // Light red
-  'Logic': {bg: '#f9f0ff', border: '#722ed1'}, // Light purple
-  'Creative Writing': {bg: '#fff0f6', border: '#eb2f96'}, // Light pink
-  'Computer': {bg: '#f0f5ff', border: '#2f54eb'}, // Light indigo
-  'Gym': {bg: '#feffe6', border: '#a0d911'}, // Light lime
+const subjectColors: Record<string, { bg: string; border: string }> = {
+  Math: { bg: '#e6f7ff', border: '#1890ff' }, // Light blue
+  History: { bg: '#fff2e8', border: '#fa8c16' }, // Light orange
+  'Home Ec': { bg: '#f6ffed', border: '#52c41a' }, // Light green
+  Economy: { bg: '#fff1f0', border: '#f5222d' }, // Light red
+  Logic: { bg: '#f9f0ff', border: '#722ed1' }, // Light purple
+  Recess: { bg: '#fff0f6', border: '#eb2f96' }, // Light pink
+  Computer: { bg: '#f0f5ff', border: '#2f54eb' }, // Light indigo
+  Gym: { bg: '#feffe6', border: '#a0d911' }, // Light lime
 };
 
-export default function StudyModal({ 
-  visible, 
-  onClose, 
-  onSelectSubject, 
-  availableSubjects 
+export default function StudyModal({
+  visible,
+  onClose,
+  onSelectSubject,
+  availableSubjects,
 }: StudyModalProps) {
-  
   React.useEffect(() => {
     console.log('StudyModal visible state changed:', visible);
   }, [visible]);
-  
+
   const handleSubjectSelect = (subject: string) => {
     console.log(`Starting ${subject} minigame...`);
     // TODO: Navigate to minigame screen based on subject
     // Each subject will have its own minigame:
     // - Math: Number/equation solving
-    // - History: Timeline/fact matching  
+    // - History: Timeline/fact matching
     // - Home Ec: Recipe/cooking simulation
     // - Social Studies: Geography/civics quiz
     // - Logic: Pattern/puzzle solving
-    // - Creative Writing: Word/story building
+    // - Recess: Word/story building
     // - Computer: Coding/typing challenges
     // - Gym: Reaction time/coordination games
-    
+
     onSelectSubject(subject);
   };
   return (
@@ -64,8 +63,10 @@ export default function StudyModal({
     >
       <View style={styles.modal}>
         <Text style={styles.title}>Choose Subject to Study</Text>
-        <Text style={styles.subtitle}>Pick a subject to improve your knowledge</Text>
-        
+        <Text style={styles.subtitle}>
+          Pick a subject to improve your knowledge
+        </Text>
+
         <View style={styles.subjectsGrid}>
           {availableSubjects.map((subject) => (
             <TouchableOpacity
@@ -74,8 +75,8 @@ export default function StudyModal({
                 styles.subjectButton,
                 {
                   backgroundColor: subjectColors[subject]?.bg || '#f0f0f0',
-                  borderColor: subjectColors[subject]?.border || '#ccc'
-                }
+                  borderColor: subjectColors[subject]?.border || '#ccc',
+                },
               ]}
               onPress={() => handleSubjectSelect(subject)}
             >
@@ -83,7 +84,7 @@ export default function StudyModal({
             </TouchableOpacity>
           ))}
         </View>
-        
+
         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
           <Text style={styles.cancelText}>Never mind, maybe later</Text>
         </TouchableOpacity>

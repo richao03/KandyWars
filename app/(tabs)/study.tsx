@@ -2,8 +2,8 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import GameHUD from '../components/GameHUD';
 import { useGame } from '../../src/context/GameContext';
+import GameHUD from '../components/GameHUD';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
@@ -11,7 +11,7 @@ const subjects = [
   { name: 'Home Ec', color: { bg: '#f6ffed', border: '#52c41a' } },
   { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' } },
   { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
-  { name: 'Creative Writing', color: { bg: '#fff0f6', border: '#eb2f96' } },
+  { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' } },
   { name: 'Computer', color: { bg: '#f0f5ff', border: '#2f54eb' } },
   { name: 'Gym', color: { bg: '#feffe6', border: '#a0d911' } },
   { name: '🐛 DEBUG', color: { bg: '#1a1a1a', border: '#ff0000' } },
@@ -19,16 +19,22 @@ const subjects = [
 
 export default function StudyPage() {
   const { day, hasStudiedTonight, markStudiedTonight } = useGame();
+
+  // DEBUG: Allow multiple studies per night
+  const DEBUG_UNLIMITED_STUDY = true;
+
   const handleSubjectSelect = (subject: string) => {
-    if (hasStudiedTonight) {
+    if (!DEBUG_UNLIMITED_STUDY && hasStudiedTonight) {
       // User has already studied tonight, prevent further studying
       return;
     }
-    
-    // Mark that user has studied tonight before starting the minigame
-    markStudiedTonight();
+
+    // Mark that user has studied tonight before starting the minigame (unless debug mode)
+    if (!DEBUG_UNLIMITED_STUDY) {
+      markStudiedTonight();
+    }
     console.log(`Starting ${subject} minigame...`);
-    
+
     // Navigate to specific minigame based on subject
     switch (subject) {
       case 'Math':
@@ -39,7 +45,7 @@ export default function StudyPage() {
         break;
       case 'Home Ec':
         router.push('/home-ec-game');
-      
+
         break;
       case 'Economy':
         router.push('/economy-game');
@@ -47,20 +53,18 @@ export default function StudyPage() {
       case 'Logic':
         router.push('/logic-game');
         break;
-      case 'Creative Writing':
-        // TODO: router.push('/writing-game');
-        console.log('Creative Writing minigame not implemented yet');
-        router.back();
+      case 'Recess':
+        router.push('/recess-game');
         break;
       case 'Computer':
-       router.push('/computer-game');
+        router.push('/computer-game');
 
         break;
       case 'Gym':
         router.push('/gym-game');
         break;
       case '🐛 DEBUG':
-        console.log("fiund a debugers")
+        console.log('fiund a debugers');
         router.push('/debug-jokers');
         break;
       default:
@@ -76,15 +80,22 @@ export default function StudyPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor="#2a1845" />
-      <GameHUD         theme="evening" 
-          customHeaderText={`After School - Day ${day}`}
-          customLocationText="Peaceful Evening" />
-      
+      <GameHUD
+        theme="evening"
+        customHeaderText={`After School - Day ${day}`}
+        customLocationText="Peaceful Evening"
+      />
+
       <View style={styles.header}>
         <Text style={styles.title}>Study Time</Text>
-        {hasStudiedTonight && (
+        {!DEBUG_UNLIMITED_STUDY && hasStudiedTonight && (
           <Text style={styles.alreadyStudiedText}>
             📚 You've already studied tonight! Rest up for tomorrow.
+          </Text>
+        )}
+        {DEBUG_UNLIMITED_STUDY && (
+          <Text style={styles.debugText}>
+            🐛 DEBUG MODE: Unlimited studying enabled
           </Text>
         )}
       </View>
@@ -98,42 +109,64 @@ export default function StudyPage() {
               style={[
                 styles.subjectButton,
                 {
-                  backgroundColor: hasStudiedTonight ? '#ccc' : subject.color.bg,
-                  borderColor: hasStudiedTonight ? '#999' : subject.color.border,
+                  backgroundColor:
+                    !DEBUG_UNLIMITED_STUDY && hasStudiedTonight
+                      ? '#ccc'
+                      : subject.color.bg,
+                  borderColor:
+                    !DEBUG_UNLIMITED_STUDY && hasStudiedTonight
+                      ? '#999'
+                      : subject.color.border,
                 },
-                hasStudiedTonight && styles.disabledButton
+                !DEBUG_UNLIMITED_STUDY &&
+                  hasStudiedTonight &&
+                  styles.disabledButton,
               ]}
               onPress={() => handleSubjectSelect(subject.name)}
-              disabled={hasStudiedTonight}
+              disabled={!DEBUG_UNLIMITED_STUDY && hasStudiedTonight}
             >
-              <Text style={[
-                styles.subjectText,
-                hasStudiedTonight && styles.disabledText
-              ]}>
+              <Text
+                style={[
+                  styles.subjectText,
+                  !DEBUG_UNLIMITED_STUDY &&
+                    hasStudiedTonight &&
+                    styles.disabledText,
+                ]}
+              >
                 {subject.name}
               </Text>
             </TouchableOpacity>
           ))}
-           <TouchableOpacity
-              key={"debug"}
+          <TouchableOpacity
+            key={'debug'}
+            style={[
+              styles.subjectButton,
+              {
+                backgroundColor:
+                  !DEBUG_UNLIMITED_STUDY && hasStudiedTonight
+                    ? '#666'
+                    : 'black',
+                borderColor:
+                  !DEBUG_UNLIMITED_STUDY && hasStudiedTonight ? '#999' : 'red',
+              },
+              !DEBUG_UNLIMITED_STUDY &&
+                hasStudiedTonight &&
+                styles.disabledButton,
+            ]}
+            onPress={() => handleSubjectSelect('🐛 DEBUG')}
+            disabled={!DEBUG_UNLIMITED_STUDY && hasStudiedTonight}
+          >
+            <Text
               style={[
-                styles.subjectButton,
-                {
-                  backgroundColor: hasStudiedTonight ? '#666' : "black",
-                  borderColor: hasStudiedTonight ? '#999' : "red",
-                },
-                hasStudiedTonight && styles.disabledButton
-              ]}
-              onPress={() => handleSubjectSelect("🐛 DEBUG")}
-              disabled={hasStudiedTonight}
-            >
-              <Text style={[
                 styles.subjectText,
-                hasStudiedTonight && styles.disabledText
-              ]}>
-                {"🐛 DEBUG"}
-              </Text>
-            </TouchableOpacity>
+                !DEBUG_UNLIMITED_STUDY &&
+                  hasStudiedTonight &&
+                  styles.disabledText,
+              ]}
+            >
+              {'🐛 DEBUG'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Second Row - 4 subjects */}
@@ -144,18 +177,30 @@ export default function StudyPage() {
               style={[
                 styles.subjectButton,
                 {
-                  backgroundColor: hasStudiedTonight ? '#ccc' : subject.color.bg,
-                  borderColor: hasStudiedTonight ? '#999' : subject.color.border,
+                  backgroundColor:
+                    !DEBUG_UNLIMITED_STUDY && hasStudiedTonight
+                      ? '#ccc'
+                      : subject.color.bg,
+                  borderColor:
+                    !DEBUG_UNLIMITED_STUDY && hasStudiedTonight
+                      ? '#999'
+                      : subject.color.border,
                 },
-                hasStudiedTonight && styles.disabledButton
+                !DEBUG_UNLIMITED_STUDY &&
+                  hasStudiedTonight &&
+                  styles.disabledButton,
               ]}
               onPress={() => handleSubjectSelect(subject.name)}
-              disabled={hasStudiedTonight}
+              disabled={!DEBUG_UNLIMITED_STUDY && hasStudiedTonight}
             >
-              <Text style={[
-                styles.subjectText,
-                hasStudiedTonight && styles.disabledText
-              ]}>
+              <Text
+                style={[
+                  styles.subjectText,
+                  !DEBUG_UNLIMITED_STUDY &&
+                    hasStudiedTonight &&
+                    styles.disabledText,
+                ]}
+              >
                 {subject.name}
               </Text>
             </TouchableOpacity>
@@ -180,8 +225,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginTop: 40,
-    marginBottom:20
-
+    marginBottom: 20,
   },
   title: {
     fontSize: 32,
@@ -242,6 +286,14 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#999',
+  },
+  debugText: {
+    fontSize: 16,
+    color: '#ff6b35',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: 'bold',
   },
   buttonContainer: {
     paddingHorizontal: 20,

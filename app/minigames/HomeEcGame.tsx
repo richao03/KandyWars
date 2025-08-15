@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import GameModal, { useGameModal } from '../components/GameModal';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -27,6 +29,8 @@ const TARGET_POSITIONS = {
 
 
 export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
+  const { modal, showModal, hideModal } = useGameModal();
+  
   // Game state
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1);
@@ -124,19 +128,16 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           
           if (level < 3) {
             setTimeout(() => {
-              Alert.alert(
-                `🎉 Level ${level} Complete!`,
-                `Ready for Level ${level + 1}?`,
-                [{ text: 'Next Level', onPress: startNextLevel }]
-              );
+              showModal(`🎉 Level ${level} Complete!`, `Ready for Level ${level + 1}?`, '🎉', () => {
+                setLevel(level + 1);
+                initializeLevel(level + 1);
+              });
             }, 600);
           } else {
             setTimeout(() => {
-              Alert.alert(
-                '🏆 All Levels Complete!',
-                'Amazing work, Master Chef!',
-                [{ text: 'Choose Reward', onPress: () => setGameState('jokerSelection') }]
-              );
+              showModal('🏆 All Levels Complete!', 'Amazing work, Master Chef!', '🏆', () => {
+                setGameState('jokerSelection');
+              });
             }, 600);
           }
         }
@@ -198,14 +199,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
-          Alert.alert(
-            '⏰ Time Up!',
-            'Try again from Level 1?',
-            [
-              { text: 'Give Up', onPress: () => router.back(), style: 'destructive' },
-              { text: 'Restart', onPress: restartGame }
-            ]
-          );
+          showModal('⏰ Time Up!', 'Try again from Level 1?');
           return 0;
         }
         return prev - 1;
@@ -225,14 +219,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
-          Alert.alert(
-            '⏰ Time Up!',
-            'Try again from Level 1?',
-            [
-              { text: 'Give Up', onPress: () => router.back(), style: 'destructive' },
-              { text: 'Restart', onPress: restartGame }
-            ]
-          );
+          showModal('⏰ Time Up!', 'Try again from Level 1?');
           return 0;
         }
         return prev - 1;
@@ -278,13 +265,13 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   // Handle forfeit
   const handleForfeit = () => {
     if (gameState === 'playing') {
-      Alert.alert(
-        '🚪 Leave Kitchen?',
+      showModal(
+        '🚪 Leave Kitchen?', 
         'Are you sure you want to leave?',
-        [
-          { text: 'Stay', style: 'cancel' },
-          { text: 'Leave', onPress: () => router.back(), style: 'destructive' }
-        ]
+        '🚪',
+        () => {
+          router.back();
+        }
       );
     } else {
       router.back();
@@ -354,7 +341,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const levelConfig = getLevelConfig(level);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <View style={[styles.container, {
+      padding: ResponsiveSpacing.containerPadding(),
+      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+    }]}>
       <GestureHandlerRootView style={styles.gameContainer}>
         
         {/* Header */}
@@ -430,20 +420,29 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         </View>
 
         {/* Footer - Bottom Buttons */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, {
+          gap: ResponsiveSpacing.buttonGap(),
+          paddingVertical: ResponsiveSpacing.buttonPadding(),
+        }]}>
           <TouchableOpacity style={styles.footerBtn} onPress={() => setGameState('instructions')}>
             <Text style={styles.footerBtnText}>📋 Instructions</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.footerBtn, styles.leaveBtn]} onPress={handleForfeit}>
             <Text style={styles.footerBtnText}>🚪 Leave</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.footerBtn} onPress={restartGame}>
-            <Text style={styles.footerBtnText}>🔄 Restart</Text>
-          </TouchableOpacity>
-        </View>
+        
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      /></View>
 
       </GestureHandlerRootView>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -452,18 +451,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1c1f26', // Dark metallic background
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-    paddingBottom: 100,
-  },
   gameContainer: {
     flex: 1,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     backgroundColor: '#2c3139', // Dark steel
     padding: 16,
     borderRadius: 12,

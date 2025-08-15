@@ -22,6 +22,7 @@ import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { JokerService } from '../../src/utils/jokerService';
+import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EndOfDayModal from '../components/EndOfDayModal';
@@ -32,10 +33,22 @@ import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
 
+type PriceBreakdown = {
+  basePrice: number;
+  jokerEffects: Array<{
+    jokerName: string;
+    jokerEmoji: string;
+    effect: string;
+    amount: number;
+  }>;
+  finalPrice: number;
+};
+
 type CandyForMarket = Candy & {
   cost: number;
   quantityOwned: number;
   averagePrice: number | null;
+  priceBreakdown?: PriceBreakdown;
 };
 
 const baseCandies = [
@@ -77,7 +90,7 @@ export default function Market() {
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
   const { addSale, resetSales } = useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
-  const { activeEffects, jokers } = useJokers();
+  const { activeEffects, jokers, removeJoker } = useJokers();
   const jokerService = JokerService.getInstance();
   usePriceDoubling(); // This hook handles price restoration on period change
   useEmptyInventoryBonus(); // This hook handles Embrace the Grind joker bonus
@@ -136,10 +149,9 @@ export default function Market() {
             candy.baseMin + Math.random() * (candy.baseMax - candy.baseMin);
         }
 
-        // Apply joker effects to the price (like Even Stevens)
-        const modifiedPrice = jokerService.applyJokerEffects(
+        // Get price breakdown showing base price and joker effects
+        const priceBreakdown = jokerService.getPriceBreakdown(
           basePrice,
-          'candy_price',
           jokers,
           periodCount,
           currentInventoryLimit
@@ -148,7 +160,7 @@ export default function Market() {
         const finalCost =
           currentEvent?.priceOverride !== undefined
             ? currentEvent.priceOverride
-            : modifiedPrice;
+            : priceBreakdown.finalPrice;
 
         // Get inventory information for this candy
         const inventoryItem = inventory[candy.name];
@@ -158,6 +170,7 @@ export default function Market() {
           cost: finalCost,
           quantityOwned: inventoryItem?.quantity || 0,
           averagePrice: inventoryItem?.averagePrice || null,
+          priceBreakdown: currentEvent?.priceOverride === undefined ? priceBreakdown : undefined, // Only show breakdown if not overridden by events
         };
       })
     );
@@ -187,6 +200,19 @@ export default function Market() {
   });
   const [deliModalVisible, setDeliModalVisible] = useState(false);
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] = useState(false);
+  const [confirmationModal, setConfirmationModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    emoji: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    emoji: '',
+    onConfirm: () => {},
+  });
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -252,7 +278,22 @@ export default function Market() {
 
           // Check if this sale should get the 5x Candy Salad bonus
           const shouldApplyBonus = addSale(candy.name);
-          const multiplier = shouldApplyBonus ? 5 : 1;
+          let multiplier = shouldApplyBonus ? 5 : 1;
+
+          // Check for Digital Lock one-time sell multiplier
+          const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(jokers, periodCount);
+          if (sellMultiplierInfo.hasEffect && sellMultiplierInfo.multiplier) {
+            multiplier *= sellMultiplierInfo.multiplier;
+            
+            // Remove the Digital Lock joker after use (one-time effect)
+            const digitalLockJoker = jokers.find(j => 
+              jokerService.cleanJokerName(j.name) === 'Digital Lock'
+            );
+            if (digitalLockJoker) {
+              removeJoker(digitalLockJoker.id);
+              console.log(`🔒 Digital Lock activated and consumed! ${sellMultiplierInfo.multiplier}x multiplier applied`);
+            }
+          }
 
           const baseGain = candy.cost * quantity;
           const totalGain = baseGain * multiplier;
@@ -262,12 +303,34 @@ export default function Market() {
           addCandySold(quantity); // Track daily candy sales
           removeFromInventory(candy.name, quantity);
 
-          // Show bonus notification if applied
-          if (shouldApplyBonus) {
+          // Show bonus notifications if applied
+          if (shouldApplyBonus || sellMultiplierInfo.hasEffect) {
             setTimeout(() => {
-              alert(
-                `🥗 Candy Salad Bonus! 5x multiplier applied!\nBase gain: $${baseGain.toFixed(2)}\nBonus gain: $${totalGain.toFixed(2)}`
-              );
+              let title = 'Sale Bonus!';
+              let message = '';
+              let emoji = '💰';
+              
+              if (sellMultiplierInfo.hasEffect && shouldApplyBonus) {
+                title = 'Double Bonus Sale!';
+                emoji = '🎉';
+                message = `🔒 Digital Lock: ${sellMultiplierInfo.multiplier}x multiplier\n🥗 Candy Salad: 5x bonus\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
+              } else if (sellMultiplierInfo.hasEffect) {
+                title = 'Digital Lock Activated!';
+                emoji = '🔒';
+                message = `${sellMultiplierInfo.multiplier}x profit multiplier applied!\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
+              } else if (shouldApplyBonus) {
+                title = 'Candy Salad Bonus!';
+                emoji = '🥗';
+                message = `5x multiplier applied!\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
+              }
+              
+              setConfirmationModal({
+                visible: true,
+                title,
+                message,
+                emoji,
+                onConfirm: () => setConfirmationModal(prev => ({ ...prev, visible: false }))
+              });
             }, 100);
           }
 
@@ -417,9 +480,23 @@ export default function Market() {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.price}>
-                      ${item.cost ? item.cost.toFixed(2) : '0.00'}
-                    </Text>
+                    <View style={styles.priceSection}>
+                      <Text style={styles.price}>
+                        ${item.cost ? item.cost.toFixed(2) : '0.00'}
+                      </Text>
+                      {item.priceBreakdown && item.priceBreakdown.jokerEffects.length > 0 && (
+                        <View style={styles.jokerIndicators}>
+                          {item.priceBreakdown.jokerEffects.slice(0, 3).map((effect, i) => (
+                            <Text key={i} style={styles.jokerIndicator}>
+                              {effect.jokerEmoji}
+                            </Text>
+                          ))}
+                          {item.priceBreakdown.jokerEffects.length > 3 && (
+                            <Text style={styles.moreIndicator}>+{item.priceBreakdown.jokerEffects.length - 3}</Text>
+                          )}
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </TouchableOpacity>
               );
@@ -484,6 +561,17 @@ export default function Market() {
         currentDay={day}
       />
 
+      <ConfirmationModal
+        visible={confirmationModal.visible}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        emoji={confirmationModal.emoji}
+        confirmText="Awesome!"
+        onConfirm={confirmationModal.onConfirm}
+        onCancel={() => setConfirmationModal(prev => ({ ...prev, visible: false }))}
+        theme="market"
+      />
+
       {selectedCandy && (
         <TransactionModal
           visible={selectedCandyIndex !== null}
@@ -492,6 +580,7 @@ export default function Market() {
           maxBuyQuantity={maxBuyQty}
           maxSellQuantity={maxSellQty}
           candy={selectedCandy}
+          priceBreakdown={selectedCandy?.priceBreakdown}
         />
       )}
 
@@ -556,6 +645,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'CrayonPastel',
   },
+  priceSection: {
+    alignItems: 'flex-end',
+  },
   price: {
     fontSize: 17,
     fontWeight: '700',
@@ -566,6 +658,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ffb3b3',
+  },
+  jokerIndicators: {
+    flexDirection: 'row',
+    marginTop: 4,
+    gap: 2,
+  },
+  jokerIndicator: {
+    fontSize: 12,
+    backgroundColor: 'rgba(74, 144, 226, 0.2)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4a90e2',
+  },
+  moreIndicator: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#4a90e2',
+    backgroundColor: 'rgba(74, 144, 226, 0.1)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 6,
+    fontFamily: 'CrayonPastel',
   },
   buttonContainer: {
     borderTopWidth: 3,

@@ -11,6 +11,8 @@ export default function TabLayout() {
       headerShown: false, // Disable tab headers for consistent spacing
       tabBarStyle: {
         backgroundColor: isAfterSchool ? '#000000' : undefined,
+        height: 49, // Standard iOS tab bar height
+        paddingBottom: 0,
       },
       tabBarLabelStyle: {
         color: isAfterSchool ? '#ffffff' : undefined,

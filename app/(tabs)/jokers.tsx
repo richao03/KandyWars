@@ -2,11 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import JokerCard from '../components/JokerCard';
+import GameHUD from '../components/GameHUD';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
 
 export default function JokersPage() {
-  const { isAfterSchool } = useGame();
+  const { isAfterSchool, day } = useGame();
   const { jokers, reorderJokers } = useJokers();
   const [activeTab, setActiveTab] = useState<'persistent' | 'one-time'>('persistent');
   
@@ -55,6 +56,12 @@ export default function JokersPage() {
       styles.container,
       isAfterSchool && styles.containerAfterSchool
     ]}>
+      <GameHUD 
+        theme={isAfterSchool ? "evening" : "school"}
+        customHeaderText={isAfterSchool ? `After School - Day ${day}` : `School - Day ${day}`}
+        customLocationText="Jokers Collection"
+      />
+      
       <View style={[
         styles.header,
         isAfterSchool && styles.headerAfterSchool
@@ -166,7 +173,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a1845',
   },
   header: {
-    paddingTop: 50,
+    paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,

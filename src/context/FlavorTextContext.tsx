@@ -12,6 +12,7 @@ type FlavorTextContextType = {
   setManual: (message: string) => void;
   setFlavorText: (text: string) => void;
   setHint: (hintText: string) => void;
+  resetFlavorText: () => void;
 };
 
 type FlavorEvent =
@@ -221,6 +222,12 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
     setText(hintText);
   }, []);
 
+  const resetFlavorText = useCallback(() => {
+    setCurrentEvent('DEFAULT');
+    setText(getRandomFlavor('DEFAULT'));
+    console.log('Flavor text reset to initial state');
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       text,
@@ -228,8 +235,9 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
       setManual,
       setFlavorText,
       setHint,
+      resetFlavorText,
     }),
-    [text, setEvent, setManual, setFlavorText, setHint]
+    [text, setEvent, setManual, setFlavorText, setHint, resetFlavorText]
   );
 
   return (

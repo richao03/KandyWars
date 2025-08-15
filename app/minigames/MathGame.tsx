@@ -1,208 +1,161 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import GameModal, { useGameModal } from '../components/GameModal';
+import { StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 import Animated, {
-  runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withTiming,
   withSpring,
-  withTiming
+  runOnJS,
+  FadeInLeft,
+  SlideInLeft,
+  useAnimatedReaction,
+  cancelAnimation,
+  Easing,
 } from 'react-native-reanimated';
 import JokerSelection from '../components/JokerSelection';
 import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
-import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
-import { useJokers } from '../../src/context/JokerContext';
-import { useGame } from '../../src/context/GameContext';
-
-
-interface Card {
-  id: number;
-  value: number;
-  column: 'left' | 'right';
-  matched: boolean;
-}
 
 interface MathGameProps {
   onComplete: () => void;
 }
 
-interface DraggableCardProps {
-  card: Card;
-  isSelected: boolean;
-  onStartDrag: (card: Card) => void;
-  onEndDrag: (absX: number, absY: number) => void;
-  translateX: Animated.SharedValue<number>;
-  translateY: Animated.SharedValue<number>;
-  scale: Animated.SharedValue<number>;
-  opacity: Animated.SharedValue<number>;
-}
-
-const DraggableCard: React.FC<DraggableCardProps> = React.memo(
-  ({ card, isSelected, onStartDrag, onEndDrag, translateX, translateY, scale, opacity }) => {
-    const handler = useAnimatedGestureHandler({
-      onStart: (_, ctx: any) => {
-        runOnJS(onStartDrag)(card);
-        ctx.startX = translateX.value;
-        ctx.startY = translateY.value;
-        scale.value = withSpring(1.08);
-        opacity.value = withSpring(0.9);
-      },
-      onActive: (evt, ctx: any) => {
-        translateX.value = ctx.startX + evt.translationX;
-        translateY.value = ctx.startY + evt.translationY;
-      },
-      onEnd: (evt) => {
-        const { absoluteX, absoluteY } = evt;
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-        scale.value = withSpring(1);
-        opacity.value = withSpring(1);
-        runOnJS(onEndDrag)(absoluteX, absoluteY);
-      },
-      onCancel: () => {
-        scale.value = withSpring(1);
-        opacity.value = withSpring(1);
-      },
-      onFail: () => {
-        scale.value = withSpring(1);
-        opacity.value = withSpring(1);
-      },
-    });
-
-    const animatedStyle = useAnimatedStyle(() => ({
-      transform: [
-        { translateX: isSelected ? translateX.value : 0 },
-        { translateY: isSelected ? translateY.value : 0 },
-        { scale: isSelected ? scale.value : 1 },
-      ],
-      zIndex: isSelected ? 1000 : 1,
-    }));
-
-    return (
-      <PanGestureHandler
-        enabled={!card.matched}
-        onGestureEvent={handler}
-        shouldCancelWhenOutside={false}
-        activeOffsetX={[-5, 5]}
-        activeOffsetY={[-5, 5]}
-      >
-        <Animated.View
-          style={[
-            styles.card,
-            card.column === 'left' ? styles.leftCard : styles.rightCard,
-            isSelected && styles.selectedCard,
-            card.matched && styles.matchedCard,
-            animatedStyle,
-          ]}
-        >
-          <Text style={[styles.cardText, card.matched && styles.matchedText]}>{card.value}</Text>
-        </Animated.View>
-      </PanGestureHandler>
-    );
-  }
-);
-
-// Academic math jokers for the classroom
-
 export default function MathGame({ onComplete }: MathGameProps) {
-  // Joker effects
-  const { jokers } = useJokers();
-  const { periodCount } = useGame();
-  const studyTimeMultiplier = useStudyTimeMultiplier(jokers, periodCount);
+  const { modal, showModal, hideModal } = useGameModal();
   
-  // Game state management
-  const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'gameOver', 'jokerSelection'
-  const [stage, setStage] = useState(1); // 1, 2, 3
-  const [timeLeft, setTimeLeft] = useState(14); // Start with stage 1 time
-  const [stageComplete, setStageComplete] = useState(false);
-  const [allStagesComplete, setAllStagesComplete] = useState(false);
+  // Screen dimensions - responsive sizing
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const isSmallScreen = screenHeight < 750; // iPhone 15 Pro and smaller
   
-  // Existing game state
-  const [targetNumber, setTargetNumber] = useState(0);
-  const [leftCards, setLeftCards] = useState<Card[]>([]);
-  const [rightCards, setRightCards] = useState<Card[]>([]);
-  const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
-  const [matchedPairs, setMatchedPairs] = useState<{ left: number; right: number }[]>([]);
-  const [gameComplete, setGameComplete] = useState(false);
-  const [selectedJokers, setSelectedJokers] = useState<typeof MATH_JOKERS>([]);
+  // Game state
+  const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
+  const [score, setScore] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [gameActive, setGameActive] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(60); // 60 seconds per level
+  const [levelMatchesNeeded, setLevelMatchesNeeded] = useState(10); // Matches needed per level
+  const [matchesCompleted, setMatchesCompleted] = useState(0); // Track matches in current level
+  
+  // Scrolling numbers state - pre-generated sequence that parades across screen
+  const [numbersSequence, setNumbersSequence] = useState<number[]>([]);
+  const [matchedIndices, setMatchedIndices] = useState<number[]>([]); // Track which numbers have been matched
+  
+  // Animation values - using Reanimated for smooth performance
+  const scrollX = useSharedValue(-600); // Start position off-screen
+  const flashValue = useSharedValue(0);
+  const scrollSpeed = useSharedValue(2); // Pixels per frame
+  const isScrolling = useSharedValue(false);
   
   // Timer ref
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [draggedCard, setDraggedCard] = useState<Card | null>(null);
-
-  // Right-card absolute frames in screen coords
-  const dropZoneLayout = useRef<
-    Record<number, { x: number; y: number; width: number; height: number } | undefined>
-  >({}).current;
-
-  // Refs to all cards so we can call measureInWindow (screen coords)
-  const cardRefs = useRef<Record<number, View | null>>({}).current;
-
-  // Animated values (single active draggable at a time)
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
-
-  // Generate a new math puzzle
-  const generatePuzzle = () => {
-    const config = getStageConfig(stage);
-    const target = Math.floor(Math.random() * config.maxTarget) + 10;
-    const leftValues: number[] = [];
-    const rightValues: number[] = [];
-    for (let i = 0; i < config.pairs; i++) {
-      const leftValue = Math.floor(Math.random() * (target - 2)) + 1; // 1..target-1
-      const rightValue = target - leftValue;
-      leftValues.push(leftValue);
-      rightValues.push(rightValue);
+  
+  const numberBoxWidth = 60;
+  
+  // Generate random numbers 1-9
+  const generateRandomNumbers = (count: number): number[] => {
+    return Array.from({ length: count }, () => Math.floor(Math.random() * 9) + 1);
+  };
+  
+  // Get level configuration - reduced speeds by 50% total (25% more from previous 25%)
+  const getLevelConfig = (levelNum: number) => {
+    switch (levelNum) {
+      case 1: return { matchesNeeded: 10, scrollSpeed: 1.125 }; // Was 1.5, now 1.125 (25% slower)
+      case 2: return { matchesNeeded: 15, scrollSpeed: 1.40625 }; // Was 1.875, now 1.40625 (25% slower)
+      case 3: return { matchesNeeded: 20, scrollSpeed: 1.6875 }; // Was 2.25, now 1.6875 (25% slower)
+      default: return { matchesNeeded: 10, scrollSpeed: 1.125 };
     }
-    const shuffledLeft = [...leftValues].sort(() => Math.random() - 0.5);
-    const shuffledRight = [...rightValues].sort(() => Math.random() - 0.5);
-
-    setTargetNumber(target);
-    setLeftCards(shuffledLeft.map((value, index) => ({ id: index, value, column: 'left', matched: false })));
-    setRightCards(shuffledRight.map((value, index) => ({ id: index + 100, value, column: 'right', matched: false })));
-    setMatchedPairs([]);
-    setSelectedCardId(null);
-    setDraggedCard(null);
-
-    // clear cached frames; they’ll re-measure onLayout
-    Object.keys(dropZoneLayout).forEach((k) => (dropZoneLayout[+k] = undefined));
   };
 
-  // Stage configuration - 5 pairs with decreasing time
-  const getStageConfig = (stageNum: number) => {
-    const baseConfig = (() => {
-      switch (stageNum) {
-        case 1: return { time: 14, pairs: 5, maxTarget: 20 };
-        case 2: return { time: 12, pairs: 5, maxTarget: 20 };
-        case 3: return { time: 10, pairs: 5, maxTarget: 20 };
-        default: return { time: 14, pairs: 5, maxTarget: 20 };
+  // Get the LAST unmatched number in the sequence - this is what we match
+  const getRightmostNumber = (): { number: number, index: number } => {
+    if (numbersSequence.length === 0) return { number: 1, index: -1 };
+    
+    // Find the LAST unmatched number in the entire sequence (not just visible)
+    let lastUnmatchedIndex = -1;
+    
+    for (let i = numbersSequence.length - 1; i >= 0; i--) {
+      if (!matchedIndices.includes(i)) {
+        lastUnmatchedIndex = i;
+        break;
       }
-    })();
+    }
     
-    // Apply study time multiplier from Pomodoro Timer joker
-    const modifiedTime = Math.round(baseConfig.time * studyTimeMultiplier);
+    if (lastUnmatchedIndex >= 0) {
+      return { number: numbersSequence[lastUnmatchedIndex], index: lastUnmatchedIndex };
+    }
     
-    return {
-      ...baseConfig,
-      time: modifiedTime
-    };
+    return { number: 1, index: -1 };
+  };
+  
+  // Initialize scrolling numbers
+  const initializeScrollingNumbers = () => {
+    // Pre-generate exactly 10 numbers for this sequence
+    const sequence = generateRandomNumbers(10);
+    console.log('Generated sequence:', sequence);
+    setNumbersSequence(sequence);
+    setMatchedIndices([]); // Reset matched numbers
+    scrollX.value = -600; // Start with numbers off-screen to the left
+  };
+  
+  // Handle game over - regular function called via runOnJS
+  const handleGameOver = () => {
+    setGameActive(false);
+    stopScrolling();
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    showModal(
+      '💥 Game Over!',
+      `A number reached the edge! You completed ${matchesCompleted} matches.`,
+      '💥',
+      () => {
+        // Restart level
+        setMatchesCompleted(0);
+        initializeScrollingNumbers();
+        setTimeout(() => {
+          startScrolling();
+        }, 500);
+        startTimer();
+        setGameActive(true);
+      }
+    );
   };
 
+  // Start the scrolling animation using Reanimated
+  const startScrolling = () => {
+    console.log('Starting parade scrolling with Reanimated...');
+    const config = getLevelConfig(level);
+    
+    // Set scroll speed based on level
+    scrollSpeed.value = config.scrollSpeed;
+    isScrolling.value = true;
+    
+    // Animate scroll position continuously
+    scrollX.value = withRepeat(
+      withTiming(screenWidth + 700, {
+        duration: 20000 / config.scrollSpeed, // Adjust duration based on speed
+        easing: Easing.linear,
+      }),
+      -1, // Infinite repeat
+      false
+    );
+  };
+  
+  // Stop scrolling
+  const stopScrolling = () => {
+    cancelAnimation(scrollX);
+    isScrolling.value = false;
+  };
+  
   // Start timer
   const startTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     
     timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
+      setTimeLeft(prev => {
         if (prev <= 1) {
-          // Time's up!
-          if (timerRef.current) clearInterval(timerRef.current);
           handleTimeUp();
           return 0;
         }
@@ -210,254 +163,215 @@ export default function MathGame({ onComplete }: MathGameProps) {
       });
     }, 1000);
   };
-
+  
   // Handle when time runs out
   const handleTimeUp = () => {
-    Alert.alert(
-      '⏰ Time\'s Up!', 
-      'You ran out of time! Try again?',
-      [
-        { text: 'Give Up', onPress: () => router.back(), style: 'destructive' },
-        { text: 'Try Again', onPress: () => {
-          generatePuzzle();
-          startTimer();
-        }}
-      ]
+    setGameActive(false);
+    if (scrollTimerRef.current) clearInterval(scrollTimerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    showModal(
+      '⏰ Time\'s Up!',
+      `Level ${level} complete! Score: ${score}`,
+      '⏰',
+      () => {
+        if (level < 3) {
+          nextLevel();
+        } else {
+          setGameState('jokerSelection');
+        }
+      }
     );
   };
-
-  // Initialize game only when playing
-  useEffect(() => {
-    if (gameState === 'playing') {
-      generatePuzzle();
-      startTimer();
-    }
-  }, [gameState]);
-
-  // Progress to next stage
-  const nextStage = () => {
-    if (stage >= 3) {
-      // All stages complete!
-      setAllStagesComplete(true);
-      setTimeout(() => setGameState('jokerSelection'), 1000);
+  
+  // Handle bottom number click
+  const handleBottomNumberClick = (clickedNumber: number) => {
+    if (!gameActive) return;
+    
+    // Calculate which number is rightmost based on scroll position
+    const rightmostData = getRightmostNumber();
+    console.log(`Clicked: ${clickedNumber}, Rightmost: ${rightmostData.number}, Sum: ${clickedNumber + rightmostData.number}`);
+    const sum = rightmostData.number + clickedNumber;
+    
+    if (sum === 10) {
+      // Correct! Remove only the matched number
+      if (rightmostData.index >= 0) {
+        const newMatchedIndices = [...matchedIndices, rightmostData.index];
+        setMatchedIndices(newMatchedIndices);
+        console.log(`Matched number at index ${rightmostData.index}`);
+        
+        // Increment matches completed
+        const newMatchesCompleted = matchesCompleted + 1;
+        setMatchesCompleted(newMatchesCompleted);
+        
+        // Check if all numbers in current sequence have been matched
+        if (newMatchedIndices.length >= 10) {
+          // Generate new sequence when all are matched
+          const newSequence = generateRandomNumbers(10);
+          console.log('All matched! New sequence:', newSequence);
+          setNumbersSequence(newSequence);
+          setMatchedIndices([]);
+          
+          // Reset scroll position with animation
+          cancelAnimation(scrollX);
+          scrollX.value = -600;
+          setTimeout(() => {
+            if (gameActive) {
+              startScrolling();
+            }
+          }, 100);
+        }
+        
+        // Check if level is complete
+        const config = getLevelConfig(level);
+        if (newMatchesCompleted >= config.matchesNeeded) {
+          setGameActive(false);
+          stopScrolling();
+          if (timerRef.current) clearInterval(timerRef.current);
+          
+          if (level < 3) {
+            showModal(
+              `🎉 Level ${level} Complete!`,
+              `Excellent! You matched ${config.matchesNeeded} numbers! Ready for Level ${level + 1}?`,
+              '🎉',
+              () => {
+                nextLevel();
+              }
+            );
+          } else {
+            showModal(
+              '🏆 Math Master!',
+              `Incredible! You've completed all 3 levels!`,
+              '🏆',
+              () => {
+                setGameState('jokerSelection');
+              }
+            );
+          }
+        }
+      }
+      
+      setScore(prev => prev + 10);
+      flashValue.value = withSpring(1, {}, () => {
+        flashValue.value = withSpring(0);
+      });
     } else {
-      const newStage = stage + 1;
-      setStage(newStage);
-      setStageComplete(false);
-      // Reset timer for new stage before generating puzzle
-      const newConfig = getStageConfig(newStage);
-      setTimeLeft(newConfig.time);
-      generatePuzzle();
-      startTimer();
+      // Wrong! Just lose points, no shake animation
+      setScore(prev => Math.max(0, prev - 5));
     }
   };
+  
+  // Next level
+  const nextLevel = () => {
+    const newLevel = level + 1;
+    const config = getLevelConfig(newLevel);
+    
+    setLevel(newLevel);
+    setLevelMatchesNeeded(config.matchesNeeded);
+    setMatchesCompleted(0);
+    setTimeLeft(60);
+    setGameActive(true);
+    
+    stopScrolling();
+    initializeScrollingNumbers();
+    setTimeout(() => {
+      startScrolling();
+    }, 300);
+    startTimer();
+  };
+  
+  // Start game
+  const startGame = () => {
+    console.log('Starting game...');
+    const config = getLevelConfig(1);
+    
+    setGameState('playing');
+    setScore(0);
+    setLevel(1);
+    setLevelMatchesNeeded(config.matchesNeeded);
+    setMatchesCompleted(0);
+    setTimeLeft(60);
+    setGameActive(true);
+    initializeScrollingNumbers();
+    
+    // Start scrolling after initialization
+    setTimeout(() => {
+      startScrolling();
+    }, 500);
+    
+    startTimer();
+  };
+  
+  // Use refs to avoid hook dependency issues
+  const numbersSequenceRef = useRef(numbersSequence);
+  const matchedIndicesRef = useRef(matchedIndices);
+  
+  useEffect(() => {
+    numbersSequenceRef.current = numbersSequence;
+    matchedIndicesRef.current = matchedIndices;
+  }, [numbersSequence, matchedIndices]);
 
-  // Cleanup timer on unmount and initialize game
+  // Use animated reaction to check for game over
+  useAnimatedReaction(
+    () => scrollX.value,
+    (currentPosition) => {
+      'worklet';
+      if (!isScrolling.value) return;
+      
+      // Check if any unmatched number reached the edge
+      const sequence = numbersSequenceRef.current;
+      const matched = matchedIndicesRef.current;
+      
+      for (let i = 0; i < sequence.length; i++) {
+        if (matched.includes(i)) continue;
+        
+        const position = currentPosition + (i * 70);
+        // Check if number has reached the right edge (including number width)
+        if (position >= screenWidth - 60) { // Number width is 60px, so when it reaches screenWidth - 60 it's at the edge
+          // Game over!
+          isScrolling.value = false;
+          cancelAnimation(scrollX);
+          runOnJS(handleGameOver)();
+          break;
+        }
+      }
+    }
+  );
+
+  // Cleanup timers
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      stopScrolling();
     };
   }, []);
   
-  // Animation values for fun effects
-  const pulseValue = useSharedValue(1);
-  const shakeValue = useSharedValue(0);
-  
-  useEffect(() => {
-    if (timeLeft <= 3 && timeLeft > 0) {
-      // Pulse effect for urgency
-      pulseValue.value = withRepeat(
-        withTiming(1.2, { duration: 200 }),
-        -1,
-        true
-      );
-    } else {
-      pulseValue.value = withTiming(1);
-    }
-    
-    if (timeLeft <= 1) {
-      // Shake effect when almost out of time
-      shakeValue.value = withRepeat(
-        withTiming(10, { duration: 50 }),
-        -1,
-        true
-      );
-    } else {
-      shakeValue.value = withTiming(0);
-    }
-  }, [timeLeft]);
-
-  // Measure a card into screen coords (so it matches evt.absoluteX/Y)
-  const measureCard = (id: number) => {
-    const ref = cardRefs[id];
-    if (!ref) return;
-    ref.measureInWindow((x, y, width, height) => {
-      dropZoneLayout[id] = { x, y, width, height };
-    });
-  };
-
-  const onStartDrag = (card: Card) => {
-    if (card.matched) return;
-   setDraggedCard(card);
-  setSelectedCardId(card.id); // works for left or right
-  };
-
-  const onEndDrag = (absX: number, absY: number) => {
-    if (!draggedCard) return;
-
-    // ensure we have frames (first time, or after orientation/layout changes)
-    for (const card of [...leftCards, ...rightCards]) {
-      if (!dropZoneLayout[card.id]) {
-        measureCard(card.id);
-      }
-    }
-
-    // Find any card under the drop point (both left and right)
-    let hitCard: Card | null = null;
-    
-    // Check all cards for collision
-    for (const card of [...leftCards, ...rightCards]) {
-      const rect = dropZoneLayout[card.id];
-      if (!rect) continue;
-      const inside =
-        absX >= rect.x && absX <= rect.x + rect.width && absY >= rect.y && absY <= rect.y + rect.height;
-      if (inside) {
-        hitCard = card;
-        break;
-      }
-    }
-
-    if (!hitCard) {
-      // no drop target
-      setDraggedCard(null);
-      setSelectedCardId(null);
-      return;
-    }
-
-    // Don't allow dropping on same column or matched cards
-    if (hitCard.column === draggedCard.column || hitCard.matched) {
-      setDraggedCard(null);
-      setSelectedCardId(null);
-      return;
-    }
-
-    const isMatch = draggedCard.value + hitCard.value === targetNumber;
-
-    if (isMatch) {
-      const leftId = draggedCard.column === 'left' ? draggedCard.id : hitCard.id;
-      const rightId = draggedCard.column === 'right' ? draggedCard.id : hitCard.id;
-      const newMatchedPairs = [...matchedPairs, { left: leftId, right: rightId }];
-      setMatchedPairs(newMatchedPairs);
-      // Mark both cards as matched
-      setLeftCards((prev) => 
-        prev.map((c) => 
-          (c.id === draggedCard.id || c.id === hitCard.id) ? { ...c, matched: true } : c
-        )
-      );
-      setRightCards((prev) => 
-        prev.map((c) => 
-          (c.id === draggedCard.id || c.id === hitCard.id) ? { ...c, matched: true } : c
-        )
-      );
-
-      const config = getStageConfig(stage);
-      if (newMatchedPairs.length === config.pairs) {
-        // Stage complete!
-        if (timerRef.current) clearInterval(timerRef.current);
-        setStageComplete(true);
-        setGameComplete(true);
-        
-        // Show celebration and next stage option
-        setTimeout(() => {
-          if (stage < 3) {
-            const nextStageConfig = getStageConfig(stage + 1);
-            Alert.alert(
-              `🎉 Level ${stage} Complete!`,
-              `Great job! Ready for Level ${stage + 1}? (${nextStageConfig.time} seconds)`,
-              [
-                { text: 'Next Level', onPress: nextStage }
-              ]
-            );
-          } else {
-            Alert.alert(
-              '🏆 Amazing! All Stages Complete!',
-              'You\'ve mastered all three difficulty levels!',
-              [
-                { text: 'Choose Reward', onPress: () => {
-                  setAllStagesComplete(true);
-                  setTimeout(() => setGameState('jokerSelection'), 500);
-                }}
-              ]
-            );
-          }
-        }, 500);
-      }
-    } else {
-      // defer Alert to avoid firing during gesture teardown
-      setTimeout(() => {
-        Alert.alert('❌ Incorrect!', `${draggedCard.value} + ${hitCard.value} = ${draggedCard.value + hitCard.value} ≠ ${targetNumber}`);
-      }, 0);
-    }
-
-    setDraggedCard(null);
-    setSelectedCardId(null);
-  };
-
-  const selectRandomJokers = () => {
-    const shuffled = [...MATH_JOKERS].sort(() => Math.random() - 0.5);
-    setSelectedJokers(shuffled.slice(0, 3));
-  };
-
-  // Handle forfeit (going back)
+  // Handle forfeit
   const handleForfeit = () => {
     if (gameState === 'playing') {
-      Alert.alert(
+      showModal(
         '📚 Leave Math Study?',
         'If you leave now, you\'ll miss your study session and won\'t earn any academic rewards.',
-        [
-          { text: 'Keep Studying', style: 'cancel' },
-          { text: 'Back to Instructions', onPress: () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-            setGameState('instructions');
-          }},
-          { 
-            text: 'Leave', 
-            style: 'destructive',
-            onPress: () => {
-              if (timerRef.current) clearInterval(timerRef.current);
-              router.back();
-            }
-          }
-        ]
+        '📚',
+        () => {
+          router.back();
+        }
       );
     } else {
       router.back();
     }
   };
   
-  // Animated styles for timer
-  const timerAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: pulseValue.value },
-        { translateX: shakeValue.value }
-      ]
-    };
-  });
   
-  // Timer color based on urgency
-  const getTimerColor = () => {
-    if (timeLeft <= 1) return '#ff4d4f';
-    if (timeLeft <= 3) return '#fa8c16';
-    if (timeLeft <= 5) return '#fadb14';
-    return '#52c41a';
-  };
+  // Animated styles - must be at top level
+  const flashAnimatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: flashValue.value ? 'rgba(0, 255, 0, 0.3)' : 'transparent',
+  }));
 
-  const handleJokerChoice = (jokerId: number) => {
-    console.log(`Selected joker: ${MATH_JOKERS.find((j) => j.id === jokerId)?.name}`);
-    onComplete();
-  };
-
+  const scrollAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: scrollX.value }]
+  }));
+  
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection 
@@ -468,10 +382,10 @@ export default function MathGame({ onComplete }: MathGameProps) {
       />
     );
   }
-
+  
   if (gameState === 'instructions') {
     return (
-      <GestureHandlerRootView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>📐 Math Study Session! 📏</Text>
           
@@ -479,30 +393,31 @@ export default function MathGame({ onComplete }: MathGameProps) {
             <Text style={styles.instructionsHeader}>📝 How to Solve:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
-              <Text style={styles.stepText}>You'll see a target number at the top of your chalkboard</Text>
+              <Text style={styles.stepText}>Watch numbers 1-9 scroll from left to right in the top row</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
-              <Text style={styles.stepText}>Drag number cards from left and right columns together</Text>
+              <Text style={styles.stepText}>Click the correct number in the bottom row to make the sum equal 10</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>Find pairs that add up to equal the target number</Text>
+              <Text style={styles.stepText}>Match with the rightmost number in the scrolling top row</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>Complete all 3 difficulty levels before time runs out!</Text>
+              <Text style={styles.stepText}>Correct answers = +10 points, wrong answers = -5 points</Text>
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>Each level gets faster - Level 1: 14s, Level 2: 12s, Level 3: 10s</Text>
+              <Text style={styles.stepText}>Level 1: Match 10 numbers | Level 2: 15 | Level 3: 20</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepText}>If any number reaches the right edge, you lose!</Text>
             </View>
           </View>
           
-          <TouchableOpacity 
-            style={styles.startGameButton} 
-            onPress={() => setGameState('playing')}
-          >
+          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
             <Text style={styles.startGameButtonText}>📝 Start Math Challenge!</Text>
           </TouchableOpacity>
           
@@ -510,72 +425,117 @@ export default function MathGame({ onComplete }: MathGameProps) {
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
-      </GestureHandlerRootView>
+      </View>
     );
   }
-
+  
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>📐 Math Challenge</Text>
+    <Animated.View style={[styles.container, {
+      padding: ResponsiveSpacing.containerPadding(),
+      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+    }, flashAnimatedStyle]}>
+      {/* Header */}
+      <View style={[styles.header, {
+        marginBottom: ResponsiveSpacing.headerMargin(),
+        padding: ResponsiveSpacing.headerPadding(),
+      }]}>
+        <Text style={[styles.title, {
+          fontSize: ResponsiveSpacing.titleSize(),
+          marginBottom: ResponsiveSpacing.inputMargin(),
+        }]}>📐 Math Challenge</Text>
+        <Text style={styles.subtitle}>Click the number that adds to {getRightmostNumber().number} = 10</Text>
         <View style={styles.gameInfo}>
-          <Text style={styles.level}>Level {stage}/3</Text>
-          <Text style={styles.progress}>Matches: {matchedPairs.length}/{getStageConfig(stage).pairs}</Text>
-          <Animated.View style={[styles.timerContainer, timerAnimatedStyle]}>
-            <Text style={[styles.timer, { color: getTimerColor() }]}>⏱️ {timeLeft}s</Text>
+          <Text style={styles.level}>Level {level}/3</Text>
+          <Text style={styles.score}>Matches: {matchesCompleted}/{levelMatchesNeeded}</Text>
+          <Text style={[styles.timer, { color: timeLeft <= 10 ? '#ff4d4f' : '#52c41a' }]}>
+            ⏱️ {timeLeft}s
+          </Text>
+        </View>
+      </View>
+      
+      {/* Scrolling top row */}
+      <View style={[styles.topRow, {
+        marginBottom: ResponsiveSpacing.sectionMargin(),
+        padding: ResponsiveSpacing.sectionPadding(),
+      }]}>
+        <Text style={styles.rowLabel}>Scrolling Numbers:</Text>
+        <View style={styles.scrollContainer}>
+          <Animated.View style={[styles.scrollingRow, scrollAnimatedStyle]}>
+            {(() => {
+              // Find the LAST unmatched number in the sequence
+              let lastUnmatchedIndex = -1;
+              
+              for (let i = numbersSequence.length - 1; i >= 0; i--) {
+                if (!matchedIndices.includes(i)) {
+                  lastUnmatchedIndex = i;
+                  break;
+                }
+              }
+              
+              return numbersSequence.map((number, index) => {
+                // Skip rendering if this number has been matched
+                if (matchedIndices.includes(index)) {
+                  return null;
+                }
+                
+                // Position each number with spacing so they follow each other
+                const xPosition = index * 70; // 70px spacing between numbers
+                
+                // ONLY highlight the LAST unmatched number in the sequence
+                const isHighlighted = index === lastUnmatchedIndex;
+                
+                return (
+                  <View 
+                    key={`number-${index}`}
+                    style={[
+                      styles.numberBox, 
+                      styles.topNumberBox,
+                      isHighlighted && styles.rightmostBox,
+                      { position: 'absolute', left: xPosition }
+                    ]}
+                  >
+                    <Text style={[
+                      styles.numberText,
+                      isHighlighted && styles.rightmostText
+                    ]}>
+                      {number}
+                    </Text>
+                  </View>
+                );
+              });
+            })()}
           </Animated.View>
         </View>
-        <View style={styles.targetContainer}>
-          <Text style={styles.targetLabel}>📏 Target Sum:</Text>
-          <Text style={styles.target}>{targetNumber}</Text>
-        </View>
       </View>
-
-      <View style={styles.gameArea}>
-        {/* Massive background target number wallpaper */}
-        <View style={styles.backgroundNumber}>
-          <Text style={styles.backgroundNumberText}>{targetNumber}</Text>
-        </View>
-        {/* Left Column */}
-        <View style={styles.column}>
-          {leftCards.map((card) => (
-            <View key={card.id} ref={(r) => (cardRefs[card.id] = r)} onLayout={() => measureCard(card.id)}>
-              <DraggableCard
-                card={card}
-                isSelected={selectedCardId === card.id}
-                onStartDrag={onStartDrag}
-                onEndDrag={onEndDrag}
-                translateX={translateX}
-                translateY={translateY}
-                scale={scale}
-                opacity={opacity}
-              />
-            </View>
-          ))}
-        </View>
-
-        {/* Right Column - Now also draggable */}
-        <View style={styles.column}>
-          {rightCards.map((card) => (
-            <View key={card.id} ref={(r) => (cardRefs[card.id] = r)} onLayout={() => measureCard(card.id)}>
-              <DraggableCard
-                card={card}
-                isSelected={selectedCardId === card.id}
-                onStartDrag={onStartDrag}
-                onEndDrag={onEndDrag}
-                translateX={translateX}
-                translateY={translateY}
-                scale={scale}
-                opacity={opacity}
-              />
-            </View>
+      
+      {/* Static bottom row */}
+      <View style={[styles.bottomRow, {
+        marginBottom: ResponsiveSpacing.sectionMargin(),
+        padding: ResponsiveSpacing.sectionPadding(),
+      }]}>
+        <Text style={styles.rowLabel}>Click the answer:</Text>
+        <View style={styles.staticRow}>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => (
+            <TouchableOpacity
+              key={number}
+              style={[styles.numberBox, styles.bottomNumberBox]}
+              onPress={() => handleBottomNumberClick(number)}
+              disabled={!gameActive}
+            >
+              <Text style={styles.numberText}>{number}</Text>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
-
-
-      <View style={styles.buttonContainer}>
+      
+      {/* Footer buttons */}
+      <View style={[styles.buttonContainer, {
+        gap: ResponsiveSpacing.buttonGap(),
+        paddingVertical: ResponsiveSpacing.buttonPadding(),
+      }]}>
         <TouchableOpacity style={styles.instructionsButton} onPress={() => {
+          setGameActive(false);
+          if (scrollTimerRef.current) clearInterval(scrollTimerRef.current);
           if (timerRef.current) clearInterval(timerRef.current);
           setGameState('instructions');
         }}>
@@ -585,179 +545,145 @@ export default function MathGame({ onComplete }: MathGameProps) {
           <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
       </View>
-    </GestureHandlerRootView>
+      
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      />
+    </Animated.View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#2d4a3e',
-    padding: 16,
-    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     backgroundColor: '#1a2f23',
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#8fbc8f',
+    borderColor: '#90ee90',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-    textShadowColor: '#8fbc8f',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-    marginBottom: 12,
-  },
-  targetContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0f1b13',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#8fbc8f',
-    marginBottom: 8,
-  },
-  targetLabel: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-    marginRight: 8,
-  },
-  target: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#ffff99',
-    fontFamily: 'CrayonPastel',
-    textShadowColor: '#f5f5dc',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  instruction: {
-    fontSize: 16,
-    color: '#f5f5dc',
+    color: '#90ee90',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
+    marginBottom: 8,
   },
-  progress: {
-    fontSize: 14,
-    color: '#8fbc8f',
+  subtitle: {
+    fontSize: 16,
+    color: '#ffff99',
     fontFamily: 'CrayonPastel',
-    marginTop: 4,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   gameInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
+    gap: 20,
   },
-  gameArea: {
-    
-    flexDirection: 'row',
-    gap: 16,
-    position: 'relative',
-    paddingHorizontal: 8,
+  level: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffff99',
+    fontFamily: 'CrayonPastel',
+  },
+  score: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#90ee90',
+    fontFamily: 'CrayonPastel',
+  },
+  timer: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'CrayonPastel',
+  },
+  topRow: {
+    marginBottom: 30,
     backgroundColor: '#1a2f23',
-    marginHorizontal: -8,
-    paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#8fbc8f',
+    padding: 16,
   },
-  column: {
-    flex: 1,
-    zIndex: 10,
+  bottomRow: {
+    marginBottom: 30,
+    backgroundColor: '#1a2f23',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#8fbc8f',
+    padding: 16,
   },
-  columnHeader: {
+  rowLabel: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#f5f5dc',
+    fontWeight: '600',
+    color: '#ffff99',
     fontFamily: 'CrayonPastel',
-    textAlign: 'center',
     marginBottom: 12,
-    textDecorationLine: 'underline',
-    textDecorationColor: '#ffff99',
+    textAlign: 'center',
   },
-  card: {
-    width: 80,
+  scrollContainer: {
     height: 80,
-    marginBottom: 8,
+    overflow: 'hidden',
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    justifyContent: 'flex-start',
+    minHeight: 80,
+    minWidth: 800, // Ensure enough width for all 10 numbers (10 * 60 + spacing)
+  },
+  staticRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  numberBox: {
+    width: 60,
+    height: 60,
     borderRadius: 8,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    shadowColor: '#ffff99',
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 5,
+    marginHorizontal: 4,
   },
-  cardTouchable: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dropZone: {
-    borderWidth: 4,
-    borderStyle: 'dashed',
-    borderColor: '#52c41a',
-    backgroundColor: '#f6ffed',
-  },
-  leftCard: {
-    backgroundColor: '#0f1b13',
-    borderColor: '#ffff99',
-  },
-  rightCard: {
+  topNumberBox: {
     backgroundColor: '#0f1b13',
     borderColor: '#f5deb3',
   },
-  selectedCard: {
-    backgroundColor: '#2a4a2a',
+  bottomNumberBox: {
+    backgroundColor: '#0f1b13',
     borderColor: '#ffff99',
+  },
+  rightmostBox: {
+    borderColor: '#ff6b35',
     borderWidth: 3,
-    shadowOpacity: 1.0,
-    shadowRadius: 10,
-    transform: [{ scale: 1.05 }],
+    backgroundColor: '#2d1b0f',
   },
-  matchedCard: {
-    backgroundColor: '#1a2f1a',
-    borderColor: '#90ee90',
-    opacity: 0.4,
-  },
-  cardText: {
+  numberText: {
     fontSize: 24,
     fontWeight: '900',
     color: '#f5f5dc',
     fontFamily: 'CrayonPastel',
+  },
+  rightmostText: {
+    color: '#ff6b35',
     textShadowColor: '#ffff99',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  matchedText: {
-    display: 'none',
-    color: '#90ee90',
-  },
-  completionMessage: {
-    alignItems: 'center',
-    padding: 16,
-  },
-  completionText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#90ee90',
-    fontFamily: 'CrayonPastel',
-    textShadowColor: '#f5f5dc',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -766,155 +692,21 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingVertical: 16,
   },
-  newGameButton: {
+  instructionsButton: {
     flex: 1,
-    backgroundColor: '#556b2f',
+    backgroundColor: '#1a2f23',
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#9acd32',
-    alignItems: 'center',
-  },
-  newGameButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-  },
-  // Joker Selection Styles
-  jokerContainer: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#2d4a3e',
-  },
-  jokerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-    textAlign: 'center',
-    marginBottom: 8,
-    textShadowColor: '#8fbc8f',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  jokerSubtitle: {
-    fontSize: 16,
-    color: '#8fbc8f',
-    fontFamily: 'CrayonPastel',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  generateButton: {
-    backgroundColor: '#1a2f23',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#ffff99',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  generateButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-  },
-  jokerCard: {
-    backgroundColor: '#1a2f23',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
     borderColor: '#8fbc8f',
-    marginBottom: 12,
-    shadowColor: '#ffff99',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  jokerName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffff99',
-    fontFamily: 'CrayonPastel',
-    marginBottom: 4,
-  },
-  jokerDescription: {
-    fontSize: 14,
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-    lineHeight: 18,
-  },
-  skipButton: {
-    backgroundColor: '#8b4513',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#daa520',
     alignItems: 'center',
-    marginTop: 16,
   },
-  skipButtonText: {
+  instructionsButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#f5f5dc',
     fontFamily: 'CrayonPastel',
   },
-  // Timer and Stage Header Styles
-  stageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 16,
-  },
-  stageTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffff99',
-    fontFamily: 'CrayonPastel',
-    textShadowColor: '#f5f5dc',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  timerContainer: {
-    backgroundColor: '#0f1b13',
-    marginTop:8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#8fbc8f',
-  },
-  timer: {
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'CrayonPastel',
-  },
-  // Background target number styles - massive wallpaper
-  backgroundNumber: {
-    position: 'absolute',
-    top: -100,
-    left: -100,
-    right: -100,
-    bottom: -100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 0,
-  },
-  backgroundNumberText: {
-    fontSize: 150,
-    fontWeight: '900',
-    color: '#2d4a3e',
-    fontFamily: 'CrayonPastel',
-    opacity: 0.3,
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-
   // Instructions Styles
   instructionsContainer: {
     flex: 1,
@@ -989,21 +781,6 @@ const styles = StyleSheet.create({
   },
   startGameButtonText: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
-  },
-  instructionsButton: {
-    flex: 1,
-    backgroundColor: '#1a2f23',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#8fbc8f',
-    alignItems: 'center',
-  },
-  instructionsButtonText: {
-    fontSize: 16,
     fontWeight: '700',
     color: '#f5f5dc',
     fontFamily: 'CrayonPastel',
