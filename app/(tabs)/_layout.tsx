@@ -2,25 +2,32 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 import { useGame } from '../../src/context/GameContext';
+import { useTabBar } from '../../src/context/TabBarContext';
 
 export default function TabLayout() {
   const { isAfterSchool } = useGame();
+  const { isTabBarVisible } = useTabBar();
+  
+  // Memoize screen options to prevent recreation on every render
+  const screenOptions = React.useMemo(() => ({
+    headerShown: false, // Disable tab headers for consistent spacing
+    tabBarStyle: isTabBarVisible ? {
+      backgroundColor: isAfterSchool ? '#000000' : undefined,
+      height: 49, // Standard iOS tab bar height
+      paddingBottom: 0,
+    } : {
+      display: 'none'
+    },
+    tabBarLabelStyle: {
+      color: isAfterSchool ? '#ffffff' : undefined,
+    },
+    tabBarIconStyle: {
+      tintColor: isAfterSchool ? '#ffffff' : undefined,
+    }
+  }), [isAfterSchool, isTabBarVisible]);
   
   return (
-    <Tabs screenOptions={{
-      headerShown: false, // Disable tab headers for consistent spacing
-      tabBarStyle: {
-        backgroundColor: isAfterSchool ? '#000000' : undefined,
-        height: 49, // Standard iOS tab bar height
-        paddingBottom: 0,
-      },
-      tabBarLabelStyle: {
-        color: isAfterSchool ? '#ffffff' : undefined,
-      },
-      tabBarIconStyle: {
-        tintColor: isAfterSchool ? '#ffffff' : undefined,
-      }
-    }}>
+    <Tabs screenOptions={screenOptions}>
       {/* Main visible tabs */}
       <Tabs.Screen 
         name="home" 
@@ -73,6 +80,14 @@ export default function TabLayout() {
       }} />
       <Tabs.Screen name="deli" options={{ 
         title: "Deli", 
+        href: null // Hide from tab bar
+      }} />
+      <Tabs.Screen name="piggy-bank" options={{ 
+        title: "Piggy Bank", 
+        href: null // Hide from tab bar
+      }} />
+      <Tabs.Screen name="upgrades" options={{ 
+        title: "Upgrades", 
         href: null // Hide from tab bar
       }} />
     </Tabs>

@@ -9,6 +9,8 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
+    'app/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
+    '!app/**/*.d.ts',
   ],
 };

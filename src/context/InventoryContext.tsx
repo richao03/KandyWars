@@ -1,5 +1,5 @@
 // context/InventoryContext.tsx
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { loadInventory, saveInventory } from '../utils/persistence';
 import { useJokers } from './JokerContext';
 import { useGame } from './GameContext';
@@ -37,6 +37,16 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   const jokerService = JokerService.getInstance();
   const { jokers } = useJokers();
   const { periodCount } = useGame();
+
+  // Memoize inventory limit calculation to prevent excessive recalculations
+  const memoizedInventoryLimit = useMemo(() => {
+    return jokerService.applyJokerEffects(inventoryLimit, 'inventory_limit', jokers, periodCount);
+  }, [inventoryLimit, jokers, periodCount, jokerService]);
+
+  // Memoize total inventory count
+  const memoizedTotalCount = useMemo(() => {
+    return Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+  }, [inventory]);
 
   // Load inventory on mount
   useEffect(() => {
@@ -78,12 +88,9 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     quantity: number,
     price: number
   ): boolean => {
-    // Calculate current total from current inventory state
-    const currentTotal = Object.values(inventory).reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    );
-    const actualLimit = getInventoryLimit();
+    // Use memoized values for better performance
+    const currentTotal = memoizedTotalCount;
+    const actualLimit = memoizedInventoryLimit;
     
     // Check if adding this quantity would exceed inventory limit
     if (currentTotal + quantity > actualLimit) {
@@ -192,14 +199,10 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getInventoryLimit = () => {
-    const currentLimit = jokerService.applyJokerEffects(inventoryLimit, 'inventory_limit', jokers, periodCount);
-    return currentLimit;
+    return memoizedInventoryLimit;
   };
   const getTotalInventoryCount = () => {
-    return Object.values(inventory).reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    );
+    return memoizedTotalCount;
   };
 
   const resetInventory = () => {

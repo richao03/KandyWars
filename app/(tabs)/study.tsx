@@ -13,7 +13,7 @@ const subjects = [
   { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
   { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' } },
   { name: 'Computer', color: { bg: '#f0f5ff', border: '#2f54eb' } },
-  { name: 'Gym', color: { bg: '#feffe6', border: '#a0d911' } },
+  { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' } },
   { name: '🐛 DEBUG', color: { bg: '#1a1a1a', border: '#ff0000' } },
 ];
 
@@ -60,8 +60,8 @@ export default function StudyPage() {
         router.push('/computer-game');
 
         break;
-      case 'Gym':
-        router.push('/gym-game');
+      case 'Art':
+        router.push('/art-game');
         break;
       case '🐛 DEBUG':
         console.log('fiund a debugers');

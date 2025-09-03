@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   Alert,
   FlatList,
@@ -29,6 +30,7 @@ import EndOfDayModal from '../components/EndOfDayModal';
 import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
 import LocationModal, { Location } from '../components/LocationModal';
+import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
@@ -61,6 +63,7 @@ const baseCandies = [
 ];
 
 export default function Market() {
+  const navigation = useNavigation();
   const {
     rng,
     seed,
@@ -191,6 +194,7 @@ export default function Market() {
     useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [dayStatsModalVisible, setDayStatsModalVisible] = useState(false);
+  const [schoolsOutModalVisible, setSchoolsOutModalVisible] = useState(false);
   const [endOfDayModalVisible, setEndOfDayModalVisible] = useState(false);
   const [stashMoneyModalVisible, setStashMoneyModalVisible] = useState(false);
   const [completedActivities, setCompletedActivities] = useState({
@@ -374,6 +378,12 @@ export default function Market() {
   // Day stats modal handler
   const handleDayStatsClose = () => {
     setDayStatsModalVisible(false);
+    setSchoolsOutModalVisible(true);
+  };
+
+  // Schools out modal handler
+  const handleSchoolsOutComplete = () => {
+    setSchoolsOutModalVisible(false);
     // Enter after school mode and navigate
     startAfterSchool();
     router.push('/(tabs)/after-school');
@@ -534,6 +544,11 @@ export default function Market() {
         onClose={handleDayStatsClose}
         stats={getTotalStats()}
         day={day}
+      />
+
+      <SchoolsOutModal
+        visible={schoolsOutModalVisible}
+        onComplete={handleSchoolsOutComplete}
       />
 
       <EndOfDayModal

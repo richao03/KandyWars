@@ -2,13 +2,13 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HISTORY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -245,34 +245,15 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
           <View style={styles.instructionsCard}>
             <Text style={styles.instructionsHeader}>📝 How to Decode:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>1.</Text>
+              <Text style={styles.stepNumber}>🔤</Text>
               <Text style={styles.stepText}>
-                Each message uses Caesar's cipher - letters are shifted in the
-                alphabet
+                Caesar cipher: shift letters back
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>2.</Text>
+              <Text style={styles.stepNumber}>🔑</Text>
               <Text style={styles.stepText}>
-                Look at the shift key to see how many positions to move back
-              </Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>
-                For example: with shift -3, 'D' becomes 'A', 'E' becomes 'B'
-              </Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>
-                Decode the encrypted text and type your answer
-              </Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>
-                Complete 3 historical cipher puzzles to master the art!
+                Use the shift key to decode
               </Text>
             </View>
           </View>
@@ -296,16 +277,16 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   }
 
   return (
-    <View style={[styles.container, {
-      padding: ResponsiveSpacing.containerPadding(),
-      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-    }]}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       <View
         style={[
           styles.header,
           {
-            marginBottom: ResponsiveSpacing.headerMargin(),
-            padding: ResponsiveSpacing.headerPadding(),
+            marginBottom: isSmallScreen ? 12 : 24,
+            padding: isSmallScreen ? 12 : 16,
           },
         ]}
       >
@@ -316,15 +297,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
         </View>
       </View>
 
-      <View
-        style={[
-          styles.puzzleContainer,
-          {
-            padding: ResponsiveSpacing.sectionPadding(),
-            marginBottom: ResponsiveSpacing.sectionMargin(),
-          },
-        ]}
-      >
+      <View style={styles.puzzleContainer}>
         <View style={styles.shiftInfo}>
           <Text style={styles.shiftLabel}>🔑 Shift Key: {puzzle.shift}</Text>
           <Text style={styles.shiftHint}>
@@ -371,16 +344,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
         </View>
       </View>
 
-      <View style={[styles.bottomButtons, {
-        gap: ResponsiveSpacing.buttonGap(),
-        paddingVertical: ResponsiveSpacing.buttonPadding(),
-      }]}>
-        <TouchableOpacity
-          style={styles.instructionsButton}
-          onPress={() => setGameState('instructions')}
-        >
-          <Text style={styles.instructionsButtonText}>📜 Instructions</Text>
-        </TouchableOpacity>
+      <View style={styles.bottomButtons}>
         <TouchableOpacity style={styles.backButton} onPress={handleForfeit}>
           <Text style={styles.backButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
@@ -394,7 +358,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
           onConfirm={modal.onConfirm}
         />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -402,6 +366,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fefaf5',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   header: {
     alignItems: 'center',
@@ -442,8 +413,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 3,
     borderColor: '#D2B48C',
-    padding: 20,
-    marginBottom: 8,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 3 },
     shadowOpacity: 0.1,
@@ -456,7 +426,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#DEB887',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   shiftLabel: {
     fontSize: 18,

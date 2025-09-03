@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import GameModal, { useGameModal } from '../components/GameModal';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
+import {
+  GestureHandlerRootView,
+  PanGestureHandler,
+} from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedGestureHandler,
@@ -11,8 +12,11 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import JokerSelection from '../components/JokerSelection';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
+import GameModal, { useGameModal } from '../components/GameModal';
+import JokerSelection from '../components/JokerSelection';
+import MinigameHUD from '../components/MinigameHUD';
 
 interface HomeEcGameProps {
   onComplete: () => void;
@@ -22,15 +26,14 @@ interface HomeEcGameProps {
 const CANDY_TYPES = ['🍭', '🍬', '🧁', '🍫'];
 const TARGET_POSITIONS = {
   '🍭': 'up',
-  '🍬': 'right', 
+  '🍬': 'right',
   '🧁': 'down',
   '🍫': 'left',
 } as const;
 
-
 export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
-  
+
   // Game state
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1);
@@ -39,7 +42,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const [centerCandy, setCenterCandy] = useState('');
   const [nextCandy, setNextCandy] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [feedbackPosition, setFeedbackPosition] = useState<{x: string, y: string} | null>(null);
+  const [feedbackPosition, setFeedbackPosition] = useState<{
+    x: string;
+    y: string;
+  } | null>(null);
   const [isFlying, setIsFlying] = useState(false);
 
   // Refs
@@ -54,15 +60,20 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   // Level configurations
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
-      case 1: return { matches: 10, time: 15 };
-      case 2: return { matches: 12, time: 15 };
-      case 3: return { matches: 15, time: 15 };
-      default: return { matches: 10, time: 15};
+      case 1:
+        return { matches: 10, time: 15 };
+      case 2:
+        return { matches: 12, time: 15 };
+      case 3:
+        return { matches: 15, time: 15 };
+      default:
+        return { matches: 10, time: 15 };
     }
   };
 
   // Generate random candy
-  const generateCandy = () => CANDY_TYPES[Math.floor(Math.random() * CANDY_TYPES.length)];
+  const generateCandy = () =>
+    CANDY_TYPES[Math.floor(Math.random() * CANDY_TYPES.length)];
 
   // Start new candy
   const startNewCandy = useCallback(() => {
@@ -72,7 +83,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       setCenterCandy(generateCandy());
     }
     setNextCandy(generateCandy());
-    
+
     // Reset animation values
     translateX.value = 0;
     translateY.value = 0;
@@ -81,87 +92,100 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   }, [nextCandy, translateX, translateY, opacity]);
 
   // Handle swipe
-  const handleSwipe = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
-    if (isFlying || !centerCandy || gameState !== 'playing') return;
+  const handleSwipe = useCallback(
+    (direction: 'up' | 'down' | 'left' | 'right') => {
+      if (isFlying || !centerCandy || gameState !== 'playing') return;
 
-    const correctDirection = TARGET_POSITIONS[centerCandy as keyof typeof TARGET_POSITIONS];
-    const isCorrect = direction === correctDirection;
-    
-    setIsFlying(true);
+      const correctDirection =
+        TARGET_POSITIONS[centerCandy as keyof typeof TARGET_POSITIONS];
+      const isCorrect = direction === correctDirection;
 
-    // Animate candy flying to edge and set feedback position
-    let targetX = 0;
-    let targetY = 0;
-    
-    switch (direction) {
-      case 'up': 
-        targetY = -300;
-        setFeedbackPosition({ x: '50%', y: '10%' });
-        break;
-      case 'down': 
-        targetY = 300;
-        setFeedbackPosition({ x: '50%', y: '85%' });
-        break;
-      case 'left': 
-        targetX = -200;
-        setFeedbackPosition({ x: '15%', y: '50%' });
-        break;
-      case 'right': 
-        targetX = 200;
-        setFeedbackPosition({ x: '85%', y: '50%' });
-        break;
-    }
+      setIsFlying(true);
 
-    translateX.value = withTiming(targetX, { duration: 250 });
-    translateY.value = withTiming(targetY, { duration: 250 });
-    opacity.value = withTiming(0, { duration: 250 });
+      // Animate candy flying to edge and set feedback position
+      let targetX = 0;
+      let targetY = 0;
 
-    // Show feedback and update score
-    if (isCorrect) {
-      setScore(prev => {
-        const newScore = prev + 1;
-        const levelConfig = getLevelConfig(level);
-        
-        if (newScore >= levelConfig.matches) {
-          // Level complete
-          if (timerRef.current) clearInterval(timerRef.current);
-          
-          if (level < 3) {
-            setTimeout(() => {
-              showModal(`🎉 Level ${level} Complete!`, `Ready for Level ${level + 1}?`, '🎉', () => {
-                setLevel(level + 1);
-                initializeLevel(level + 1);
-              });
-            }, 600);
-          } else {
-            setTimeout(() => {
-              showModal('🏆 All Levels Complete!', 'Amazing work, Master Chef!', '🏆', () => {
-                setGameState('jokerSelection');
-              });
-            }, 600);
+      switch (direction) {
+        case 'up':
+          targetY = -300;
+          setFeedbackPosition({ x: '50%', y: '10%' });
+          break;
+        case 'down':
+          targetY = 300;
+          setFeedbackPosition({ x: '50%', y: '85%' });
+          break;
+        case 'left':
+          targetX = -200;
+          setFeedbackPosition({ x: '15%', y: '50%' });
+          break;
+        case 'right':
+          targetX = 200;
+          setFeedbackPosition({ x: '85%', y: '50%' });
+          break;
+      }
+
+      translateX.value = withTiming(targetX, { duration: 250 });
+      translateY.value = withTiming(targetY, { duration: 250 });
+      opacity.value = withTiming(0, { duration: 250 });
+
+      // Show feedback and update score
+      if (isCorrect) {
+        setScore((prev) => {
+          const newScore = prev + 1;
+          const levelConfig = getLevelConfig(level);
+
+          if (newScore >= levelConfig.matches) {
+            // Level complete
+            if (timerRef.current) clearInterval(timerRef.current);
+
+            if (level < 3) {
+              setTimeout(() => {
+                showModal(
+                  `🎉 Level ${level} Complete!`,
+                  `Ready for Level ${level + 1}?`,
+                  '🎉',
+                  () => {
+                    setLevel(level + 1);
+                    initializeLevel(level + 1);
+                  }
+                );
+              }, 600);
+            } else {
+              setTimeout(() => {
+                showModal(
+                  '🏆 All Levels Complete!',
+                  'Amazing work, Master Chef!',
+                  '🏆',
+                  () => {
+                    setGameState('jokerSelection');
+                  }
+                );
+              }, 600);
+            }
           }
-        }
-        
-        return newScore;
-      });
-      setFeedback('✅ +1');
-    } else {
-      setScore(prev => Math.max(0, prev - 1)); // Subtract 1 but don't go below 0
-      setFeedback('❌ -1');
-    }
 
-    // Start new candy after brief delay to let first candy fly
-    setTimeout(() => {
-      startNewCandy();
-    }, 200);
-    
-    // Clear feedback after candy flies away
-    setTimeout(() => {
-      setFeedback('');
-      setFeedbackPosition(null);
-    }, 400);
+          return newScore;
+        });
+        setFeedback('✅ +1');
+      } else {
+        setScore((prev) => Math.max(0, prev - 1)); // Subtract 1 but don't go below 0
+        setFeedback('❌ -1');
+      }
 
-  }, [isFlying, centerCandy, gameState, level, startNewCandy]);
+      // Start new candy after brief delay to let first candy fly
+      setTimeout(() => {
+        startNewCandy();
+      }, 200);
+
+      // Clear feedback after candy flies away
+      setTimeout(() => {
+        setFeedback('');
+        setFeedbackPosition(null);
+      }, 400);
+    },
+    [isFlying, centerCandy, gameState, level, startNewCandy]
+  );
 
   // Gesture handler
   const gestureHandler = useAnimatedGestureHandler({
@@ -173,13 +197,13 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
       if (absX > 50 || absY > 50) {
         let direction: 'up' | 'down' | 'left' | 'right';
-        
+
         if (absX > absY) {
           direction = translationX > 0 ? 'right' : 'left';
         } else {
           direction = translationY > 0 ? 'down' : 'up';
         }
-        
+
         runOnJS(handleSwipe)(direction);
       }
     },
@@ -193,10 +217,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     setTimeLeft(15);
     setFeedback('');
     startNewCandy();
-    
+
     // Start timer
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
           showModal('⏰ Time Up!', 'Try again from Level 1?');
@@ -207,16 +231,42 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     }, 1000);
   }, [startNewCandy]);
 
+  // Initialize level
+  const initializeLevel = useCallback((levelNum: number) => {
+    setScore(0);
+    setTimeLeft(15);
+    setFeedback('');
+    setFeedbackPosition(null);
+    startNewCandy();
+
+    // Clear any existing timer
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    // Start timer
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          showModal('⏰ Time Up!', 'Try again from Level 1?', '⏰', () => {
+            setGameState('instructions');
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [startNewCandy, showModal]);
+
   // Start next level
   const startNextLevel = useCallback(() => {
-    setLevel(prev => prev + 1);
+    setLevel((prev) => prev + 1);
     setScore(0);
     setTimeLeft(15);
     startNewCandy();
-    
+
     // Restart timer
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
           showModal('⏰ Time Up!', 'Try again from Level 1?');
@@ -266,7 +316,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const handleForfeit = () => {
     if (gameState === 'playing') {
       showModal(
-        '🚪 Leave Kitchen?', 
+        '🚪 Leave Kitchen?',
         'Are you sure you want to leave?',
         '🚪',
         () => {
@@ -280,7 +330,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   if (gameState === 'jokerSelection') {
     return (
-      <JokerSelection 
+      <JokerSelection
         jokers={HOME_EC_JOKERS}
         theme="homeec"
         subject="Home Economics"
@@ -293,44 +343,42 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     return (
       <GestureHandlerRootView style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>🍭 Candy Kitchen Study! 🍳</Text>
-          
+          <Text style={styles.instructionsTitle}>
+            🍭 Candy Kitchen Study! 🍳
+          </Text>
+
           <View style={styles.instructionsCard}>
             <Text style={styles.instructionsHeader}>📝 How to Cook:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>1.</Text>
-              <Text style={styles.stepText}>Swipe the center candy toward the matching edge candy</Text>
+              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepText}>
+                Swipe ingredients to matching kitchen stations
+              </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>2.</Text>
-              <Text style={styles.stepText}>🍭 Lollipop → Swipe UP</Text>
+              <Text style={styles.stepNumber}>🔑</Text>
+              <Text style={styles.stepText}>
+                🍭 UP, 🍬 RIGHT, 🧁 DOWN, 🍫 LEFT
+              </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>🍬 Candy → Swipe RIGHT</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>🧁 Cupcake → Swipe DOWN</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>🍫 Chocolate → Swipe LEFT</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>6.</Text>
-              <Text style={styles.stepText}>Wrong match loses points, complete all 3 levels!</Text>
+              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepText}>
+                Wrong swipes lose points - be fast and accurate!
+              </Text>
             </View>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.startGameButton} 
-            onPress={startGame}
-          >
-            <Text style={styles.startGameButtonText}>👩‍🍳 Start Cooking Challenge!</Text>
+
+          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
+            <Text style={styles.startGameButtonText}>
+              👩‍🍳 Start Cooking Challenge!
+            </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.startGameButton} onPress={handleForfeit}>
+
+          <TouchableOpacity
+            style={styles.startGameButton}
+            onPress={handleForfeit}
+          >
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -341,24 +389,25 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const levelConfig = getLevelConfig(level);
 
   return (
-    <View style={[styles.container, {
-      padding: ResponsiveSpacing.containerPadding(),
-      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-    }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          padding: ResponsiveSpacing.containerPadding(),
+          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+        },
+      ]}
+    >
       <GestureHandlerRootView style={styles.gameContainer}>
-        
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>🍳 Kitchen Practice 🧑‍🍳</Text>
-          <View style={styles.gameInfo}>
-            <Text style={styles.levelText}> {level} / 3</Text>
-            <Text style={[styles.timerText, { color: timeLeft <= 5 ? '#ff4d4f' : '#52c41a' }]}>
-              ⏱️ {timeLeft}s
-            </Text>
-          </View>
-          <Text style={styles.scoreText}>Progress: {score}/{levelConfig.matches}</Text>
-          <Text style={styles.subtitle}>Sort ingredients to their designated stations</Text>
-        </View>
+        <MinigameHUD
+          title="🍳 Kitchen Practice 🧑‍🍳"
+          subtitle="Sort ingredients to their designated stations"
+          leftInfo={`Level ${level}/3`}
+          centerInfo={`Progress: ${score}/${levelConfig.matches}`}
+          rightInfo={`⏱️ ${timeLeft}s`}
+          theme="homeec"
+        />
 
         {/* Game Area - Center Panel */}
         <View style={styles.gameArea}>
@@ -406,41 +455,47 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
           {/* Feedback */}
           {feedback && feedbackPosition && (
-            <View style={[
-              styles.feedbackContainer,
-              {
-                left: feedbackPosition.x,
-                top: feedbackPosition.y,
-                transform: [{ translateX: -30 }, { translateY: -15 }],
-              }
-            ]}>
+            <View
+              style={[
+                styles.feedbackContainer,
+                {
+                  left: feedbackPosition.x,
+                  top: feedbackPosition.y,
+                  transform: [{ translateX: -30 }, { translateY: -15 }],
+                },
+              ]}
+            >
               <Text style={styles.feedbackText}>{feedback}</Text>
             </View>
           )}
         </View>
 
         {/* Footer - Bottom Buttons */}
-        <View style={[styles.footer, {
-          gap: ResponsiveSpacing.buttonGap(),
-          paddingVertical: ResponsiveSpacing.buttonPadding(),
-        }]}>
-          <TouchableOpacity style={styles.footerBtn} onPress={() => setGameState('instructions')}>
-            <Text style={styles.footerBtnText}>📋 Instructions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.footerBtn, styles.leaveBtn]} onPress={handleForfeit}>
+        <View
+          style={[
+            styles.footer,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.footerBtn, styles.leaveBtn]}
+            onPress={handleForfeit}
+          >
             <Text style={styles.footerBtnText}>🚪 Leave</Text>
           </TouchableOpacity>
-        
 
-      <GameModal
-        visible={modal.visible}
-        title={modal.title}
-        message={modal.message}
-        emoji={modal.emoji}
-        onClose={hideModal}
-        onConfirm={modal.onConfirm}
-      /></View>
-
+          <GameModal
+            visible={modal.visible}
+            title={modal.title}
+            message={modal.message}
+            emoji={modal.emoji}
+            onClose={hideModal}
+            onConfirm={modal.onConfirm}
+          />
+        </View>
       </GestureHandlerRootView>
     </View>
   );

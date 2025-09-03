@@ -310,10 +310,6 @@ export class JokerService {
             effectAmount = currentPrice * (effect.amount - 1); // Amount added by multiplication
             effectText = `×${effect.amount} (+$${effectAmount.toFixed(2)})`;
             currentPrice *= effect.amount;
-          } else if (effect.operation === 'subtract') {
-            effectAmount = -effect.amount;
-            effectText = `-$${effect.amount.toFixed(2)}`;
-            currentPrice -= effect.amount;
           }
 
           breakdown.jokerEffects.push({

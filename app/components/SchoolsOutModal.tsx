@@ -1,0 +1,84 @@
+import React, { useEffect } from 'react';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { useTabBar } from '../../src/context/TabBarContext';
+
+interface SchoolsOutModalProps {
+  visible: boolean;
+  onComplete: () => void;
+}
+
+const { width, height } = Dimensions.get('window');
+
+export default function SchoolsOutModal({
+  visible,
+  onComplete,
+}: SchoolsOutModalProps) {
+  const { hideTabBar, showTabBar } = useTabBar();
+
+  useEffect(() => {
+    if (visible) {
+      hideTabBar();
+      // Auto-dismiss after 2.5 seconds
+      const timer = setTimeout(() => {
+        showTabBar();
+        onComplete();
+      }, 2500);
+
+      return () => {
+        clearTimeout(timer);
+        showTabBar();
+      };
+    }
+  }, [visible, onComplete, hideTabBar, showTabBar]);
+
+  if (!visible) return null;
+
+  return (
+    <View style={styles.overlay}>
+      <View style={styles.container}>
+        <Image
+          source={require('../../assets/images/schoolsOut.png')}
+          style={styles.image}
+          resizeMode="contain"
+        />
+        <Text style={styles.text}>Time to head home!</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF8C42', // Warm orange to match the schoolsOut.png
+    zIndex: 1000,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 1000, // Android elevation
+  },
+  container: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: width,
+    height: height,
+  },
+  image: {
+    width: width * 0.9,
+    height: height * 0.7,
+    marginBottom: 20,
+  },
+  text: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF', // White text for good contrast on orange
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+});

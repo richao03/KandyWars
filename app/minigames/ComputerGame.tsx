@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import GameModal, { useGameModal } from '../components/GameModal';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
 import FlipCard from 'react-native-flip-card';
-import JokerSelection from '../components/JokerSelection';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
+import GameModal, { useGameModal } from '../components/GameModal';
+import JokerSelection from '../components/JokerSelection';
+import MinigameHUD from '../components/MinigameHUD';
 
 interface MemoryCard {
   id: string;
@@ -19,12 +20,28 @@ interface ComputerGameProps {
 }
 
 // Computer/tech-themed emojis for memory game
-const TECH_EMOJIS = ['💻', '🖥️', '⌨️', '🖱️', '💾', '💿', '📱', '⚡', '🔌', '🔋', '📡', '🛰️', '🎮', '🕹️', '📺', '🎧'];
-
+const TECH_EMOJIS = [
+  '💻',
+  '🖥️',
+  '⌨️',
+  '🖱️',
+  '💾',
+  '💿',
+  '📱',
+  '⚡',
+  '🔌',
+  '🔋',
+  '📡',
+  '🛰️',
+  '🎮',
+  '🕹️',
+  '📺',
+  '🎧',
+];
 
 export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
-  
+
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1);
   const [cards, setCards] = useState<MemoryCard[]>([]);
@@ -36,15 +53,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   // Level configuration: [pairs, maxTurns]
   const levelConfig = {
-    1: { pairs: 6, maxTurns: 12 },   // 6 pairs, 12 turns (2x2 grid)
-    2: { pairs: 8, maxTurns: 16 },   // 8 pairs, 16 turns (4x4 grid)
-    3: { pairs: 12, maxTurns: 20 },  // 12 pairs, 20 turns (4x6 grid)
+    1: { pairs: 6, maxTurns: 12 }, // 6 pairs, 12 turns (2x2 grid)
+    2: { pairs: 8, maxTurns: 16 }, // 8 pairs, 16 turns (4x4 grid)
+    3: { pairs: 12, maxTurns: 20 }, // 12 pairs, 20 turns (4x6 grid)
   };
 
   const initializeLevel = (levelNum: number) => {
     const config = levelConfig[levelNum as keyof typeof levelConfig];
     const selectedEmojis = TECH_EMOJIS.slice(0, config.pairs);
-    
+
     // Create pairs
     const cardPairs: MemoryCard[] = [];
     selectedEmojis.forEach((emoji, index) => {
@@ -65,17 +82,17 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
     // Shuffle cards
     const shuffledCards = [...cardPairs].sort(() => Math.random() - 0.5);
-    
+
     setCards(shuffledCards);
     setFlippedCards([]);
     setTurns(0);
     setMaxTurns(config.maxTurns);
     setShowingAllCards(true);
     setIsGameActive(false); // Don't allow clicks yet
-    
+
     // After 2.5 seconds, flip all cards back and activate game
     setTimeout(() => {
-      setCards(prev => prev.map(c => ({ ...c, isFlipped: false })));
+      setCards((prev) => prev.map((c) => ({ ...c, isFlipped: false })));
       setShowingAllCards(false);
       setIsGameActive(true);
     }, 2500);
@@ -87,66 +104,75 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     }
   }, [level, gameState]);
 
+  // Check for win condition whenever cards change
+  useEffect(() => {
+    if (gameState === 'playing' && isGameActive && cards.length > 0) {
+      const allMatched = cards.every((card) => card.isMatched);
+      if (allMatched) {
+        handleLevelComplete();
+      }
+    }
+  }, [cards, gameState, isGameActive]);
+
   const handleCardPress = (cardId: string) => {
     if (!isGameActive || showingAllCards) return;
-    
-    const card = cards.find(c => c.id === cardId);
-    if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2) return;
+
+    const card = cards.find((c) => c.id === cardId);
+    if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2)
+      return;
 
     const newFlippedCards = [...flippedCards, cardId];
     setFlippedCards(newFlippedCards);
 
     // Update card state to show it's flipped
-    setCards(prev => prev.map(c => 
-      c.id === cardId ? { ...c, isFlipped: true } : c
-    ));
+    setCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, isFlipped: true } : c))
+    );
 
     if (newFlippedCards.length === 2) {
       const [firstCardId, secondCardId] = newFlippedCards;
-      const firstCard = cards.find(c => c.id === firstCardId);
-      const secondCard = cards.find(c => c.id === secondCardId);
+      const firstCard = cards.find((c) => c.id === firstCardId);
+      const secondCard = cards.find((c) => c.id === secondCardId);
 
       if (firstCard && secondCard && firstCard.emoji === secondCard.emoji) {
         // Match found! Allow new clicks immediately
         setFlippedCards([]);
-        
+
         setTimeout(() => {
-          setCards(prev => prev.map(c => 
-            (c.id === firstCardId || c.id === secondCardId) 
-              ? { ...c, isMatched: true }
-              : c
-          ));
-          
-          // Check if all cards are matched
-          const updatedCards = cards.map(c => 
-            (c.id === firstCardId || c.id === secondCardId) 
-              ? { ...c, isMatched: true }
-              : c
+          setCards((prev) =>
+            prev.map((c) =>
+              c.id === firstCardId || c.id === secondCardId
+                ? { ...c, isMatched: true }
+                : c
+            )
           );
-          
-          if (updatedCards.every(c => c.isMatched)) {
-            handleLevelComplete();
-          }
+
+          // Win condition check is now handled by useEffect
         }, 1000);
       } else {
         // No match, clear flipped cards immediately but flip back after delay
         setFlippedCards([]); // Allow new clicks immediately
         setTimeout(() => {
-          setCards(prev => prev.map(c => 
-            (c.id === firstCardId || c.id === secondCardId) 
-              ? { ...c, isFlipped: false }
-              : c
-          ));
+          setCards((prev) =>
+            prev.map((c) =>
+              c.id === firstCardId || c.id === secondCardId
+                ? { ...c, isFlipped: false }
+                : c
+            )
+          );
         }, 400); // Set back to 400ms but allow immediate new clicks
       }
-      
-      setTurns(prev => prev + 1);
-      
+
+      setTurns((prev) => prev + 1);
+
       // Check if out of turns
       if (turns + 1 >= maxTurns) {
         setTimeout(() => {
           setIsGameActive(false);
-          showModal('💥 System Breach Failed!', 'You ran out of turns! Try again?');
+          showModal(
+            '💥 System Breach Failed!',
+            'You ran out of turns! Try again?'
+          );
         }, 2000);
       }
     }
@@ -154,15 +180,25 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   const handleLevelComplete = () => {
     setIsGameActive(false);
-    
+
     if (level < 3) {
-      showModal(`🎉 Level ${level} Complete!`, `Great memory work! Ready for Level ${level + 1}?`, '🎉', () => {
-        setLevel(level + 1);
-      });
+      showModal(
+        `🎉 Level ${level} Complete!`,
+        `Great memory work! Ready for Level ${level + 1}?`,
+        '🎉',
+        () => {
+          setLevel(level + 1);
+        }
+      );
     } else {
-      showModal('🏆 System Infiltrated!', 'Incredible! You\'ve hacked through all security layers!', '🏆', () => {
-        setGameState('jokerSelection');
-      });
+      showModal(
+        '🏆 System Infiltrated!',
+        "Incredible! You've hacked through all security layers!",
+        '🏆',
+        () => {
+          setGameState('jokerSelection');
+        }
+      );
     }
   };
 
@@ -172,14 +208,21 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   };
 
   const handleJokerChoice = (jokerId: number) => {
-    console.log(`Selected computer joker: ${COMPUTER_JOKERS.find(j => j.id === jokerId)?.name}`);
+    console.log(
+      `Selected computer joker: ${COMPUTER_JOKERS.find((j) => j.id === jokerId)?.name}`
+    );
     onComplete();
   };
 
   const handleForfeit = () => {
-    showModal('🚪 Abort Hack Session?', 'If you leave now, you\'ll lose your hacking progress!', '🚪', () => {
-      router.back();
-    });
+    showModal(
+      '🚪 Abort Hack Session?',
+      "If you leave now, you'll lose your hacking progress!",
+      '🚪',
+      () => {
+        router.back();
+      }
+    );
   };
 
   const getGridStyle = () => {
@@ -191,7 +234,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   if (gameState === 'jokerSelection') {
     return (
-      <JokerSelection 
+      <JokerSelection
         jokers={COMPUTER_JOKERS}
         theme="computer"
         subject="Computer"
@@ -204,44 +247,49 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>💻 Computer Study Session! ⚡</Text>
-          
+          <Text style={styles.instructionsTitle}>
+            💻 Computer Study Session! ⚡
+          </Text>
+
           <View style={styles.instructionsCard}>
             <Text style={styles.instructionsHeader}>📝 How to Solve:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>1.</Text>
-              <Text style={styles.stepText}>Infiltrate the system by matching tech component pairs</Text>
+              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepText}>
+                Match tech component pairs to hack the system
+              </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>2.</Text>
-              <Text style={styles.stepText}>Click cards to flip them and reveal hidden tech icons</Text>
+              <Text style={styles.stepNumber}>🔑</Text>
+              <Text style={styles.stepText}>
+                Flip cards to reveal hidden icons, find matches
+              </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>Find matching pairs before your hack attempts run out</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>4.</Text>
-              <Text style={styles.stepText}>Complete 3 levels with increasing difficulty</Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>5.</Text>
-              <Text style={styles.stepText}>Level 1: 6 pairs, Level 2: 8 pairs, Level 3: 12 pairs</Text>
+              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepText}>
+                Limited attempts - memorize positions carefully!
+              </Text>
             </View>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.startGameButton} 
+
+          <TouchableOpacity
+            style={styles.startGameButton}
             onPress={() => {
               setGameState('playing');
               setLevel(1);
               initializeLevel(1);
             }}
           >
-            <Text style={styles.startGameButtonText}>💻 Start Computer Challenge!</Text>
+            <Text style={styles.startGameButtonText}>
+              💻 Start Computer Challenge!
+            </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.startGameButton} onPress={() => router.back()}>
+
+          <TouchableOpacity
+            style={styles.startGameButton}
+            onPress={() => router.back()}
+          >
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -250,18 +298,22 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   }
 
   return (
-    <View style={[styles.container, {
-      padding: ResponsiveSpacing.containerPadding(),
-      paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-    }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>💻 Hack the System</Text>
-        <Text style={styles.subtitle}>Match the tech pairs to infiltrate the network!</Text>
-        <View style={styles.gameInfo}>
-          <Text style={styles.level}>Level {level}/3</Text>
-          <Text style={styles.turns}>Turns: {turns}/{maxTurns}</Text>
-        </View>
-      </View>
+    <View
+      style={[
+        styles.container,
+        {
+          padding: ResponsiveSpacing.containerPadding(),
+          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+        },
+      ]}
+    >
+      <MinigameHUD
+        title="💻 Hack the System"
+        subtitle="Match the tech pairs to infiltrate the network!"
+        leftInfo={`Level ${level}/3`}
+        rightInfo={`Turns: ${turns}/${maxTurns}`}
+        theme="computer"
+      />
 
       <View style={styles.gameContainer}>
         <View style={[styles.cardGrid, getGridStyle()]}>
@@ -286,7 +338,12 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                   <Text style={styles.cardBackText}></Text>
                 </View>
                 {/* Back (front of card with emoji) */}
-                <View style={[styles.cardFront, card.isMatched && styles.cardMatched]}>
+                <View
+                  style={[
+                    styles.cardFront,
+                    card.isMatched && styles.cardMatched,
+                  ]}
+                >
                   <Text style={styles.cardEmoji}>{card.emoji}</Text>
                 </View>
               </FlipCard>
@@ -295,29 +352,31 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         </View>
       </View>
 
-      <View style={[styles.bottomButtons, {
-        gap: ResponsiveSpacing.buttonGap(),
-        paddingVertical: ResponsiveSpacing.buttonPadding(),
-      }]}>
-        <TouchableOpacity style={styles.instructionsButton} onPress={() => setGameState('instructions')}>
-          <Text style={styles.instructionsButtonText}>📋 Mission Brief</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.instructionsButton} onPress={handleForfeit}>
+      <View
+        style={[
+          styles.bottomButtons,
+          {
+            gap: ResponsiveSpacing.buttonGap(),
+            paddingVertical: ResponsiveSpacing.buttonPadding(),
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.instructionsButton}
+          onPress={handleForfeit}
+        >
           <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.restartButton} onPress={() => initializeLevel(level)}>
-          <Text style={styles.restartButtonText}>🔄 Reset Hack</Text>
-        </TouchableOpacity>
-      
 
-      <GameModal
-        visible={modal.visible}
-        title={modal.title}
-        message={modal.message}
-        emoji={modal.emoji}
-        onClose={hideModal}
-        onConfirm={modal.onConfirm}
-      /></View>
+        <GameModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          emoji={modal.emoji}
+          onClose={hideModal}
+          onConfirm={modal.onConfirm}
+        />
+      </View>
     </View>
   );
 }
@@ -450,21 +509,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     paddingVertical: 16,
-  },
-  restartButton: {
-    flex: 1,
-    backgroundColor: '#16213e',
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#00d4ff',
-    alignItems: 'center',
-  },
-  restartButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#00d4ff',
-    fontFamily: 'CrayonPastel',
   },
   backButtonText: {
     fontSize: 16,

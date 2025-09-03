@@ -71,7 +71,7 @@ export class JokerEffectEngine {
 
   // Remove a joker from active effects
   removeJoker(jokerId: number) {
-    this.activeEffects.delete(jokerId);
+    this.activeEffects.delete(jokerId.toString());
   }
 
   // Get all active effects for a specific target

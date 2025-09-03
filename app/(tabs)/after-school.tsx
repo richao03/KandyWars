@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   FlatList,
   ImageBackground,
@@ -15,14 +16,18 @@ import { useGame } from '../../src/context/GameContext';
 import { useWallet } from '../../src/context/WalletContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
+import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 
 export default function AfterSchoolPage() {
+  const navigation = useNavigation();
   const { day, startNewDay, hasStudiedTonight } = useGame();
   const { resetDailyStats } = useDailyStats();
   const { balance } = useWallet();
   const { setEvent } = useFlavorText();
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
+    useState(false);
+  const [goingToSchoolModalVisible, setGoingToSchoolModalVisible] =
     useState(false);
 
   // Set afternoon flavor text when component loads
@@ -51,8 +56,14 @@ export default function AfterSchoolPage() {
   };
 
   const handleSleepConfirm = () => {
-    // Close the modal first
+    // Close the sleep modal and show going to school interstitial
     setSleepConfirmModalVisible(false);
+    setGoingToSchoolModalVisible(true);
+  };
+
+  const handleGoingToSchoolComplete = () => {
+    // Close the interstitial
+    setGoingToSchoolModalVisible(false);
     // Reset daily stats and start new day
     resetDailyStats(balance);
     // Start new day (this will exit after-school mode and increment to next day)
@@ -151,6 +162,11 @@ export default function AfterSchoolPage() {
         onConfirm={handleSleepConfirm}
         onCancel={handleSleepCancel}
         currentDay={day}
+      />
+
+      <GoingToSchoolModal
+        visible={goingToSchoolModalVisible}
+        onComplete={handleGoingToSchoolComplete}
       />
     </View>
   );

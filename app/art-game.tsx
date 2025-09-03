@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
 import React from 'react';
-import GymGame from './minigames/GymGame';
+import ArtGame from './minigames/ArtGame';
 
-export default function GymGameScreen() {
+export default function ArtGameScreen() {
   const handleGameComplete = () => {
     // TODO: Mark study as completed in game state
-    console.log('Gym game completed! Study session finished.');
+    console.log('art game completed! Study session finished.');
     // Return to market/study flow
     router.back();
   };
 
-  return <GymGame onComplete={handleGameComplete} />;
+  return <ArtGame onComplete={handleGameComplete} />;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
@@ -25,7 +25,7 @@ interface JokerCardProps {
 
 const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
 
-export default function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }: JokerCardProps) {
+function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }: JokerCardProps) {
   const { jokers, activateJoker, addJoker } = useJokers();
   const { periodCount, revertToPreviousPeriod, incrementPeriod } = useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
@@ -398,28 +398,32 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
     }
   };
 
-  const getTypeColor = () => {
+  // Memoize computed values to prevent recreation on every render
+  const typeColor = useMemo(() => {
     if (joker.type === 'persistent') {
       return isAfterSchool ? '#8a7ca8' : '#4ade80';
     }
     return isAfterSchool ? '#f87171' : '#fb7185';
-  };
+  }, [joker.type, isAfterSchool]);
 
-  const getTypeText = () => {
+  const typeText = useMemo(() => {
     return joker.type === 'persistent' ? '🔄 PERSISTENT' : '⚡ ONE-TIME';
-  };
+  }, [joker.type]);
+
+  // Memoize component styles to prevent recreation on every render
+  const cardStyles = useMemo(() => [
+    styles.jokerCard,
+    isCompact && styles.jokerCardCompact,
+    isAfterSchool && styles.jokerCardAfterSchool,
+    isDragging && styles.jokerCardDragging
+  ], [isCompact, isAfterSchool, isDragging]);
 
   const CardWrapper = onLongPress ? TouchableOpacity : View;
   const cardWrapperProps = onLongPress ? { onLongPress, activeOpacity: 0.8 } : {};
 
   return (
     <CardWrapper 
-      style={[
-        styles.jokerCard,
-        isCompact && styles.jokerCardCompact,
-        isAfterSchool && styles.jokerCardAfterSchool,
-        isDragging && styles.jokerCardDragging
-      ]}
+      style={cardStyles}
       {...cardWrapperProps}
     >
       <View style={[styles.jokerHeader, isCompact && styles.jokerHeaderCompact]}>
@@ -439,8 +443,8 @@ export default function JokerCard({ joker, isAfterSchool, onLongPress, isDraggin
           <Text style={[
             styles.jokerType,
             isCompact && styles.jokerTypeCompact,
-            { color: getTypeColor() }
-          ]}>{getTypeText()}</Text>
+            { color: typeColor }
+          ]}>{typeText}</Text>
         </View>
       </View>
       
@@ -1137,3 +1141,6 @@ const styles = StyleSheet.create({
     color: '#b8a9c9',
   },
 });
+
+// Memoize the component to prevent unnecessary rerenders
+export default memo(JokerCard);

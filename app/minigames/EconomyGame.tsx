@@ -20,9 +20,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
+import MinigameHUD from '../components/MinigameHUD';
 
 /** =========================
  *  Types
@@ -507,14 +508,35 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     const success = (inv[puzzle.goal] || 0) >= 1;
     if (success) {
       const isLast = levelIndex === LEVEL_SLOTS.length - 1;
-      showModal(
-        '🎉 Congrats!',
-        `✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nStart: ${fmtInv(puzzle.startInventory) || 'Empty'}\nEnd: ${fmtInv(inv) || 'Empty'}`
-      );
+      
+      if (isLast) {
+        // All levels complete - go to joker selection
+        showModal(
+          '🏆 Trading Master!',
+          `Incredible! You've mastered all trading levels!\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}`,
+          '🏆',
+          () => {
+            setGameState('jokerSelection');
+          }
+        );
+      } else {
+        // Level complete - advance to next level
+        showModal(
+          '🎉 Level Complete!',
+          `Excellent trading! Ready for Level ${levelIndex + 2}?\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}`,
+          '🎉',
+          () => {
+            const nextLevel = levelIndex + 1;
+            setLevelIndex(nextLevel);
+            resetLevel(nextLevel);
+          }
+        );
+      }
     } else {
       showModal(
         '📉 Not There Yet',
-        `❌ Did not reach 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nEnd: ${fmtInv(inv) || 'Empty'}`
+        `❌ Did not reach 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nEnd: ${fmtInv(inv) || 'Empty'}`,
+        '📉'
       );
     }
   };
@@ -597,33 +619,15 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             <View style={styles.instructionsCard}>
               <Text style={styles.instructionsHeader}>📊 How to Trade:</Text>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>1.</Text>
+                <Text style={styles.stepNumber}>🎯</Text>
                 <Text style={styles.stepText}>
-                  Drag trade tiles from the palette to plan your route
+                  Trade items to reach your goal
                 </Text>
               </View>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>2.</Text>
+                <Text style={styles.stepNumber}>🔄</Text>
                 <Text style={styles.stepText}>
-                  Each tile shows what you give and what you get
-                </Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>3.</Text>
-                <Text style={styles.stepText}>
-                  Arrange trades in sequence to reach your goal item
-                </Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>4.</Text>
-                <Text style={styles.stepText}>
-                  Execute your plan to see if it works!
-                </Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>5.</Text>
-                <Text style={styles.stepText}>
-                  Complete all 3 levels of increasing complexity
+                  Drag tiles to build trade chain
                 </Text>
               </View>
             </View>
@@ -651,29 +655,24 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <View style={[styles.container, {
-        padding: ResponsiveSpacing.containerPadding(),
-        paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-      }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            padding: ResponsiveSpacing.containerPadding(),
+            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+          },
+        ]}
+      >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>💱 Barter Trading</Text>
-          <Text style={styles.subtitle}>Trade your way to the goal candy!</Text>
-          <View style={styles.gameInfo}>
-            <Text style={styles.level}>
-              Level {levelIndex + 1}/{LEVEL_SLOTS.length}
-            </Text>
-            <Text style={styles.steps}>Slots: {puzzle.steps}</Text>
-          </View>
-          <View style={styles.gameInfo}>
-            <Text style={styles.hudValue}>
-              Start: {fmtInv(puzzle.startInventory) || 'Empty'}
-            </Text>
-            <Text style={styles.hudValue}>
-              Goal: {CATALOG[puzzle.goal]} {puzzle.goal}
-            </Text>
-          </View>
-        </View>
+        <MinigameHUD
+          title="💱 Barter Trading"
+          subtitle="Trade your way to the goal candy!"
+          leftInfo={`Level ${levelIndex + 1}/${LEVEL_SLOTS.length} • Slots: ${puzzle.steps}`}
+          centerInfo={`Start: ${fmtInv(puzzle.startInventory) || 'Empty'}`}
+          rightInfo={`Goal: ${CATALOG[puzzle.goal]} ${puzzle.goal}`}
+          theme="economy"
+        />
 
         {/* Slots */}
         <View style={styles.slotsWrapper}>
@@ -750,10 +749,15 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         </View>
 
         {/* Execute Button */}
-        <View style={[styles.footer, {
-          gap: ResponsiveSpacing.buttonGap(),
-          paddingVertical: ResponsiveSpacing.buttonPadding(),
-        }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.footerBtn, styles.footerPrimary]}
             onPress={executePlan}
@@ -769,16 +773,15 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         </View>
 
         {/* Footer */}
-        <View style={[styles.footer, {
-          gap: ResponsiveSpacing.buttonGap(),
-          paddingVertical: ResponsiveSpacing.buttonPadding(),
-        }]}>
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.footerSecondary]}
-            onPress={() => setGameState('instructions')}
-          >
-            <Text style={styles.footerSecondaryText}>📋 Instructions</Text>
-          </TouchableOpacity>
+        <View
+          style={[
+            styles.footer,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.footerBtn, styles.footerBack]}
             onPress={handleForfeit}

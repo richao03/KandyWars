@@ -1,10 +1,19 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  clearAllGameData,
+  loadGameState,
+  saveGameState,
+} from '../utils/persistence';
 import { useFlavorText } from './FlavorTextContext';
 import { useJokers } from './JokerContext';
 import { useSeed } from './SeedContext';
 import { useWallet } from './WalletContext';
-import { saveGameState, loadGameState, clearAllGameData } from '../utils/persistence';
 
 export type Location =
   | 'gym'
@@ -55,11 +64,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const { jokers } = useJokers();
   const { balance, stealMoney } = useWallet();
 
-  const day = Math.max(1, Math.floor(periodCount / 8) + 1);
-  const period = Math.max(1, (periodCount % 8) + 1);
-  
-  // Debug logging for day/period calculation
-  console.log(`📅 Day/Period Debug: periodCount=${periodCount}, calculated day=${day}, calculated period=${period}`);
+  // Memoize day and period calculations to prevent recalculation on every render
+  const day = useMemo(
+    () => Math.max(1, Math.floor(periodCount / 8) + 1),
+    [periodCount]
+  );
+  const period = useMemo(
+    () => Math.max(1, (periodCount % 8) + 1),
+    [periodCount]
+  );
+
+  // Debug logging for day/period calculation (only when values change)
+  // console.log(
+  //   `📅 Day/Period Debug: periodCount=${periodCount}, calculated day=${day}, calculated period=${period}`
+  // );
 
   // Load game state on mount
   useEffect(() => {
@@ -71,21 +89,26 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         isAfterSchool: false,
         hasStudiedTonight: false,
       };
-      
+
       const savedState = await loadGameState(defaultState);
-      
+
       console.log('💾 GameContext - Loading saved state:', savedState);
       console.log('💾 GameContext - Default state was:', defaultState);
-      
+
       setPeriodCount(savedState.periodCount ?? 0);
       setCurrentLocation(savedState.currentLocation || 'home room');
-      setLocationHistory(savedState.locationHistory || [{ period: 0, location: 'home room' }]);
+      setLocationHistory(
+        savedState.locationHistory || [{ period: 0, location: 'home room' }]
+      );
       setIsAfterSchool(savedState.isAfterSchool ?? false);
       setHasStudiedTonight(savedState.hasStudiedTonight ?? false);
       setIsLoaded(true);
       setIsInitialized(true);
-      
-      console.log('💾 GameContext - Set periodCount to:', savedState.periodCount ?? 0);
+
+      console.log(
+        '💾 GameContext - Set periodCount to:',
+        savedState.periodCount ?? 0
+      );
     };
 
     loadGameData();
@@ -94,7 +117,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   // Save game state whenever it changes
   useEffect(() => {
     if (!isLoaded) return; // Don't save during initial load
-    
+
     const gameState = {
       periodCount,
       currentLocation,
@@ -102,10 +125,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       isAfterSchool,
       hasStudiedTonight,
     };
-    
+
     console.log('💾 GameContext - Saving game state:', gameState);
     saveGameState(gameState);
-  }, [periodCount, currentLocation, locationHistory, isAfterSchool, hasStudiedTonight, isLoaded]);
+  }, [
+    periodCount,
+    currentLocation,
+    locationHistory,
+    isAfterSchool,
+    hasStudiedTonight,
+    isLoaded,
+  ]);
 
   // Check for location-specific events
   const currentEvent = gameData.periodEvents.find(
@@ -117,27 +147,37 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   // Process current event effects
   useEffect(() => {
     if (currentEvent && isInitialized) {
-      console.log(`🎭 Processing event: ${currentEvent.effect} at period ${periodCount}`);
-      
+      console.log(
+        `🎭 Processing event: ${currentEvent.effect} at period ${periodCount}`
+      );
+
       switch (currentEvent.effect) {
         case 'LOSE_MONEY':
           // Bully event: lose 75% of money
           const currentBalance = balance;
           const amountToLose = Math.floor(currentBalance * 0.75);
-          
-          console.log(`💸 LOSE_MONEY event: losing ${amountToLose} out of ${currentBalance}`);
-          
+
+          console.log(
+            `💸 LOSE_MONEY event: losing ${amountToLose} out of ${currentBalance}`
+          );
+
           if (amountToLose > 0) {
-            const actualAmountLost = stealMoney(amountToLose, jokers, periodCount);
-            console.log(`💸 Actually lost: $${actualAmountLost} (after joker protection)`);
+            const actualAmountLost = stealMoney(
+              amountToLose,
+              jokers,
+              periodCount
+            );
+            console.log(
+              `💸 Actually lost: $${actualAmountLost} (after joker protection)`
+            );
           }
           break;
-          
+
         case 'FOUND_MONEY':
           // Could implement other money events here
           console.log('💰 FOUND_MONEY event (not implemented yet)');
           break;
-          
+
         default:
           console.log(`⚠️ Unhandled event effect: ${currentEvent.effect}`);
       }
@@ -149,44 +189,63 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     const nextPeriodEvent = gameData.periodEvents.find(
       (e) => e.period === periodCount + 1 && e.hint
     );
-    
-    // Debug logging for events
-    const allEventsWithHints = gameData.periodEvents.filter(e => e.hint);
-    console.log(`All events with hints:`, allEventsWithHints.map(e => `Period ${e.period}: ${e.effect}`));
-    console.log(`Looking for event at period ${periodCount + 1}:`, gameData.periodEvents.filter(e => e.period === periodCount + 1));
+
+    // Debug logging for events (commented out for performance)
+    // const allEventsWithHints = gameData.periodEvents.filter((e) => e.hint);
+    // console.log(
+    //   `All events with hints:`,
+    //   allEventsWithHints.map((e) => `Period ${e.period}: ${e.effect}`)
+    // );
+    // console.log(
+    //   `Looking for event at period ${periodCount + 1}:`,
+    //   gameData.periodEvents.filter((e) => e.period === periodCount + 1)
+    // );
 
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
-      const scoutJoker = jokers.find((j) => j.name.replace(' (Copy)', '') === 'Scout');
-      const predictorJoker = jokers.find((j) => j.name.replace(' (Copy)', '') === 'Predictor');
+      const scoutJoker = jokers.find(
+        (j) => j.name.replace(' (Copy)', '') === 'Scout'
+      );
+      const predictorJoker = jokers.find(
+        (j) => j.name.replace(' (Copy)', '') === 'Predictor'
+      );
 
-      console.log(`Hint Debug - Period ${periodCount}, Next event: ${nextPeriodEvent.effect}, Has hint: ${!!nextPeriodEvent.hint}`);
-      console.log(`Jokers:`, jokers.map(j => j.name));
-      console.log(`Scout found: ${!!scoutJoker}, Predictor found: ${!!predictorJoker}`);
+      // console.log(
+      //   `Hint Debug - Period ${periodCount}, Next event: ${nextPeriodEvent.effect}, Has hint: ${!!nextPeriodEvent.hint}`
+      // );
+      // console.log(
+      //   `Jokers:`,
+      //   jokers.map((j) => j.name)
+      // );
+      // console.log(
+      //   `Scout found: ${!!scoutJoker}, Predictor found: ${!!predictorJoker}`
+      // );
 
       let hintChance = 0.25; // Base 25% chance
 
       if (predictorJoker) {
         hintChance = 1.0; // Predictor joker shows all hints (100% chance)
-        console.log('Predictor active - setting 100% hint chance');
+        // console.log('Predictor active - setting 100% hint chance');
       } else if (scoutJoker) {
         hintChance = 0.5; // Scout joker increases hint chance to 50%
-        console.log('Scout active - setting 50% hint chance');
+        // console.log('Scout active - setting 50% hint chance');
       } else {
-        console.log('No hint jokers - using base 25% chance');
+        // console.log('No hint jokers - using base 25% chance');
       }
 
       const randomRoll = Math.random();
-      console.log(`Random roll: ${randomRoll}, Hint chance: ${hintChance}, Will show hint: ${randomRoll < hintChance}`);
+      // console.log(
+      //   `Random roll: ${randomRoll}, Hint chance: ${hintChance}, Will show hint: ${randomRoll < hintChance}`
+      // );
 
       if (randomRoll < hintChance) {
-        console.log(`Setting hint: "${nextPeriodEvent.hint}"`);
+        // console.log(`Setting hint: "${nextPeriodEvent.hint}"`);
         setHint(nextPeriodEvent.hint);
       } else if (currentEvent?.effect) {
-        console.log('No hint shown, showing current event');
+        // console.log('No hint shown, showing current event');
         setEvent(currentEvent.effect);
       } else {
-        console.log('No hint shown, showing DEFAULT');
+        // console.log('No hint shown, showing DEFAULT');
         setEvent('DEFAULT');
       }
     } else if (currentEvent?.effect) {
@@ -204,7 +263,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       ...prev,
       { period: newPeriodCount, location },
     ]);
-    
+
     // Trigger candy generation for "Something from Nothing" joker
     // This will be handled by a separate effect in InventoryContext
   };
@@ -226,7 +285,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setLocationHistory([{ period: 0, location: 'home room' }]);
     setIsAfterSchool(false);
     setHasStudiedTonight(false);
-    
+
     // Clear all saved game data
     await clearAllGameData();
     console.log('Game reset and all saved data cleared');
@@ -257,31 +316,47 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     return false; // Can't revert from period 0
   };
 
+  // Memoize the context value to prevent unnecessary rerenders
+  const contextValue = useMemo(
+    () => ({
+      day,
+      period,
+      periodCount,
+      currentLocation,
+      locationHistory,
+      isAfterSchool,
+      hasStudiedTonight,
+      incrementPeriod,
+      startAfterSchool,
+      startNewDay,
+      resetGame,
+      revertToPreviousPeriod,
+      markStudiedTonight,
+    }),
+    [
+      day,
+      period,
+      periodCount,
+      currentLocation,
+      locationHistory,
+      isAfterSchool,
+      hasStudiedTonight,
+      incrementPeriod,
+      startAfterSchool,
+      startNewDay,
+      resetGame,
+      revertToPreviousPeriod,
+      markStudiedTonight,
+    ]
+  );
+
   // Don't render children until initialized to prevent NaN values
   if (!isInitialized) {
     return null;
   }
 
   return (
-    <GameContext.Provider
-      value={{
-        day,
-        period,
-        periodCount,
-        currentLocation,
-        locationHistory,
-        isAfterSchool,
-        hasStudiedTonight,
-        incrementPeriod,
-        startAfterSchool,
-        startNewDay,
-        resetGame,
-        revertToPreviousPeriod,
-        markStudiedTonight,
-      }}
-    >
-      {children}
-    </GameContext.Provider>
+    <GameContext.Provider value={contextValue}>{children}</GameContext.Provider>
   );
 };
 

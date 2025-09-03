@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import JokerCard from '../components/JokerCard';
@@ -6,7 +6,7 @@ import GameHUD from '../components/GameHUD';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
 
-export default function JokersPage() {
+function JokersPage() {
   const { isAfterSchool, day } = useGame();
   const { jokers, reorderJokers } = useJokers();
   const [activeTab, setActiveTab] = useState<'persistent' | 'one-time'>('persistent');
@@ -32,6 +32,22 @@ export default function JokersPage() {
   
   const currentJokers = activeTab === 'persistent' ? persistentJokers : oneTimeJokers;
   
+  // Memoize styles to prevent recreation on every render
+  const containerStyles = useMemo(() => [
+    styles.container,
+    isAfterSchool && styles.containerAfterSchool
+  ], [isAfterSchool]);
+
+  const headerStyles = useMemo(() => [
+    styles.header,
+    isAfterSchool && styles.headerAfterSchool
+  ], [isAfterSchool]);
+
+  const titleStyles = useMemo(() => [
+    styles.title,
+    isAfterSchool && styles.titleAfterSchool
+  ], [isAfterSchool]);
+  
   const renderJoker = ({ item, drag, isActive }: RenderItemParams<any>) => (
     <JokerCard 
       joker={item} 
@@ -52,25 +68,16 @@ export default function JokersPage() {
   };
 
   return (
-    <View style={[
-      styles.container,
-      isAfterSchool && styles.containerAfterSchool
-    ]}>
+    <View style={containerStyles}>
       <GameHUD 
         theme={isAfterSchool ? "evening" : "school"}
         customHeaderText={isAfterSchool ? `After School - Day ${day}` : `School - Day ${day}`}
         customLocationText="Jokers Collection"
       />
       
-      <View style={[
-        styles.header,
-        isAfterSchool && styles.headerAfterSchool
-      ]}>
+      <View style={headerStyles}>
         <View style={styles.headerTop}>
-          <Text style={[
-            styles.title,
-            isAfterSchool && styles.titleAfterSchool
-          ]}>🃏 Jokers</Text>
+          <Text style={titleStyles}>🃏 Jokers</Text>
           <View style={styles.countBadge}>
             <Text style={[
               styles.countText,
@@ -308,3 +315,6 @@ const styles = StyleSheet.create({
     color: '#b8a9c9',
   },
 });
+
+// Memoize the component to prevent unnecessary rerenders
+export default memo(JokersPage);
