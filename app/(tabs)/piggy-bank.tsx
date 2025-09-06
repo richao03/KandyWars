@@ -1,6 +1,7 @@
 import Slider from '@react-native-community/slider';
 import React, { useEffect, useState } from 'react';
 import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router';
 import GameHUD from '../components/GameHUD';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
@@ -26,7 +27,7 @@ export default function PiggyBankPage() {
     setEvent('PIGGY_BANK');
   }, [setEvent]);
 
-  const maxAmount = mode === 'deposit' ? balance : stashedAmount;
+  const maxAmount = mode === 'deposit' ? Math.max(0, balance) : Math.max(0, stashedAmount);
 
   const handleTransaction = () => {
     if (amount <= 0) {
@@ -57,6 +58,17 @@ export default function PiggyBankPage() {
           setConfirmModal(prev => ({ ...prev, visible: false }));
         }
       });
+    } else {
+      // Show error if transaction failed
+      setConfirmModal({
+        visible: true,
+        title: 'Transaction Failed',
+        message: mode === 'deposit' 
+          ? `Unable to deposit $${amount.toFixed(2)}. Current balance: $${balance.toFixed(2)}`
+          : `Unable to withdraw $${amount.toFixed(2)}. Stashed amount: $${stashedAmount.toFixed(2)}`,
+        emoji: '❌',
+        onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+      });
     }
   };
 
@@ -84,28 +96,28 @@ export default function PiggyBankPage() {
         </View>
 
 
-        {/* Mode Selector */}
-        <View style={styles.modeContainer}>
+        {/* Tab-style Mode Selector */}
+        <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.modeButton, mode === 'deposit' && styles.modeButtonActive]}
+            style={[styles.tab, mode === 'deposit' && styles.tabActive]}
             onPress={() => {
               setMode('deposit');
               setAmount(0);
             }}
           >
-            <Text style={[styles.modeButtonText, mode === 'deposit' && styles.modeButtonTextActive]}>
+            <Text style={[styles.tabText, mode === 'deposit' && styles.tabTextActive]}>
               💰 Deposit
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.modeButton, mode === 'withdraw' && styles.modeButtonActive]}
+            style={[styles.tab, mode === 'withdraw' && styles.tabActive]}
             onPress={() => {
               setMode('withdraw');
               setAmount(0);
             }}
           >
-            <Text style={[styles.modeButtonText, mode === 'withdraw' && styles.modeButtonTextActive]}>
+            <Text style={[styles.tabText, mode === 'withdraw' && styles.tabTextActive]}>
               💸 Withdraw
             </Text>
           </TouchableOpacity>
@@ -120,7 +132,7 @@ export default function PiggyBankPage() {
           <View style={styles.amountDisplay}>
             <Text style={[
               styles.amountValue,
-              { color: mode === 'deposit' ? '#ef4444' : '#22c55e' }
+              { color: mode === 'deposit' ? '#4ade80' : '#22c55e' }
             ]}>
               ${amount.toFixed(2)}
             </Text>
@@ -136,33 +148,36 @@ export default function PiggyBankPage() {
             step={0.01}
             value={amount}
             onValueChange={setAmount}
-            minimumTrackTintColor={mode === 'deposit' ? '#ef4444' : '#22c55e'}
+            minimumTrackTintColor={mode === 'deposit' ? '#4ade80' : '#22c55e'}
             maximumTrackTintColor="#ccc"
           />
 
+          {/* Action Button inside container */}
+          <TouchableOpacity
+            style={[
+              styles.inlineActionButton,
+              { backgroundColor: mode === 'deposit' ? '#4ade80' : '#22c55e' },
+              amount === 0 && styles.actionButtonDisabled
+            ]}
+            onPress={handleTransaction}
+            disabled={amount === 0}
+          >
+            <Text style={styles.actionButtonText}>
+              {mode === 'deposit' ? '💰 Deposit Money' : '💸 Withdraw Money'}
+            </Text>
+          </TouchableOpacity>
+
         </View>
 
-        {/* Action Button */}
+        {/* Back to After School Button */}
         <TouchableOpacity
-          style={[
-            styles.actionButton,
-            { backgroundColor: mode === 'deposit' ? '#ef4444' : '#22c55e' },
-            amount === 0 && styles.actionButtonDisabled
-          ]}
-          onPress={handleTransaction}
-          disabled={amount === 0}
+          style={styles.backButton}
+          onPress={() => router.push('/after-school')}
         >
-          <Text style={styles.actionButtonText}>
-            {mode === 'deposit' ? '💰 Deposit Money' : '💸 Withdraw Money'}
+          <Text style={styles.backButtonText}>
+            ← Back to After School
           </Text>
         </TouchableOpacity>
-
-        {/* Info Text */}
-        <Text style={styles.infoText}>
-          {mode === 'deposit' 
-            ? '💡 Tip: Stashing money keeps it safe from market losses!'
-            : '💡 Tip: Withdraw money when you spot good trading opportunities!'}
-        </Text>
       </View>
       </ImageBackground>
 
@@ -195,9 +210,9 @@ const styles = StyleSheet.create({
   piggyBankContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 20,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
     borderWidth: 2,
     borderColor: 'rgba(247, 233, 142, 0.8)',
   },
@@ -211,7 +226,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   piggyBankAmount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#f7e98e',
     fontFamily: 'CrayonPastel',
@@ -240,38 +255,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'CrayonPastel',
   },
-  modeContainer: {
+  tabContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 8,
+    padding: 2,
+    marginBottom: 12,
   },
-  modeButton: {
+  tab: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
   },
-  modeButtonActive: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderColor: '#f7e98e',
+  tabActive: {
+    backgroundColor: 'rgba(247, 233, 142, 0.2)',
   },
-  modeButtonText: {
-    fontSize: 16,
+  tabText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#b8a9c9',
     fontFamily: 'CrayonPastel',
   },
-  modeButtonTextActive: {
+  tabTextActive: {
     color: '#f7e98e',
   },
   amountSection: {
     backgroundColor: 'rgba(93, 76, 112, 0.4)',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: 8,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#5d4c70',
   },
@@ -324,10 +338,10 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
   },
   actionButton: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -336,6 +350,18 @@ const styles = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.5,
+  },
+  inlineActionButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
   },
   actionButtonText: {
     color: '#fff',
@@ -349,5 +375,21 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  backButton: {
+    backgroundColor: 'rgba(93, 76, 112, 0.6)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#b8a9c9',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#f7e98e',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
   },
 });

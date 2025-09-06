@@ -72,7 +72,7 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
   const { removeAllFromInventory } = useInventory();
   const { jokers } = useJokers();
-  const { confiscateStash, add: addToWallet } = useWallet();
+  const { confiscateStash, add: addToWallet, balance, stealMoney } = useWallet();
   const [currentEvent, setCurrentEvent] = useState<SpecialEventEffect | null>(
     null
   );
@@ -203,6 +203,13 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
             removeAllFromInventory();
           }
           break;
+        case 'LOSE_MONEY':
+          // Bully event: steal 50% of money (before joker effects)
+          const fiftyPercent = Math.floor(balance * 0.5);
+          const amountToSteal = currentEvent.dollarAmount || fiftyPercent; // Use event's amount or default to 50%
+          const actualAmountStolen = stealMoney(amountToSteal, jokers, periodCount);
+          console.log(`💸 Bully tried to steal $${amountToSteal} (50% of $${balance}), actually stole: $${actualAmountStolen} after joker effects`);
+          break;
         case 'FOUND_MONEY':
           addToWallet(currentEvent.dollarAmount);
           break;
@@ -227,11 +234,9 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
         currentEvent.callback();
       }
 
-      // Clear the event and reset processing flag with a slight delay to prevent flash
-      setTimeout(() => {
-        setCurrentEvent(null);
-        setIsProcessingEvent(false);
-      }, 300); // Small delay to smooth transition
+      // Clear the event and reset processing flag immediately
+      setCurrentEvent(null);
+      setIsProcessingEvent(false);
       console.log('EventHandler - Event dismissed and cleared');
     }
   };

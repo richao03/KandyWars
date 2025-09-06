@@ -12,6 +12,7 @@ type WalletContextType = {
   confiscateStash: (jokers?: any[], periodCount?: number) => number; // Returns amount confiscated
   stealMoney: (amount: number, jokers?: any[], periodCount?: number) => number; // Returns amount stolen from balance
   resetWallet: () => void;
+  initializeWallet: (difficulty?: 'easy' | 'medium' | 'hard') => void;
 };
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -51,22 +52,35 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const add = (amount: number) => {
-    setBalance(prev => prev + amount);
+    console.log('💰 WalletContext: Adding money to wallet:', amount, 'Previous balance:', balance);
+    setBalance(prev => {
+      const newBalance = prev + amount;
+      console.log('💰 WalletContext: New balance will be:', newBalance);
+      return newBalance;
+    });
   };
 
   const stashMoney = (amount: number): boolean => {
-    if (balance >= amount) {
-      setBalance(prev => prev - amount);
-      setStashedAmount(prev => prev + amount);
+    // Round to 2 decimal places to avoid floating point precision issues
+    const roundedAmount = Math.round(amount * 100) / 100;
+    const roundedBalance = Math.round(balance * 100) / 100;
+    
+    if (roundedBalance >= roundedAmount && roundedAmount > 0) {
+      setBalance(prev => Math.round((prev - roundedAmount) * 100) / 100);
+      setStashedAmount(prev => Math.round((prev + roundedAmount) * 100) / 100);
       return true;
     }
     return false;
   };
 
   const withdrawFromStash = (amount: number): boolean => {
-    if (stashedAmount >= amount) {
-      setStashedAmount(prev => prev - amount);
-      setBalance(prev => prev + amount);
+    // Round to 2 decimal places to avoid floating point precision issues
+    const roundedAmount = Math.round(amount * 100) / 100;
+    const roundedStashed = Math.round(stashedAmount * 100) / 100;
+    
+    if (roundedStashed >= roundedAmount && roundedAmount > 0) {
+      setStashedAmount(prev => Math.round((prev - roundedAmount) * 100) / 100);
+      setBalance(prev => Math.round((prev + roundedAmount) * 100) / 100);
       return true;
     }
     return false;
@@ -112,6 +126,27 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     console.log('Wallet reset to initial state');
   };
 
+  const initializeWallet = (difficulty?: 'easy' | 'medium' | 'hard') => {
+    setBalance(20); // Starting cash is always 20
+    
+    // Set piggy bank balance based on difficulty (negative amounts represent debt)
+    switch (difficulty) {
+      case 'easy':
+        setStashedAmount(-5000);
+        break;
+      case 'medium':
+        setStashedAmount(-10000);
+        break;
+      case 'hard':
+        setStashedAmount(-30000);
+        break;
+      default:
+        setStashedAmount(0); // Default case
+    }
+    
+    console.log(`Wallet initialized for ${difficulty || 'default'} difficulty`);
+  };
+
   return (
     <WalletContext.Provider value={{ 
       balance, 
@@ -122,7 +157,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       withdrawFromStash,
       confiscateStash,
       stealMoney,
-      resetWallet
+      resetWallet,
+      initializeWallet
     }}>
       {children}
     </WalletContext.Provider>

@@ -92,8 +92,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     const currentTotal = memoizedTotalCount;
     const actualLimit = memoizedInventoryLimit;
     
+    console.log('📦 InventoryContext: Adding to inventory:', name, 'quantity:', quantity, 'currentTotal:', currentTotal, 'limit:', actualLimit);
+    
     // Check if adding this quantity would exceed inventory limit
     if (currentTotal + quantity > actualLimit) {
+      console.log('❌ InventoryContext: Transaction rejected - would exceed limit');
       return false; // Transaction rejected due to inventory limit
     }
 
@@ -130,10 +133,15 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   };
   const removeFromInventory = (name: string, quantity: number): boolean => {
     const existing = inventory[name];
-    if (!existing || existing.quantity < quantity) return false;
+    console.log('📦 InventoryContext: Removing from inventory:', name, 'quantity:', quantity, 'existing:', existing);
+    if (!existing || existing.quantity < quantity) {
+      console.log('❌ InventoryContext: Cannot remove - insufficient quantity');
+      return false;
+    }
 
     setInventory((prev) => {
       const updatedQuantity = existing.quantity - quantity;
+      console.log('📦 InventoryContext: Updated quantity after removal:', updatedQuantity);
       if (updatedQuantity === 0) {
         const { [name]: _, ...rest } = prev;
         return rest;

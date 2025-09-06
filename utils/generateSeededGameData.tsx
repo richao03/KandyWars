@@ -126,7 +126,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       effect: 'LOSE_MONEY',
       category: 'bad',
       heading: 'Give me your lunch money!',
-      title: 'A bully took all your money',
+      title: 'A bully took half your money',
       subtitle: 'Better hit the weights to get your weight up!',
       hint: '👀 Rumor is someone is out looking for you....👀',
       backgroundImage: require('../assets/images/bully.png'),

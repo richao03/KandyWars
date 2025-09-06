@@ -1,10 +1,11 @@
 import { Marquee } from '@animatereactnative/marquee';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
 import { useInventory } from '../../src/context/InventoryContext';
 import { useWallet } from '../../src/context/WalletContext';
+import InventoryModal from './InventoryModal';
 
 const locationNames = {
   gym: 'Gymnasium',
@@ -33,8 +34,10 @@ export default function GameHUD({
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
-  const { getTotalInventoryCount, getInventoryLimit } = useInventory();
+  const { getTotalInventoryCount, getInventoryLimit, inventory } =
+    useInventory();
   const { text } = useFlavorText();
+  const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
 
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
@@ -60,23 +63,26 @@ export default function GameHUD({
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
         <View style={[styles.statBox, styles.cashBox]}>
-          <Text style={statTitleStyle}>My Money</Text>
+          <Text style={statTitleStyle}>Wallet</Text>
           <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
         </View>
 
         <View style={[styles.statBox, styles.piggyBox]}>
-          <Text style={statTitleStyle}>Saved</Text>
+          <Text style={statTitleStyle}>Piggy Bank</Text>
           <Text style={styles.piggyAmount}>
             ${(stashedAmount || 0).toFixed(2)}
           </Text>
         </View>
 
-        <View style={[styles.statBox, styles.inventoryBox]}>
-          <Text style={statTitleStyle}>Candy</Text>
+        <TouchableOpacity
+          style={[styles.statBox, styles.inventoryBox]}
+          onPress={() => setInventoryModalVisible(true)}
+        >
+          <Text style={statTitleStyle}>Inventory</Text>
           <Text style={styles.inventoryAmount}>
             {totalInventory || 0}/{inventoryCapacity || 30}
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Location badge */}
@@ -99,6 +105,15 @@ export default function GameHUD({
           </Marquee>
         </View>
       )}
+
+      {/* Inventory Modal */}
+      <InventoryModal
+        visible={inventoryModalVisible}
+        onClose={() => setInventoryModalVisible(false)}
+        inventory={inventory}
+        totalCount={totalInventory}
+        capacity={inventoryCapacity}
+      />
     </View>
   );
 }

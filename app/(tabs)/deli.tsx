@@ -85,6 +85,7 @@ export default function Deli() {
           };
         } else {
           const totalGain = candy.cost * quantity;
+          console.log('🍭 Deli: Selling candy:', candy.name, 'quantity:', quantity, 'price:', candy.cost, 'totalGain:', totalGain);
           add(totalGain);
           removeFromInventory(candy.name, quantity);
 
@@ -139,7 +140,7 @@ export default function Deli() {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.backButton} onPress={handleReturnToAfterSchool}>
-          <Text style={styles.backButtonText}>🌅 Back to After School</Text>
+          <Text style={styles.backButtonText}>← Back to After School</Text>
         </TouchableOpacity>
       </View>
 
@@ -238,22 +239,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    backgroundColor: '#ffcc99',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: '#cc7a00',
-    shadowColor: '#8b4513',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    backgroundColor: 'rgba(93, 76, 112, 0.6)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#b8a9c9',
+    alignItems: 'center',
   },
   backButtonText: {
+    color: '#f7e98e',
     fontSize: 16,
-    fontWeight: '700',
-    color: '#6b4423',
+    fontWeight: '600',
     fontFamily: 'CrayonPastel',
   },
 });

@@ -232,6 +232,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return styles.grid4x6; // 4x6 for level 3
   };
 
+  const getCardStyle = () => {
+    const config = levelConfig[level as keyof typeof levelConfig];
+    if (config.pairs <= 6) return styles.cardContainer; // Normal size for level 1
+    if (config.pairs <= 8) return styles.cardContainerMedium; // Medium size for level 2
+    return styles.cardContainerSmall; // Small size for level 3
+  };
+
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
@@ -281,9 +288,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
               initializeLevel(1);
             }}
           >
-            <Text style={styles.startGameButtonText}>
-              💻 Start Computer Challenge!
-            </Text>
+            <Text style={styles.startGameButtonText}>💻 Start Challenge!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -316,40 +321,143 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       />
 
       <View style={styles.gameContainer}>
-        <View style={[styles.cardGrid, getGridStyle()]}>
-          {cards.map((card) => (
-            <TouchableOpacity
-              key={card.id}
-              style={styles.cardContainer}
-              onPress={() => handleCardPress(card.id)}
-              disabled={!isGameActive || card.isMatched}
-            >
-              <FlipCard
-                style={styles.flipCard}
-                friction={6}
-                perspective={1000}
-                flipHorizontal={true}
-                flipVertical={false}
-                flip={card.isFlipped || card.isMatched}
-                clickable={false}
+        {level === 3 ? (
+          <View style={[styles.cardGrid, getGridStyle()]}>
+            {/* Render 6 rows of 4 cards each for level 3 */}
+            {Array.from({ length: 6 }, (_, rowIndex) => (
+              <View key={rowIndex} style={styles.grid4x6Row}>
+                {cards.slice(rowIndex * 4, rowIndex * 4 + 4).map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    style={getCardStyle()}
+                    onPress={() => handleCardPress(card.id)}
+                    disabled={!isGameActive || card.isMatched}
+                  >
+                    <FlipCard
+                      style={styles.flipCard}
+                      friction={6}
+                      perspective={1000}
+                      flipHorizontal={true}
+                      flipVertical={false}
+                      flip={card.isFlipped || card.isMatched}
+                      clickable={false}
+                    >
+                      {/* Front (back of card) */}
+                      <View style={styles.cardBack}>
+                        <Text style={styles.cardBackText}></Text>
+                      </View>
+                      {/* Back (front of card with emoji) */}
+                      <View
+                        style={[
+                          styles.cardFront,
+                          card.isMatched && styles.cardMatched,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.cardEmoji,
+                            level === 3 && styles.cardEmojiSmall,
+                          ]}
+                        >
+                          {card.emoji}
+                        </Text>
+                      </View>
+                    </FlipCard>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : level === 2 ? (
+          <View style={[styles.cardGrid, getGridStyle()]}>
+            {/* Render 4 rows of 4 cards each for level 2 */}
+            {Array.from({ length: 4 }, (_, rowIndex) => (
+              <View key={rowIndex} style={styles.grid4x4Row}>
+                {cards.slice(rowIndex * 4, rowIndex * 4 + 4).map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    style={getCardStyle()}
+                    onPress={() => handleCardPress(card.id)}
+                    disabled={!isGameActive || card.isMatched}
+                  >
+                    <FlipCard
+                      style={styles.flipCard}
+                      friction={6}
+                      perspective={1000}
+                      flipHorizontal={true}
+                      flipVertical={false}
+                      flip={card.isFlipped || card.isMatched}
+                      clickable={false}
+                    >
+                      {/* Front (back of card) */}
+                      <View style={styles.cardBack}>
+                        <Text style={styles.cardBackText}></Text>
+                      </View>
+                      {/* Back (front of card with emoji) */}
+                      <View
+                        style={[
+                          styles.cardFront,
+                          card.isMatched && styles.cardMatched,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.cardEmoji,
+                            level === 3 && styles.cardEmojiSmall,
+                          ]}
+                        >
+                          {card.emoji}
+                        </Text>
+                      </View>
+                    </FlipCard>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={[styles.cardGrid, getGridStyle()]}>
+            {cards.map((card) => (
+              <TouchableOpacity
+                key={card.id}
+                style={getCardStyle()}
+                onPress={() => handleCardPress(card.id)}
+                disabled={!isGameActive || card.isMatched}
               >
-                {/* Front (back of card) */}
-                <View style={styles.cardBack}>
-                  <Text style={styles.cardBackText}></Text>
-                </View>
-                {/* Back (front of card with emoji) */}
-                <View
-                  style={[
-                    styles.cardFront,
-                    card.isMatched && styles.cardMatched,
-                  ]}
+                <FlipCard
+                  style={styles.flipCard}
+                  friction={6}
+                  perspective={1000}
+                  flipHorizontal={true}
+                  flipVertical={false}
+                  flip={card.isFlipped || card.isMatched}
+                  clickable={false}
                 >
-                  <Text style={styles.cardEmoji}>{card.emoji}</Text>
-                </View>
-              </FlipCard>
-            </TouchableOpacity>
-          ))}
-        </View>
+                  {/* Front (back of card) */}
+                  <View style={styles.cardBack}>
+                    <Text style={styles.cardBackText}></Text>
+                  </View>
+                  {/* Back (front of card with emoji) */}
+                  <View
+                    style={[
+                      styles.cardFront,
+                      card.isMatched && styles.cardMatched,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.cardEmoji,
+                        level === 3 && styles.cardEmojiSmall,
+                      ]}
+                    >
+                      {card.emoji}
+                    </Text>
+                  </View>
+                </FlipCard>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <View
@@ -442,21 +550,37 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   grid4x4: {
-    width: '100%',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  grid4x4Row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    justifyContent: 'space-between',
+    width: 4 * 65 + 3 * 10, // 4 cards * 65px + 3 gaps * 10px
+    marginBottom: 8,
   },
   grid4x6: {
-    width: '100%',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  grid4x6Row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
+    justifyContent: 'space-between',
+    width: 4 * 58 + 3 * 8, // 4 cards * 58px + 3 gaps * 8px
+    marginBottom: 6,
   },
   cardContainer: {
     width: 70,
     height: 70,
     margin: 2,
+  },
+  cardContainerMedium: {
+    width: 65,
+    height: 65,
+  },
+  cardContainerSmall: {
+    width: 58,
+    height: 58,
   },
   flipCard: {
     width: '100%',
@@ -504,6 +628,9 @@ const styles = StyleSheet.create({
   },
   cardEmoji: {
     fontSize: 30,
+  },
+  cardEmojiSmall: {
+    fontSize: 22,
   },
   bottomButtons: {
     flexDirection: 'row',

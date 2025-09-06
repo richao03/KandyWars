@@ -67,19 +67,19 @@ export default function MathGame({ onComplete }: MathGameProps) {
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
       case 1:
-        return { matchesNeeded: 10, speed: 1 };
+        return { speed: 1 };
       case 2:
-        return { matchesNeeded: 15, speed: 1.5 };
+        return { speed: 1.5 };
       case 3:
-        return { matchesNeeded: 20, speed: 2 };
+        return { speed: 2 };
       default:
-        return { matchesNeeded: 10, speed: 1 };
+        return { speed: 1 };
     }
   };
   
   // Generate random numbers
   const generateRandomNumbers = (count: number): number[] => {
-    return Array.from({ length: count }, () => Math.floor(Math.random() * 9) + 1);
+    return Array.from({ length: count }, () => Math.floor(Math.random() * 10) + 1);
   };
   
   // Get rightmost unmatched number
@@ -137,8 +137,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
         const currentX = translateX.value;
         // Calculate position relative to the scrollingRow
         // The scrollingRow starts with translateX of -600 and moves right
-        // The scrollingRow has paddingHorizontal: 10
-        const numberLeftEdge = (rightmostIndex * TOTAL_NUMBER_WIDTH) + 10; // 10 is paddingHorizontal
+        const numberLeftEdge = rightmostIndex * TOTAL_NUMBER_WIDTH;
         const numberRightEdge = numberLeftEdge + NUMBER_WIDTH;
         
         // The visible area starts at x=0 in container coordinates
@@ -146,7 +145,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
         const absoluteRightEdge = currentX + numberRightEdge;
         
         // Container width is the visible area
-        if (absoluteRightEdge >= containerWidth.current - 10) { // Subtract padding
+        if (absoluteRightEdge >= containerWidth.current) {
           // Game over!
           runOnJS(() => {
             stopScrollAnimation();
@@ -210,31 +209,31 @@ export default function MathGame({ onComplete }: MathGameProps) {
       setMatchesCompleted(newMatchesCompleted);
       matchesCompletedRef.current = newMatchesCompleted;
       
-      // Check if all numbers matched
-      if (newMatchedIndices.length >= numbersSequence.length) {
-        // Generate new sequence
+      // Check if all numbers matched (completed set of 10)
+      if (newMatchedIndices.length >= 10) {
+        // Set completed after completing a full set of 10 numbers
         stopScrollAnimation();
-        initializeNumbers();
-        setTimeout(() => {
-          if (gameActive) {
-            startScrollAnimation();
+        setGameActive(false);
+        
+        // Show completion modal for the set
+        showModal(
+          '🎯 Set Complete!',
+          `Great job! You completed all 10 numbers. Ready for the next level?`,
+          '🎯',
+          () => {
+            if (level < 3) {
+              nextLevel();
+            } else {
+              // All levels complete
+              setGameState('jokerSelection');
+            }
           }
-        }, 100);
-      }
-      
-      // Check if level complete
-      const config = getLevelConfig(level);
-      if (newMatchesCompleted >= config.matchesNeeded) {
-        completeLevel();
+        );
+        return;
       }
       
       // Add score
       setScore(prev => prev + 10);
-      
-      // Flash effect
-      flashValue.value = withSpring(1, {}, () => {
-        flashValue.value = withSpring(0);
-      });
     } else {
       // Wrong answer
       setScore(prev => Math.max(0, prev - 5));
@@ -414,12 +413,12 @@ export default function MathGame({ onComplete }: MathGameProps) {
   
   // Render game
   return (
-    <Animated.View style={[styles.container, flashAnimatedStyle]}>
+    <View style={styles.container}>
       <MinigameHUD
         title="📐 Math Challenge"
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
-        centerInfo={`Matches: ${matchesCompleted}/${getLevelConfig(level).matchesNeeded}`}
+        centerInfo={`Matches: ${matchedIndices.length}/10`}
         rightInfo={`⏱️ ${timeLeft}s`}
         theme="math"
       />
@@ -463,9 +462,20 @@ export default function MathGame({ onComplete }: MathGameProps) {
       
       {/* Bottom numbers */}
       <View style={styles.bottomContainer}>
-        <Text style={styles.rowLabel}>Click the answer:</Text>
         <View style={styles.bottomRow}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+          {[0, 1, 2, 3, 4].map(num => (
+            <TouchableOpacity
+              key={num}
+              style={styles.bottomNumberBox}
+              onPress={() => handleBottomNumberClick(num)}
+              disabled={!gameActive}
+            >
+              <Text style={styles.numberText}>{num}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.bottomRow}>
+          {[5, 6, 7, 8, 9].map(num => (
             <TouchableOpacity
               key={num}
               style={styles.bottomNumberBox}
@@ -501,7 +511,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
         onClose={hideModal}
         onConfirm={modal.onConfirm}
       />
-    </Animated.View>
+    </View>
   );
 }
 
@@ -607,7 +617,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: 80,
-    paddingHorizontal: 10,
   },
   numberBox: {
     width: 60,
@@ -635,17 +644,13 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     marginTop: 30,
-    backgroundColor: '#0d2818',
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: '#f5f5dc',
     padding: 16,
   },
   bottomRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 8,
+    marginBottom: 8,
   },
   bottomNumberBox: {
     width: 60,

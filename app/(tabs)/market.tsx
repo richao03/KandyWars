@@ -302,6 +302,7 @@ export default function Market() {
           const baseGain = candy.cost * quantity;
           const totalGain = baseGain * multiplier;
 
+          console.log('🛒 Market: Selling candy:', candy.name, 'quantity:', quantity, 'price:', candy.cost, 'baseGain:', baseGain, 'multiplier:', multiplier, 'totalGain:', totalGain);
           add(totalGain);
           addProfit(totalGain); // Track daily profit
           addCandySold(quantity); // Track daily candy sales
@@ -596,6 +597,8 @@ export default function Market() {
           maxSellQuantity={maxSellQty}
           candy={selectedCandy}
           priceBreakdown={selectedCandy?.priceBreakdown}
+          playerBalance={balance}
+          availableInventorySpace={availableInventorySpace}
         />
       )}
 

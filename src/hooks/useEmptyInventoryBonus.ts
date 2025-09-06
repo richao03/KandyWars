@@ -29,11 +29,6 @@ export const useEmptyInventoryBonus = () => {
       if (bonusAmount > 0) {
         addMoney(bonusAmount);
         console.log(`💪 Embrace the Grind: +$${bonusAmount} for ending period with empty inventory!`);
-        
-        // Show notification to user
-        setTimeout(() => {
-          alert(`💪 Embrace the Grind!\n\nYou ended the period with 0 inventory and earned $${bonusAmount}!\n\n"No pain, no gain!"`);
-        }, 1000); // Delay to ensure period transition is complete
       }
     }
   }, [periodCount, jokers]); // Trigger when period changes

@@ -1,12 +1,6 @@
 import Slider from '@react-native-community/slider';
 import React, { useState } from 'react';
-import {
-  Button,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
 import { Candy } from '../../src/types/candy';
 
@@ -27,8 +21,14 @@ type Props = {
   onConfirm: (quantity: number, mode: 'buy' | 'sell') => void;
   maxBuyQuantity: number;
   maxSellQuantity: number;
-  candy: Candy & { cost: number; quantityOwned: number; averagePrice: number | null };
+  candy: Candy & {
+    cost: number;
+    quantityOwned: number;
+    averagePrice: number | null;
+  };
   priceBreakdown?: PriceBreakdown;
+  playerBalance?: number;
+  availableInventorySpace?: number;
 };
 
 export default function TransactionModal({
@@ -39,6 +39,8 @@ export default function TransactionModal({
   maxSellQuantity,
   candy,
   priceBreakdown,
+  playerBalance,
+  availableInventorySpace,
 }: Props) {
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [quantity, setQuantity] = useState(1);
@@ -73,27 +75,34 @@ export default function TransactionModal({
     >
       <View style={styles.container}>
         <Text style={styles.title}>{candy.name}</Text>
-        
+
         <View style={styles.priceInfoContainer}>
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Current Price:</Text>
             <Text style={styles.priceValue}>${candy.cost.toFixed(2)}</Text>
           </View>
-          
+
           {candy.quantityOwned > 0 && (
             <>
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>You Own:</Text>
                 <Text style={styles.priceValue}>{candy.quantityOwned}</Text>
               </View>
-              
+
               {candy.averagePrice !== null && (
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>Avg Buy Price:</Text>
-                  <Text style={[
-                    styles.priceValue,
-                    { color: candy.averagePrice < candy.cost ? '#22c55e' : '#ef4444' }
-                  ]}>
+                  <Text
+                    style={[
+                      styles.priceValue,
+                      {
+                        color:
+                          candy.averagePrice < candy.cost
+                            ? '#22c55e'
+                            : '#ef4444',
+                      },
+                    ]}
+                  >
                     ${candy.averagePrice.toFixed(2)}
                   </Text>
                 </View>
@@ -105,33 +114,39 @@ export default function TransactionModal({
         {priceBreakdown && priceBreakdown.jokerEffects.length > 0 && (
           <View style={styles.priceBreakdownContainer}>
             <Text style={styles.breakdownTitle}>💰 Price Breakdown</Text>
-            
+
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Base Price:</Text>
-              <Text style={styles.breakdownValue}>${priceBreakdown.basePrice.toFixed(2)}</Text>
+              <Text style={styles.breakdownValue}>
+                ${priceBreakdown.basePrice.toFixed(2)}
+              </Text>
             </View>
-            
+
             <View style={styles.divider} />
-            
+
             {priceBreakdown.jokerEffects.map((effect, index) => (
               <View key={index} style={styles.breakdownRow}>
                 <Text style={styles.jokerEffectLabel}>
                   {effect.jokerEmoji} {effect.jokerName}:
                 </Text>
-                <Text style={[
-                  styles.jokerEffectValue,
-                  { color: effect.amount >= 0 ? '#22c55e' : '#ef4444' }
-                ]}>
+                <Text
+                  style={[
+                    styles.jokerEffectValue,
+                    { color: effect.amount >= 0 ? '#22c55e' : '#ef4444' },
+                  ]}
+                >
                   {effect.effect}
                 </Text>
               </View>
             ))}
-            
+
             <View style={styles.divider} />
-            
+
             <View style={styles.breakdownRow}>
               <Text style={styles.finalPriceLabel}>Final Price:</Text>
-              <Text style={styles.finalPriceValue}>${priceBreakdown.finalPrice.toFixed(2)}</Text>
+              <Text style={styles.finalPriceValue}>
+                ${priceBreakdown.finalPrice.toFixed(2)}
+              </Text>
             </View>
           </View>
         )}
@@ -155,7 +170,7 @@ export default function TransactionModal({
           <Text style={styles.quantityLabel}>
             Quantity: {quantity} / {maxQuantity}
           </Text>
-          
+
           <Slider
             style={{ width: '100%', height: 40 }}
             minimumValue={0}
@@ -163,29 +178,49 @@ export default function TransactionModal({
             step={1}
             value={quantity}
             onValueChange={(val) => setQuantity(val)}
-            minimumTrackTintColor={mode === 'buy' ? "#ef4444" : "#4ade80"}
+            minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
             maximumTrackTintColor="#ccc"
           />
-          
+
           <View style={styles.totalValueContainer}>
             <Text style={styles.totalValueLabel}>Total Value:</Text>
-            <Text style={[
-              styles.totalValueAmount,
-              { color: mode === 'buy' ? '#ef4444' : '#22c55e' }
-            ]}>
+            <Text
+              style={[
+                styles.totalValueAmount,
+                { color: mode === 'buy' ? '#ef4444' : '#22c55e' },
+              ]}
+            >
               ${(quantity * candy.cost).toFixed(2)}
             </Text>
           </View>
-          
+
+          {mode === 'buy' && maxBuyQuantity === 0 && (
+            <Text style={styles.warningText}>
+              {playerBalance !== undefined && availableInventorySpace !== undefined
+                ? playerBalance < candy.cost
+                  ? '⚠️ You don\'t have enough money!'
+                  : availableInventorySpace <= 0
+                  ? '⚠️ Your stash is full!'
+                  : '⚠️ You can\'t buy this item!'
+                : '⚠️ Your stash is full!'
+              }
+            </Text>
+          )}
+
           {mode === 'sell' && candy.averagePrice !== null && quantity > 0 && (
             <View style={styles.profitContainer}>
               <Text style={styles.profitLabel}>
                 {candy.cost > candy.averagePrice ? 'Profit:' : 'Loss:'}
               </Text>
-              <Text style={[
-                styles.profitAmount,
-                { color: candy.cost > candy.averagePrice ? '#22c55e' : '#ef4444' }
-              ]}>
+              <Text
+                style={[
+                  styles.profitAmount,
+                  {
+                    color:
+                      candy.cost > candy.averagePrice ? '#22c55e' : '#ef4444',
+                  },
+                ]}
+              >
                 ${((candy.cost - candy.averagePrice) * quantity).toFixed(2)}
               </Text>
             </View>
@@ -406,5 +441,20 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#bae6fd',
     marginVertical: 8,
+  },
+  warningContainer: {
+    marginTop: 10,
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+  },
+  warningText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
   },
 });

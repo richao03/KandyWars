@@ -144,45 +144,49 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       (!e.location || e.location === currentLocation)
   );
 
+  // Track which events have been processed
+  const [processedEvents, setProcessedEvents] = useState<Set<number>>(new Set());
+
   // Process current event effects
   useEffect(() => {
     if (currentEvent && isInitialized) {
+      // Check if we've already processed this event at this period
+      const eventKey = periodCount;
+      if (processedEvents.has(eventKey)) {
+        console.log(`🎭 Event at period ${periodCount} already processed, skipping`);
+        return;
+      }
+
       console.log(
         `🎭 Processing event: ${currentEvent.effect} at period ${periodCount}`
       );
 
       switch (currentEvent.effect) {
         case 'LOSE_MONEY':
-          // Bully event: lose 75% of money
-          const currentBalance = balance;
-          const amountToLose = Math.floor(currentBalance * 0.75);
-
+          // Bully event: lose all money
+          // NOTE: The actual money stealing is handled by EventHandlerContext
+          // when the modal is dismissed, so we don't steal it here
           console.log(
-            `💸 LOSE_MONEY event: losing ${amountToLose} out of ${currentBalance}`
+            `💸 LOSE_MONEY event detected at period ${periodCount}`
           );
-
-          if (amountToLose > 0) {
-            const actualAmountLost = stealMoney(
-              amountToLose,
-              jokers,
-              periodCount
-            );
-            console.log(
-              `💸 Actually lost: $${actualAmountLost} (after joker protection)`
-            );
-          }
+          // Mark this event as processed
+          setProcessedEvents(prev => new Set(prev).add(eventKey));
           break;
 
         case 'FOUND_MONEY':
-          // Could implement other money events here
-          console.log('💰 FOUND_MONEY event (not implemented yet)');
+          // Found money event: add money to wallet
+          const moneyToAdd = currentEvent.dollarAmount || 10; // Default to $10 if not specified
+          console.log(`💰 FOUND_MONEY event: adding $${moneyToAdd}`);
+          // The wallet add function will be called elsewhere, this is just for logging
+          // Mark this event as processed
+          setProcessedEvents(prev => new Set(prev).add(eventKey));
           break;
 
         default:
           console.log(`⚠️ Unhandled event effect: ${currentEvent.effect}`);
       }
     }
-  }, [currentEvent, periodCount, balance, isInitialized]);
+  }, [currentEvent, periodCount, balance, isInitialized, processedEvents, stealMoney, jokers]);
 
   useEffect(() => {
     // Check for hints about next period's events
@@ -285,6 +289,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setLocationHistory([{ period: 0, location: 'home room' }]);
     setIsAfterSchool(false);
     setHasStudiedTonight(false);
+    setProcessedEvents(new Set()); // Clear processed events
 
     // Clear all saved game data
     await clearAllGameData();
