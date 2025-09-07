@@ -7,6 +7,7 @@ type WalletContextType = {
   stashedAmount: number;
   spend: (amount: number) => boolean;
   add: (amount: number) => void;
+  addAllowance: (jokers?: any[], periodCount?: number) => number; // Returns amount received
   stashMoney: (amount: number) => boolean;
   withdrawFromStash: (amount: number) => boolean;
   confiscateStash: (jokers?: any[], periodCount?: number) => number; // Returns amount confiscated
@@ -58,6 +59,26 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('💰 WalletContext: New balance will be:', newBalance);
       return newBalance;
     });
+  };
+
+  const addAllowance = (jokers?: any[], periodCount?: number): number => {
+    let allowanceAmount = 20; // Base allowance is $20
+    
+    // TODO: Check for joker effects that modify allowance amount
+    // Example: if (jokers && periodCount !== undefined) {
+    //   const jokerService = JokerService.getInstance();
+    //   const allowanceModifier = jokerService.getAllowanceModifier(jokers, periodCount);
+    //   allowanceAmount = Math.round((allowanceAmount * allowanceModifier) * 100) / 100;
+    // }
+    
+    console.log('💰 WalletContext: Adding daily allowance:', allowanceAmount);
+    setBalance(prev => {
+      const newBalance = prev + allowanceAmount;
+      console.log('💰 WalletContext: New balance after allowance:', newBalance);
+      return newBalance;
+    });
+    
+    return allowanceAmount;
   };
 
   const stashMoney = (amount: number): boolean => {
@@ -153,6 +174,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       stashedAmount,
       spend, 
       add,
+      addAllowance,
       stashMoney,
       withdrawFromStash,
       confiscateStash,

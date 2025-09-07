@@ -7,7 +7,7 @@ import GameHUD from '../components/GameHUD';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
-  { name: 'History', color: { bg: '#fff2e8', border: '#fa8c16' } },
+  { name: 'Gym', color: { bg: '#e6f2ff', border: '#4169e1' } },
   { name: 'Home Ec', color: { bg: '#f6ffed', border: '#52c41a' } },
   { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' } },
   { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
@@ -40,7 +40,7 @@ export default function StudyPage() {
       case 'Math':
         router.push('/math-game');
         break;
-      case 'History':
+      case 'Gym':
         router.push('/history-game');
         break;
       case 'Home Ec':

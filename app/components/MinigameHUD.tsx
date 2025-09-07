@@ -48,11 +48,11 @@ const THEME_COLORS = {
     info: '#28a745',
   },
   gym: {
-    background: '#1a2332',
-    border: '#2a3142',
-    title: '#87ceeb',
-    subtitle: '#98fb98',
-    info: '#52c41a',
+    background: '#2c3e50', // Dark gym blue-gray to match game background
+    border: '#e74c3c', // Gym red border
+    title: '#f39c12', // Gym gold for title
+    subtitle: '#ecf0f1', // Light gray for subtitle
+    info: '#e74c3c', // Gym red for info text
   },
   economy: {
     background: '#1e3a8a', // Deep blue matching game header

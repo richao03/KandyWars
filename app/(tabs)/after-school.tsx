@@ -23,12 +23,13 @@ export default function AfterSchoolPage() {
   const navigation = useNavigation();
   const { day, startNewDay, hasStudiedTonight } = useGame();
   const { resetDailyStats } = useDailyStats();
-  const { balance } = useWallet();
+  const { balance, addAllowance } = useWallet();
   const { setEvent } = useFlavorText();
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
   const [goingToSchoolModalVisible, setGoingToSchoolModalVisible] =
     useState(false);
+  const [allowanceAmount, setAllowanceAmount] = useState(0);
 
   // Set afternoon flavor text when component loads
   useEffect(() => {
@@ -56,8 +57,13 @@ export default function AfterSchoolPage() {
   };
 
   const handleSleepConfirm = () => {
-    // Close the sleep modal and show going to school interstitial
+    // Close the sleep modal and add allowance before showing going to school modal
     setSleepConfirmModalVisible(false);
+    
+    // Add daily allowance (jokers could modify this amount in the future)
+    const receivedAllowance = addAllowance();
+    setAllowanceAmount(receivedAllowance);
+    
     setGoingToSchoolModalVisible(true);
   };
 
@@ -166,6 +172,7 @@ export default function AfterSchoolPage() {
 
       <GoingToSchoolModal
         visible={goingToSchoolModalVisible}
+        allowanceAmount={allowanceAmount}
         onComplete={handleGoingToSchoolComplete}
       />
     </View>

@@ -90,6 +90,10 @@ export default function RootLayout() {
                                     options={{ headerShown: false }}
                                   />
                                   <Stack.Screen
+                                    name="title-screen"
+                                    options={{ headerShown: false }}
+                                  />
+                                  <Stack.Screen
                                     name="computer-game"
                                     options={{ headerShown: false }}
                                   />

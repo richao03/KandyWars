@@ -138,75 +138,97 @@ function applyTrade(inv: Inventory, trade: TradeTile): Inventory {
 }
 
 /** =========================
- *  Generator (unique path)
+ *  Generator (multi-step trading)
  *  ========================= */
-function generatePuzzle(seed: string, steps: number): Puzzle {
-  const rng = makePRNG(`${seed}::steps=${steps}`);
+function generatePuzzle(seed: string, levelIndex: number): Puzzle {
+  const config = LEVEL_CONFIG[levelIndex];
+  const rng = makePRNG(`${seed}::level=${levelIndex}`);
+  
+  // Pick goal item and create trading chain
   const goal: Item = pick(rng, ALL_ITEMS);
-  let currentNeed: Inventory = { [goal]: 1 };
-
-  const solution: {
-    id: string;
-    give: Inventory;
-    get: Inventory;
-    label: string;
-  }[] = [];
-  const chainItems = new Set<Item>([goal]);
-
-  for (let i = steps - 1; i >= 0; i--) {
-    const needItem = Object.keys(currentNeed)[0] as Item;
-    const needQty = currentNeed[needItem]!;
-    const giveItem = pick(rng, ALL_ITEMS, [needItem]);
-    const giveQty = randInt(rng, 1, 2);
-
-    solution.unshift({
-      id: `sol-${i}-${giveItem}->${needItem}`,
-      give: { [giveItem]: giveQty },
-      get: { [needItem]: needQty },
-      label: `${qty(giveQty, giveItem)} → ${qty(needQty, needItem)}`,
-    });
-
-    chainItems.add(giveItem);
-    currentNeed = { [giveItem]: giveQty };
+  const chainItems: Item[] = [goal];
+  
+  // Build chain backwards: goal <- item(n-1) <- ... <- item1 <- startItem
+  // For config.steps trades, we need config.steps + 1 items in the chain
+  for (let i = 0; i < config.steps; i++) {
+    const nextItem = pick(rng, ALL_ITEMS, chainItems);
+    chainItems.unshift(nextItem);
   }
-
-  const startInventory = currentNeed;
-  const tiles: TradeTile[] = solution.map((t) => ({ ...t, source: 'palette' }));
-  const offPathItems = ALL_ITEMS.filter((i) => !chainItems.has(i));
-
-  for (let s = 0; s < steps; s++) {
-    const sol = solution[s];
-    const solGive = Object.keys(sol.give)[0] as Item;
-    const solGiveQty = sol.give[solGive]!;
-    const count = randInt(rng, 1, 2);
-    for (let v = 0; v < count && offPathItems.length > 0; v++) {
-      const outItem = pick(rng, offPathItems);
-      if (outItem === goal) continue;
-
-      // Prevent one-shot solutions: Check if this decoy would allow reaching goal directly
-      const startHasGiveItem = (startInventory[solGive] || 0) >= solGiveQty;
-      if (startHasGiveItem && outItem === goal) {
-        continue; // Skip this decoy as it would create a one-shot solution
+  
+  // Create the solution trades (always 1 for 1)
+  const solutionTrades: TradeTile[] = [];
+  for (let i = 0; i < config.steps; i++) {
+    const giveItem = chainItems[i];
+    const getItem = chainItems[i + 1];
+    
+    solutionTrades.push({
+      id: `sol-${i}-${giveItem}->${getItem}`,
+      give: { [giveItem]: 1 },
+      get: { [getItem]: 1 },
+      label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
+      source: 'palette',
+    });
+  }
+  
+  // Starting inventory is what we need for the first trade
+  const startInventory: Inventory = { ...solutionTrades[0].give };
+  
+  // Generate dummy trades
+  const dummyTrades: TradeTile[] = [];
+  const usedItems = new Set(chainItems);
+  
+  for (let i = 0; i < config.dummyTrades; i++) {
+    // Pick items not in the solution chain for dummy trades
+    const availableItems = ALL_ITEMS.filter(item => !usedItems.has(item));
+    if (availableItems.length < 2) {
+      // If we run out of unused items, reuse items but avoid creating shortcuts
+      const giveItem = pick(rng, ALL_ITEMS);
+      const getItem = pick(rng, ALL_ITEMS, [giveItem]);
+      
+      // Make sure dummy trade doesn't accidentally create a shortcut to goal
+      if (getItem === goal && Object.keys(startInventory).includes(giveItem)) {
+        continue; // Skip this dummy trade
       }
-
-      const getQty = randInt(rng, 1, 2);
-      tiles.push({
-        id: `d-${s}-${v}-${solGive}(${solGiveQty})->${outItem}(${getQty})`,
-        give: { [solGive]: solGiveQty },
-        get: { [outItem]: getQty },
-        label: `${qty(solGiveQty, solGive)} → ${qty(getQty, outItem)}`,
+      
+      dummyTrades.push({
+        id: `dummy-${i}-${giveItem}->${getItem}`,
+        give: { [giveItem]: 1 },
+        get: { [getItem]: 1 },
+        label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
         source: 'palette',
       });
+      continue;
     }
+    
+    const giveItem = pick(rng, availableItems);
+    const getItem = pick(rng, availableItems, [giveItem]);
+    
+    dummyTrades.push({
+      id: `dummy-${i}-${giveItem}->${getItem}`,
+      give: { [giveItem]: 1 },
+      get: { [getItem]: 1 },
+      label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
+      source: 'palette',
+    });
+    
+    usedItems.add(giveItem);
+    usedItems.add(getItem);
   }
-
-  // shuffle deterministically
-  for (let i = tiles.length - 1; i > 0; i--) {
+  
+  // Combine and shuffle all trades
+  const allTrades = [...solutionTrades, ...dummyTrades];
+  for (let i = allTrades.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
-    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+    [allTrades[i], allTrades[j]] = [allTrades[j], allTrades[i]];
   }
-
-  return { startInventory, goal, tiles, steps };
+  
+  const totalSlots = config.steps + config.dummyTrades;
+  return { 
+    startInventory, 
+    goal, 
+    tiles: allTrades, 
+    steps: totalSlots 
+  };
 }
 
 /** =========================
@@ -336,7 +358,12 @@ function DraggableFromSlot({
 /** =========================
  *  Component
  *  ========================= */
-const LEVEL_SLOTS = [4, 5, 6];
+// Level configuration: [steps, dummyTrades]
+const LEVEL_CONFIG = [
+  { steps: 3, dummyTrades: 0 }, // Level 1: 3 steps, no dummy trades
+  { steps: 4, dummyTrades: 4 }, // Level 2: 4 steps, 4 dummy trades  
+  { steps: 5, dummyTrades: 7 }, // Level 3: 5 steps, 7 dummy trades
+];
 
 export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
@@ -346,7 +373,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const [levelIndex, setLevelIndex] = useState(0);
 
   const [puzzle, setPuzzle] = useState<Puzzle>(() =>
-    generatePuzzle(`${seed}::L${0}`, LEVEL_SLOTS[0])
+    generatePuzzle(`${seed}::L${0}`, 0)
   );
   const [slots, setSlots] = useState<(TradeTile | null)[]>(() =>
     Array(puzzle.steps).fill(null)
@@ -367,7 +394,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const [hoveredSlotIndex, setHoveredSlotIndex] = useState<number | null>(null);
 
   const resetLevel = (level: number) => {
-    const p = generatePuzzle(`${seed}::L${level}`, LEVEL_SLOTS[level]);
+    const p = generatePuzzle(`${seed}::L${level}`, level);
     setPuzzle(p);
     setSlots(Array(p.steps).fill(null));
     setAvailable(p.tiles);
@@ -493,9 +520,12 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   const executePlan = () => {
     let inv: Inventory = { ...puzzle.startInventory };
+    let tradesExecuted = 0;
+    
     for (let i = 0; i < slots.length; i++) {
       const tile = slots[i];
       if (!tile) continue;
+      
       if (!canAfford(inv, tile.give)) {
         showModal(
           '❌ Plan Failed',
@@ -504,10 +534,12 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         return;
       }
       inv = applyTrade(inv, tile);
+      tradesExecuted++;
     }
+    
     const success = (inv[puzzle.goal] || 0) >= 1;
     if (success) {
-      const isLast = levelIndex === LEVEL_SLOTS.length - 1;
+      const isLast = levelIndex === LEVEL_CONFIG.length - 1;
       
       if (isLast) {
         // All levels complete - go to joker selection
@@ -523,7 +555,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         // Level complete - advance to next level
         showModal(
           '🎉 Level Complete!',
-          `Excellent trading! Ready for Level ${levelIndex + 2}?\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}`,
+          `Excellent multi-step trading! You used ${tradesExecuted} trades.\nReady for Level ${levelIndex + 2}?\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}`,
           '🎉',
           () => {
             const nextLevel = levelIndex + 1;
@@ -619,15 +651,21 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             <View style={styles.instructionsCard}>
               <Text style={styles.instructionsHeader}>📊 How to Trade:</Text>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>🎯</Text>
+                <Text style={styles.stepNumber}>🔗</Text>
                 <Text style={styles.stepText}>
-                  Trade items to reach your goal
+                  Build multi-step trading chains to reach your goal candy
                 </Text>
               </View>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>🔄</Text>
+                <Text style={styles.stepNumber}>📋</Text>
                 <Text style={styles.stepText}>
-                  Drag tiles to build trade chain
+                  Level 1: 3 steps • Level 2: 4 steps • Level 3: 5 steps - no shortcuts!
+                </Text>
+              </View>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>🎯</Text>
+                <Text style={styles.stepText}>
+                  Drag tiles to slots in the correct order to execute your plan
                 </Text>
               </View>
             </View>
@@ -668,7 +706,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <MinigameHUD
           title="💱 Barter Trading"
           subtitle="Trade your way to the goal candy!"
-          leftInfo={`Level ${levelIndex + 1}/${LEVEL_SLOTS.length} • Slots: ${puzzle.steps}`}
+          leftInfo={`Level ${levelIndex + 1}/${LEVEL_CONFIG.length} • Slots: ${puzzle.steps}`}
           centerInfo={`Start: ${fmtInv(puzzle.startInventory) || 'Empty'}`}
           rightInfo={`Goal: ${CATALOG[puzzle.goal]} ${puzzle.goal}`}
           theme="economy"
@@ -679,12 +717,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           <Text style={styles.sectionTitle}>
             Arrange your plan (drag into slots)
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.slotsScrollContent}
-          >
-            <View style={styles.slotsRow}>
+          {levelIndex === 0 ? (
+            // Level 1: 3 slots, centered, no scroll
+            <View style={[styles.slotsRow, styles.slotsRowCentered]}>
               {slots.map((slot, i) => (
                 <View
                   key={`slot-${i}`}
@@ -713,7 +748,44 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
                 </View>
               ))}
             </View>
-          </ScrollView>
+          ) : (
+            // Level 2-3: Left aligned, swipeable
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.slotsScrollContent}
+            >
+              <View style={styles.slotsRow}>
+                {slots.map((slot, i) => (
+                  <View
+                    key={`slot-${i}`}
+                    ref={(el) => (slotRefs.current[i] = el)}
+                    style={[
+                      styles.slot,
+                      !!slot && styles.slotFilled,
+                      hoveredSlotIndex === i && styles.slotHighlighted,
+                    ]}
+                    onLayout={onSlotLayout(i)}
+                  >
+                    {slot ? (
+                      <DraggableFromSlot
+                        tile={slot}
+                        slotIndex={i}
+                        dragX={dragX}
+                        dragY={dragY}
+                        dragScale={dragScale}
+                        onStartJS={onStartJS}
+                        onMoveJS={onMoveJS}
+                        onEndFromSlotJS={dropFromSlot}
+                      />
+                    ) : (
+                      <Text style={styles.slotPlaceholder}>{i + 1}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
         </View>
 
         {/* Palette */}
@@ -915,6 +987,10 @@ const styles = StyleSheet.create({
   slotsRow: {
     flexDirection: 'row',
     gap: 8,
+  },
+  slotsRowCentered: {
+    justifyContent: 'center',
+    paddingHorizontal: 16,
   },
   slot: {
     width: 88,

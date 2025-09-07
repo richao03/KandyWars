@@ -1,6 +1,6 @@
 // app/(tabs)/settings.tsx
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { router } from 'expo-router';
 import GameHUD from '../components/GameHUD';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -84,6 +84,23 @@ export default function Settings() {
     });
   };
 
+  const handleReturnToTitleScreen = () => {
+    setConfirmModal({
+      visible: true,
+      title: 'Return to Title Screen',
+      message: 'Return to the main menu? Your progress will be saved.',
+      emoji: '🏠',
+      confirmText: 'Return',
+      cancelText: 'Cancel',
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, visible: false }));
+        // Navigate to title screen
+        router.replace('/title-screen');
+      },
+      onCancel: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+    });
+  };
+
   return (
     <View style={styles.container}>
       <GameHUD 
@@ -94,6 +111,18 @@ export default function Settings() {
       <View style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Game Controls</Text>
+          
+          <TouchableOpacity
+            style={[styles.button, styles.titleScreenButton]}
+            onPress={handleReturnToTitleScreen}
+          >
+            <Text style={styles.titleScreenButtonText}>
+              🏠 Return to Title Screen
+            </Text>
+            <Text style={styles.buttonSubtext}>
+              Go back to main menu (progress saved)
+            </Text>
+          </TouchableOpacity>
           
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}
@@ -170,6 +199,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  titleScreenButton: {
+    backgroundColor: '#dbeafe', // Light blue background
+    borderWidth: 2,
+    borderColor: '#3b82f6', // Blue border
+  },
+  titleScreenButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1d4ed8', // Dark blue text
+    marginBottom: 4,
+  },
   dangerButton: {
     backgroundColor: '#fee2e2', // Light red background
     borderWidth: 2,
@@ -183,7 +223,7 @@ const styles = StyleSheet.create({
   },
   buttonSubtext: {
     fontSize: 12,
-    color: '#7f1d1d', // Darker red
+    color: '#6b5b73', // Neutral darker gray
     fontStyle: 'italic',
   },
   aboutText: {

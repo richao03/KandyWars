@@ -4,12 +4,13 @@ import { useTabBar } from '../../src/context/TabBarContext';
 
 interface GoingToSchoolModalProps {
   visible: boolean;
+  allowanceAmount?: number;
   onComplete: () => void;
 }
 
 const { width, height } = Dimensions.get('window');
 
-export default function GoingToSchoolModal({ visible, onComplete }: GoingToSchoolModalProps) {
+export default function GoingToSchoolModal({ visible, allowanceAmount, onComplete }: GoingToSchoolModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
 
   useEffect(() => {
@@ -39,6 +40,11 @@ export default function GoingToSchoolModal({ visible, onComplete }: GoingToSchoo
           resizeMode="contain"
         />
         <Text style={styles.text}>Time for school!</Text>
+        {allowanceAmount && (
+          <Text style={styles.allowanceText}>
+            Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -74,6 +80,17 @@ const styles = StyleSheet.create({
     color: '#8B4513', // Saddle brown for good contrast on warm background
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  allowanceText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2E8B57', // Sea green for money/positive message
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginTop: 12,
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
