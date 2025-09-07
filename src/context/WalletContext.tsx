@@ -187,10 +187,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 };
 
-export const useWallet = (): WalletContextType => {
+export const useWallet = (): WalletContextType | null => {
   const context = useContext(WalletContext);
   if (!context) {
-    throw new Error('useWallet must be used within WalletProvider');
+    return null;
   }
   return context;
 };

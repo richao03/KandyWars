@@ -26,11 +26,18 @@ interface JokerSelectionProps {
 
 export default function JokerSelection({ jokers, theme, subject, onComplete }: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
+  const [hasRerolled, setHasRerolled] = useState(false);
   const { addJoker } = useJokers();
 
   const selectRandomJokers = () => {
     const shuffled = [...jokers].sort(() => Math.random() - 0.5);
     setSelectedJokers(shuffled.slice(0, 3));
+  };
+
+  const rerollJokers = () => {
+    const shuffled = [...jokers].sort(() => Math.random() - 0.5);
+    setSelectedJokers(shuffled.slice(0, 2)); // Only 2 jokers on reroll
+    setHasRerolled(true); // Disable further rerolls
   };
 
   const handleJokerChoice = (jokerId: number) => {
@@ -198,6 +205,17 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
           </TouchableOpacity>
         ))}
 
+        {selectedJokers.length > 0 && !hasRerolled && (
+          <TouchableOpacity 
+            style={[styles.rerollButton, themeStyles.generateButton]} 
+            onPress={rerollJokers}
+          >
+            <Text style={[styles.rerollButtonText, themeStyles.generateButtonText]}>
+              🎲 Reroll (2 cards only)
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity 
           style={[styles.skipButton, themeStyles.skipButton]} 
           onPress={onComplete}
@@ -276,6 +294,18 @@ const styles = StyleSheet.create({
   skipButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'CrayonPastel',
+  },
+  rerollButton: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 3,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  rerollButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
     fontFamily: 'CrayonPastel',
   },
 

@@ -4,6 +4,7 @@ import { useInventory } from '../context/InventoryContext';
 import { useJokers } from '../context/JokerContext';
 import { useWallet } from '../context/WalletContext';
 import { JokerService } from '../utils/jokerService';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useEmptyInventoryBonus = () => {
   const { periodCount } = useGame();
@@ -16,7 +17,7 @@ export const useEmptyInventoryBonus = () => {
     if (periodCount === 0) return;
 
     // Check if player has Embrace the Grind joker
-    const embraceGrindJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Embrace the Grind');
+    const embraceGrindJoker = findJokerById(jokers, JOKER_IDS.EMBRACE_THE_GRIND);
     if (!embraceGrindJoker) return;
 
     // Check if inventory is empty

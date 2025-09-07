@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useJokers } from './JokerContext';
 import { useGame } from './GameContext';
 import { loadGameState, saveGameState } from '../utils/persistence';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 type CandySalesContextType = {
   consecutiveSales: string[];
@@ -41,7 +42,7 @@ export const CandySalesProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addSale = (candyName: string): boolean => {
     // Check if user has Candy Salad joker
-    const candySaladJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Candy Salad');
+    const candySaladJoker = findJokerById(jokers, JOKER_IDS.CANDY_SALAD);
     if (!candySaladJoker) {
       return false;
     }

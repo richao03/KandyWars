@@ -23,6 +23,7 @@ import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { JokerService } from '../../src/utils/jokerService';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
@@ -290,9 +291,7 @@ export default function Market() {
             multiplier *= sellMultiplierInfo.multiplier;
             
             // Remove the Digital Lock joker after use (one-time effect)
-            const digitalLockJoker = jokers.find(j => 
-              jokerService.cleanJokerName(j.name) === 'Digital Lock'
-            );
+            const digitalLockJoker = findJokerById(jokers, JOKER_IDS.DIGITAL_LOCK);
             if (digitalLockJoker) {
               removeJoker(digitalLockJoker.id);
               console.log(`🔒 Digital Lock activated and consumed! ${sellMultiplierInfo.multiplier}x multiplier applied`);

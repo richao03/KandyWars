@@ -28,12 +28,18 @@ export default function CandyWarsTitleScreen({
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonsShown = useRef(false);
 
   const handleAnimationComplete = () => {
     setAnimationComplete(true);
   };
 
   const handleCandyComplete = () => {
+    // Prevent multiple calls using ref
+    if (buttonsShown.current) return;
+    buttonsShown.current = true;
+    
+    console.log('🎨 CandyWarsTitleScreen: Showing buttons');
     // Buttons appear after "Candy" is done
     setShowButtons(true);
     // Fade in buttons

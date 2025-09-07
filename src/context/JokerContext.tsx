@@ -169,10 +169,10 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useJokers = (): JokerContextType => {
+export const useJokers = (): JokerContextType | null => {
   const context = useContext(JokerContext);
   if (!context) {
-    throw new Error('useJokers must be used within a JokerProvider');
+    return null;
   }
   return context;
 };

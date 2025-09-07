@@ -4,6 +4,7 @@ import { loadInventory, saveInventory } from '../utils/persistence';
 import { useJokers } from './JokerContext';
 import { useGame } from './GameContext';
 import { JokerService } from '../utils/jokerService';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export type InventoryItem = {
   name: string;
@@ -71,7 +72,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (!isLoaded || periodCount === 0) return; // Don't generate on initial load or period 0
     
-    const somethingFromNothing = jokers.find(j => j.name.replace(' (Copy)', '') === 'Something from Nothing');
+    const somethingFromNothing = findJokerById(jokers, JOKER_IDS.SOMETHING_FROM_NOTHING);
     if (somethingFromNothing) {
       const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
       

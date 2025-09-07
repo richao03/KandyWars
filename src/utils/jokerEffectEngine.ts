@@ -49,8 +49,10 @@ export interface JokerEffect {
 export interface StandardizedJoker {
   id: number;
   name: string;
-  description: string;
   subject: string;
+  type: 'one-time' | 'persistent';
+  flavorText: string;
+  description: string;
   effects: JokerEffect[];
 }
 
@@ -66,7 +68,9 @@ export class JokerEffectEngine {
   addJoker(joker: StandardizedJoker, currentPeriod: number) {
     const uniqueKey = `${joker.id}_${this.nextInstanceId++}`;
     this.activeEffects.set(uniqueKey, { joker, activatedAt: currentPeriod });
-    console.log(`🔧 JokerEffectEngine: Added "${joker.name}" with key "${uniqueKey}". Total effects: ${this.activeEffects.size}`);
+    console.log(
+      `🔧 JokerEffectEngine: Added "${joker.name}" with key "${uniqueKey}". Total effects: ${this.activeEffects.size}`
+    );
   }
 
   // Remove a joker from active effects
@@ -143,8 +147,13 @@ export class JokerEffectEngine {
     let result = baseValue;
 
     if (target === 'inventory_limit') {
-      console.log(`🔧 JokerEffectEngine: Processing ${effects.length} effects for ${target}`);
-      console.log(`   Effects found:`, effects.map(e => `${e.operation} ${e.amount}`));
+      console.log(
+        `🔧 JokerEffectEngine: Processing ${effects.length} effects for ${target}`
+      );
+      console.log(
+        `   Effects found:`,
+        effects.map((e) => `${e.operation} ${e.amount}`)
+      );
     }
 
     // Apply operations in order: set -> multiply -> add
@@ -226,8 +235,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 1,
     name: 'Double Up',
-    description: 'Double the price of one candy for one period',
     subject: 'Math',
+    type: 'one-time',
+    flavorText: 'The theorem of the period is f(x) = 2x',
+    description: '2x the price of 1 candy for 1 period',
     effects: [
       {
         target: 'candy_price',
@@ -240,8 +251,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 2,
     name: 'Time Equation',
-    description: 'Reverse one period using temporal mathematics',
     subject: 'Math',
+    type: 'one-time',
+    flavorText: 'Reverse one period using temporal mathematics',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'period_count',
@@ -254,9 +267,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 3,
     name: 'Geometric Expansion',
-    description:
-      'Increase inventory space using spatial geometry \nInventory Capacity + 10',
     subject: 'Math',
+    type: 'persistent',
+    flavorText: 'Increase inventory space using spatial geometry',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
@@ -269,9 +283,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 28,
     name: 'Even Stevens',
-    description:
-      'If total inventory limit is an even number, all candy prices are 50% higher',
     subject: 'Math',
+    type: 'persistent',
+    flavorText:
+      'If total inventory limit is an even number, all candy prices are 50% higher',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'candy_price',
@@ -284,9 +300,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 29,
     name: 'Odd Todd',
-    description:
-      'If total inventory limit is an odd number, all candy prices are 50% higher',
     subject: 'Math',
+    type: 'persistent',
+    flavorText:
+      'If total inventory limit is an odd number, all candy prices are 50% higher',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'candy_price',
@@ -300,9 +318,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   // COMPUTER JOKERS
   {
     id: 11,
-    name: 'Scout',
-    description: '50% chance to hear about events before it happens',
+    name: 'Tapped in',
     subject: 'Computer',
+    type: 'persistent',
+    flavorText: 'Signal Through the Noise',
+    description: '50% chance to hear about events before it happens',
     effects: [
       {
         target: 'hint_chance',
@@ -315,8 +335,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 12,
     name: 'Predictor',
-    description: '100% chance to hear about events before it happens',
     subject: 'Computer',
+    type: 'persistent',
+    flavorText: 'Solve the algorithm for the future',
+    description: '100% chance to hear about events before it happens',
     effects: [
       {
         target: 'hint_chance',
@@ -329,9 +351,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 13,
     name: 'Propacandies',
-    description:
-      'Make one candy price crash by spreading untrue news\n selected candy cost 10% of original price',
     subject: 'Computer',
+    type: 'one-time',
+    description: 'Drop the price of 1 candy by 90% for 1 period',
+    flavorText: 'AI video to spread untrue news about a candy',
     effects: [
       {
         target: 'candy_price',
@@ -344,9 +367,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 14,
     name: 'Data Compression',
-    description:
-      'Candied no loss compression to save space\n Inventory Capacity +13',
     subject: 'Computer',
+    type: 'persistent',
+    flavorText: 'No loss compression for sugar to save space',
+    description: 'Inventory space increase by 13',
     effects: [
       {
         target: 'inventory_limit',
@@ -359,8 +383,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 15,
     name: 'Glitch in the Matrix',
-    description: 'Choose a joker in your possession, and copy it',
     subject: 'Computer',
+    type: 'one-time',
+    flavorText: "Didn't I just see that joker?",
+    description: 'Choose 1 joker in your possession, and copy it',
     effects: [
       {
         target: 'joker_duplicate',
@@ -375,8 +401,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 19,
     name: 'Vacuum Sealer',
-    description: 'All candy, no air! \nInventory capacity * 2',
     subject: 'Home Economics',
+    type: 'persistent',
+    flavorText: 'All candy, no air!',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
@@ -389,8 +417,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 20,
     name: 'Pomodoro Timer',
-    description: 'Studying mini-games have 50% more time',
     subject: 'Home Economics',
+    type: 'persistent',
+    flavorText: 'Studying mini-games have 50% more time',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'study_time',
@@ -403,8 +433,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 63,
     name: 'Fridge Organizer',
-    description: 'Inventory limit +15',
     subject: 'Home Economics',
+    type: 'persistent',
+    flavorText: 'Inventory limit +15',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
@@ -418,9 +450,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 27,
     name: 'Master of Trade',
-    description:
-      'Exchange any candy for another type of candy. \n No questions asked!',
     subject: 'Economy',
+    type: 'one-time',
+    flavorText:
+      'Exchange any candy for another type of candy. No questions asked!',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'candy_conversion',
@@ -434,9 +468,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 64,
     name: 'Market Crash',
-    description:
-      'All candy prices drop by 50% for one period (great for bulk buying)',
     subject: 'Economy',
+    type: 'one-time',
+    flavorText:
+      'All candy prices drop by 50% for one period (great for bulk buying)',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'candy_price',
@@ -451,9 +487,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 35,
     name: 'Temporary Emperor',
-    description:
-      'skip one period and gain the equivalent of selling 3 of every candy',
     subject: 'History',
+    type: 'one-time',
+    flavorText:
+      'Skip one period and gain the equivalent of selling 3 of every candy',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'time_skip',
@@ -467,8 +505,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 37,
     name: 'Roman Coin',
-    description: 'Sell the ancient coin for some modern coins!',
     subject: 'History',
+    type: 'one-time',
+    flavorText: 'Sell the ancient coin for some modern coins!',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'money',
@@ -481,8 +521,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 40,
     name: 'Medieval Shield',
-    description: 'Protect against one negative event',
     subject: 'History',
+    type: 'one-time',
+    flavorText: 'Protect against one negative event',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'event_immunity',
@@ -495,8 +537,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 41,
     name: 'Drought Relief',
-    description: 'If you have made no sales in 3 periods, you receive $150',
     subject: 'History',
+    type: 'persistent',
+    flavorText: 'If you have made no sales in 3 periods, you receive $150',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'drought_relief_bonus',
@@ -509,8 +553,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 63,
     name: 'Treasure Chest',
-    description: 'Inventory limit +15',
     subject: 'History',
+    type: 'persistent',
+    flavorText: 'Inventory limit +15',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
@@ -525,8 +571,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 43,
     name: 'Inductive Reasoning',
-    description: 'Every new day, inventory incrases by 3',
     subject: 'Logic',
+    type: 'persistent',
+    flavorText: 'Every new day, inventory increases by 3',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
@@ -539,8 +587,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 45,
     name: 'Lock Pick',
-    description: 'Bypass one negative event',
     subject: 'Logic',
+    type: 'one-time',
+    flavorText: 'Bypass one negative event',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'event_immunity',
@@ -553,8 +603,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 48,
     name: 'Digital Lock',
-    description: 'Double profits for one sale (one-time use)',
     subject: 'Logic',
+    type: 'one-time',
+    flavorText: 'Double profits for one sale (one-time use)',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'sell_multiplier',
@@ -567,8 +619,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 50,
     name: 'Safe Deposit',
-    description: 'Protect money from theft events',
     subject: 'Logic',
+    type: 'persistent',
+    flavorText: 'Protect money from theft events',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'money_protection',
@@ -581,8 +635,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 46,
     name: 'Something from Nothing',
-    description: 'Every period, you get one of each candy',
     subject: 'Logic',
+    type: 'persistent',
+    flavorText: 'Every period, you get one of each candy',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'candy_generation',
@@ -597,8 +653,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 51,
     name: "Bet you I'm faster",
-    description: 'Gain $100 from being the fastet kid alive',
     subject: 'Gym',
+    type: 'one-time',
+    flavorText: 'Gain $100 from being the fastest kid alive',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'money',
@@ -611,13 +669,15 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 66,
     name: 'Bulk Up',
-    description: 'Inventory limit +20',
     subject: 'Gym',
+    type: 'persistent',
+    flavorText: 'Inventory limit +10',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
         operation: 'add',
-        amount: 20,
+        amount: 10,
         duration: 'persistent',
       },
     ],
@@ -625,8 +685,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 67,
     name: 'Embrace the Grind',
-    description: 'Every period you end with 0 inventory, you get $50',
     subject: 'Gym',
+    type: 'persistent',
+    flavorText: 'Every period you end with 0 inventory, you get $50',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'empty_inventory_bonus',
@@ -639,9 +701,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 68,
     name: 'Diamond Hand',
-    description:
-      'Every period when you have inventory but you dont sell, you get $50',
     subject: 'Gym',
+    type: 'persistent',
+    flavorText:
+      'Every period when you have inventory but you dont sell, you get $50',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'holding_inventory_bonus',
@@ -654,8 +718,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 72,
     name: 'Deep Storage',
-    description: 'Increase inventory limit by 30 for one period',
     subject: 'Home Economics',
+    type: 'one-time',
+    flavorText: 'Increase inventory limit by 30 for one period',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'inventory_limit',
@@ -668,8 +734,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 74,
     name: 'Candy Vault',
-    description: 'Protect stash from confiscation permanently',
     subject: 'History',
+    type: 'persistent',
+    flavorText: 'Protect stash from confiscation permanently',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'stash_protection',
@@ -682,8 +750,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 75,
     name: 'Compound Interest',
-    description: 'Gain $10 for every candy held at the end of each day',
     subject: 'Economy',
+    type: 'persistent',
+    flavorText: 'Gain $10 for every candy held at the end of each day',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'compound_interest_bonus',
@@ -696,9 +766,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 76,
     name: 'Market Manipulation',
-    description:
-      'Set any candy to the highest price of all candies this period',
     subject: 'Economy',
+    type: 'one-time',
+    flavorText: 'Set any candy to the highest price of all candies this period',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'market_manipulation',
@@ -711,8 +782,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 77,
     name: 'The Big Short',
-    description: 'Set any candy to the lowest price of all candies this period',
     subject: 'Economy',
+    type: 'one-time',
+    flavorText: 'Set any candy to the lowest price of all candies this period',
+    description: '[PLACEHOLDER: Add game mechanics description]',
     effects: [
       {
         target: 'big_short',

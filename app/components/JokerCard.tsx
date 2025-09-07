@@ -1,9 +1,17 @@
-import React, { useState, useMemo, memo } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import React, { memo, useMemo, useState } from 'react';
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/context/GameContext';
+import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
-import { useInventory } from '../../src/context/InventoryContext';
 import { useWallet } from '../../src/context/WalletContext';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -11,31 +19,58 @@ interface JokerCardProps {
   joker: {
     id: number;
     name: string;
-    description: string;
     subject: string;
-    theme: string;
     type: 'one-time' | 'persistent';
-    effect: string;
+    flavorText: string;
+    description: string;
+    theme?: string;
+    effect?: string;
   };
   isAfterSchool: boolean;
   onLongPress?: () => void;
   isDragging?: boolean;
   isCompact?: boolean;
+  showOwned?: boolean;
+  disableActivation?: boolean;
 }
 
-const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
+const CANDY_TYPES = [
+  'Bubble Gum',
+  'M&Ms',
+  'Skittles',
+  'Snickers',
+  'Sour Patch Kids',
+  'Warheads',
+];
 
-function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }: JokerCardProps) {
+function JokerCard({
+  joker,
+  isAfterSchool,
+  onLongPress,
+  isDragging,
+  isCompact,
+  showOwned,
+  disableActivation = false,
+}: JokerCardProps) {
   const { jokers, activateJoker, addJoker } = useJokers();
   const { periodCount, revertToPreviousPeriod, incrementPeriod } = useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
-  const { inventory, removeFromInventory, addToInventory, convertCandyType, getTotalInventoryCount, getInventoryLimit } = useInventory();
+  const {
+    inventory,
+    removeFromInventory,
+    addToInventory,
+    convertCandyType,
+    getTotalInventoryCount,
+    getInventoryLimit,
+  } = useInventory();
   const { add: addMoney } = useWallet();
   const [showCandySelector, setShowCandySelector] = useState(false);
   const [showJokerSelector, setShowJokerSelector] = useState(false);
   const [showConversionStep1, setShowConversionStep1] = useState(false); // Select source candy
   const [showConversionStep2, setShowConversionStep2] = useState(false); // Select target candy
-  const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(null);
+  const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(
+    null
+  );
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -45,24 +80,40 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
     onCancel?: () => void;
     confirmText?: string;
     cancelText?: string;
-  }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    emoji: '',
+    onConfirm: () => {},
+  });
 
-  const showConfirm = (title: string, message: string, emoji: string, onConfirm: () => void, confirmText = 'OK', cancelText = 'Cancel', onCancel?: () => void) => {
+  const showConfirm = (
+    title: string,
+    message: string,
+    emoji: string,
+    onConfirm: () => void,
+    confirmText = 'OK',
+    cancelText = 'Cancel',
+    onCancel?: () => void
+  ) => {
     setConfirmModal({
       visible: true,
       title,
       message,
       emoji,
       onConfirm: () => {
-        setConfirmModal(prev => ({ ...prev, visible: false }));
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
         onConfirm();
       },
-      onCancel: onCancel ? () => {
-        setConfirmModal(prev => ({ ...prev, visible: false }));
-        onCancel();
-      } : () => setConfirmModal(prev => ({ ...prev, visible: false })),
+      onCancel: onCancel
+        ? () => {
+            setConfirmModal((prev) => ({ ...prev, visible: false }));
+            onCancel();
+          }
+        : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
       confirmText,
-      cancelText: onCancel ? cancelText : undefined
+      cancelText: onCancel ? cancelText : undefined,
     });
   };
 
@@ -85,13 +136,13 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         'Cancel',
         () => {}
       );
-    } else if (joker.name === 'Glitch in the Matrix') {
+    } else if (joker.id === JOKER_IDS.GLITCH_IN_THE_MATRIX) {
       // Show joker selector modal for duplication
       setShowJokerSelector(true);
-    } else if (joker.name === 'Master of Trade') {
+    } else if (joker.id === JOKER_IDS.MASTER_OF_TRADE) {
       // Show candy conversion modal - step 1 (select source)
       setShowConversionStep1(true);
-    } else if (joker.name === 'Temporary Emperor') {
+    } else if (joker.id === JOKER_IDS.TEMPORARY_EMPEROR) {
       // Show confirmation for time skip with auto profits
       showConfirm(
         'Temporary Emperor',
@@ -102,7 +153,7 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         'Cancel',
         () => {}
       );
-    } else if (joker.name === 'Market Crash') {
+    } else if (joker.id === JOKER_IDS.MARKET_CRASH) {
       // Show confirmation for market crash
       showConfirm(
         'Market Crash',
@@ -113,13 +164,13 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         'Cancel',
         () => {}
       );
-    } else if (joker.name === 'Market Manipulation') {
+    } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
       // Show candy selector modal for market manipulation
       setShowCandySelector(true);
-    } else if (joker.name === 'The Big Short') {
+    } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
       // Show candy selector modal for big short
       setShowCandySelector(true);
-    } else if (joker.name === 'Roman Coin') {
+    } else if (joker.id === JOKER_IDS.ROMAN_COIN) {
       // Show confirmation for Roman Coin activation
       showConfirm(
         'Roman Coin',
@@ -134,26 +185,33 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
   };
 
   const handleCandySelection = async (candyType: string) => {
-    if (joker.name === 'Market Manipulation') {
+    if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
       // Handle Market Manipulation: set chosen candy to highest price
       const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
-      
+
       // Get all current candy prices for this period
       const allPrices: Record<string, number> = {};
-      const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
-      CANDY_TYPES.forEach(candy => {
+      const CANDY_TYPES = [
+        'Bubble Gum',
+        'M&Ms',
+        'Skittles',
+        'Snickers',
+        'Sour Patch Kids',
+        'Warheads',
+      ];
+      CANDY_TYPES.forEach((candy) => {
         allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
       });
-      
+
       // Find the highest price
       const highestPrice = Math.max(...Object.values(allPrices));
-      
+
       // Set the chosen candy to the highest price
       modifyCandyPrice(candyType, periodCount, highestPrice);
-      
+
       // Activate the joker (this will remove it from inventory)
       const success = await activateJoker(joker.id, candyType, periodCount);
-      
+
       if (success) {
         showAlert(
           'Market Manipulation Activated!',
@@ -161,26 +219,33 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
           '📈'
         );
       }
-    } else if (joker.name === 'The Big Short') {
+    } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
       // Handle The Big Short: set chosen candy to lowest price
       const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
-      
+
       // Get all current candy prices for this period
       const allPrices: Record<string, number> = {};
-      const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
-      CANDY_TYPES.forEach(candy => {
+      const CANDY_TYPES = [
+        'Bubble Gum',
+        'M&Ms',
+        'Skittles',
+        'Snickers',
+        'Sour Patch Kids',
+        'Warheads',
+      ];
+      CANDY_TYPES.forEach((candy) => {
         allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
       });
-      
+
       // Find the lowest price
       const lowestPrice = Math.min(...Object.values(allPrices));
-      
+
       // Set the chosen candy to the lowest price
       modifyCandyPrice(candyType, periodCount, lowestPrice);
-      
+
       // Activate the joker (this will remove it from inventory)
       const success = await activateJoker(joker.id, candyType, periodCount);
-      
+
       if (success) {
         showAlert(
           'The Big Short Activated!',
@@ -192,13 +257,13 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
       // Handle other price-doubling effects
       const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
       const doubledPrice = originalPrice * 2;
-      
+
       // Modify the actual game data for this period
       modifyCandyPrice(candyType, periodCount, doubledPrice);
-      
+
       // Activate the joker (this will remove it from inventory)
       const success = await activateJoker(joker.id, candyType, periodCount);
-      
+
       if (success) {
         showAlert(
           'Joker Activated!',
@@ -240,10 +305,10 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
 
     // Add the duplicated joker
     addJoker(duplicatedJoker);
-    
+
     // Remove the Glitch in the Matrix joker (it's one-time use)
     const success = await activateJoker(joker.id);
-    
+
     if (success) {
       showAlert(
         'Glitch Activated!',
@@ -251,12 +316,14 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         '🔄'
       );
     }
-    
+
     setShowJokerSelector(false);
   };
 
   // Get available jokers for duplication (exclude the Glitch in the Matrix card itself)
-  const availableJokersForDuplication = jokers.filter(j => j.name !== 'Glitch in the Matrix');
+  const availableJokersForDuplication = jokers.filter(
+    (j) => j.name !== 'Glitch in the Matrix'
+  );
 
   const handleSourceCandySelection = (candyType: string) => {
     setSelectedSourceCandy(candyType);
@@ -275,22 +342,36 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
 
     const currentTotal = getTotalInventoryCount();
     const inventoryLimit = getInventoryLimit();
-    console.log(`Master of Trade: Current inventory: ${currentTotal}/${inventoryLimit}`);
-    console.log(`Master of Trade: Converting ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`);
+    console.log(
+      `Master of Trade: Current inventory: ${currentTotal}/${inventoryLimit}`
+    );
+    console.log(
+      `Master of Trade: Converting ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`
+    );
 
     // Get current target candy price for conversion
-    const targetPrice = gameData.candyPrices[targetCandyType]?.[periodCount] || 0;
-    console.log(`Master of Trade: Target price for ${targetCandyType}: ${targetPrice}`);
-    
+    const targetPrice =
+      gameData.candyPrices[targetCandyType]?.[periodCount] || 0;
+    console.log(
+      `Master of Trade: Target price for ${targetCandyType}: ${targetPrice}`
+    );
+
     // Use the dedicated convertCandyType function (bypasses inventory limits for 1:1 conversion)
-    const conversionSuccess = convertCandyType(selectedSourceCandy, sourceInventoryItem.quantity, targetCandyType, targetPrice);
-    
+    const conversionSuccess = convertCandyType(
+      selectedSourceCandy,
+      sourceInventoryItem.quantity,
+      targetCandyType,
+      targetPrice
+    );
+
     if (!conversionSuccess) {
       showAlert('Error', 'Failed to convert candy!', '❌');
       return;
     }
-    
-    console.log(`Master of Trade: Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`);
+
+    console.log(
+      `Master of Trade: Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`
+    );
 
     // Remove the Master of Trade joker (it's one-time use)
     await activateJoker(joker.id);
@@ -308,12 +389,12 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
 
   // Get available inventory candies for conversion
   const availableCandiesForConversion = Object.keys(inventory).filter(
-    candyType => inventory[candyType].quantity > 0
+    (candyType) => inventory[candyType].quantity > 0
   );
 
   // Get target candies (exclude the selected source)
   const availableTargetCandies = CANDY_TYPES.filter(
-    candyType => candyType !== selectedSourceCandy
+    (candyType) => candyType !== selectedSourceCandy
   );
 
   const handleTemporaryEmperor = async () => {
@@ -343,7 +424,7 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
     await activateJoker(joker.id);
 
     showAlert(
-      'Emperor\'s Decree Executed!',
+      "Emperor's Decree Executed!",
       `Time has been advanced by 2 periods (skipped period ${skippedPeriod}).\n\nAuto-profit from selling 3 of each candy:\n${profitBreakdown.join('\n')}\n\nTotal gained: $${totalProfit.toFixed(2)}`,
       '👑'
     );
@@ -362,12 +443,12 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
 
   const handleRomanCoin = async () => {
     console.log('🪙 Roman Coin: Starting activation');
-    
+
     try {
       // Add $200 to wallet
       console.log('🪙 Roman Coin: Adding $200 to wallet');
       addMoney(200);
-      
+
       // Remove the joker (it's one-time use)
       console.log('🪙 Roman Coin: Activating joker with ID:', joker.id);
       const success = await activateJoker(joker.id);
@@ -382,11 +463,7 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         );
       } else {
         console.log('🪙 Roman Coin: Activation failed, showing error');
-        showAlert(
-          'Error',
-          'Failed to activate Roman Coin joker',
-          '❌'
-        );
+        showAlert('Error', 'Failed to activate Roman Coin joker', '❌');
       }
     } catch (error) {
       console.error('🪙 Roman Coin: Error during activation:', error);
@@ -407,94 +484,73 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
   }, [joker.type, isAfterSchool]);
 
   const typeText = useMemo(() => {
-    return joker.type === 'persistent' ? '🔄 PERSISTENT' : '⚡ ONE-TIME';
+    return joker.type === 'persistent' ? ' 🔄' : ' ⚡';
   }, [joker.type]);
 
-  // Memoize component styles to prevent recreation on every render
-  const cardStyles = useMemo(() => [
-    styles.jokerCard,
-    isCompact && styles.jokerCardCompact,
-    isAfterSchool && styles.jokerCardAfterSchool,
-    isDragging && styles.jokerCardDragging
-  ], [isCompact, isAfterSchool, isDragging]);
-
   const CardWrapper = onLongPress ? TouchableOpacity : View;
-  const cardWrapperProps = onLongPress ? { onLongPress, activeOpacity: 0.8 } : {};
+  const cardWrapperProps = onLongPress
+    ? { onLongPress, activeOpacity: 0.8 }
+    : {};
 
   return (
-    <CardWrapper 
-      style={cardStyles}
-      {...cardWrapperProps}
-    >
-      <View style={[styles.jokerHeader, isCompact && styles.jokerHeaderCompact]}>
-        <View style={styles.jokerTitleRow}>
-          <View style={styles.jokerTitleLeft}>
-            <Text style={[
-              styles.jokerName,
-              isCompact && styles.jokerNameCompact,
-              isAfterSchool && styles.jokerNameAfterSchool
-            ]}>{joker.name}</Text>
-            <Text style={[
-              styles.jokerSubject,
-              isCompact && styles.jokerSubjectCompact,
-              isAfterSchool && styles.jokerSubjectAfterSchool
-            ]}>{joker.subject}</Text>
-          </View>
-          <Text style={[
-            styles.jokerType,
-            isCompact && styles.jokerTypeCompact,
-            { color: typeColor }
-          ]}>{typeText}</Text>
+    <>
+      <View style={styles.jokerCard}>
+        <View style={styles.cardContainer}>
+          <CardWrapper style={styles.cardContent} {...cardWrapperProps}>
+            <View style={styles.jokerHeader}>
+              <View style={styles.jokerTitleRow}>
+                <View style={styles.jokerTitleLeft}>
+                  <Text
+                    style={styles.jokerName}
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {joker.name}
+                  </Text>
+                </View>
+                <View style={styles.jokerTypeContainer}>
+                  {showOwned && <Text style={styles.ownedIndicator}>✓</Text>}
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.descriptionContainer}>
+              <Text
+                style={styles.jokerDescription}
+                numberOfLines={4}
+                ellipsizeMode="tail"
+              >
+                {joker.description}{' '}
+                <Text style={[styles.typeIndicatorText, { color: typeColor }]}>
+                  {typeText}
+                </Text>
+              </Text>
+
+              <View style={styles.separator} />
+              <Text
+                style={styles.jokerFlavorText}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                {joker.flavorText}
+              </Text>
+            </View>
+
+            <View style={styles.bottomRow}>
+              {joker.type === 'one-time' && !disableActivation ? (
+                <TouchableOpacity
+                  style={styles.activateButton}
+                  onPress={handleActivate}
+                >
+                  <Text style={styles.activateButtonText}>ACTIVATE</Text>
+                </TouchableOpacity>
+              ) : (
+                <View />
+              )}
+            </View>
+          </CardWrapper>
         </View>
       </View>
-      
-      <Text style={[
-        styles.jokerDescription,
-        isCompact && styles.jokerDescriptionCompact,
-        isAfterSchool && styles.jokerDescriptionAfterSchool
-      ]}>{joker.description}</Text>
-
-      {joker.type === 'one-time' && !isCompact && (
-        <TouchableOpacity 
-          style={[
-            styles.activateButton,
-            isAfterSchool && styles.activateButtonAfterSchool
-          ]}
-          onPress={handleActivate}
-        >
-          <Text style={[
-            styles.activateButtonText,
-            isAfterSchool && styles.activateButtonTextAfterSchool
-          ]}>🎯 ACTIVATE</Text>
-        </TouchableOpacity>
-      )}
-
-      {joker.type === 'one-time' && isCompact && (
-        <TouchableOpacity 
-          style={[
-            styles.activateButtonCompact,
-            isAfterSchool && styles.activateButtonCompactAfterSchool
-          ]}
-          onPress={handleActivate}
-        >
-          <Text style={[
-            styles.activateButtonTextCompact,
-            isAfterSchool && styles.activateButtonTextCompactAfterSchool
-          ]}>ACTIVATE</Text>
-        </TouchableOpacity>
-      )}
-
-      {joker.type === 'persistent' && !isCompact && (
-        <View style={[
-          styles.persistentIndicator,
-          isAfterSchool && styles.persistentIndicatorAfterSchool
-        ]}>
-          <Text style={[
-            styles.persistentText,
-            isAfterSchool && styles.persistentTextAfterSchool
-          ]}>✨ EFFECT ACTIVE</Text>
-        </View>
-      )}
 
       {/* Candy Selector Modal */}
       <Modal
@@ -503,46 +559,30 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            isAfterSchool && styles.modalContentAfterSchool
-          ]}>
-            <Text style={[
-              styles.modalTitle,
-              isAfterSchool && styles.modalTitleAfterSchool
-            ]}>
-              {joker.name === 'Market Manipulation' ? '📈 Choose Candy to Manipulate' : 
-               joker.name === 'The Big Short' ? '📉 Choose Candy to Short' : 
-               '🍭 Choose Candy to Double'}
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {joker.id === JOKER_IDS.MARKET_MANIPULATION
+                ? '📈 Choose Candy to Manipulate'
+                : joker.id === JOKER_IDS.THE_BIG_SHORT
+                  ? '📉 Choose Candy to Short'
+                  : '🍭 Choose Candy to Double'}
             </Text>
-            
+
             {CANDY_TYPES.map((candyType) => (
               <TouchableOpacity
                 key={candyType}
-                style={[
-                  styles.candyOption,
-                  isAfterSchool && styles.candyOptionAfterSchool
-                ]}
+                style={styles.candyOption}
                 onPress={() => handleCandySelection(candyType)}
               >
-                <Text style={[
-                  styles.candyOptionText,
-                  isAfterSchool && styles.candyOptionTextAfterSchool
-                ]}>{candyType}</Text>
+                <Text style={styles.candyOptionText}>{candyType}</Text>
               </TouchableOpacity>
             ))}
-            
+
             <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                isAfterSchool && styles.cancelButtonAfterSchool
-              ]}
+              style={styles.cancelButton}
               onPress={() => setShowCandySelector(false)}
             >
-              <Text style={[
-                styles.cancelButtonText,
-                isAfterSchool && styles.cancelButtonTextAfterSchool
-              ]}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -555,72 +595,70 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            styles.jokerModalContent,
-            isAfterSchool && styles.modalContentAfterSchool
-          ]}>
-            <Text style={[
-              styles.modalTitle,
-              isAfterSchool && styles.modalTitleAfterSchool
-            ]}>🔄 Choose Joker to Copy</Text>
-            
-            <ScrollView style={styles.jokerScrollView} showsVerticalScrollIndicator={false}>
+          <View
+            style={[
+              styles.modalContent,
+              styles.jokerModalContent,
+              isAfterSchool && styles.modalContentAfterSchool,
+            ]}
+          >
+            <Text style={styles.modalTitle}>🔄 Choose Joker to Copy</Text>
+
+            <ScrollView
+              style={styles.jokerScrollView}
+              showsVerticalScrollIndicator={false}
+            >
               {availableJokersForDuplication.length > 0 ? (
                 availableJokersForDuplication.map((availableJoker) => (
                   <TouchableOpacity
                     key={availableJoker.id}
-                    style={[
-                      styles.jokerOption,
-                      isAfterSchool && styles.jokerOptionAfterSchool
-                    ]}
+                    style={styles.jokerOption}
                     onPress={() => handleJokerSelection(availableJoker)}
                   >
                     <View style={styles.jokerOptionHeader}>
-                      <Text style={[
-                        styles.jokerOptionName,
-                        isAfterSchool && styles.jokerOptionNameAfterSchool
-                      ]}>{availableJoker.name}</Text>
-                      <Text style={[
-                        styles.jokerOptionType,
-                        { color: availableJoker.type === 'persistent' 
-                          ? (isAfterSchool ? '#8a7ca8' : '#4ade80')
-                          : (isAfterSchool ? '#f87171' : '#fb7185') }
-                      ]}>
+                      <Text style={styles.jokerOptionName}>
+                        {availableJoker.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.jokerOptionType,
+                          {
+                            color:
+                              availableJoker.type === 'persistent'
+                                ? isAfterSchool
+                                  ? '#8a7ca8'
+                                  : '#4ade80'
+                                : isAfterSchool
+                                  ? '#f87171'
+                                  : '#fb7185',
+                          },
+                        ]}
+                      >
                         {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
                       </Text>
                     </View>
-                    <Text style={[
-                      styles.jokerOptionDescription,
-                      isAfterSchool && styles.jokerOptionDescriptionAfterSchool
-                    ]}>{availableJoker.description}</Text>
+                    <Text style={styles.jokerOptionDescription}>
+                      {availableJoker.description}
+                    </Text>
                   </TouchableOpacity>
                 ))
               ) : (
                 <View style={styles.noJokersContainer}>
-                  <Text style={[
-                    styles.noJokersText,
-                    isAfterSchool && styles.noJokersTextAfterSchool
-                  ]}>No other jokers to copy!</Text>
-                  <Text style={[
-                    styles.noJokersSubtext,
-                    isAfterSchool && styles.noJokersSubtextAfterSchool
-                  ]}>Study to earn more jokers first</Text>
+                  <Text style={styles.noJokersText}>
+                    No other jokers to copy!
+                  </Text>
+                  <Text style={styles.noJokersSubtext}>
+                    Study to earn more jokers first
+                  </Text>
                 </View>
               )}
             </ScrollView>
-            
+
             <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                isAfterSchool && styles.cancelButtonAfterSchool
-              ]}
+              style={styles.cancelButton}
               onPress={() => setShowJokerSelector(false)}
             >
-              <Text style={[
-                styles.cancelButtonText,
-                isAfterSchool && styles.cancelButtonTextAfterSchool
-              ]}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -633,68 +671,62 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            styles.jokerModalContent,
-            isAfterSchool && styles.modalContentAfterSchool
-          ]}>
-            <Text style={[
-              styles.modalTitle,
-              isAfterSchool && styles.modalTitleAfterSchool
-            ]}>🍭 Select Candy to Convert</Text>
-            
-            <ScrollView style={styles.jokerScrollView} showsVerticalScrollIndicator={false}>
+          <View
+            style={[
+              styles.modalContent,
+              styles.jokerModalContent,
+              isAfterSchool && styles.modalContentAfterSchool,
+            ]}
+          >
+            <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
+
+            <ScrollView
+              style={styles.jokerScrollView}
+              showsVerticalScrollIndicator={false}
+            >
               {availableCandiesForConversion.length > 0 ? (
                 availableCandiesForConversion.map((candyType) => (
                   <TouchableOpacity
                     key={candyType}
                     style={[
                       styles.candyOption,
-                      isAfterSchool && styles.candyOptionAfterSchool
+                      isAfterSchool && styles.candyOptionAfterSchool,
                     ]}
                     onPress={() => handleSourceCandySelection(candyType)}
                   >
                     <View style={styles.candyOptionHeader}>
-                      <Text style={[
-                        styles.candyOptionText,
-                        isAfterSchool && styles.candyOptionTextAfterSchool
-                      ]}>{candyType}</Text>
-                      <Text style={[
-                        styles.candyQuantity,
-                        isAfterSchool && styles.candyQuantityAfterSchool
-                      ]}>×{inventory[candyType].quantity}</Text>
+                      <Text
+                        style={[
+                          styles.candyOptionText,
+                          isAfterSchool && styles.candyOptionTextAfterSchool,
+                        ]}
+                      >
+                        {candyType}
+                      </Text>
+                      <Text style={styles.candyQuantity}>
+                        ×{inventory[candyType].quantity}
+                      </Text>
                     </View>
-                    <Text style={[
-                      styles.candyAvgPrice,
-                      isAfterSchool && styles.candyAvgPriceAfterSchool
-                    ]}>Avg: ${inventory[candyType].averagePrice.toFixed(2)}</Text>
+                    <Text style={styles.candyAvgPrice}>
+                      Avg: ${inventory[candyType].averagePrice.toFixed(2)}
+                    </Text>
                   </TouchableOpacity>
                 ))
               ) : (
                 <View style={styles.noJokersContainer}>
-                  <Text style={[
-                    styles.noJokersText,
-                    isAfterSchool && styles.noJokersTextAfterSchool
-                  ]}>No candy to convert!</Text>
-                  <Text style={[
-                    styles.noJokersSubtext,
-                    isAfterSchool && styles.noJokersSubtextAfterSchool
-                  ]}>Buy some candy first</Text>
+                  <Text style={styles.noJokersText}>No candy to convert!</Text>
+                  <Text style={styles.noJokersSubtext}>
+                    Buy some candy first
+                  </Text>
                 </View>
               )}
             </ScrollView>
-            
+
             <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                isAfterSchool && styles.cancelButtonAfterSchool
-              ]}
+              style={styles.cancelButton}
               onPress={() => setShowConversionStep1(false)}
             >
-              <Text style={[
-                styles.cancelButtonText,
-                isAfterSchool && styles.cancelButtonTextAfterSchool
-              ]}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -707,58 +739,40 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         animationType="slide"
       >
         <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            isAfterSchool && styles.modalContentAfterSchool
-          ]}>
-            <Text style={[
-              styles.modalTitle,
-              isAfterSchool && styles.modalTitleAfterSchool
-            ]}>🔄 Convert to Which Candy?</Text>
-            
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🔄 Convert to Which Candy?</Text>
+
             {selectedSourceCandy && (
-              <Text style={[
-                styles.conversionSummary,
-                isAfterSchool && styles.conversionSummaryAfterSchool
-              ]}>
-                Converting: {inventory[selectedSourceCandy].quantity} {selectedSourceCandy}
+              <Text style={styles.conversionSummary}>
+                Converting: {inventory[selectedSourceCandy].quantity}{' '}
+                {selectedSourceCandy}
               </Text>
             )}
-            
+
             {availableTargetCandies.map((candyType) => (
               <TouchableOpacity
                 key={candyType}
-                style={[
-                  styles.candyOption,
-                  isAfterSchool && styles.candyOptionAfterSchool
-                ]}
+                style={styles.candyOption}
                 onPress={() => handleTargetCandySelection(candyType)}
               >
-                <Text style={[
-                  styles.candyOptionText,
-                  isAfterSchool && styles.candyOptionTextAfterSchool
-                ]}>{candyType}</Text>
-                <Text style={[
-                  styles.targetPrice,
-                  isAfterSchool && styles.targetPriceAfterSchool
-                ]}>Current Price: ${(gameData.candyPrices[candyType]?.[periodCount] || 0).toFixed(2)}</Text>
+                <Text style={styles.candyOptionText}>{candyType}</Text>
+                <Text style={styles.targetPrice}>
+                  Current Price: $
+                  {(
+                    gameData.candyPrices[candyType]?.[periodCount] || 0
+                  ).toFixed(2)}
+                </Text>
               </TouchableOpacity>
             ))}
-            
+
             <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                isAfterSchool && styles.cancelButtonAfterSchool
-              ]}
+              style={styles.cancelButton}
               onPress={() => {
                 setShowConversionStep2(false);
                 setSelectedSourceCandy(null);
               }}
             >
-              <Text style={[
-                styles.cancelButtonText,
-                isAfterSchool && styles.cancelButtonTextAfterSchool
-              ]}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -773,50 +787,50 @@ function JokerCard({ joker, isAfterSchool, onLongPress, isDragging, isCompact }:
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
         onConfirm={confirmModal.onConfirm}
-        onCancel={confirmModal.onCancel || (() => setConfirmModal(prev => ({ ...prev, visible: false })))}
+        onCancel={
+          confirmModal.onCancel ||
+          (() => setConfirmModal((prev) => ({ ...prev, visible: false })))
+        }
         theme="market"
       />
-    </CardWrapper>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   jokerCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#d4a574',
-    shadowColor: '#8b4513',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    borderRadius: 15,
+    marginTop: 6,
+    borderColor: '#6b4423',
+    borderWidth: 3,
+    elevation: 13,
+    flex: 1,
+    height: 180,
   },
-  jokerCardCompact: {
-    padding: 12,
-    marginBottom: 8,
+  cardContainer: {
     borderRadius: 12,
+    backgroundColor: '#fefaf5',
+    flex: 1,
   },
-  jokerCardAfterSchool: {
-    backgroundColor: 'rgba(93, 76, 112, 0.85)',
-    borderColor: '#8a7ca8',
-    shadowColor: '#2d1b3d',
-    shadowOpacity: 0.15,
-  },
-  jokerCardDragging: {
-    opacity: 0.7,
-    transform: [{ scale: 1.05 }],
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  cardContent: {
+    paddingLeft: 8,
+    paddingRight: 8,
+    paddingBottom: 4,
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
   },
   jokerHeader: {
-    marginBottom: 12,
-  },
-  jokerHeaderCompact: {
-    marginBottom: 8,
+    // marginBottom: 4,
+    paddingTop: 2,
+    paddingBottom: 2,
+    marginLeft: -8,
+    marginRight: -8,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomWidth: 1,
+    backgroundColor: '#6b4423',
+    borderBottomColor: 'rgba(212, 165, 116, 0.2)',
   },
   jokerTitleRow: {
     flexDirection: 'row',
@@ -825,127 +839,124 @@ const styles = StyleSheet.create({
   },
   jokerTitleLeft: {
     flex: 1,
-    marginRight: 8,
+    marginLeft: 8,
   },
   jokerName: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#6b4423',
+    color: 'white',
     fontFamily: 'CrayonPastel',
     marginBottom: 2,
-  },
-  jokerNameCompact: {
-    fontSize: 16,
-  },
-  jokerNameAfterSchool: {
-    color: '#f7e98e',
-    textShadowColor: 'rgba(247,233,142,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    lineHeight: 16,
   },
   jokerType: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 9,
+    fontWeight: '700',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
     fontFamily: 'CrayonPastel',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(107, 68, 35, 0.3)',
   },
-  jokerTypeCompact: {
-    fontSize: 9,
+  jokerTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  jokerSubject: {
-    fontSize: 11,
-    color: '#8b4513',
-    fontFamily: 'CrayonPastel',
-    opacity: 0.8,
+  ownedIndicator: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#22c55e',
+    backgroundColor: '#f0fdf4',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    borderWidth: 1,
+    borderColor: '#22c55e',
+    marginRight: 2,
   },
-  jokerSubjectCompact: {
-    fontSize: 10,
-  },
-  jokerSubjectAfterSchool: {
-    color: '#b8a9c9',
+
+  descriptionContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    minHeight: 120,
   },
   jokerDescription: {
     fontSize: 14,
     color: '#5d4037',
-    lineHeight: 20,
+    lineHeight: 18,
     fontFamily: 'CrayonPastel',
-    marginBottom: 12,
+    fontWeight: '600',
+    marginTop: 4,
+    maxHeight: 72,
+    flex: 0,
   },
-  jokerDescriptionCompact: {
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(212, 165, 116, 0.3)',
+    marginVertical: 4,
+  },
+  jokerFlavorText: {
     fontSize: 12,
+    color: '#8b4513',
     lineHeight: 16,
-    marginBottom: 8,
-  },
-  jokerDescriptionAfterSchool: {
-    color: '#b8a9c9',
+    fontFamily: 'CrayonPastel',
+    fontStyle: 'italic',
+    opacity: 0.9,
+    marginBottom: 0,
+    height: 48,
+    flex: 0,
+    textAlignVertical: 'top',
   },
   activateButton: {
     backgroundColor: '#4ade80',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
     borderColor: '#22c55e',
-  },
-  activateButtonAfterSchool: {
-    backgroundColor: '#8a7ca8',
-    borderColor: '#6d5985',
+    marginTop: 4,
   },
   activateButtonText: {
     color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: 'CrayonPastel',
+    textTransform: 'uppercase',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  typeIndicator: {
+    alignSelf: 'flex-end',
+  },
+  typeIndicatorText: {
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'CrayonPastel',
   },
-  activateButtonTextAfterSchool: {
-    color: '#f7e98e',
-  },
-  activateButtonCompact: {
-    backgroundColor: '#4ade80',
+  persistentIndicator: {
+    backgroundColor: '#f0fdf4',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: '#22c55e',
-  },
-  activateButtonCompactAfterSchool: {
-    backgroundColor: '#8a7ca8',
-    borderColor: '#6d5985',
-  },
-  activateButtonTextCompact: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'CrayonPastel',
-  },
-  activateButtonTextCompactAfterSchool: {
-    color: '#f7e98e',
-  },
-  persistentIndicator: {
-    backgroundColor: '#f0fdf4',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
     borderColor: '#4ade80',
-  },
-  persistentIndicatorAfterSchool: {
-    backgroundColor: 'rgba(138, 124, 168, 0.2)',
-    borderColor: '#8a7ca8',
   },
   persistentText: {
     color: '#22c55e',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     fontFamily: 'CrayonPastel',
-  },
-  persistentTextAfterSchool: {
-    color: '#b8a9c9',
   },
   modalOverlay: {
     flex: 1,
@@ -961,9 +972,6 @@ const styles = StyleSheet.create({
     maxWidth: 300,
     width: '80%',
   },
-  modalContentAfterSchool: {
-    backgroundColor: '#2a1845',
-  },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -971,9 +979,6 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
     marginBottom: 20,
-  },
-  modalTitleAfterSchool: {
-    color: '#f7e98e',
   },
   candyOption: {
     backgroundColor: '#f5e6d3',
@@ -984,19 +989,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d4a574',
   },
-  candyOptionAfterSchool: {
-    backgroundColor: 'rgba(184, 169, 201, 0.2)',
-    borderColor: '#8a7ca8',
-  },
   candyOptionText: {
     color: '#6b4423',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
-  },
-  candyOptionTextAfterSchool: {
-    color: '#b8a9c9',
   },
   cancelButton: {
     backgroundColor: '#f87171',
@@ -1005,18 +1003,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 8,
   },
-  cancelButtonAfterSchool: {
-    backgroundColor: '#8b5cf6',
-  },
   cancelButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
-  },
-  cancelButtonTextAfterSchool: {
-    color: '#f7e98e',
   },
   jokerModalContent: {
     maxHeight: '80%',
@@ -1034,10 +1026,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d4a574',
   },
-  jokerOptionAfterSchool: {
-    backgroundColor: 'rgba(184, 169, 201, 0.2)',
-    borderColor: '#8a7ca8',
-  },
   jokerOptionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1051,9 +1039,6 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     flex: 1,
   },
-  jokerOptionNameAfterSchool: {
-    color: '#b8a9c9',
-  },
   jokerOptionType: {
     fontSize: 16,
     fontWeight: '600',
@@ -1063,9 +1048,6 @@ const styles = StyleSheet.create({
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
     lineHeight: 18,
-  },
-  jokerOptionDescriptionAfterSchool: {
-    color: '#b8a9c9',
   },
   noJokersContainer: {
     alignItems: 'center',
@@ -1079,17 +1061,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  noJokersTextAfterSchool: {
-    color: '#f7e98e',
-  },
   noJokersSubtext: {
     fontSize: 14,
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
-  },
-  noJokersSubtextAfterSchool: {
-    color: '#b8a9c9',
   },
   candyOptionHeader: {
     flexDirection: 'row',
@@ -1103,17 +1079,11 @@ const styles = StyleSheet.create({
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
   },
-  candyQuantityAfterSchool: {
-    color: '#b8a9c9',
-  },
   candyAvgPrice: {
     fontSize: 12,
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
     opacity: 0.8,
-  },
-  candyAvgPriceAfterSchool: {
-    color: '#b8a9c9',
   },
   conversionSummary: {
     fontSize: 16,
@@ -1126,19 +1096,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5e6d3',
     borderRadius: 8,
   },
-  conversionSummaryAfterSchool: {
-    color: '#b8a9c9',
-    backgroundColor: 'rgba(184, 169, 201, 0.2)',
-  },
   targetPrice: {
     fontSize: 12,
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
     opacity: 0.8,
     marginTop: 2,
-  },
-  targetPriceAfterSchool: {
-    color: '#b8a9c9',
   },
 });
 

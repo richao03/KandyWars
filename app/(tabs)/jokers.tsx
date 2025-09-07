@@ -1,171 +1,308 @@
-import React, { useState, useMemo, memo } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
-import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
-import JokerCard from '../components/JokerCard';
-import GameHUD from '../components/GameHUD';
+import React, { memo, useMemo, useState } from 'react';
+import {
+  FlatList,
+  SectionList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import DraggableFlatList, {
+  RenderItemParams,
+} from 'react-native-draggable-flatlist';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
+import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
+import GameHUD from '../components/GameHUD';
+import JokerCard from '../components/JokerCard';
 
 function JokersPage() {
-  const { isAfterSchool, day } = useGame();
-  const { jokers, reorderJokers } = useJokers();
-  const [activeTab, setActiveTab] = useState<'persistent' | 'one-time'>('persistent');
-  
-  
-  // Separate jokers by their effect duration (not type)
-  // A joker is "persistent" if it has at least one persistent effect
-  const persistentJokers = useMemo(() => {
-    const persistent = jokers.filter(j => {
-      // Check if this joker should be treated as persistent
-      // This could be based on a type field, or we can infer from name/effect
-      return j.type === 'persistent' || !j.type?.includes('one-time');
-    });
-    return persistent;
-  }, [jokers]);
-  
-  const oneTimeJokers = useMemo(() => {
-    const oneTime = jokers.filter(j => {
-      return j.type === 'one-time';
-    });
-    return oneTime;
-  }, [jokers]);
-  
-  const currentJokers = activeTab === 'persistent' ? persistentJokers : oneTimeJokers;
-  
-  // Memoize styles to prevent recreation on every render
-  const containerStyles = useMemo(() => [
-    styles.container,
-    isAfterSchool && styles.containerAfterSchool
-  ], [isAfterSchool]);
-
-  const headerStyles = useMemo(() => [
-    styles.header,
-    isAfterSchool && styles.headerAfterSchool
-  ], [isAfterSchool]);
-
-  const titleStyles = useMemo(() => [
-    styles.title,
-    isAfterSchool && styles.titleAfterSchool
-  ], [isAfterSchool]);
-  
-  const renderJoker = ({ item, drag, isActive }: RenderItemParams<any>) => (
-    <JokerCard 
-      joker={item} 
-      isAfterSchool={isAfterSchool}
-      onLongPress={drag}
-      isDragging={isActive}
-      isCompact={true}
-    />
+  const gameContext = useGame();
+  const jokerContext = useJokers();
+  const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
+    'inventory'
   );
-  
+  // Remove selectedSubject state - we'll show all subjects as sections
+
+  // If contexts are not available, show loading or initialization message
+  if (!gameContext || !jokerContext) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading game data...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const { isAfterSchool, day } = gameContext;
+  const { jokers, reorderJokers } = jokerContext;
+
+  // Create sectioned data for browse tab with 2-column layout
+  const sectionedJokers = useMemo(() => {
+    const sections = [];
+    const subjects = Object.keys(ALL_JOKERS).sort();
+    
+    for (const subject of subjects) {
+      const subjectJokers = ALL_JOKERS[subject] || [];
+      if (subjectJokers.length > 0) {
+        // Group jokers into rows of 2 for proper 2-column layout
+        const jokersInRows = [];
+        for (let i = 0; i < subjectJokers.length; i += 2) {
+          const row = [subjectJokers[i]];
+          if (subjectJokers[i + 1]) {
+            row.push(subjectJokers[i + 1]);
+          }
+          jokersInRows.push(row);
+        }
+        
+        sections.push({
+          title: subject,
+          data: jokersInRows,
+        });
+      }
+    }
+    
+    return sections;
+  }, []);
+
+  // Get total count for browse tab
+  const allJokersCount = useMemo(() => {
+    return Object.values(ALL_JOKERS).flat().length;
+  }, []);
+
+  // Current user's jokers for "Inventory" tab
+  const inventoryJokers = useMemo(() => {
+    return jokers; // Keep current user's jokers as-is for inventory
+  }, [jokers]);
+
+  const currentJokers = inventoryJokers; // Only used for inventory tab
+
+  // Memoize styles to prevent recreation on every render
+  const containerStyles = useMemo(
+    () => [styles.container, isAfterSchool && styles.containerAfterSchool],
+    [isAfterSchool]
+  );
+
+  const headerStyles = useMemo(
+    () => [styles.header, isAfterSchool && styles.headerAfterSchool],
+    [isAfterSchool]
+  );
+
+  const titleStyles = useMemo(
+    () => [styles.title, isAfterSchool && styles.titleAfterSchool],
+    [isAfterSchool]
+  );
+
+  const renderInventoryJoker = ({
+    item,
+    drag,
+    isActive,
+  }: RenderItemParams<any>) => (
+    <View style={styles.jokerCardContainer}>
+      <JokerCard
+        joker={item}
+        isAfterSchool={isAfterSchool}
+        onLongPress={drag}
+        isDragging={isActive}
+        isCompact={true}
+      />
+    </View>
+  );
+
+  const renderSeeAllJoker = ({ item }: { item: any }) => (
+    <View style={styles.jokerCardContainer}>
+      <JokerCard
+        joker={item}
+        isAfterSchool={isAfterSchool}
+        isCompact={true}
+        showOwned={jokers.some((ownedJoker) => ownedJoker.id === item.id)}
+      />
+    </View>
+  );
+
+  const renderJokerRow = ({ item }: { item: any[] }) => (
+    <View style={styles.row}>
+      {item.map((joker) => (
+        <View key={joker.id} style={styles.jokerCardContainer}>
+          <JokerCard
+            joker={joker}
+            isAfterSchool={isAfterSchool}
+            isCompact={true}
+            showOwned={jokers.some((ownedJoker) => ownedJoker.id === joker.id)}
+            disableActivation={true}
+          />
+        </View>
+      ))}
+    </View>
+  );
+
   const handleReorder = (data: any[]) => {
-    // Merge reordered data with other type jokers
-    const otherJokers = activeTab === 'persistent' ? oneTimeJokers : persistentJokers;
-    const allJokers = activeTab === 'persistent' 
-      ? [...data, ...otherJokers]
-      : [...persistentJokers, ...data];
-    reorderJokers(allJokers);
+    // Only allow reordering in inventory tab
+    if (activeTab === 'inventory') {
+      reorderJokers(data);
+    }
   };
 
   return (
     <View style={containerStyles}>
-      <GameHUD 
-        theme={isAfterSchool ? "evening" : "school"}
-        customHeaderText={isAfterSchool ? `After School - Day ${day}` : `School - Day ${day}`}
+      <GameHUD
+        theme={isAfterSchool ? 'evening' : 'school'}
+        customHeaderText={
+          isAfterSchool ? `After School - Day ${day}` : `School - Day ${day}`
+        }
         customLocationText="Jokers Collection"
       />
-      
+
       <View style={headerStyles}>
         <View style={styles.headerTop}>
           <Text style={titleStyles}>🃏 Jokers</Text>
           <View style={styles.countBadge}>
-            <Text style={[
-              styles.countText,
-              isAfterSchool && styles.countTextAfterSchool
-            ]}>{jokers.length}</Text>
+            <Text
+              style={[
+                styles.countText,
+                isAfterSchool && styles.countTextAfterSchool,
+              ]}
+            >
+              {activeTab === 'inventory'
+                ? jokers.length
+                : allJokersCount}
+            </Text>
           </View>
         </View>
-        
-        <View style={[
-          styles.tabContainer,
-          isAfterSchool && styles.tabContainerAfterSchool
-        ]}>
-          <TouchableOpacity 
+
+        <View
+          style={[
+            styles.tabContainer,
+            isAfterSchool && styles.tabContainerAfterSchool,
+          ]}
+        >
+          <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'persistent' && styles.activeTab,
-              activeTab === 'persistent' && isAfterSchool && styles.activeTabAfterSchool
+              activeTab === 'inventory' && styles.activeTab,
+              activeTab === 'inventory' &&
+                isAfterSchool &&
+                styles.activeTabAfterSchool,
             ]}
-            onPress={() => setActiveTab('persistent')}
+            onPress={() => setActiveTab('inventory')}
           >
-            <Text style={[
-              styles.tabText,
-              activeTab === 'persistent' && styles.activeTabText,
-              isAfterSchool && styles.tabTextAfterSchool,
-              activeTab === 'persistent' && isAfterSchool && styles.activeTabTextAfterSchool
-            ]}>
-              🔄 Persistent ({persistentJokers.length})
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'inventory' && styles.activeTabText,
+                isAfterSchool && styles.tabTextAfterSchool,
+                activeTab === 'inventory' &&
+                  isAfterSchool &&
+                  styles.activeTabTextAfterSchool,
+              ]}
+            >
+              🎒 Mine ({jokers.length})
             </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
               styles.tab,
-              activeTab === 'one-time' && styles.activeTab,
-              activeTab === 'one-time' && isAfterSchool && styles.activeTabAfterSchool
+              activeTab === 'see-all' && styles.activeTab,
+              activeTab === 'see-all' &&
+                isAfterSchool &&
+                styles.activeTabAfterSchool,
             ]}
-            onPress={() => setActiveTab('one-time')}
+            onPress={() => setActiveTab('see-all')}
           >
-            <Text style={[
-              styles.tabText,
-              activeTab === 'one-time' && styles.activeTabText,
-              isAfterSchool && styles.tabTextAfterSchool,
-              activeTab === 'one-time' && isAfterSchool && styles.activeTabTextAfterSchool
-            ]}>
-              ⚡ One-Time ({oneTimeJokers.length})
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'see-all' && styles.activeTabText,
+                isAfterSchool && styles.tabTextAfterSchool,
+                activeTab === 'see-all' &&
+                  isAfterSchool &&
+                  styles.activeTabTextAfterSchool,
+              ]}
+            >
+              📖 All ({allJokersCount})
             </Text>
           </TouchableOpacity>
         </View>
+
       </View>
-      
-      {currentJokers.length > 0 ? (
-        <>
-          {currentJokers.length > 1 && (
-            <Text style={[
-              styles.dragHint,
-              isAfterSchool && styles.dragHintAfterSchool
-            ]}>Hold & drag cards to reorder</Text>
-          )}
-          <DraggableFlatList
-            data={currentJokers}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderJoker}
-            onDragEnd={({ data }) => handleReorder(data)}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
-        </>
+
+      {activeTab === 'inventory' ? (
+        currentJokers.length > 0 ? (
+          <>
+            {currentJokers.length > 1 && (
+              <Text
+                style={[
+                  styles.dragHint,
+                  isAfterSchool && styles.dragHintAfterSchool,
+                ]}
+              >
+                Hold & drag cards to reorder
+              </Text>
+            )}
+            <DraggableFlatList
+              data={currentJokers}
+              keyExtractor={(item) =>
+                item?.id?.toString() || Math.random().toString()
+              }
+              renderItem={renderInventoryJoker}
+              onDragEnd={({ data }) => handleReorder(data)}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+            />
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text
+              style={[
+                styles.emptyIcon,
+                isAfterSchool && styles.emptyIconAfterSchool,
+              ]}
+            >
+              🎒
+            </Text>
+            <Text
+              style={[
+                styles.emptyText,
+                isAfterSchool && styles.emptyTextAfterSchool,
+              ]}
+            >
+              No jokers in inventory
+            </Text>
+            <Text
+              style={[
+                styles.emptySubtext,
+                isAfterSchool && styles.emptySubtextAfterSchool,
+              ]}
+            >
+              Study different subjects to earn jokers!
+            </Text>
+          </View>
+        )
       ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={[
-            styles.emptyIcon,
-            isAfterSchool && styles.emptyIconAfterSchool
-          ]}>
-            {activeTab === 'persistent' ? '🔄' : '⚡'}
-          </Text>
-          <Text style={[
-            styles.emptyText,
-            isAfterSchool && styles.emptyTextAfterSchool
-          ]}>
-            No {activeTab} jokers yet
-          </Text>
-          <Text style={[
-            styles.emptySubtext,
-            isAfterSchool && styles.emptySubtextAfterSchool
-          ]}>
-            Study to earn {activeTab === 'persistent' ? 'permanent buffs' : 'powerful one-time abilities'}
-          </Text>
-        </View>
+        <SectionList
+          sections={sectionedJokers}
+          keyExtractor={(item, index) => `row-${index}`}
+          renderItem={renderJokerRow}
+          renderSectionHeader={({ section: { title } }) => (
+            <View style={[
+              styles.sectionHeader,
+              isAfterSchool && styles.sectionHeaderAfterSchool,
+            ]}>
+              <Text style={[
+                styles.sectionTitle,
+                isAfterSchool && styles.sectionTitleAfterSchool,
+              ]}>
+                {title}
+              </Text>
+            </View>
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </View>
   );
@@ -180,8 +317,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a1845',
   },
   header: {
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 4,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e6ccb3',
@@ -228,16 +365,16 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 6,
   },
   tabContainerAfterSchool: {
     borderTopColor: '#8a7ca8',
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 16,
     backgroundColor: '#f5e6d3',
     alignItems: 'center',
   },
@@ -248,7 +385,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#8a7ca8',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
@@ -275,8 +412,20 @@ const styles = StyleSheet.create({
     color: '#b8a9c9',
   },
   list: {
-    padding: 12,
+    padding: 16,
     paddingTop: 4,
+  },
+  row: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 8,
+  },
+  jokerCardContainer: {
+    width: 160, // Fixed width for consistent sizing
+    height: 180, // Fixed height to ensure all cards are the same size
+    marginBottom: 8,
+    marginRight: 8,
   },
   emptyContainer: {
     flex: 1,
@@ -313,6 +462,27 @@ const styles = StyleSheet.create({
   },
   emptySubtextAfterSchool: {
     color: '#b8a9c9',
+  },
+  sectionHeader: {
+    backgroundColor: '#f5e6d3',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e6ccb3',
+    marginTop: 0,
+  },
+  sectionHeaderAfterSchool: {
+    backgroundColor: 'rgba(138, 124, 168, 0.3)',
+    borderBottomColor: '#8a7ca8',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+  },
+  sectionTitleAfterSchool: {
+    color: '#f7e98e',
   },
 });
 

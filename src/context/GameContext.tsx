@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 import {
   clearAllGameData,
   loadGameState,
@@ -59,10 +60,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const [hasStudiedTonight, setHasStudiedTonight] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const { setEvent, setHint } = useFlavorText();
-  const { gameData } = useSeed();
-  const { jokers } = useJokers();
-  const { balance, stealMoney } = useWallet();
+  const flavorTextContext = useFlavorText();
+  const seedContext = useSeed();
+  const jokerContext = useJokers();
+  const walletContext = useWallet();
+
+  // Handle cases where contexts might not be available
+  const setEvent = flavorTextContext?.setEvent || (() => {});
+  const setHint = flavorTextContext?.setHint || (() => {});
+  const gameData = seedContext?.gameData || { periodEvents: [] };
+  const jokers = jokerContext?.jokers || [];
+  const balance = walletContext?.balance || 0;
+  const stealMoney = walletContext?.stealMoney || (() => {});
 
   // Memoize day and period calculations to prevent recalculation on every render
   const day = useMemo(
@@ -138,14 +147,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
 
   // Check for location-specific events
-  const currentEvent = gameData.periodEvents.find(
+  const currentEvent = gameData?.periodEvents?.find(
     (e) =>
       e.period === periodCount &&
       (!e.location || e.location === currentLocation)
   );
 
   // Track which events have been processed
-  const [processedEvents, setProcessedEvents] = useState<Set<number>>(new Set());
+  const [processedEvents, setProcessedEvents] = useState<Set<number>>(
+    new Set()
+  );
 
   // Process current event effects
   useEffect(() => {
@@ -153,12 +164,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       // Check if we've already processed this event at this period
       const eventKey = periodCount;
       if (processedEvents.has(eventKey)) {
-        console.log(`🎭 Event at period ${periodCount} already processed, skipping`);
+        console.log(
+          `🎭 Event at period ${periodCount} already processed, skipping`
+        );
         return;
       }
 
       console.log(
-        `🎭 Processing event: ${currentEvent.effect} at period ${periodCount}`
+        `🎭 Processing event: ${currentEvent.effect || 'Unknown'} at period ${periodCount}`
       );
 
       switch (currentEvent.effect) {
@@ -166,11 +179,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
           // Bully event: lose all money
           // NOTE: The actual money stealing is handled by EventHandlerContext
           // when the modal is dismissed, so we don't steal it here
-          console.log(
-            `💸 LOSE_MONEY event detected at period ${periodCount}`
-          );
+          console.log(`💸 LOSE_MONEY event detected at period ${periodCount}`);
           // Mark this event as processed
-          setProcessedEvents(prev => new Set(prev).add(eventKey));
+          setProcessedEvents((prev) => new Set(prev).add(eventKey));
           break;
 
         case 'FOUND_MONEY':
@@ -179,60 +190,54 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
           console.log(`💰 FOUND_MONEY event: adding $${moneyToAdd}`);
           // The wallet add function will be called elsewhere, this is just for logging
           // Mark this event as processed
-          setProcessedEvents(prev => new Set(prev).add(eventKey));
+          setProcessedEvents((prev) => new Set(prev).add(eventKey));
           break;
 
         default:
-          console.log(`⚠️ Unhandled event effect: ${currentEvent.effect}`);
+          console.log(
+            `⚠️ Unhandled event effect: ${currentEvent.effect || 'Unknown'}`
+          );
       }
     }
-  }, [currentEvent, periodCount, balance, isInitialized, processedEvents, stealMoney, jokers]);
+  }, [
+    currentEvent,
+    periodCount,
+    balance,
+    isInitialized,
+    processedEvents,
+    stealMoney,
+    jokers,
+  ]);
 
   useEffect(() => {
     // Check for hints about next period's events
-    const nextPeriodEvent = gameData.periodEvents.find(
+    const nextPeriodEvent = gameData?.periodEvents?.find(
       (e) => e.period === periodCount + 1 && e.hint
     );
 
     // Debug logging for events (commented out for performance)
-    // const allEventsWithHints = gameData.periodEvents.filter((e) => e.hint);
+    // const allEventsWithHints = gameData?.periodEvents?.filter((e) => e.hint) || [];
     // console.log(
     //   `All events with hints:`,
-    //   allEventsWithHints.map((e) => `Period ${e.period}: ${e.effect}`)
+    //   allEventsWithHints.map((e) => `Period ${e.period}: ${e.effect || 'Unknown'}`)
     // );
     // console.log(
     //   `Looking for event at period ${periodCount + 1}:`,
-    //   gameData.periodEvents.filter((e) => e.period === periodCount + 1)
+    //   gameData?.periodEvents?.filter((e) => e.period === periodCount + 1) || []
     // );
 
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
-      const scoutJoker = jokers.find(
-        (j) => j.name.replace(' (Copy)', '') === 'Scout'
-      );
-      const predictorJoker = jokers.find(
-        (j) => j.name.replace(' (Copy)', '') === 'Predictor'
-      );
-
-      // console.log(
-      //   `Hint Debug - Period ${periodCount}, Next event: ${nextPeriodEvent.effect}, Has hint: ${!!nextPeriodEvent.hint}`
-      // );
-      // console.log(
-      //   `Jokers:`,
-      //   jokers.map((j) => j.name)
-      // );
-      // console.log(
-      //   `Scout found: ${!!scoutJoker}, Predictor found: ${!!predictorJoker}`
-      // );
+      const tapedInJoker = findJokerById(jokers, JOKER_IDS.TAPPED_IN);
+      const predictorJoker = findJokerById(jokers, JOKER_IDS.PREDICTOR);
 
       let hintChance = 0.25; // Base 25% chance
 
       if (predictorJoker) {
         hintChance = 1.0; // Predictor joker shows all hints (100% chance)
         // console.log('Predictor active - setting 100% hint chance');
-      } else if (scoutJoker) {
-        hintChance = 0.5; // Scout joker increases hint chance to 50%
-        // console.log('Scout active - setting 50% hint chance');
+      } else if (tapedInJoker) {
+        hintChance = 0.5;
       } else {
         // console.log('No hint jokers - using base 25% chance');
       }
@@ -365,10 +370,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useGame = (): GameContextType => {
+export const useGame = (): GameContextType | null => {
   const context = useContext(GameContext);
   if (!context) {
-    throw new Error('useGame must be used within a GameProvider');
+    return null;
   }
   return context;
 };

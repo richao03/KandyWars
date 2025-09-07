@@ -94,7 +94,7 @@ export const SeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useSeed = () => {
   const context = useContext(SeedContext);
   if (!context) {
-    throw new Error("useSeed must be used within a SeedProvider");
+    return null;
   }
   return context;
 };

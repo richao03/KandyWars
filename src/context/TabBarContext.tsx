@@ -23,10 +23,10 @@ export const TabBarProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useTabBar = (): TabBarContextType => {
+export const useTabBar = (): TabBarContextType | null => {
   const context = useContext(TabBarContext);
   if (!context) {
-    throw new Error('useTabBar must be used within a TabBarProvider');
+    return null;
   }
   return context;
 };

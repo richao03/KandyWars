@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { G, Path } from 'react-native-svg';
 
@@ -15,6 +15,7 @@ export default function ExactFontHandwriting({
   const [progress, setProgress] = useState(0);
   const [fillProgress, setFillProgress] = useState(0);
   const [candyCompleted, setCandyCompleted] = useState(false);
+  const candyCallbackTriggered = useRef(false);
 
   // Exact DonGraffiti font paths from the provided SVGs
   const exactPaths = {
@@ -78,8 +79,9 @@ export default function ExactFontHandwriting({
 
     let animationFrame: number;
     let startTime: number;
-    const letterDuration = 477; // 30% slower outline (367 * 1.3)
-    const letterDelay = 8; // Keep same delay
+    const letterDuration = 400; // Slightly faster for smoother flow
+    const letterOverlap = 150; // Start next letter before current finishes (negative delay)
+    const effectiveDelay = letterDuration - letterOverlap; // Letters overlap for smoother flow
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -87,34 +89,32 @@ export default function ExactFontHandwriting({
 
       // Calculate which letter we're on and progress within that letter
       const totalElapsed = elapsed;
-      const letterIndex = Math.floor(
-        totalElapsed / (letterDuration + letterDelay)
-      );
-      const letterElapsed =
-        totalElapsed - letterIndex * (letterDuration + letterDelay);
+      const letterIndex = Math.floor(totalElapsed / effectiveDelay);
+      const letterElapsed = totalElapsed - letterIndex * effectiveDelay;
       const letterProgress = Math.min(letterElapsed / letterDuration, 1);
 
       setCurrentLetter(letterIndex);
       setProgress(letterProgress);
 
       // Check if "Candy" (first 5 letters) is completed
-      if (!candyCompleted && letterIndex >= 5 && letterProgress >= 1) {
+      // Since letters now overlap, check if we're past the 5th letter or well into it
+      const candyCompletionTime = 5 * effectiveDelay; // Time when 5th letter starts
+      if (!candyCallbackTriggered.current && totalElapsed >= candyCompletionTime + letterDuration * 0.5) {
+        candyCallbackTriggered.current = true;
         setCandyCompleted(true);
+        console.log('🎨 Candy animation completed, showing buttons');
         if (onCandyComplete) {
-          setTimeout(onCandyComplete, 100); // Small delay for smooth transition
+          onCandyComplete(); // Call immediately, don't use setTimeout in animation loop
         }
       }
 
-      // Calculate fill progress for current letter (fade in after 65% outline completion for slower fade)
-      if (letterProgress > 0.65) {
-        const fillStart = 0.65;
+      // Calculate fill progress for current letter (start fill earlier for smoother transition)
+      if (letterProgress > 0.4) {
+        const fillStart = 0.4; // Start filling at 40% for smoother overlap
         const fillRange = 1 - fillStart;
         const normalizedFillProgress = (letterProgress - fillStart) / fillRange;
-        // Apply easing for smoother fade-in
-        const easedProgress =
-          normalizedFillProgress *
-          normalizedFillProgress *
-          (3 - 2 * normalizedFillProgress); // Smoothstep
+        // Apply easing for smoother fade-in with faster ramp-up
+        const easedProgress = Math.pow(normalizedFillProgress, 0.8); // Faster fade-in curve
         setFillProgress(easedProgress);
       } else {
         setFillProgress(0);
@@ -143,12 +143,13 @@ export default function ExactFontHandwriting({
   const renderLetter = (letter: any, index: number, transform: string) => {
     const isActive = index === currentLetter;
     const isComplete = index < currentLetter;
+    const isNext = index === currentLetter + 1;
 
     // Calculate opacity for fill
     let fillOpacity = 0;
     if (isComplete) {
       fillOpacity = 1; // Completed letters are fully visible
-    } else if (isActive && progress > 0.65) {
+    } else if (isActive && progress > 0.4) {
       fillOpacity = fillProgress; // Current letter fades in based on fillProgress
     }
 
@@ -157,11 +158,19 @@ export default function ExactFontHandwriting({
 
     // Calculate stroke dash for animation
     const dashArray = letter.length;
-    const dashOffset = isActive
-      ? dashArray * (1 - progress)
-      : isComplete
-        ? 0
-        : dashArray;
+    let dashOffset: number;
+    
+    if (isActive) {
+      dashOffset = dashArray * (1 - progress);
+    } else if (isComplete) {
+      dashOffset = 0;
+    } else if (isNext && progress > 0.6) {
+      // Start outlining next letter when current is 60% done for overlap
+      const nextProgress = (progress - 0.6) / 0.4; // 0.6-1.0 maps to 0-1
+      dashOffset = dashArray * (1 - Math.max(0, nextProgress));
+    } else {
+      dashOffset = dashArray; // Not started yet
+    }
 
     return (
       <G key={`${letter.key}-${index}`} transform={transform}>

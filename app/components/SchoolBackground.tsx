@@ -1,18 +1,22 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withRepeat, 
-  withSequence 
+import { Dimensions, StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
 // Window component with animated sunlight
-const SchoolWindow = ({ windowWidth, windowHeight, leftPosition, topPosition }) => {
+const SchoolWindow = ({
+  windowWidth,
+  windowHeight,
+  leftPosition,
+  topPosition,
+}) => {
   const sunlightOpacity = useSharedValue(0.6);
   const sunlightScale = useSharedValue(1);
 
@@ -48,18 +52,20 @@ const SchoolWindow = ({ windowWidth, windowHeight, leftPosition, topPosition }) 
   }));
 
   return (
-    <View style={[
-      styles.window,
-      {
-        width: windowWidth,
-        height: windowHeight,
-        left: leftPosition,
-        top: topPosition,
-      }
-    ]}>
+    <View
+      style={[
+        styles.window,
+        {
+          width: windowWidth,
+          height: windowHeight,
+          left: leftPosition,
+          top: topPosition,
+        },
+      ]}
+    >
       {/* Window frame */}
       <View style={styles.windowFrame} />
-      
+
       {/* Window panes */}
       <View style={styles.windowPanes}>
         <View style={styles.windowPane} />
@@ -67,18 +73,13 @@ const SchoolWindow = ({ windowWidth, windowHeight, leftPosition, topPosition }) 
         <View style={styles.windowPane} />
         <View style={styles.windowPane} />
       </View>
-      
+
       {/* Cross dividers */}
       <View style={styles.windowDividerHorizontal} />
       <View style={styles.windowDividerVertical} />
-      
+
       {/* Animated sunlight streaming through */}
-      <Animated.View 
-        style={[
-          styles.sunlight,
-          animatedSunlightStyle
-        ]} 
-      />
+      <Animated.View style={[styles.sunlight, animatedSunlightStyle]} />
     </View>
   );
 };
@@ -86,21 +87,23 @@ const SchoolWindow = ({ windowWidth, windowHeight, leftPosition, topPosition }) 
 // Blackboard component
 const Blackboard = ({ boardWidth, boardHeight, leftPosition, topPosition }) => {
   return (
-    <View style={[
-      styles.blackboard,
-      {
-        width: boardWidth,
-        height: boardHeight,
-        left: leftPosition,
-        top: topPosition,
-      }
-    ]}>
+    <View
+      style={[
+        styles.blackboard,
+        {
+          width: boardWidth,
+          height: boardHeight,
+          left: leftPosition,
+          top: topPosition,
+        },
+      ]}
+    >
       {/* Blackboard surface */}
       <View style={styles.blackboardSurface} />
-      
+
       {/* Chalk ledge */}
       <View style={styles.chalkLedge} />
-      
+
       {/* Frame */}
       <View style={styles.blackboardFrame} />
     </View>
@@ -110,17 +113,19 @@ const Blackboard = ({ boardWidth, boardHeight, leftPosition, topPosition }) => {
 // Desk component
 const SchoolDesk = ({ deskWidth, leftPosition, bottomPosition }) => {
   return (
-    <View style={[
-      styles.desk,
-      {
-        width: deskWidth,
-        left: leftPosition,
-        bottom: bottomPosition,
-      }
-    ]}>
+    <View
+      style={[
+        styles.desk,
+        {
+          width: deskWidth,
+          left: leftPosition,
+          bottom: bottomPosition,
+        },
+      ]}
+    >
       {/* Desk top */}
       <View style={styles.deskTop} />
-      
+
       {/* Desk legs */}
       <View style={[styles.deskLeg, { left: 10 }]} />
       <View style={[styles.deskLeg, { right: 10 }]} />
@@ -132,11 +137,7 @@ export default function SchoolBackground() {
   return (
     <View style={styles.container}>
       {/* Sky gradient background */}
-      <LinearGradient
-        colors={['#87CEEB', '#E0F6FF', '#F0F8FF']} // Sky blue to light blue to almost white
-        style={styles.background}
-      />
-      
+
       {/* School windows with sunlight */}
       <SchoolWindow
         windowWidth={120}
@@ -156,7 +157,7 @@ export default function SchoolBackground() {
         leftPosition={width * 0.6}
         topPosition={height * 0.15}
       />
-      
+
       {/* Blackboard */}
       <Blackboard
         boardWidth={200}
@@ -164,7 +165,7 @@ export default function SchoolBackground() {
         leftPosition={width * 0.5 - 100}
         topPosition={height * 0.08}
       />
-      
+
       {/* School desks */}
       <SchoolDesk
         deskWidth={80}
@@ -181,7 +182,7 @@ export default function SchoolBackground() {
         leftPosition={width * 0.75}
         bottomPosition={120}
       />
-      
+
       {/* Floor */}
       <View style={styles.floor} />
     </View>
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  
+
   // Window styles
   window: {
     position: 'absolute',
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 10,
   },
-  
+
   // Blackboard styles
   blackboard: {
     position: 'absolute',
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     borderColor: '#8B4513', // Brown frame
     borderRadius: 6,
   },
-  
+
   // Desk styles
   desk: {
     position: 'absolute',
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#A0522D', // Sienna wood legs
     borderRadius: 4,
   },
-  
+
   // Floor
   floor: {
     position: 'absolute',

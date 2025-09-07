@@ -5,8 +5,11 @@ import { useGame } from '../../src/context/GameContext';
 import { useTabBar } from '../../src/context/TabBarContext';
 
 export default function TabLayout() {
-  const { isAfterSchool } = useGame();
-  const { isTabBarVisible } = useTabBar();
+  const gameContext = useGame();
+  const tabBarContext = useTabBar();
+  
+  const isAfterSchool = gameContext?.isAfterSchool || false;
+  const isTabBarVisible = tabBarContext?.isTabBarVisible || false;
   
   // Memoize screen options to prevent recreation on every render
   const screenOptions = React.useMemo(() => ({

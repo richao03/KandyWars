@@ -247,10 +247,10 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useFlavorText = (): FlavorTextContextType => {
+export const useFlavorText = (): FlavorTextContextType | null => {
   const context = useContext(FlavorTextContext);
   if (!context) {
-    throw new Error('useFlavorText must be used within FlavorTextProvider');
+    return null;
   }
   return context;
 };

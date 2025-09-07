@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { useJokers } from '../context/JokerContext';
 import { useWallet } from '../context/WalletContext';
 import { JokerService } from '../utils/jokerService';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useDroughtRelief = () => {
   const { periodCount } = useGame();
@@ -29,7 +30,7 @@ export const useDroughtRelief = () => {
     if (lastPeriod < 3) return;
 
     // Check if player has Drought Relief joker
-    const droughtReliefJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Drought Relief');
+    const droughtReliefJoker = findJokerById(jokers, JOKER_IDS.DROUGHT_RELIEF);
     if (!droughtReliefJoker) return;
 
     // Check if the last 3 periods had no sales

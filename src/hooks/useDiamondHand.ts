@@ -4,6 +4,7 @@ import { useInventory } from '../context/InventoryContext';
 import { useJokers } from '../context/JokerContext';
 import { useWallet } from '../context/WalletContext';
 import { JokerService } from '../utils/jokerService';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useDiamondHand = () => {
   const { periodCount } = useGame();
@@ -32,7 +33,7 @@ export const useDiamondHand = () => {
     if (lastPeriod === 0) return;
 
     // Check if player has Diamond Hand joker
-    const diamondHandJoker = jokers.find(j => j.name.replace(' (Copy)', '') === 'Diamond Hand');
+    const diamondHandJoker = findJokerById(jokers, JOKER_IDS.DIAMOND_HAND);
     if (!diamondHandJoker) return;
 
     // Check if player had inventory and didn't sell
