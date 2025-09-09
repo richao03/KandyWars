@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -92,7 +93,7 @@ export default function Market() {
   } = useGame();
   const { hasActiveEvent } = useEventHandler();
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
-  const { addSale, resetSales } = useCandySales();
+  const { addSale, resetSales, consecutivePeriodSales } = useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
   const { activeEffects, jokers, removeJoker } = useJokers();
   const jokerService = JokerService.getInstance();
@@ -148,9 +149,12 @@ export default function Market() {
         // Get the current price from game data, fallback to base range if not available
         let basePrice = gameData.candyPrices[candy.name]?.[periodCount];
         if (basePrice === undefined || basePrice === null) {
-          // Fallback to a random price in base range
-          basePrice =
-            candy.baseMin + Math.random() * (candy.baseMax - candy.baseMin);
+          // Use a consistent fallback price based on the candy name and period
+          // This ensures the same price is used throughout the period
+          const seed = candy.name.charCodeAt(0) + periodCount;
+          const random = Math.sin(seed) * 10000;
+          const normalizedRandom = random - Math.floor(random);
+          basePrice = candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
         }
 
         // Get price breakdown showing base price and joker effects
@@ -281,9 +285,19 @@ export default function Market() {
           // Record sale for Drought Relief tracking
           recordDroughtSale();
 
-          // Check if this sale should get the 5x Candy Salad bonus
-          const shouldApplyBonus = addSale(candy.name);
-          let multiplier = shouldApplyBonus ? 5 : 1;
+          // Check for sale bonuses
+          const saleResult = addSale(candy.name);
+          let multiplier = 1;
+
+          // Apply Candy Salad bonus if applicable
+          if (saleResult.shouldApplyCandySaladBonus) {
+            multiplier *= 5;
+          }
+
+          // Apply Jump Rope Rhythm bonus if applicable  
+          if (saleResult.shouldApplyJumpRopeBonus) {
+            multiplier *= 1.33;
+          }
 
           // Check for Digital Lock one-time sell multiplier
           const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(jokers, periodCount);
@@ -298,6 +312,36 @@ export default function Market() {
             }
           }
 
+          // Check for Even Stevens and Odd Todd jokers
+          const inventoryLimit = getInventoryLimit();
+          const evenStevensJoker = findJokerById(jokers, JOKER_IDS.EVEN_STEVENS);
+          const oddToddJoker = findJokerById(jokers, JOKER_IDS.ODD_TODD);
+          
+          if (evenStevensJoker && inventoryLimit % 2 === 0) {
+            multiplier *= 1.1; // 10% bonus for even inventory limit
+            console.log(`⚖️ Even Stevens: +10% sales bonus applied (inventory limit: ${inventoryLimit})`);
+          } else if (oddToddJoker && inventoryLimit % 2 === 1) {
+            multiplier *= 1.1; // 10% bonus for odd inventory limit
+            console.log(`🎭 Odd Todd: +10% sales bonus applied (inventory limit: ${inventoryLimit})`);
+          }
+
+          // Check for Recess jokers
+          const hopscotchJoker = findJokerById(jokers, JOKER_IDS.HOPSCOTCH_BONUS);
+          const swingsetJoker = findJokerById(jokers, JOKER_IDS.SWINGSET_MOMENTUM);
+
+          // Hopscotch Bonus: Every even period sales get +20%
+          if (hopscotchJoker && period % 2 === 0) {
+            multiplier *= 1.2; // 20% bonus for even periods
+            console.log(`🏃 Hopscotch Bonus: +20% sales bonus applied (period ${period} is even)`);
+          }
+          
+          // Swingset Momentum: Each consecutive period with a sale gets +10% sale price
+          if (swingsetJoker && consecutivePeriodSales > 1) {
+            const swingsetMultiplier = 1 + (consecutivePeriodSales - 1) * 0.1; // +10% per consecutive period
+            multiplier *= swingsetMultiplier;
+            console.log(`⛹️ Swingset Momentum: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (${consecutivePeriodSales} consecutive periods)`);
+          }
+
           const baseGain = candy.cost * quantity;
           const totalGain = baseGain * multiplier;
 
@@ -308,25 +352,41 @@ export default function Market() {
           removeFromInventory(candy.name, quantity);
 
           // Show bonus notifications if applied
-          if (shouldApplyBonus || sellMultiplierInfo.hasEffect) {
+          const hasAnyBonus = saleResult.shouldApplyCandySaladBonus || saleResult.shouldApplyJumpRopeBonus || sellMultiplierInfo.hasEffect || 
+                             (hopscotchJoker && period % 2 === 0) || (swingsetJoker && consecutivePeriodSales > 1);
+          
+          if (hasAnyBonus) {
             setTimeout(() => {
               let title = 'Sale Bonus!';
               let message = '';
               let emoji = '💰';
+              let bonusDetails: string[] = [];
               
-              if (sellMultiplierInfo.hasEffect && shouldApplyBonus) {
-                title = 'Double Bonus Sale!';
-                emoji = '🎉';
-                message = `🔒 Digital Lock: ${sellMultiplierInfo.multiplier}x multiplier\n🥗 Candy Salad: 5x bonus\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
-              } else if (sellMultiplierInfo.hasEffect) {
-                title = 'Digital Lock Activated!';
-                emoji = '🔒';
-                message = `${sellMultiplierInfo.multiplier}x profit multiplier applied!\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
-              } else if (shouldApplyBonus) {
-                title = 'Candy Salad Bonus!';
-                emoji = '🥗';
-                message = `5x multiplier applied!\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
+              if (sellMultiplierInfo.hasEffect) {
+                bonusDetails.push(`🔒 Digital Lock: ${sellMultiplierInfo.multiplier}x multiplier`);
               }
+              if (saleResult.shouldApplyCandySaladBonus) {
+                bonusDetails.push(`🥗 Candy Salad: 5x bonus`);
+              }
+              if (saleResult.shouldApplyJumpRopeBonus) {
+                bonusDetails.push(`🪩 Jump Rope Rhythm: 33% bonus (3rd sale)`);
+              }
+              if (hopscotchJoker && period % 2 === 0) {
+                bonusDetails.push(`🏃 Hopscotch Bonus: 20% bonus (even period)`);
+              }
+              if (swingsetJoker && consecutivePeriodSales > 1) {
+                bonusDetails.push(`⛹️ Swingset Momentum: ${((1 + (consecutivePeriodSales - 1) * 0.1 - 1) * 100).toFixed(0)}% bonus (${consecutivePeriodSales} consecutive periods)`);
+              }
+              
+              if (bonusDetails.length > 1) {
+                title = 'Multiple Bonuses!';
+                emoji = '🎉';
+              } else if (saleResult.shouldApplyJumpRopeBonus) {
+                title = 'Jump Rope Rhythm!';
+                emoji = '🪩';
+              }
+              
+              message = bonusDetails.join('\n') + `\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
               
               setConfirmationModal({
                 visible: true,
@@ -350,6 +410,9 @@ export default function Market() {
   };
 
   const handleNextDay = () => {
+    // Trigger success haptic feedback when advancing to next period
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
     if (period === 8) {
       // End of day - show day stats first
       setDayStatsModalVisible(true);

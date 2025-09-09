@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useGame } from '../../src/context/GameContext';
 import GameHUD from '../components/GameHUD';
 
@@ -73,6 +74,8 @@ export default function StudyPage() {
   };
 
   const handleGoBack = () => {
+    // Trigger success haptic feedback when going back to after school
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Go back to after school
     router.push('/after-school');
   };

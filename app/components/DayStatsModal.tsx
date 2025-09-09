@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
+import * as Haptics from 'expo-haptics';
 
 interface DayStatsModalProps {
   visible: boolean;
@@ -76,7 +77,14 @@ export default function DayStatsModal({
           </View>
         </View>
 
-        <TouchableOpacity style={styles.continueButton} onPress={onClose}>
+        <TouchableOpacity 
+          style={styles.continueButton} 
+          onPress={() => {
+            // Trigger success haptic feedback when going to after school
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onClose();
+          }}
+        >
           <Text style={styles.continueButtonText}>
             🌟 Continue to After School
           </Text>

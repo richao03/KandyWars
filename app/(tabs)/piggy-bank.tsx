@@ -1,17 +1,27 @@
 import Slider from '@react-native-community/slider';
-import React, { useEffect, useState } from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
-import GameHUD from '../components/GameHUD';
-import ConfirmationModal from '../components/ConfirmationModal';
+import React, { useEffect, useState } from 'react';
+import {
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
+import { useJokers } from '../../src/context/JokerContext';
 import { useWallet } from '../../src/context/WalletContext';
+import ConfirmationModal from '../components/ConfirmationModal';
+import GameHUD from '../components/GameHUD';
 
 export default function PiggyBankPage() {
   const { balance, stashedAmount, stashMoney, withdrawFromStash } = useWallet();
   const { day, period } = useGame();
   const { setEvent } = useFlavorText();
+  const { jokers } = useJokers();
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState(0);
   const [confirmModal, setConfirmModal] = useState<{
@@ -20,14 +30,21 @@ export default function PiggyBankPage() {
     message: string;
     emoji: string;
     onConfirm: () => void;
-  }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    emoji: '',
+    onConfirm: () => {},
+  });
 
   // Set piggy bank flavor text when component loads
   useEffect(() => {
     setEvent('PIGGY_BANK');
   }, [setEvent]);
 
-  const maxAmount = mode === 'deposit' ? Math.max(0, balance) : Math.max(0, stashedAmount);
+  const maxAmount =
+    mode === 'deposit' ? Math.max(0, balance) : Math.max(0, stashedAmount);
 
   const handleTransaction = () => {
     if (amount <= 0) {
@@ -36,42 +53,67 @@ export default function PiggyBankPage() {
         title: 'Invalid Amount',
         message: 'Please select an amount greater than 0',
         emoji: '⚠️',
-        onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+        onConfirm: () =>
+          setConfirmModal((prev) => ({ ...prev, visible: false })),
       });
       return;
     }
 
-    const success = mode === 'deposit' 
-      ? stashMoney(amount)
-      : withdrawFromStash(amount);
+    // Check for Deposit Bonus joker when depositing
+    let finalAmount = amount;
+    let bonusApplied = false;
+    if (mode === 'deposit') {
+      const depositBonusJoker = findJokerById(jokers, JOKER_IDS.DEPOSIT_BONUS);
+      if (depositBonusJoker) {
+        finalAmount = amount * 1.1; // Apply 10% bonus
+        bonusApplied = true;
+        console.log(
+          `💰 Deposit Bonus: Applied 10% bonus. Original: $${amount.toFixed(2)}, Final: $${finalAmount.toFixed(2)}`
+        );
+      }
+    }
+
+    const success =
+      mode === 'deposit' ? stashMoney(finalAmount) : withdrawFromStash(amount);
 
     if (success) {
+      const depositMessage = bonusApplied
+        ? `You've stashed $${amount.toFixed(2)} + 10% bonus ($${(finalAmount - amount).toFixed(2)}) = $${finalAmount.toFixed(2)} in your piggy bank!`
+        : `You've safely stashed $${amount.toFixed(2)} in your piggy bank!`;
+
       setConfirmModal({
         visible: true,
-        title: mode === 'deposit' ? 'Money Stashed!' : 'Money Withdrawn!',
-        message: mode === 'deposit' 
-          ? `You've safely stashed $${amount.toFixed(2)} in your piggy bank!`
-          : `You've withdrawn $${amount.toFixed(2)} from your piggy bank!`,
-        emoji: mode === 'deposit' ? '💰' : '💸',
+        title:
+          mode === 'deposit'
+            ? bonusApplied
+              ? '💰 Bonus Deposit!'
+              : 'Money Stashed!'
+            : 'Money Withdrawn!',
+        message:
+          mode === 'deposit'
+            ? depositMessage
+            : `You've withdrawn $${amount.toFixed(2)} from your piggy bank!`,
+        emoji: mode === 'deposit' ? (bonusApplied ? '🎉' : '💰') : '💸',
         onConfirm: () => {
           setAmount(0);
-          setConfirmModal(prev => ({ ...prev, visible: false }));
-        }
+          setConfirmModal((prev) => ({ ...prev, visible: false }));
+        },
       });
     } else {
       // Show error if transaction failed
       setConfirmModal({
         visible: true,
         title: 'Transaction Failed',
-        message: mode === 'deposit' 
-          ? `Unable to deposit $${amount.toFixed(2)}. Current balance: $${balance.toFixed(2)}`
-          : `Unable to withdraw $${amount.toFixed(2)}. Stashed amount: $${stashedAmount.toFixed(2)}`,
+        message:
+          mode === 'deposit'
+            ? `Unable to deposit $${amount.toFixed(2)}. Current balance: $${balance.toFixed(2)}`
+            : `Unable to withdraw $${amount.toFixed(2)}. Stashed amount: $${stashedAmount.toFixed(2)}`,
         emoji: '❌',
-        onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+        onConfirm: () =>
+          setConfirmModal((prev) => ({ ...prev, visible: false })),
       });
     }
   };
-
 
   return (
     <View style={styles.container}>
@@ -80,105 +122,117 @@ export default function PiggyBankPage() {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <GameHUD 
+        <GameHUD
           theme="evening"
           customHeaderText={`After School - Day ${day}`}
           customLocationText="Piggy Bank"
         />
 
         <View style={styles.content}>
-        {/* Piggy Bank Visual */}
-        <View style={styles.piggyBankContainer}>
-          <View style={styles.piggyBankInfo}>
-            <Text style={styles.piggyBankLabel}>Stashed Away</Text>
-            <Text style={styles.piggyBankAmount}>${stashedAmount.toFixed(2)}</Text>
-          </View>
-        </View>
-
-
-        {/* Tab-style Mode Selector */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, mode === 'deposit' && styles.tabActive]}
-            onPress={() => {
-              setMode('deposit');
-              setAmount(0);
-            }}
-          >
-            <Text style={[styles.tabText, mode === 'deposit' && styles.tabTextActive]}>
-              💰 Deposit
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.tab, mode === 'withdraw' && styles.tabActive]}
-            onPress={() => {
-              setMode('withdraw');
-              setAmount(0);
-            }}
-          >
-            <Text style={[styles.tabText, mode === 'withdraw' && styles.tabTextActive]}>
-              💸 Withdraw
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Amount Selector */}
-        <View style={styles.amountSection}>
-          <Text style={styles.amountLabel}>
-            {mode === 'deposit' ? 'Amount to Deposit' : 'Amount to Withdraw'}
-          </Text>
-          
-          <View style={styles.amountDisplay}>
-            <Text style={[
-              styles.amountValue,
-              { color: mode === 'deposit' ? '#4ade80' : '#22c55e' }
-            ]}>
-              ${amount.toFixed(2)}
-            </Text>
-            <Text style={styles.maxAmount}>
-              Max: ${maxAmount.toFixed(2)}
-            </Text>
+          {/* Piggy Bank Visual */}
+          <View style={styles.piggyBankContainer}>
+            <View style={styles.piggyBankInfo}>
+              <Text style={styles.piggyBankLabel}>Stashed Away</Text>
+              <Text style={styles.piggyBankAmount}>
+                ${stashedAmount.toFixed(2)}
+              </Text>
+            </View>
           </View>
 
-          <Slider
-            style={styles.slider}
-            minimumValue={0}
-            maximumValue={maxAmount}
-            step={0.01}
-            value={amount}
-            onValueChange={setAmount}
-            minimumTrackTintColor={mode === 'deposit' ? '#4ade80' : '#22c55e'}
-            maximumTrackTintColor="#ccc"
-          />
+          {/* Tab-style Mode Selector */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, mode === 'deposit' && styles.tabActive]}
+              onPress={() => {
+                setMode('deposit');
+                setAmount(0);
+              }}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  mode === 'deposit' && styles.tabTextActive,
+                ]}
+              >
+                💰 Deposit
+              </Text>
+            </TouchableOpacity>
 
-          {/* Action Button inside container */}
-          <TouchableOpacity
-            style={[
-              styles.inlineActionButton,
-              { backgroundColor: mode === 'deposit' ? '#4ade80' : '#22c55e' },
-              amount === 0 && styles.actionButtonDisabled
-            ]}
-            onPress={handleTransaction}
-            disabled={amount === 0}
-          >
-            <Text style={styles.actionButtonText}>
-              {mode === 'deposit' ? '💰 Deposit Money' : '💸 Withdraw Money'}
+            <TouchableOpacity
+              style={[styles.tab, mode === 'withdraw' && styles.tabActive]}
+              onPress={() => {
+                setMode('withdraw');
+                setAmount(0);
+              }}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  mode === 'withdraw' && styles.tabTextActive,
+                ]}
+              >
+                💸 Withdraw
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Amount Selector */}
+          <View style={styles.amountSection}>
+            <Text style={styles.amountLabel}>
+              {mode === 'deposit' ? 'Amount to Deposit' : 'Amount to Withdraw'}
             </Text>
+
+            <View style={styles.amountDisplay}>
+              <Text
+                style={[
+                  styles.amountValue,
+                  { color: mode === 'deposit' ? '#4ade80' : '#22c55e' },
+                ]}
+              >
+                ${amount.toFixed(2)}
+              </Text>
+              <Text style={styles.maxAmount}>Max: ${maxAmount.toFixed(2)}</Text>
+            </View>
+
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={maxAmount}
+              step={0.01}
+              value={amount}
+              onValueChange={setAmount}
+              minimumTrackTintColor={mode === 'deposit' ? '#4ade80' : '#22c55e'}
+              maximumTrackTintColor="#ccc"
+            />
+
+            {/* Action Button inside container */}
+            <TouchableOpacity
+              style={[
+                styles.inlineActionButton,
+                { backgroundColor: mode === 'deposit' ? '#4ade80' : '#f87171' },
+                amount === 0 && styles.actionButtonDisabled,
+              ]}
+              onPress={handleTransaction}
+              disabled={amount === 0}
+            >
+              <Text style={styles.actionButtonText}>
+                {mode === 'deposit' ? '💰 Deposit Money' : '💸 Withdraw Money'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Back to After School Button */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              // Trigger success haptic feedback when going back to after school
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              router.push('/after-school');
+            }}
+          >
+            <Text style={styles.backButtonText}>← Back to After School</Text>
           </TouchableOpacity>
-
         </View>
-
-        {/* Back to After School Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.push('/after-school')}
-        >
-          <Text style={styles.backButtonText}>
-            ← Back to After School
-          </Text>
-        </TouchableOpacity>
-      </View>
       </ImageBackground>
 
       <ConfirmationModal
@@ -188,7 +242,9 @@ export default function PiggyBankPage() {
         emoji={confirmModal.emoji}
         confirmText="OK"
         onConfirm={confirmModal.onConfirm}
-        onCancel={() => setConfirmModal(prev => ({ ...prev, visible: false }))}
+        onCancel={() =>
+          setConfirmModal((prev) => ({ ...prev, visible: false }))
+        }
         theme="evening"
       />
     </View>
@@ -257,7 +313,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, .8)',
     borderRadius: 8,
     padding: 2,
     marginBottom: 12,
@@ -270,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: 'rgba(247, 233, 142, 0.2)',
+    backgroundColor: 'rgba(0,0,0,1)',
   },
   tabText: {
     fontSize: 14,
@@ -282,7 +338,7 @@ const styles = StyleSheet.create({
     color: '#f7e98e',
   },
   amountSection: {
-    backgroundColor: 'rgba(93, 76, 112, 0.4)',
+    backgroundColor: 'rgba(0,0,0, 0.8)',
     borderRadius: 16,
     padding: 8,
     marginBottom: 10,
@@ -291,7 +347,7 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 16,
-    color: '#b8a9c9',
+    color: '#f7e98e',
     fontFamily: 'CrayonPastel',
     marginBottom: 10,
     textAlign: 'center',
@@ -322,21 +378,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  quickAmountButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  quickAmountText: {
-    color: '#f7e98e',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'CrayonPastel',
-  },
+
   actionButton: {
     paddingVertical: 14,
     borderRadius: 16,
@@ -377,13 +419,13 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   backButton: {
-    backgroundColor: 'rgba(93, 76, 112, 0.6)',
+    backgroundColor: 'rgba(0,0,0, 0.7)',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: '#b8a9c9',
+    borderColor: '#f7e98e',
     alignItems: 'center',
   },
   backButtonText: {

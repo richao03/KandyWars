@@ -14,10 +14,15 @@ import { useFlavorText } from '../../src/context/FlavorTextContext';
 export default function Settings() {
   const { resetGame } = useGame();
   const { setSeed } = useSeed();
-  const { resetWallet } = useWallet();
+  const walletContext = useWallet();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
+
+  // Handle potential null wallet context
+  const resetWallet = walletContext?.resetWallet || (() => {});
+  const initializeWallet = walletContext?.initializeWallet || (() => {});
+  const currentDifficulty = walletContext?.difficulty;
   const [isRestarting, setIsRestarting] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
@@ -30,7 +35,12 @@ export default function Settings() {
     cancelText?: string;
   }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
 
+  const resetConfirmModal = () => {
+    setConfirmModal({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
+  };
+
   const handleRestartGame = () => {
+    console.log('🔄 Restart button clicked');
     setConfirmModal({
       visible: true,
       title: 'Restart Game',
@@ -39,34 +49,39 @@ export default function Settings() {
       confirmText: 'Restart',
       cancelText: 'Cancel',
       onConfirm: async () => {
-        setConfirmModal(prev => ({ ...prev, visible: false }));
+        console.log('✅ Restart confirmed, restarting with current difficulty:', currentDifficulty);
+        resetConfirmModal();
         setIsRestarting(true);
+        
         try {
           // Reset all game data
           await resetGame();
           
-          // Reset all contexts
-          resetWallet();
+          // Reset all contexts except wallet (we'll initialize it with difficulty)
           resetInventory();
           resetJokers();
           resetFlavorText();
+          
+          // Initialize wallet with current difficulty (or default to 'medium' if none set)
+          const difficultyToUse = currentDifficulty || 'medium';
+          initializeWallet(difficultyToUse);
           
           // Generate new seed for fresh game
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
           
-          // Navigate back to market (home)
-          router.push('/(tabs)/market');
-          
-          setTimeout(() => {
-            setConfirmModal({
-              visible: true,
-              title: 'Game Restarted',
-              message: 'A fresh game has started with a new seed!',
-              emoji: '✨',
-              onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
-            });
-          }, 500);
+          // Show success modal
+          setConfirmModal({
+            visible: true,
+            title: 'Game Restarted',
+            message: `A fresh game has started with ${difficultyToUse} difficulty!`,
+            emoji: '✨',
+            onConfirm: () => {
+              resetConfirmModal();
+              // Navigate to market after user acknowledges
+              router.replace('/(tabs)/market');
+            }
+          });
         } catch (error) {
           console.error('Error restarting game:', error);
           setConfirmModal({
@@ -74,17 +89,22 @@ export default function Settings() {
             title: 'Error',
             message: 'Failed to restart the game. Please try again.',
             emoji: '❌',
-            onConfirm: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+            onConfirm: () => resetConfirmModal()
           });
         } finally {
           setIsRestarting(false);
         }
       },
-      onCancel: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+      onCancel: () => {
+        console.log('❌ Restart canceled');
+        resetConfirmModal();
+      }
     });
   };
 
+
   const handleReturnToTitleScreen = () => {
+    console.log('🏠 Return to Title Screen button clicked');
     setConfirmModal({
       visible: true,
       title: 'Return to Title Screen',
@@ -93,11 +113,15 @@ export default function Settings() {
       confirmText: 'Return',
       cancelText: 'Cancel',
       onConfirm: () => {
+        console.log('✅ Return to title screen confirmed');
         setConfirmModal(prev => ({ ...prev, visible: false }));
         // Navigate to title screen
         router.replace('/title-screen');
       },
-      onCancel: () => setConfirmModal(prev => ({ ...prev, visible: false }))
+      onCancel: () => {
+        console.log('❌ Return to title screen canceled');
+        resetConfirmModal();
+      }
     });
   };
 
@@ -157,9 +181,10 @@ export default function Settings() {
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
         onConfirm={confirmModal.onConfirm}
-        onCancel={confirmModal.onCancel || (() => setConfirmModal(prev => ({ ...prev, visible: false })))}
+        onCancel={confirmModal.onCancel || (() => resetConfirmModal())}
         theme="school"
       />
+
     </View>
   );
 }

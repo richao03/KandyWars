@@ -7,9 +7,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DraggableFlatList, {
-  RenderItemParams,
-} from 'react-native-draggable-flatlist';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -36,13 +33,24 @@ function JokersPage() {
   }
 
   const { isAfterSchool, day } = gameContext;
-  const { jokers, reorderJokers } = jokerContext;
+  const { jokers, isLoaded } = jokerContext;
+
+  // Wait for jokers to load before rendering
+  if (!isLoaded) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading jokers...</Text>
+        </View>
+      </View>
+    );
+  }
 
   // Create sectioned data for browse tab with 2-column layout
   const sectionedJokers = useMemo(() => {
     const sections = [];
     const subjects = Object.keys(ALL_JOKERS).sort();
-    
+
     for (const subject of subjects) {
       const subjectJokers = ALL_JOKERS[subject] || [];
       if (subjectJokers.length > 0) {
@@ -55,14 +63,14 @@ function JokersPage() {
           }
           jokersInRows.push(row);
         }
-        
+
         sections.push({
           title: subject,
           data: jokersInRows,
         });
       }
     }
-    
+
     return sections;
   }, []);
 
@@ -71,42 +79,38 @@ function JokersPage() {
     return Object.values(ALL_JOKERS).flat().length;
   }, []);
 
-  // Current user's jokers for "Inventory" tab
+  // Current user's jokers for "Inventory" tab - organize into rows like the "All" tab
   const inventoryJokers = useMemo(() => {
-    return jokers; // Keep current user's jokers as-is for inventory
+    if (!jokers || jokers.length === 0) return [];
+    
+    // Group jokers into rows of 2 for proper 2-column layout like the "All" tab
+    const jokersInRows = [];
+    for (let i = 0; i < jokers.length; i += 2) {
+      jokersInRows.push(jokers.slice(i, i + 2));
+    }
+    return jokersInRows;
   }, [jokers]);
 
   const currentJokers = inventoryJokers; // Only used for inventory tab
 
-  // Memoize styles to prevent recreation on every render
-  const containerStyles = useMemo(
-    () => [styles.container, isAfterSchool && styles.containerAfterSchool],
-    [isAfterSchool]
-  );
+  // Use consistent daytime styles
+  const containerStyles = styles.container;
+  const headerStyles = styles.header;
+  const titleStyles = styles.title;
 
-  const headerStyles = useMemo(
-    () => [styles.header, isAfterSchool && styles.headerAfterSchool],
-    [isAfterSchool]
-  );
-
-  const titleStyles = useMemo(
-    () => [styles.title, isAfterSchool && styles.titleAfterSchool],
-    [isAfterSchool]
-  );
-
-  const renderInventoryJoker = ({
-    item,
-    drag,
-    isActive,
-  }: RenderItemParams<any>) => (
-    <View style={styles.jokerCardContainer}>
-      <JokerCard
-        joker={item}
-        isAfterSchool={isAfterSchool}
-        onLongPress={drag}
-        isDragging={isActive}
-        isCompact={true}
-      />
+  const renderInventoryJokerRow = ({ item }: { item: any[] }) => (
+    <View style={styles.row}>
+      {item.map((joker) => (
+        <View key={joker.id} style={styles.jokerCardContainer}>
+          <JokerCard
+            joker={joker}
+            isAfterSchool={isAfterSchool}
+            isCompact={true}
+            showOwned={false}
+            disableActivation={false}
+          />
+        </View>
+      ))}
     </View>
   );
 
@@ -137,20 +141,12 @@ function JokersPage() {
     </View>
   );
 
-  const handleReorder = (data: any[]) => {
-    // Only allow reordering in inventory tab
-    if (activeTab === 'inventory') {
-      reorderJokers(data);
-    }
-  };
 
   return (
     <View style={containerStyles}>
       <GameHUD
-        theme={isAfterSchool ? 'evening' : 'school'}
-        customHeaderText={
-          isAfterSchool ? `After School - Day ${day}` : `School - Day ${day}`
-        }
+        theme="school"
+        customHeaderText={`School - Day ${day}`}
         customLocationText="Jokers Collection"
       />
 
@@ -158,32 +154,17 @@ function JokersPage() {
         <View style={styles.headerTop}>
           <Text style={titleStyles}>🃏 Jokers</Text>
           <View style={styles.countBadge}>
-            <Text
-              style={[
-                styles.countText,
-                isAfterSchool && styles.countTextAfterSchool,
-              ]}
-            >
-              {activeTab === 'inventory'
-                ? jokers.length
-                : allJokersCount}
+            <Text style={styles.countText}>
+              {activeTab === 'inventory' ? jokers.length : allJokersCount}
             </Text>
           </View>
         </View>
 
-        <View
-          style={[
-            styles.tabContainer,
-            isAfterSchool && styles.tabContainerAfterSchool,
-          ]}
-        >
+        <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[
               styles.tab,
               activeTab === 'inventory' && styles.activeTab,
-              activeTab === 'inventory' &&
-                isAfterSchool &&
-                styles.activeTabAfterSchool,
             ]}
             onPress={() => setActiveTab('inventory')}
           >
@@ -191,10 +172,6 @@ function JokersPage() {
               style={[
                 styles.tabText,
                 activeTab === 'inventory' && styles.activeTabText,
-                isAfterSchool && styles.tabTextAfterSchool,
-                activeTab === 'inventory' &&
-                  isAfterSchool &&
-                  styles.activeTabTextAfterSchool,
               ]}
             >
               🎒 Mine ({jokers.length})
@@ -205,9 +182,6 @@ function JokersPage() {
             style={[
               styles.tab,
               activeTab === 'see-all' && styles.activeTab,
-              activeTab === 'see-all' &&
-                isAfterSchool &&
-                styles.activeTabAfterSchool,
             ]}
             onPress={() => setActiveTab('see-all')}
           >
@@ -215,69 +189,32 @@ function JokersPage() {
               style={[
                 styles.tabText,
                 activeTab === 'see-all' && styles.activeTabText,
-                isAfterSchool && styles.tabTextAfterSchool,
-                activeTab === 'see-all' &&
-                  isAfterSchool &&
-                  styles.activeTabTextAfterSchool,
               ]}
             >
               📖 All ({allJokersCount})
             </Text>
           </TouchableOpacity>
         </View>
-
       </View>
 
       {activeTab === 'inventory' ? (
         currentJokers.length > 0 ? (
-          <>
-            {currentJokers.length > 1 && (
-              <Text
-                style={[
-                  styles.dragHint,
-                  isAfterSchool && styles.dragHintAfterSchool,
-                ]}
-              >
-                Hold & drag cards to reorder
-              </Text>
-            )}
-            <DraggableFlatList
-              data={currentJokers}
-              keyExtractor={(item) =>
-                item?.id?.toString() || Math.random().toString()
-              }
-              renderItem={renderInventoryJoker}
-              onDragEnd={({ data }) => handleReorder(data)}
-              contentContainerStyle={styles.list}
-              showsVerticalScrollIndicator={false}
-              numColumns={2}
-              columnWrapperStyle={styles.row}
-            />
-          </>
+          <FlatList
+            data={currentJokers}
+            keyExtractor={(item, index) => `inventory-row-${index}`}
+            renderItem={renderInventoryJokerRow}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text
-              style={[
-                styles.emptyIcon,
-                isAfterSchool && styles.emptyIconAfterSchool,
-              ]}
-            >
+            <Text style={styles.emptyIcon}>
               🎒
             </Text>
-            <Text
-              style={[
-                styles.emptyText,
-                isAfterSchool && styles.emptyTextAfterSchool,
-              ]}
-            >
+            <Text style={styles.emptyText}>
               No jokers in inventory
             </Text>
-            <Text
-              style={[
-                styles.emptySubtext,
-                isAfterSchool && styles.emptySubtextAfterSchool,
-              ]}
-            >
+            <Text style={styles.emptySubtext}>
               Study different subjects to earn jokers!
             </Text>
           </View>
@@ -288,14 +225,8 @@ function JokersPage() {
           keyExtractor={(item, index) => `row-${index}`}
           renderItem={renderJokerRow}
           renderSectionHeader={({ section: { title } }) => (
-            <View style={[
-              styles.sectionHeader,
-              isAfterSchool && styles.sectionHeaderAfterSchool,
-            ]}>
-              <Text style={[
-                styles.sectionTitle,
-                isAfterSchool && styles.sectionTitleAfterSchool,
-              ]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
                 {title}
               </Text>
             </View>
@@ -324,7 +255,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e6ccb3',
   },
   headerAfterSchool: {
-    backgroundColor: '#000000',
+    backgroundColor: '#2a1845',
     borderBottomColor: '#8a7ca8',
   },
   headerTop: {
@@ -414,11 +345,17 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     paddingTop: 4,
+    paddingBottom: 20,
+  },
+  inventoryList: {
+    padding: 16,
+    paddingTop: 4,
+    paddingBottom: 80,
   },
   row: {
     flex: 1,
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 8,
   },
   jokerCardContainer: {
@@ -472,7 +409,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   sectionHeaderAfterSchool: {
-    backgroundColor: 'rgba(138, 124, 168, 0.3)',
+    backgroundColor: 'rgba(138, 124, 168, 1)',
     borderBottomColor: '#8a7ca8',
   },
   sectionTitle: {

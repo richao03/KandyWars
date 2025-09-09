@@ -13,6 +13,7 @@ import {
   HISTORY_JOKERS, 
   LOGIC_JOKERS, 
   GYM_JOKERS,
+  RECESS_JOKERS,
   StandardizedJoker 
 } from '../src/utils/jokerEffectEngine';
 
@@ -25,6 +26,7 @@ const ALL_DEBUG_JOKERS = [
   ...HISTORY_JOKERS.map(j => ({ ...j, subject: 'History', theme: 'history' })),
   ...LOGIC_JOKERS.map(j => ({ ...j, subject: 'Logic', theme: 'candy' })),
   ...GYM_JOKERS.map(j => ({ ...j, subject: 'Gym', theme: 'gym' })),
+  ...RECESS_JOKERS.map(j => ({ ...j, subject: 'Recess', theme: 'recess' })),
 ];
 
 export default function DebugJokersPage() {
@@ -63,6 +65,7 @@ export default function DebugJokersPage() {
           name: joker.name,
           description: joker.description,
           subject: joker.subject,
+          flavorText: joker.flavorText, // Add flavor text
           theme: joker.theme,
           type: jokerType,
           effect: joker.effects[0] ? joker.effects[0].target : 'none',
@@ -91,6 +94,7 @@ export default function DebugJokersPage() {
         name: joker.name,
         description: joker.description,
         subject: joker.subject,
+        flavorText: joker.flavorText, // Add flavor text
         theme: joker.theme,
         type: jokerType,
         effect: joker.effects[0] ? joker.effects[0].target : 'none',

@@ -1,9 +1,8 @@
+import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import {
-  FlatList,
   ImageBackground,
   StyleSheet,
   Text,
@@ -13,17 +12,18 @@ import {
 import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
+import { useJokers } from '../../src/context/JokerContext';
 import { useWallet } from '../../src/context/WalletContext';
-import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 
 export default function AfterSchoolPage() {
   const navigation = useNavigation();
-  const { day, startNewDay, hasStudiedTonight } = useGame();
+  const { day, startNewDay, hasStudiedTonight, periodCount } = useGame();
   const { resetDailyStats } = useDailyStats();
   const { balance, addAllowance } = useWallet();
+  const { jokers } = useJokers();
   const { setEvent } = useFlavorText();
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
@@ -59,11 +59,11 @@ export default function AfterSchoolPage() {
   const handleSleepConfirm = () => {
     // Close the sleep modal and add allowance before showing going to school modal
     setSleepConfirmModalVisible(false);
-    
-    // Add daily allowance (jokers could modify this amount in the future)
-    const receivedAllowance = addAllowance();
+
+    // Add daily allowance (jokers could modify this amount)
+    const receivedAllowance = addAllowance(jokers, periodCount);
     setAllowanceAmount(receivedAllowance);
-    
+
     setGoingToSchoolModalVisible(true);
   };
 
@@ -83,25 +83,19 @@ export default function AfterSchoolPage() {
     setSleepConfirmModalVisible(false);
   };
 
-  const renderItem = ({ item }) => (
+  const renderCircleOption = (item, index) => (
     <TouchableOpacity
-      style={[styles.option, item.disabled && styles.disabledOption]}
+      key={item.id}
+      style={[styles.circleOption, item.disabled && styles.disabledCircle]}
       onPress={item.disabled ? undefined : item.onPress}
       disabled={item.disabled}
     >
-      <Text style={[styles.optionEmoji, item.disabled && styles.disabledEmoji]}>
+      <Text style={[styles.circleEmoji, item.disabled && styles.disabledEmoji]}>
         {item.emoji}
       </Text>
-      <View style={styles.optionText}>
-        <Text
-          style={[styles.optionTitle, item.disabled && styles.disabledText]}
-        >
-          {item.title}
-        </Text>
-        <Text style={[styles.optionDesc, item.disabled && styles.disabledText]}>
-          {item.desc}
-        </Text>
-      </View>
+      <Text style={[styles.circleTitle, item.disabled && styles.disabledText]}>
+        {item.title}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -152,12 +146,11 @@ export default function AfterSchoolPage() {
           customHeaderText={`After School - Day ${day}`}
           customLocationText="Peaceful Evening"
         />
-        <FlatList
-          data={options}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.list}
-        />
+        <View style={styles.optionsContainer}>
+          <View style={styles.optionsGrid}>
+            {options.map((item, index) => renderCircleOption(item, index))}
+          </View>
+        </View>
         <View style={styles.buttonContainer}>
           {/* Optional: Add a button here if needed */}
         </View>
@@ -187,57 +180,59 @@ const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
   },
-  list: {
-    padding: 16,
-  },
-  option: {
-    marginBottom: 12,
-    padding: 16,
-    flexDirection: 'row',
+  optionsContainer: {
+    flex: 1,
+    paddingTop: 20,
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    backgroundColor: 'rgba(120, 120, 120, 0.3)', // Darker background for better contrast
-    borderRadius: 16,
-    borderWidth: 2,
+    paddingHorizontal: 20,
+  },
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    maxWidth: 320,
+    width: '100%',
+  },
+  circleOption: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(90,99,127, 0.8)',
+    borderWidth: 3,
     borderColor: '#f7e98e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
     shadowColor: '#2d1b3d',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 3, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
   buttonContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
     alignItems: 'center',
   },
-  optionEmoji: {
-    fontSize: 44,
-    marginRight: 20,
+  circleEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
   },
-  optionText: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+  circleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#f7e98e',
-    marginBottom: 6,
+    textAlign: 'center',
     fontFamily: 'CrayonPastel',
     textShadowColor: 'rgba(125,125,125,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+    paddingHorizontal: 8,
   },
-  optionDesc: {
-    fontSize: 16,
-    color: '#f5f5dc', // Changed from purple to beige/cream for better contrast
-    lineHeight: 22,
-    fontStyle: 'italic',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  disabledOption: {
-    opacity: 0.6,
+  disabledCircle: {
+    opacity: 0.5,
     backgroundColor: 'rgba(93, 76, 112, 0.4)',
   },
   disabledEmoji: {

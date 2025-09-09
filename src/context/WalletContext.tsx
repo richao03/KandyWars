@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { saveWallet, loadWallet } from '../utils/persistence';
 import { JokerService } from '../utils/jokerService';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 type WalletContextType = {
   balance: number;
   stashedAmount: number;
+  difficulty: 'easy' | 'medium' | 'hard' | null;
   spend: (amount: number) => boolean;
   add: (amount: number) => void;
   addAllowance: (jokers?: any[], periodCount?: number) => number; // Returns amount received
@@ -21,15 +23,17 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [balance, setBalance] = useState(20); // starting cash
   const [stashedAmount, setStashedAmount] = useState(0); // money in piggy bank
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | null>(null); // current difficulty
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load wallet data on mount
   useEffect(() => {
     const loadWalletData = async () => {
-      const defaultWallet = { balance: 20, stashedAmount: 0 };
+      const defaultWallet = { balance: 20, stashedAmount: 0, difficulty: null };
       const savedWallet = await loadWallet(defaultWallet);
       setBalance(savedWallet.balance ?? 20);
       setStashedAmount(savedWallet.stashedAmount ?? 0);
+      setDifficulty(savedWallet.difficulty ?? null);
       setIsLoaded(true);
       console.log('Wallet loaded:', savedWallet);
     };
@@ -40,9 +44,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Save wallet data whenever it changes
   useEffect(() => {
     if (!isLoaded) return; // Don't save during initial load
-    const walletData = { balance, stashedAmount };
+    const walletData = { balance, stashedAmount, difficulty };
     saveWallet(walletData);
-  }, [balance, stashedAmount, isLoaded]);
+  }, [balance, stashedAmount, difficulty, isLoaded]);
 
   const spend = (amount: number): boolean => {
     if (balance >= amount) {
@@ -64,12 +68,14 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addAllowance = (jokers?: any[], periodCount?: number): number => {
     let allowanceAmount = 20; // Base allowance is $20
     
-    // TODO: Check for joker effects that modify allowance amount
-    // Example: if (jokers && periodCount !== undefined) {
-    //   const jokerService = JokerService.getInstance();
-    //   const allowanceModifier = jokerService.getAllowanceModifier(jokers, periodCount);
-    //   allowanceAmount = Math.round((allowanceAmount * allowanceModifier) * 100) / 100;
-    // }
+    // Check for Ace the Test joker that doubles allowance
+    if (jokers) {
+      const aceTheTestJoker = findJokerById(jokers, JOKER_IDS.ACE_THE_TEST);
+      if (aceTheTestJoker) {
+        allowanceAmount = allowanceAmount * 2;
+        console.log('🎯 Ace the Test: Doubling daily allowance from $20 to $40');
+      }
+    }
     
     console.log('💰 WalletContext: Adding daily allowance:', allowanceAmount);
     setBalance(prev => {
@@ -144,11 +150,17 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const resetWallet = () => {
     setBalance(20); // Reset to starting cash
     setStashedAmount(0); // Reset stash
+    setDifficulty(null); // Reset difficulty
     console.log('Wallet reset to initial state');
   };
 
   const initializeWallet = (difficulty?: 'easy' | 'medium' | 'hard') => {
     setBalance(20); // Starting cash is always 20
+    
+    // Store the difficulty for future use
+    if (difficulty) {
+      setDifficulty(difficulty);
+    }
     
     // Set piggy bank balance based on difficulty (negative amounts represent debt)
     switch (difficulty) {
@@ -172,6 +184,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     <WalletContext.Provider value={{ 
       balance, 
       stashedAmount,
+      difficulty,
       spend, 
       add,
       addAllowance,

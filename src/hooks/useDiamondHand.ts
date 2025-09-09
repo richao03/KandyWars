@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useGame } from '../context/GameContext';
 import { useInventory } from '../context/InventoryContext';
 import { useJokers } from '../context/JokerContext';
@@ -12,55 +12,36 @@ export const useDiamondHand = () => {
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
   
-  // Track if player sold anything this period
-  const [soldThisPeriod, setSoldThisPeriod] = useState(false);
   const [lastPeriod, setLastPeriod] = useState(periodCount);
 
-  // Reset sold tracking when period changes
+  // Check for Diamond Hand bonus when period changes
   useEffect(() => {
-    if (periodCount !== lastPeriod) {
-      // Check Diamond Hand conditions for the previous period
+    if (periodCount !== lastPeriod && periodCount > 0) {
       checkDiamondHandBonus();
-      
-      // Reset for new period
-      setSoldThisPeriod(false);
       setLastPeriod(periodCount);
     }
-  }, [periodCount]);
+  }, [periodCount, checkDiamondHandBonus]); // Trigger when period or dependencies change
 
-  const checkDiamondHandBonus = () => {
-    // Skip the first period (period 0)
-    if (lastPeriod === 0) return;
-
+  const checkDiamondHandBonus = useCallback(() => {
     // Check if player has Diamond Hand joker
     const diamondHandJoker = findJokerById(jokers, JOKER_IDS.DIAMOND_HAND);
     if (!diamondHandJoker) return;
 
-    // Check if player had inventory and didn't sell
+    // Get current inventory count
     const currentInventory = getTotalInventoryCount();
-    const hasInventory = currentInventory > 0;
-    const didntSell = !soldThisPeriod;
-
-    if (hasInventory && didntSell) {
-      // Get the bonus amount from joker service
-      const jokerService = JokerService.getInstance();
-      const bonusAmount = jokerService.applyJokerEffects(0, 'holding_inventory_bonus', jokers, periodCount);
+    
+    if (currentInventory > 0) {
+      // Calculate bonus: $50 per candy in inventory
+      const bonusAmount = currentInventory * 50;
       
-      if (bonusAmount > 0) {
-        addMoney(bonusAmount);
-        console.log(`💎 Diamond Hand: +$${bonusAmount} for holding inventory without selling!`);
-        
-        // Show notification to user
-        setTimeout(() => {
-          alert(`💎 Diamond Hand!\n\nYou held your inventory without selling and earned $${bonusAmount}!\n\n"Hold the line! 🚀"`);
-        }, 1000); // Delay to ensure period transition is complete
-      }
+      addMoney(bonusAmount);
+      console.log(`💎 Diamond Hand: +$${bonusAmount} for ${currentInventory} candies at period start!`);
     }
-  };
+  }, [jokers, getTotalInventoryCount, addMoney]);
 
-  // Function to be called when player makes a sale
+  // Legacy function for backwards compatibility (no longer used)
   const recordSale = () => {
-    setSoldThisPeriod(true);
+    // No longer needed since we're not tracking sales
   };
 
   return { recordSale };

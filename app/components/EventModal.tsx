@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Animated,
@@ -123,6 +124,9 @@ const EventModal = React.memo(function EventModal() {
       }
 
       if (currentEvent.category === 'bad') {
+        // Trigger warning haptic feedback for negative events
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        
         // For BAD events: Immediate appearance with shake
         fadeAnim.setValue(1);
         scaleAnim.setValue(1);

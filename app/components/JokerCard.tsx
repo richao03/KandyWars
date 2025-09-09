@@ -13,6 +13,7 @@ import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
 
 interface JokerCardProps {
@@ -53,7 +54,8 @@ function JokerCard({
   disableActivation = false,
 }: JokerCardProps) {
   const { jokers, activateJoker, addJoker } = useJokers();
-  const { periodCount, revertToPreviousPeriod, incrementPeriod } = useGame();
+  const { periodCount, revertToPreviousPeriod, incrementPeriod, jumpToPeriod } =
+    useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
   const {
     inventory,
@@ -66,6 +68,7 @@ function JokerCard({
   const { add: addMoney } = useWallet();
   const [showCandySelector, setShowCandySelector] = useState(false);
   const [showJokerSelector, setShowJokerSelector] = useState(false);
+  const [showPeriodSelector, setShowPeriodSelector] = useState(false); // Select period for time travel
   const [showConversionStep1, setShowConversionStep1] = useState(false); // Select source candy
   const [showConversionStep2, setShowConversionStep2] = useState(false); // Select target candy
   const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(
@@ -170,6 +173,12 @@ function JokerCard({
     } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
       // Show candy selector modal for big short
       setShowCandySelector(true);
+    } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
+      // Show candy selector modal for inventory filling
+      setShowCandySelector(true);
+    } else if (joker.id === JOKER_IDS.TACHYONIC_SPRINT) {
+      // Show period selector modal for time travel
+      setShowPeriodSelector(true);
     } else if (joker.id === JOKER_IDS.ROMAN_COIN) {
       // Show confirmation for Roman Coin activation
       showConfirm(
@@ -178,6 +187,28 @@ function JokerCard({
         '🪙',
         () => handleRomanCoin(),
         'Sell Coin',
+        'Cancel',
+        () => {}
+      );
+    } else if (joker.id === JOKER_IDS.LOST_AND_FOUND) {
+      // Show confirmation for Lost and Found activation
+      showConfirm(
+        'Lost and Found',
+        "Find someone's lost lunch money worth $100?",
+        '🎒',
+        () => handleLostAndFound(),
+        'Find Money',
+        'Cancel',
+        () => {}
+      );
+    } else if (joker.id === JOKER_IDS.DODGEBALL_DASH) {
+      // Show confirmation for Dodgeball Dash activation
+      showConfirm(
+        'Dodgeball Dash',
+        'Set up your next sale to earn double profit?',
+        '⚡',
+        () => handleDodgeballDash(),
+        'Activate',
         'Cancel',
         () => {}
       );
@@ -253,6 +284,9 @@ function JokerCard({
           '📉'
         );
       }
+    } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
+      // Handle Bet You I'm Faster: fill inventory with chosen candy
+      await handleBetYouImFaster(candyType);
     } else {
       // Handle other price-doubling effects
       const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
@@ -293,6 +327,60 @@ function JokerCard({
         );
       }
     }
+  };
+
+  const handleBetYouImFaster = async (candyType: string) => {
+    const inventoryLimit = getInventoryLimit();
+    const currentInventoryCount = getTotalInventoryCount();
+    const availableSpace = inventoryLimit - currentInventoryCount;
+
+    if (availableSpace <= 0) {
+      showAlert(
+        'Inventory Full!',
+        'Your inventory is full! Clear some space first.',
+        '📦'
+      );
+      setShowCandySelector(false);
+      return;
+    }
+
+    // Fill inventory with chosen candy (free candy at $0 cost)
+    const success = addToInventory(candyType, availableSpace, 0);
+
+    if (success) {
+      // Remove the joker (it's one-time use)
+      await activateJoker(joker.id);
+
+      showAlert(
+        'Speed Demon Victory!',
+        `Lightning fast! You filled your inventory with ${availableSpace} ${candyType} candies!`,
+        '⚡'
+      );
+    } else {
+      showAlert('Fill Failed!', 'Unable to fill inventory. Try again!', '❌');
+    }
+
+    setShowCandySelector(false);
+  };
+
+  const handlePeriodSelection = async (targetPeriod: number) => {
+    if (jumpToPeriod && jumpToPeriod(targetPeriod)) {
+      // Remove the joker (it's one-time use)
+      await activateJoker(joker.id);
+
+      showAlert(
+        'Tachyonic Sprint Activated!',
+        `Time has bent to your will! You have traveled back to period ${targetPeriod}.\n\nYour wallet and inventory remain intact, but game events and prices have been reset.`,
+        '⚡'
+      );
+    } else {
+      showAlert(
+        'Time Travel Failed!',
+        `Unable to travel to period ${targetPeriod}. The timeline remains unchanged.`,
+        '❌'
+      );
+    }
+    setShowPeriodSelector(false);
   };
 
   const handleJokerSelection = async (selectedJoker: any) => {
@@ -475,17 +563,95 @@ function JokerCard({
     }
   };
 
+  const handleLostAndFound = async () => {
+    console.log('🎒 Lost and Found: Starting activation');
+
+    try {
+      // Generate maximum find money event (typically $50-100)
+      const maxAmount = 100; // Max amount for found money events
+      console.log(`🎒 Lost and Found: Adding $${maxAmount} to wallet`);
+      addMoney(maxAmount);
+
+      // Remove the joker (it's one-time use)
+      console.log('🎒 Lost and Found: Activating joker with ID:', joker.id);
+      const success = await activateJoker(joker.id);
+      console.log('🎒 Lost and Found: Activation result:', success);
+
+      if (success) {
+        console.log('🎒 Lost and Found: Showing success alert');
+        showAlert(
+          'Lost and Found!',
+          `You found someone\'s lost lunch money and received $${maxAmount}!`,
+          '🎒'
+        );
+      } else {
+        console.log('🎒 Lost and Found: Activation failed, showing error');
+        showAlert('Error', 'Failed to activate Lost and Found joker', '❌');
+      }
+    } catch (error) {
+      console.error('🎒 Lost and Found: Error during activation:', error);
+      showAlert(
+        'Error',
+        'An error occurred while activating Lost and Found',
+        '❌'
+      );
+    }
+  };
+
+  const handleDodgeballDash = async () => {
+    console.log('⚡ Dodgeball Dash: Starting activation');
+
+    try {
+      // This joker sets up a "next sale doubles" effect
+      // We'll need to track this in the sales system
+      console.log('⚡ Dodgeball Dash: Setting up next sale multiplier');
+
+      // Remove the joker (it's one-time use)
+      const success = await activateJoker(joker.id);
+      console.log('⚡ Dodgeball Dash: Activation result:', success);
+
+      if (success) {
+        showAlert(
+          'Dodgeball Dash Activated!',
+          'Your next candy sale will earn double profit!',
+          '⚡'
+        );
+      } else {
+        showAlert('Error', 'Failed to activate Dodgeball Dash joker', '❌');
+      }
+    } catch (error) {
+      console.error('⚡ Dodgeball Dash: Error during activation:', error);
+      showAlert(
+        'Error',
+        'An error occurred while activating Dodgeball Dash',
+        '❌'
+      );
+    }
+  };
+
   // Memoize computed values to prevent recreation on every render
   const typeColor = useMemo(() => {
     if (joker.type === 'persistent') {
-      return isAfterSchool ? '#8a7ca8' : '#4ade80';
+      return '#4ade80';
     }
-    return isAfterSchool ? '#f87171' : '#fb7185';
-  }, [joker.type, isAfterSchool]);
+    return '#fb7185';
+  }, [joker.type]);
 
   const typeText = useMemo(() => {
-    return joker.type === 'persistent' ? ' 🔄' : ' ⚡';
+    return joker.type === 'persistent' ? 'Aura' : 'Instant';
   }, [joker.type]);
+
+  // Get flavor text from standardized jokers if missing (for backward compatibility)
+  const flavorText = useMemo(() => {
+    if (joker.flavorText) {
+      return joker.flavorText;
+    }
+    // Look up flavor text from standardized jokers
+    const standardizedJoker = STANDARDIZED_JOKERS.find(
+      (sj) => sj.id === joker.id
+    );
+    return standardizedJoker?.flavorText || 'Mysterious power awaits...';
+  }, [joker.id, joker.flavorText]);
 
   const CardWrapper = onLongPress ? TouchableOpacity : View;
   const cardWrapperProps = onLongPress
@@ -513,31 +679,11 @@ function JokerCard({
                 </View>
               </View>
             </View>
-
-            <View style={styles.descriptionContainer}>
-              <Text
-                style={styles.jokerDescription}
-                numberOfLines={4}
-                ellipsizeMode="tail"
-              >
-                {joker.description}{' '}
-                <Text style={[styles.typeIndicatorText, { color: typeColor }]}>
-                  {typeText}
-                </Text>
+            <View style={styles.typeRow}>
+              <Text style={[styles.typeIndicatorText, { color: typeColor }]}>
+                {typeText}
               </Text>
-
-              <View style={styles.separator} />
-              <Text
-                style={styles.jokerFlavorText}
-                numberOfLines={3}
-                ellipsizeMode="tail"
-              >
-                {joker.flavorText}
-              </Text>
-            </View>
-
-            <View style={styles.bottomRow}>
-              {joker.type === 'one-time' && !disableActivation ? (
+              {joker.type === 'one-time' && !disableActivation && !isAfterSchool ? (
                 <TouchableOpacity
                   style={styles.activateButton}
                   onPress={handleActivate}
@@ -547,6 +693,24 @@ function JokerCard({
               ) : (
                 <View />
               )}
+            </View>
+            <View style={styles.descriptionContainer}>
+              <Text
+                style={styles.jokerDescription}
+                numberOfLines={4}
+                ellipsizeMode="tail"
+              >
+                {joker.description}{' '}
+              </Text>
+
+              <View style={styles.separator} />
+              <Text
+                style={styles.jokerFlavorText}
+                numberOfLines={3}
+                ellipsizeMode="tail"
+              >
+                {flavorText}
+              </Text>
             </View>
           </CardWrapper>
         </View>
@@ -581,6 +745,51 @@ function JokerCard({
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => setShowCandySelector(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Period Selector Modal */}
+      <Modal
+        visible={showPeriodSelector}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>⚡ Choose Period to Travel To</Text>
+
+            <Text style={styles.modalSubtitle}>
+              Current Period: {periodCount}
+            </Text>
+
+            {Array.from({ length: periodCount + 1 }, (_, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  styles.periodOption,
+                  i === periodCount && styles.currentPeriodOption,
+                ]}
+                onPress={() => handlePeriodSelection(i)}
+                disabled={i === periodCount}
+              >
+                <Text
+                  style={[
+                    styles.periodOptionText,
+                    i === periodCount && styles.currentPeriodText,
+                  ]}
+                >
+                  Period {i} {i === periodCount ? '(Current)' : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowPeriodSelector(false)}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -625,12 +834,8 @@ function JokerCard({
                           {
                             color:
                               availableJoker.type === 'persistent'
-                                ? isAfterSchool
-                                  ? '#8a7ca8'
-                                  : '#4ade80'
-                                : isAfterSchool
-                                  ? '#f87171'
-                                  : '#fb7185',
+                                ? '#4ade80'
+                                : '#fb7185',
                           },
                         ]}
                       >
@@ -914,8 +1119,8 @@ const styles = StyleSheet.create({
   },
   activateButton: {
     backgroundColor: '#4ade80',
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
     borderRadius: 6,
     alignSelf: 'flex-start',
     borderWidth: 1,
@@ -929,18 +1134,20 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     textTransform: 'uppercase',
   },
-  bottomRow: {
+  typeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 0,
   },
   typeIndicator: {
     alignSelf: 'flex-end',
   },
   typeIndicatorText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '700',
+    fontStyle: 'italic',
+    marginTop: 4,
     fontFamily: 'CrayonPastel',
   },
   persistentIndicator: {
@@ -1102,6 +1309,37 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     opacity: 0.8,
     marginTop: 2,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8b4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  periodOption: {
+    padding: 16,
+    backgroundColor: '#f5e6d3',
+    marginVertical: 4,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#d4a574',
+  },
+  currentPeriodOption: {
+    backgroundColor: '#e0e0e0',
+    borderColor: '#999999',
+    opacity: 0.6,
+  },
+  periodOptionText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+  },
+  currentPeriodText: {
+    color: '#888888',
   },
 });
 

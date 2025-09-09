@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { SpecialEventEffect } from '../../utils/generateSeededGameData';
 import { useGame } from './GameContext';
@@ -192,6 +193,13 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
       // Handle effect-specific actions
       switch (currentEvent.effect) {
         case 'STASH_LOCKED':
+          // Trigger strong haptic feedback for stash confiscation
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          // Add a second heavy impact for longer effect
+          setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          }, 200);
+          
           // Attempt to confiscate money, but respect Safe Deposit protection
           const confiscatedAmount = confiscateStash(jokers, periodCount);
           if (confiscatedAmount > 0) {
@@ -204,6 +212,13 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
           }
           break;
         case 'LOSE_MONEY':
+          // Trigger strong haptic feedback for money theft
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          // Add a second heavy impact for longer effect
+          setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          }, 200);
+          
           // Bully event: steal 50% of money (before joker effects)
           const fiftyPercent = Math.floor(balance * 0.5);
           const amountToSteal = currentEvent.dollarAmount || fiftyPercent; // Use event's amount or default to 50%
@@ -211,12 +226,31 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
           console.log(`💸 Bully tried to steal $${amountToSteal} (50% of $${balance}), actually stole: $${actualAmountStolen} after joker effects`);
           break;
         case 'FOUND_MONEY':
+          // Trigger double light haptic feedback for positive events
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }, 100);
+          
           addToWallet(currentEvent.dollarAmount);
           break;
         case 'PRICE_DROP':
+          // Trigger strong haptic feedback for price drops
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          // Add a second heavy impact for longer effect
+          setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          }, 200);
+          
           modifyCandyPrice(currentEvent?.candy, periodCount, 1);
           break;
         case 'PRICE_SPIKE':
+          // Trigger double light haptic feedback for positive events
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setTimeout(() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }, 100);
+          
           modifyCandyPrice(
             currentEvent?.candy,
             periodCount,

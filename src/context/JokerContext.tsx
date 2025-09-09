@@ -6,6 +6,7 @@ export interface Joker {
   name: string;
   description: string;
   subject: string;
+  flavorText?: string; // Added flavor text field
   theme?: string;
   type?: 'one-time' | 'persistent'; // Optional, can be inferred from effects
   effect?: string; // Optional, legacy field
@@ -29,6 +30,7 @@ export interface ActiveJokerEffect {
 type JokerContextType = {
   jokers: Joker[];
   activeEffects: ActiveJokerEffect[];
+  isLoaded: boolean;
   addJoker: (joker: Joker) => void;
   removeJoker: (jokerId: number) => void;
   hasJoker: (jokerId: number) => boolean;
@@ -154,6 +156,7 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         jokers,
         activeEffects,
+        isLoaded,
         addJoker,
         removeJoker,
         hasJoker,

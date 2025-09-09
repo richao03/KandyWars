@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { loadInventory, saveInventory } from '../utils/persistence';
 import { useJokers } from './JokerContext';
 import { useGame } from './GameContext';
+import { useWallet } from './WalletContext';
 import { JokerService } from '../utils/jokerService';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
@@ -35,9 +36,11 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   const [inventory, setInventory] = useState<Inventory>({});
   const [inventoryLimit, setInventoryLimit] = useState(30);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [lastProcessedDay, setLastProcessedDay] = useState(-1);
   const jokerService = JokerService.getInstance();
   const { jokers } = useJokers();
-  const { periodCount } = useGame();
+  const { periodCount, period, day } = useGame();
+  const { add: addMoney } = useWallet();
 
   // Memoize inventory limit calculation to prevent excessive recalculations
   const memoizedInventoryLimit = useMemo(() => {
@@ -67,6 +70,23 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isLoaded) return; // Don't save during initial load
     saveInventory(inventory);
   }, [inventory, isLoaded]);
+
+  // Handle Home Made joker effect - give money for inventory at start of each school day
+  useEffect(() => {
+    // Check if it's period 1 (start of school day) and we haven't processed this day yet
+    if (period === 1 && day !== lastProcessedDay && day > 0) {
+      const homeMadeJoker = jokers.find(j => j.name === 'Home Made');
+      if (homeMadeJoker) {
+        const totalCandies = Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+        if (totalCandies > 0) {
+          const bonus = totalCandies * 10; // $10 per candy
+          addMoney(bonus);
+          console.log(`🏠 Home Made: Earned $${bonus} for bringing ${totalCandies} candies to school on day ${day}`);
+        }
+      }
+      setLastProcessedDay(day);
+    }
+  }, [period, day, jokers, inventory, addMoney, lastProcessedDay]);
 
   // Handle candy generation from "Something from Nothing" joker
   useEffect(() => {

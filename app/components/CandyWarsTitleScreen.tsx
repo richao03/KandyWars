@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Animated,
   Dimensions,
@@ -29,6 +29,16 @@ export default function CandyWarsTitleScreen({
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonsShown = useRef(false);
+
+  // Reset component state when it mounts/re-mounts
+  useEffect(() => {
+    console.log('🎬 CandyWarsTitleScreen: Component mounted, resetting state');
+    setAnimationComplete(false);
+    setShowButtons(false);
+    setShowDifficultyModal(false);
+    buttonsShown.current = false;
+    buttonOpacity.setValue(0);
+  }, []);
 
   const handleAnimationComplete = () => {
     setAnimationComplete(true);
@@ -65,12 +75,16 @@ export default function CandyWarsTitleScreen({
     setShowDifficultyModal(false);
   };
 
+  console.log('🎬 CandyWarsTitleScreen: Rendering - showButtons:', showButtons, 'animationComplete:', animationComplete);
+
   return (
     <View style={styles.container}>
       <ImageBackground
         source={require('../../assets/images/titleScreen.png')}
         style={styles.backgroundContainer}
         resizeMode="cover"
+        onLoad={() => console.log('🖼️ Background image loaded successfully')}
+        onError={(error) => console.error('❌ Background image failed to load:', error)}
       >
         <View style={styles.titleWrapper}>
           <ExactFontHandwriting 

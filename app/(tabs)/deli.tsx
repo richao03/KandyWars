@@ -1,13 +1,16 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import GameHUD from '../components/GameHUD';
 import TransactionModal from '../components/TransactionModal';
 import { useGame } from '../../src/context/GameContext';
 import { useInventory } from '../../src/context/InventoryContext';
+import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { Candy } from '../types';
 
 type CandyForDeli = Candy & {
@@ -30,12 +33,21 @@ export default function Deli() {
   const { balance, spend, add } = useWallet();
   const { addToInventory, removeFromInventory } = useInventory();
   const { day } = useGame();
+  const { jokers } = useJokers();
+
+  // Check for Vendor Kickback joker
+  const vendorKickbackJoker = findJokerById(jokers, JOKER_IDS.VENDOR_KICKBACK);
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
       // Calculate average price across all periods
       const prices = gameData.candyPrices[candy.name];
-      const averageCost = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+      let averageCost = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+      
+      // Apply Vendor Kickback discount if joker is present
+      if (vendorKickbackJoker) {
+        averageCost = averageCost * 0.5; // 50% discount
+      }
       
       return {
         ...candy,
@@ -48,6 +60,30 @@ export default function Deli() {
 
   const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(null);
   const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
+
+  // Update candy prices when jokers change
+  useEffect(() => {
+    const currentVendorKickbackJoker = findJokerById(jokers, JOKER_IDS.VENDOR_KICKBACK);
+    
+    setCandies(baseCandies.map((candy) => {
+      // Calculate average price across all periods
+      const prices = gameData.candyPrices[candy.name];
+      let averageCost = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+      
+      // Apply Vendor Kickback discount if joker is present
+      if (currentVendorKickbackJoker) {
+        averageCost = averageCost * 0.5; // 50% discount
+        console.log(`🏪 Vendor Kickback: Applied 50% discount to ${candy.name} at deli`);
+      }
+      
+      return {
+        ...candy,
+        cost: parseFloat(averageCost.toFixed(2)),
+        quantityOwned: 0,
+        averagePrice: null,
+      };
+    }));
+  }, [jokers, gameData]);
 
   const openModal = (index: number) => {
     setSelectedCandyIndex(index);
@@ -101,6 +137,8 @@ export default function Deli() {
   };
 
   const handleReturnToAfterSchool = () => {
+    // Trigger success haptic feedback when going back to after school
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.push('/(tabs)/after-school');
   };
 
@@ -121,6 +159,14 @@ export default function Deli() {
         <Text style={styles.title}>🏪 Corner Deli</Text>
         <Text style={styles.subtitle}>Stable prices • Average market rates</Text>
       </View>
+
+      {vendorKickbackJoker && (
+        <View style={styles.discountBanner}>
+          <Text style={styles.discountText}>
+            🤝 Vendor Kickback Active - All prices 50% off!
+          </Text>
+        </View>
+      )}
       
       <FlatList
         data={candies}
@@ -253,5 +299,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'CrayonPastel',
+  },
+  discountBanner: {
+    backgroundColor: 'rgba(34, 197, 94, 0.9)', // Green background
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    alignItems: 'center',
+  },
+  discountText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });

@@ -1,7 +1,11 @@
 import Slider from '@react-native-community/slider';
-import React, { useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import React, { useState, useMemo } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useJokers } from '../../src/context/JokerContext';
 import { Candy } from '../../src/types/candy';
 
 type PriceBreakdown = {
@@ -44,8 +48,25 @@ export default function TransactionModal({
 }: Props) {
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [quantity, setQuantity] = useState(1);
+  const { jokers } = useJokers();
+  const { getInventoryLimit } = useInventory();
 
   const maxQuantity = mode === 'buy' ? maxBuyQuantity : maxSellQuantity;
+  const inventoryLimit = getInventoryLimit();
+  
+  // Check for Bulk Discount joker
+  const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_DISCOUNT);
+  const qualifiesForBulkDiscount = useMemo(() => {
+    return mode === 'buy' && bulkDiscountJoker && quantity > inventoryLimit / 2;
+  }, [mode, bulkDiscountJoker, quantity, inventoryLimit]);
+  
+  // Calculate final price with bulk discount
+  const finalUnitPrice = useMemo(() => {
+    if (qualifiesForBulkDiscount) {
+      return candy.cost * 0.9; // Apply 10% discount
+    }
+    return candy.cost;
+  }, [qualifiesForBulkDiscount, candy.cost]);
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
@@ -56,6 +77,12 @@ export default function TransactionModal({
   const changeMode = (newMode: 'buy' | 'sell') => {
     setMode(newMode);
     setQuantity(1);
+  };
+
+  const handleSliderChange = (value: number) => {
+    // Trigger light haptic feedback on slider value change
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setQuantity(value);
   };
 
   return (
@@ -177,10 +204,22 @@ export default function TransactionModal({
             maximumValue={maxQuantity}
             step={1}
             value={quantity}
-            onValueChange={(val) => setQuantity(val)}
+            onValueChange={handleSliderChange}
             minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
             maximumTrackTintColor="#ccc"
           />
+
+          {/* Bulk Discount Notification */}
+          {qualifiesForBulkDiscount && mode === 'buy' && (
+            <View style={styles.bulkDiscountContainer}>
+              <Text style={styles.bulkDiscountLabel}>
+                🎯 Bulk Discount Applied!
+              </Text>
+              <Text style={styles.bulkDiscountDescription}>
+                10% off for purchasing more than {Math.floor(inventoryLimit / 2)} items
+              </Text>
+            </View>
+          )}
 
           <View style={styles.totalValueContainer}>
             <Text style={styles.totalValueLabel}>Total Value:</Text>
@@ -190,9 +229,18 @@ export default function TransactionModal({
                 { color: mode === 'buy' ? '#ef4444' : '#22c55e' },
               ]}
             >
-              ${(quantity * candy.cost).toFixed(2)}
+              ${(quantity * finalUnitPrice).toFixed(2)}
             </Text>
           </View>
+
+          {qualifiesForBulkDiscount && mode === 'buy' && (
+            <View style={styles.savingsContainer}>
+              <Text style={styles.savingsLabel}>You Save:</Text>
+              <Text style={styles.savingsAmount}>
+                ${((quantity * candy.cost) - (quantity * finalUnitPrice)).toFixed(2)}
+              </Text>
+            </View>
+          )}
 
           {mode === 'buy' && maxBuyQuantity === 0 && (
             <Text style={styles.warningText}>
@@ -456,5 +504,51 @@ const styles = StyleSheet.create({
     color: '#92400e',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
+  },
+  bulkDiscountContainer: {
+    backgroundColor: '#e0f2fe',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 8,
+    borderWidth: 2,
+    borderColor: '#0ea5e9',
+    alignItems: 'center',
+  },
+  bulkDiscountLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0c4a6e',
+    fontFamily: 'CrayonPastel',
+    marginBottom: 4,
+  },
+  bulkDiscountDescription: {
+    fontSize: 12,
+    color: '#075985',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+  },
+  savingsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: '#dcfce7',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+  },
+  savingsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#15803d',
+    fontFamily: 'CrayonPastel',
+    marginRight: 8,
+  },
+  savingsAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#16a34a',
+    fontFamily: 'CrayonPastel',
   },
 });
