@@ -71,7 +71,7 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const { periodCount, currentLocation, day } = useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
-  const { removeAllFromInventory } = useInventory();
+  const { removeAllFromInventory, confiscateHalfInventory } = useInventory();
   const { jokers } = useJokers();
   const { confiscateStash, add: addToWallet, balance, stealMoney } = useWallet();
   const [currentEvent, setCurrentEvent] = useState<SpecialEventEffect | null>(
@@ -200,16 +200,13 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           }, 200);
           
-          // Attempt to confiscate money, but respect Safe Deposit protection
-          const confiscatedAmount = confiscateStash(jokers, periodCount);
-          if (confiscatedAmount > 0) {
-            console.log(`💸 Confiscated $${confiscatedAmount} from stash`);
-            removeAllFromInventory(); // Also remove inventory
-          } else {
-            console.log('💰 Safe Deposit joker prevented money confiscation!');
-            // Still remove inventory even if money is protected
-            removeAllFromInventory();
-          }
+          // Confiscate half of candy inventory (rounded down)
+          // Example: 1 candy → 0 taken, 2 candies → 1 taken, 3 candies → 1 taken, 4 candies → 2 taken
+          const candiesConfiscated = confiscateHalfInventory();
+          console.log(`🍬 Confiscated ${candiesConfiscated} candies (half of inventory, rounded down)`);
+          
+          // Note: STASH_LOCKED should NOT touch money in wallet or piggy bank
+          // Only candy inventory is affected
           break;
         case 'LOSE_MONEY':
           // Trigger strong haptic feedback for money theft

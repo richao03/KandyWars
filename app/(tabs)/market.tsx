@@ -1,9 +1,8 @@
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   FlatList,
   ImageBackground,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useCandySales } from '../../src/context/CandySalesContext';
 import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useEventHandler } from '../../src/context/EventHandlerContext';
@@ -24,7 +24,6 @@ import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { JokerService } from '../../src/utils/jokerService';
-import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
@@ -44,6 +43,8 @@ type PriceBreakdown = {
     jokerEmoji: string;
     effect: string;
     amount: number;
+    effectType: 'buy' | 'sell';
+    isActive: boolean;
   }>;
   finalPrice: number;
 };
@@ -146,29 +147,33 @@ export default function Market() {
             e.priceOverride !== undefined
         );
 
-        // Get the current price from game data, fallback to base range if not available
-        let basePrice = gameData.candyPrices[candy.name]?.[periodCount];
-        if (basePrice === undefined || basePrice === null) {
-          // Use a consistent fallback price based on the candy name and period
-          // This ensures the same price is used throughout the period
-          const seed = candy.name.charCodeAt(0) + periodCount;
-          const random = Math.sin(seed) * 10000;
-          const normalizedRandom = random - Math.floor(random);
-          basePrice = candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
+        // Get the TRUE base price (before any modifications) for accurate breakdown
+        // Use a consistent fallback price based on the candy name and period
+        const seed = candy.name.charCodeAt(0) + periodCount;
+        const random = Math.sin(seed) * 10000;
+        const normalizedRandom = random - Math.floor(random);
+        const trueBasePrice =
+          candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
+
+        // Get the current modified price from game data (includes Trojan Horse, etc.)
+        let currentPrice = gameData.candyPrices[candy.name]?.[periodCount];
+        if (currentPrice === undefined || currentPrice === null) {
+          currentPrice = trueBasePrice;
         }
 
         // Get price breakdown showing base price and joker effects
         const priceBreakdown = jokerService.getPriceBreakdown(
-          basePrice,
+          trueBasePrice,
           jokers,
           periodCount,
-          currentInventoryLimit
+          currentInventoryLimit,
+          activeEffects
         );
 
         const finalCost =
           currentEvent?.priceOverride !== undefined
             ? currentEvent.priceOverride
-            : priceBreakdown.finalPrice;
+            : currentPrice;
 
         // Get inventory information for this candy
         const inventoryItem = inventory[candy.name];
@@ -178,7 +183,10 @@ export default function Market() {
           cost: finalCost,
           quantityOwned: inventoryItem?.quantity || 0,
           averagePrice: inventoryItem?.averagePrice || null,
-          priceBreakdown: currentEvent?.priceOverride === undefined ? priceBreakdown : undefined, // Only show breakdown if not overridden by events
+          priceBreakdown:
+            currentEvent?.priceOverride === undefined
+              ? priceBreakdown
+              : undefined, // Only show breakdown if not overridden by events
         };
       })
     );
@@ -208,7 +216,8 @@ export default function Market() {
     visitedDeli: false,
   });
   const [deliModalVisible, setDeliModalVisible] = useState(false);
-  const [sleepConfirmModalVisible, setSleepConfirmModalVisible] = useState(false);
+  const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
+    useState(false);
   const [confirmationModal, setConfirmationModal] = useState<{
     visible: boolean;
     title: string;
@@ -222,6 +231,8 @@ export default function Market() {
     emoji: '',
     onConfirm: () => {},
   });
+  const [endDayConfirmVisible, setEndDayConfirmVisible] = useState(false);
+  const [isEarlyEndDay, setIsEarlyEndDay] = useState(false);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -294,76 +305,114 @@ export default function Market() {
             multiplier *= 5;
           }
 
-          // Apply Jump Rope Rhythm bonus if applicable  
+          // Apply Jump Rope Rhythm bonus if applicable
           if (saleResult.shouldApplyJumpRopeBonus) {
             multiplier *= 1.33;
           }
 
-          // Check for Digital Lock one-time sell multiplier
-          const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(jokers, periodCount);
+          // Check for one-time sell multiplier jokers (like Pursuasion)
+          const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(
+            jokers,
+            periodCount,
+            activeEffects
+          );
           if (sellMultiplierInfo.hasEffect && sellMultiplierInfo.multiplier) {
             multiplier *= sellMultiplierInfo.multiplier;
-            
-            // Remove the Digital Lock joker after use (one-time effect)
-            const digitalLockJoker = findJokerById(jokers, JOKER_IDS.DIGITAL_LOCK);
-            if (digitalLockJoker) {
-              removeJoker(digitalLockJoker.id);
-              console.log(`🔒 Digital Lock activated and consumed! ${sellMultiplierInfo.multiplier}x multiplier applied`);
-            }
+
+            // Note: One-time sell multiplier jokers are automatically handled by the joker system
+            console.log(
+              `🗣️ ${sellMultiplierInfo.jokerName} activated! ${sellMultiplierInfo.multiplier}x multiplier applied`
+            );
           }
 
           // Check for Even Stevens and Odd Todd jokers
           const inventoryLimit = getInventoryLimit();
-          const evenStevensJoker = findJokerById(jokers, JOKER_IDS.EVEN_STEVENS);
+          const evenStevensJoker = findJokerById(
+            jokers,
+            JOKER_IDS.EVEN_STEVENS
+          );
           const oddToddJoker = findJokerById(jokers, JOKER_IDS.ODD_TODD);
-          
+
           if (evenStevensJoker && inventoryLimit % 2 === 0) {
             multiplier *= 1.1; // 10% bonus for even inventory limit
-            console.log(`⚖️ Even Stevens: +10% sales bonus applied (inventory limit: ${inventoryLimit})`);
+            console.log(
+              `⚖️ Even Stevens: +10% sales bonus applied (inventory limit: ${inventoryLimit})`
+            );
           } else if (oddToddJoker && inventoryLimit % 2 === 1) {
             multiplier *= 1.1; // 10% bonus for odd inventory limit
-            console.log(`🎭 Odd Todd: +10% sales bonus applied (inventory limit: ${inventoryLimit})`);
+            console.log(
+              `🎭 Odd Todd: +10% sales bonus applied (inventory limit: ${inventoryLimit})`
+            );
           }
 
           // Check for Recess jokers
-          const hopscotchJoker = findJokerById(jokers, JOKER_IDS.HOPSCOTCH_BONUS);
-          const swingsetJoker = findJokerById(jokers, JOKER_IDS.SWINGSET_MOMENTUM);
+          const hopscotchJoker = findJokerById(
+            jokers,
+            JOKER_IDS.HOPSCOTCH_BONUS
+          );
+          const swingsetJoker = findJokerById(
+            jokers,
+            JOKER_IDS.SWINGSET_MOMENTUM
+          );
 
           // Hopscotch Bonus: Every even period sales get +20%
           if (hopscotchJoker && period % 2 === 0) {
             multiplier *= 1.2; // 20% bonus for even periods
-            console.log(`🏃 Hopscotch Bonus: +20% sales bonus applied (period ${period} is even)`);
+            console.log(
+              `🏃 Hopscotch Bonus: +20% sales bonus applied (period ${period} is even)`
+            );
           }
-          
+
           // Swingset Momentum: Each consecutive period with a sale gets +10% sale price
           if (swingsetJoker && consecutivePeriodSales > 1) {
             const swingsetMultiplier = 1 + (consecutivePeriodSales - 1) * 0.1; // +10% per consecutive period
             multiplier *= swingsetMultiplier;
-            console.log(`⛹️ Swingset Momentum: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (${consecutivePeriodSales} consecutive periods)`);
+            console.log(
+              `⛹️ Swingset Momentum: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (${consecutivePeriodSales} consecutive periods)`
+            );
           }
 
           const baseGain = candy.cost * quantity;
           const totalGain = baseGain * multiplier;
 
-          console.log('🛒 Market: Selling candy:', candy.name, 'quantity:', quantity, 'price:', candy.cost, 'baseGain:', baseGain, 'multiplier:', multiplier, 'totalGain:', totalGain);
+          console.log(
+            '🛒 Market: Selling candy:',
+            candy.name,
+            'quantity:',
+            quantity,
+            'price:',
+            candy.cost,
+            'baseGain:',
+            baseGain,
+            'multiplier:',
+            multiplier,
+            'totalGain:',
+            totalGain
+          );
           add(totalGain);
           addProfit(totalGain); // Track daily profit
           addCandySold(quantity); // Track daily candy sales
           removeFromInventory(candy.name, quantity);
 
           // Show bonus notifications if applied
-          const hasAnyBonus = saleResult.shouldApplyCandySaladBonus || saleResult.shouldApplyJumpRopeBonus || sellMultiplierInfo.hasEffect || 
-                             (hopscotchJoker && period % 2 === 0) || (swingsetJoker && consecutivePeriodSales > 1);
-          
+          const hasAnyBonus =
+            saleResult.shouldApplyCandySaladBonus ||
+            saleResult.shouldApplyJumpRopeBonus ||
+            sellMultiplierInfo.hasEffect ||
+            (hopscotchJoker && period % 2 === 0) ||
+            (swingsetJoker && consecutivePeriodSales > 1);
+
           if (hasAnyBonus) {
             setTimeout(() => {
               let title = 'Sale Bonus!';
               let message = '';
               let emoji = '💰';
               let bonusDetails: string[] = [];
-              
+
               if (sellMultiplierInfo.hasEffect) {
-                bonusDetails.push(`🔒 Digital Lock: ${sellMultiplierInfo.multiplier}x multiplier`);
+                bonusDetails.push(
+                  `🗣️ ${sellMultiplierInfo.jokerName}: ${sellMultiplierInfo.multiplier}x multiplier`
+                );
               }
               if (saleResult.shouldApplyCandySaladBonus) {
                 bonusDetails.push(`🥗 Candy Salad: 5x bonus`);
@@ -372,12 +421,16 @@ export default function Market() {
                 bonusDetails.push(`🪩 Jump Rope Rhythm: 33% bonus (3rd sale)`);
               }
               if (hopscotchJoker && period % 2 === 0) {
-                bonusDetails.push(`🏃 Hopscotch Bonus: 20% bonus (even period)`);
+                bonusDetails.push(
+                  `🏃 Hopscotch Bonus: 20% bonus (even period)`
+                );
               }
               if (swingsetJoker && consecutivePeriodSales > 1) {
-                bonusDetails.push(`⛹️ Swingset Momentum: ${((1 + (consecutivePeriodSales - 1) * 0.1 - 1) * 100).toFixed(0)}% bonus (${consecutivePeriodSales} consecutive periods)`);
+                bonusDetails.push(
+                  `⛹️ Swingset Momentum: ${((1 + (consecutivePeriodSales - 1) * 0.1 - 1) * 100).toFixed(0)}% bonus (${consecutivePeriodSales} consecutive periods)`
+                );
               }
-              
+
               if (bonusDetails.length > 1) {
                 title = 'Multiple Bonuses!';
                 emoji = '🎉';
@@ -385,15 +438,18 @@ export default function Market() {
                 title = 'Jump Rope Rhythm!';
                 emoji = '🪩';
               }
-              
-              message = bonusDetails.join('\n') + `\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
-              
+
+              message =
+                bonusDetails.join('\n') +
+                `\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
+
               setConfirmationModal({
                 visible: true,
                 title,
                 message,
                 emoji,
-                onConfirm: () => setConfirmationModal(prev => ({ ...prev, visible: false }))
+                onConfirm: () =>
+                  setConfirmationModal((prev) => ({ ...prev, visible: false })),
               });
             }, 100);
           }
@@ -412,7 +468,7 @@ export default function Market() {
   const handleNextDay = () => {
     // Trigger success haptic feedback when advancing to next period
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
+
     if (period === 8) {
       // End of day - show day stats first
       setDayStatsModalVisible(true);
@@ -438,16 +494,60 @@ export default function Market() {
     incrementPeriod(location);
   };
 
+  const handleEndDay = () => {
+    console.log('🏠 End Day button pressed');
+    setEndDayConfirmVisible(true);
+  };
+
+  const handleEndDayConfirm = () => {
+    console.log('🏠 End Day confirmed');
+    // Trigger success haptic feedback when ending day
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    setEndDayConfirmVisible(false);
+    
+    // Don't advance periods - just show day stats to simulate end of day
+    console.log('🏠 Ending day early - showing day stats modal');
+    
+    // Reset all modal states first, then show day stats
+    setTimeout(() => {
+      console.log('🏠 Resetting all modal states');
+      setLocationModalVisible(false);
+      setSchoolsOutModalVisible(false);
+      setEndOfDayModalVisible(false);
+      setStashMoneyModalVisible(false);
+      setDeliModalVisible(false);
+      setSleepConfirmModalVisible(false);
+      
+      // Then show day stats modal (this simulates end of day)
+      setTimeout(() => {
+        console.log('🏠 Now showing DayStatsModal');
+        setDayStatsModalVisible(true);
+      }, 100);
+    }, 200);
+  };
+
+  const handleEndDayCancel = () => {
+    setEndDayConfirmVisible(false);
+  };
+
   // Day stats modal handler
   const handleDayStatsClose = () => {
+    console.log('📊 Day stats modal closing');
     setDayStatsModalVisible(false);
+    
+    // Show schools out modal first
+    console.log('📊 Showing schools out modal');
     setSchoolsOutModalVisible(true);
   };
 
   // Schools out modal handler
   const handleSchoolsOutComplete = () => {
+    console.log('🏫 Schools out modal complete');
     setSchoolsOutModalVisible(false);
-    // Enter after school mode and navigate
+    
+    // Now navigate to after school
+    console.log('🏫 Navigating to after school');
     startAfterSchool();
     router.push('/(tabs)/after-school');
   };
@@ -557,18 +657,23 @@ export default function Market() {
                       <Text style={styles.price}>
                         ${item.cost ? item.cost.toFixed(2) : '0.00'}
                       </Text>
-                      {item.priceBreakdown && item.priceBreakdown.jokerEffects.length > 0 && (
-                        <View style={styles.jokerIndicators}>
-                          {item.priceBreakdown.jokerEffects.slice(0, 3).map((effect, i) => (
-                            <Text key={i} style={styles.jokerIndicator}>
-                              {effect.jokerEmoji}
-                            </Text>
-                          ))}
-                          {item.priceBreakdown.jokerEffects.length > 3 && (
-                            <Text style={styles.moreIndicator}>+{item.priceBreakdown.jokerEffects.length - 3}</Text>
-                          )}
-                        </View>
-                      )}
+                      {item.priceBreakdown &&
+                        item.priceBreakdown.jokerEffects.length > 0 && (
+                          <View style={styles.jokerIndicators}>
+                            {item.priceBreakdown.jokerEffects
+                              .slice(0, 3)
+                              .map((effect, i) => (
+                                <Text key={i} style={styles.jokerIndicator}>
+                                  {effect.jokerEmoji}
+                                </Text>
+                              ))}
+                            {item.priceBreakdown.jokerEffects.length > 3 && (
+                              <Text style={styles.moreIndicator}>
+                                +{item.priceBreakdown.jokerEffects.length - 3}
+                              </Text>
+                            )}
+                          </View>
+                        )}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -579,20 +684,42 @@ export default function Market() {
         />
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.nextPeriodButton}
-            onPress={handleNextDay}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.nextPeriodButtonText}>
-              {period === 8 ? '🏠 Leave School for the Day' : '⏰ Next Period'}
-            </Text>
-            <Text style={styles.nextPeriodSubtext}>
-              {period === 8
-                ? 'Time to head home!'
-                : `Going to period ${period + 1}`}
-            </Text>
-          </TouchableOpacity>
+          {period === 8 ? (
+            // Period 8: Only show leave school button
+            <TouchableOpacity
+              style={styles.nextPeriodButton}
+              onPress={handleNextDay}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nextPeriodButtonText}>
+                🏠 Leave School for the Day
+              </Text>
+              <Text style={styles.nextPeriodSubtext}>Time to head home!</Text>
+            </TouchableOpacity>
+          ) : (
+            // Periods 1-7: Show both next period and end day buttons
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.nextPeriodButton, styles.bigButton]}
+                onPress={handleNextDay}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.nextPeriodButtonText}>⏰ Next Period</Text>
+                <Text style={styles.nextPeriodSubtext}>
+                  Going to period {period + 1}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.endDayButton, styles.smallButton]}
+                onPress={handleEndDay}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.endDayButtonText}>🏠 End Day</Text>
+                <Text style={styles.endDaySubtext}>Skip to after school</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ImageBackground>
 
@@ -646,7 +773,21 @@ export default function Market() {
         emoji={confirmationModal.emoji}
         confirmText="Awesome!"
         onConfirm={confirmationModal.onConfirm}
-        onCancel={() => setConfirmationModal(prev => ({ ...prev, visible: false }))}
+        onCancel={() =>
+          setConfirmationModal((prev) => ({ ...prev, visible: false }))
+        }
+        theme="market"
+      />
+
+      <ConfirmationModal
+        visible={endDayConfirmVisible}
+        title="End School Day?"
+        message={`Are you sure you want to end the school day early? You're currently in period ${period} of 8.\n\nThis will skip the remaining periods and take you directly to after-school activities.`}
+        emoji="🏠"
+        confirmText="End Day"
+        cancelText="Stay in School"
+        onConfirm={handleEndDayConfirm}
+        onCancel={handleEndDayCancel}
         theme="market"
       />
 
@@ -769,19 +910,31 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: 'center',
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    gap: 12, // Add space between buttons
+  },
+  bigButton: {
+    flex: 2, // Next period button is 2x the size
+  },
+  smallButton: {
+    flex: 1, // End day button is 1x the size
+  },
   nextPeriodButton: {
     backgroundColor: 'rgba(154,193,118,1)',
-    paddingVertical: 8,
-    paddingHorizontal: 32,
-    borderRadius: 20,
-    borderWidth: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 2,
     borderColor: 'rgba(123,169,101,1)',
     shadowColor: '#166534',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    minWidth: 280,
+    shadowRadius: 6,
+    elevation: 6,
     alignItems: 'center',
   },
   nextPeriodButtonText: {
@@ -795,12 +948,45 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   nextPeriodSubtext: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
     color: '#f0fdf4',
     fontFamily: 'CrayonPastel',
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 1,
+    opacity: 0.9,
+  },
+  endDayButton: {
+    backgroundColor: 'rgba(239,68,68,1)',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(185,28,28,1)',
+    shadowColor: '#991b1b',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+    alignItems: 'center',
+  },
+  endDayButtonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    textShadowColor: '#991b1b',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  endDaySubtext: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#fef2f2',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginTop: 1,
     opacity: 0.9,
   },
 });

@@ -212,6 +212,17 @@ function JokerCard({
         'Cancel',
         () => {}
       );
+    } else if (joker.id === JOKER_IDS.PURSUASION) {
+      // Show confirmation for Pursuasion activation
+      showConfirm(
+        'Pursuasion',
+        'Activate 2x profits for your next sale?',
+        '🗣️',
+        () => handlePersuasion(),
+        'Activate',
+        'Cancel',
+        () => {}
+      );
     }
   };
 
@@ -624,6 +635,33 @@ function JokerCard({
       showAlert(
         'Error',
         'An error occurred while activating Dodgeball Dash',
+        '❌'
+      );
+    }
+  };
+
+  const handlePersuasion = async () => {
+    console.log('🗣️ Pursuasion: Starting activation');
+
+    try {
+      // Activate the joker to track the effect for this period
+      const success = await activateJoker(joker.id, undefined, periodCount);
+      console.log('🗣️ Pursuasion: Activation result:', success);
+
+      if (success) {
+        showAlert(
+          'Pursuasion Activated!',
+          'Your next candy sale will earn 2x profit!',
+          '🗣️'
+        );
+      } else {
+        showAlert('Error', 'Failed to activate Pursuasion joker', '❌');
+      }
+    } catch (error) {
+      console.error('🗣️ Pursuasion: Error during activation:', error);
+      showAlert(
+        'Error',
+        'An error occurred while activating Pursuasion',
         '❌'
       );
     }

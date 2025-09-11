@@ -23,6 +23,7 @@ type InventoryContextType = {
   getTotalInventoryCount: () => number;
   getInventoryLimit: () => number;
   removeAllFromInventory: () => void;
+  confiscateHalfInventory: () => number; // Returns total candies confiscated
   resetInventory: () => void;
 };
 
@@ -152,6 +153,37 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   const removeAllFromInventory = () => {
     setInventory({});
   };
+
+  const confiscateHalfInventory = (): number => {
+    let totalConfiscated = 0;
+    
+    setInventory((prev) => {
+      const updatedInventory: Inventory = {};
+      
+      // Go through each candy type and take half (rounded down)
+      Object.entries(prev).forEach(([candyName, item]) => {
+        const halfQuantity = Math.floor(item.quantity / 2);
+        const remaining = item.quantity - halfQuantity;
+        
+        totalConfiscated += halfQuantity;
+        
+        // Only keep the item if there's candy left
+        if (remaining > 0) {
+          updatedInventory[candyName] = {
+            ...item,
+            quantity: remaining,
+          };
+        }
+        
+        console.log(`🍬 Confiscating ${halfQuantity} of ${candyName} (had ${item.quantity}, keeping ${remaining})`);
+      });
+      
+      return updatedInventory;
+    });
+    
+    console.log(`🚨 Total candies confiscated: ${totalConfiscated}`);
+    return totalConfiscated;
+  };
   const removeFromInventory = (name: string, quantity: number): boolean => {
     const existing = inventory[name];
     console.log('📦 InventoryContext: Removing from inventory:', name, 'quantity:', quantity, 'existing:', existing);
@@ -248,6 +280,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
         removeFromInventory,
         convertCandyType,
         removeAllFromInventory,
+        confiscateHalfInventory,
         getTotalInventoryCount,
         getInventoryLimit,
         resetInventory,

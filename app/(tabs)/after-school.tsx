@@ -13,7 +13,9 @@ import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { useWallet } from '../../src/context/WalletContext';
+import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
@@ -22,13 +24,16 @@ export default function AfterSchoolPage() {
   const navigation = useNavigation();
   const { day, startNewDay, hasStudiedTonight, periodCount } = useGame();
   const { resetDailyStats } = useDailyStats();
-  const { balance, addAllowance } = useWallet();
+  const { balance, stashedAmount, addAllowance } = useWallet();
   const { jokers } = useJokers();
   const { setEvent } = useFlavorText();
+  const { trackGameCompleted } = useScoreboard();
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
   const [goingToSchoolModalVisible, setGoingToSchoolModalVisible] =
     useState(false);
+  const [gameEndModalVisible, setGameEndModalVisible] = useState(false);
+  const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
   const [allowanceAmount, setAllowanceAmount] = useState(0);
 
   // Set afternoon flavor text when component loads
@@ -57,23 +62,58 @@ export default function AfterSchoolPage() {
   };
 
   const handleSleepConfirm = () => {
+    console.log('🌙 AfterSchool: handleSleepConfirm called');
+    console.log('🌙 AfterSchool: Current wallet balance before allowance:', balance);
+    
     // Close the sleep modal and add allowance before showing going to school modal
     setSleepConfirmModalVisible(false);
 
     // Add daily allowance (jokers could modify this amount)
     const receivedAllowance = addAllowance(jokers, periodCount);
+    console.log('🌙 AfterSchool: Allowance received:', receivedAllowance);
     setAllowanceAmount(receivedAllowance);
 
     setGoingToSchoolModalVisible(true);
   };
 
-  const handleGoingToSchoolComplete = () => {
+  const handleGoingToSchoolComplete = async () => {
+    console.log('🌙 AfterSchool: handleGoingToSchoolComplete called');
+    console.log('🌙 AfterSchool: Current wallet balance before startNewDay:', balance);
+    console.log('🌙 AfterSchool: Current day:', day);
+    console.log('🌙 AfterSchool: Current stashedAmount (debt):', stashedAmount);
+    
     // Close the interstitial
     setGoingToSchoolModalVisible(false);
-    // Reset daily stats and start new day
+    
+    // Check if this is the end of day 5 (game should end after 5 days)
+    if (day >= 5) {
+      console.log('🎯 Game End: 5 days completed, checking win/lose condition');
+      
+      // Calculate final score (balance + stashedAmount)
+      const finalScore = balance + stashedAmount;
+      console.log('🎯 Final Score:', finalScore, '(balance:', balance, '+ stashed:', stashedAmount, ')');
+      
+      // Player wins if they have paid off all debt (stashedAmount >= 0)
+      const hasWon = stashedAmount >= 0;
+      console.log('🎯 Player', hasWon ? 'WON' : 'LOST');
+      
+      setGameResult(hasWon ? 'won' : 'lost');
+      
+      // Track game completion in scoreboard
+      await trackGameCompleted();
+      console.log('🎯 Game completion tracked in scoreboard');
+      
+      // Show game end modal
+      setGameEndModalVisible(true);
+      return; // Don't start a new day, game is over
+    }
+    
+    // Reset daily stats and start new day (only if game hasn't ended)
     resetDailyStats(balance);
+    console.log('🌙 AfterSchool: Daily stats reset, calling startNewDay...');
     // Start new day (this will exit after-school mode and increment to next day)
     startNewDay();
+    console.log('🌙 AfterSchool: startNewDay completed, navigating to market');
     // Navigate back to market (school)
     router.push('/(tabs)/market');
   };
@@ -81,6 +121,13 @@ export default function AfterSchoolPage() {
   const handleSleepCancel = () => {
     // Just close the modal
     setSleepConfirmModalVisible(false);
+  };
+
+  const handleGameRestart = () => {
+    // Close game end modal and navigate to title screen
+    setGameEndModalVisible(false);
+    setGameResult(null);
+    router.push('/title-screen');
   };
 
   const renderCircleOption = (item, index) => (
@@ -146,6 +193,7 @@ export default function AfterSchoolPage() {
           customHeaderText={`After School - Day ${day}`}
           customLocationText="Peaceful Evening"
         />
+
         <View style={styles.optionsContainer}>
           <View style={styles.optionsGrid}>
             {options.map((item, index) => renderCircleOption(item, index))}
@@ -167,6 +215,15 @@ export default function AfterSchoolPage() {
         visible={goingToSchoolModalVisible}
         allowanceAmount={allowanceAmount}
         onComplete={handleGoingToSchoolComplete}
+      />
+
+      <GameEndModal
+        visible={gameEndModalVisible}
+        gameResult={gameResult || 'lost'}
+        finalScore={balance + stashedAmount}
+        balance={balance}
+        stashedAmount={stashedAmount}
+        onRestart={handleGameRestart}
       />
     </View>
   );

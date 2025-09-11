@@ -14,6 +14,7 @@ import { JokerProvider } from '../src/context/JokerContext';
 import { SeedProvider } from '../src/context/SeedContext';
 import { TabBarProvider } from '../src/context/TabBarContext';
 import { WalletProvider, useWallet } from '../src/context/WalletContext';
+import { ScoreboardProvider } from '../src/context/ScoreboardContext';
 import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
 import StudioTitleScreen from './components/StudioTitleScreen';
 
@@ -83,7 +84,8 @@ export default function RootLayout() {
                         <CandySalesProvider>
                           <DailyStatsProvider>
                             <EventHandlerProvider>
-                              <TabBarProvider>
+                              <ScoreboardProvider>
+                                <TabBarProvider>
                                 <Stack>
                                   <Stack.Screen
                                     name="(tabs)"
@@ -130,7 +132,8 @@ export default function RootLayout() {
                                     options={{ headerShown: false }}
                                   />
                                 </Stack>
-                              </TabBarProvider>
+                                </TabBarProvider>
+                              </ScoreboardProvider>
                             </EventHandlerProvider>
                           </DailyStatsProvider>
                         </CandySalesProvider>

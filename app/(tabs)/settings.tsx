@@ -1,15 +1,27 @@
 // app/(tabs)/settings.tsx
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { router } from 'expo-router';
-import GameHUD from '../components/GameHUD';
-import ConfirmationModal from '../components/ConfirmationModal';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
-import { useSeed } from '../../src/context/SeedContext';
-import { useWallet } from '../../src/context/WalletContext';
 import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
-import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useSeed } from '../../src/context/SeedContext';
+import { useWallet } from '../../src/context/WalletContext';
+import { scoreboardService } from '../../src/services/firebase';
+import { nameValidationService } from '../../src/services/nameValidationService';
+import ConfirmationModal from '../components/ConfirmationModal';
+import GameHUD from '../components/GameHUD';
+import { ScoreboardButton } from '../components/ScoreboardButton';
 
 export default function Settings() {
   const { resetGame } = useGame();
@@ -22,8 +34,16 @@ export default function Settings() {
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
   const initializeWallet = walletContext?.initializeWallet || (() => {});
+  const setPlayerName = walletContext?.setPlayerName || (() => {});
   const currentDifficulty = walletContext?.difficulty;
+  const currentPlayerName = walletContext?.playerName;
   const [isRestarting, setIsRestarting] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [isValidatingName, setIsValidatingName] = useState(false);
+  const [nameValidationError, setNameValidationError] = useState<string | null>(
+    null
+  );
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -33,10 +53,22 @@ export default function Settings() {
     onCancel?: () => void;
     confirmText?: string;
     cancelText?: string;
-  }>({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    emoji: '',
+    onConfirm: () => {},
+  });
 
   const resetConfirmModal = () => {
-    setConfirmModal({ visible: false, title: '', message: '', emoji: '', onConfirm: () => {} });
+    setConfirmModal({
+      visible: false,
+      title: '',
+      message: '',
+      emoji: '',
+      onConfirm: () => {},
+    });
   };
 
   const handleRestartGame = () => {
@@ -44,32 +76,36 @@ export default function Settings() {
     setConfirmModal({
       visible: true,
       title: 'Restart Game',
-      message: 'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
+      message:
+        'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
       emoji: '🔄',
       confirmText: 'Restart',
       cancelText: 'Cancel',
       onConfirm: async () => {
-        console.log('✅ Restart confirmed, restarting with current difficulty:', currentDifficulty);
+        console.log(
+          '✅ Restart confirmed, restarting with current difficulty:',
+          currentDifficulty
+        );
         resetConfirmModal();
         setIsRestarting(true);
-        
+
         try {
           // Reset all game data
           await resetGame();
-          
+
           // Reset all contexts except wallet (we'll initialize it with difficulty)
           resetInventory();
           resetJokers();
           resetFlavorText();
-          
+
           // Initialize wallet with current difficulty (or default to 'medium' if none set)
           const difficultyToUse = currentDifficulty || 'medium';
           initializeWallet(difficultyToUse);
-          
+
           // Generate new seed for fresh game
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
-          
+
           // Show success modal
           setConfirmModal({
             visible: true,
@@ -80,7 +116,7 @@ export default function Settings() {
               resetConfirmModal();
               // Navigate to market after user acknowledges
               router.replace('/(tabs)/market');
-            }
+            },
           });
         } catch (error) {
           console.error('Error restarting game:', error);
@@ -89,7 +125,7 @@ export default function Settings() {
             title: 'Error',
             message: 'Failed to restart the game. Please try again.',
             emoji: '❌',
-            onConfirm: () => resetConfirmModal()
+            onConfirm: () => resetConfirmModal(),
           });
         } finally {
           setIsRestarting(false);
@@ -98,10 +134,9 @@ export default function Settings() {
       onCancel: () => {
         console.log('❌ Restart canceled');
         resetConfirmModal();
-      }
+      },
     });
   };
-
 
   const handleReturnToTitleScreen = () => {
     console.log('🏠 Return to Title Screen button clicked');
@@ -114,28 +149,202 @@ export default function Settings() {
       cancelText: 'Cancel',
       onConfirm: () => {
         console.log('✅ Return to title screen confirmed');
-        setConfirmModal(prev => ({ ...prev, visible: false }));
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
         // Navigate to title screen
         router.replace('/title-screen');
       },
       onCancel: () => {
         console.log('❌ Return to title screen canceled');
         resetConfirmModal();
-      }
+      },
     });
+  };
+
+  const handleEditName = () => {
+    setNewPlayerName(currentPlayerName || '');
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = newPlayerName.trim();
+
+    if (trimmedName.length === 0) {
+      Alert.alert('Invalid Name', 'Please enter a valid name.');
+      return;
+    }
+
+    if (trimmedName.length > 20) {
+      Alert.alert(
+        'Name Too Long',
+        'Please enter a name with 20 characters or less.'
+      );
+      return;
+    }
+
+    // Skip validation if name hasn't changed
+    if (trimmedName.toLowerCase() === (currentPlayerName || '').toLowerCase()) {
+      setEditingName(false);
+      setNewPlayerName('');
+      return;
+    }
+
+    // Validate name uniqueness
+    setIsValidatingName(true);
+    setNameValidationError(null);
+
+    try {
+      // Initialize Firebase services
+      await scoreboardService.initialize();
+
+      // Get player ID from wallet context
+      const currentPlayerId = walletContext?.playerId;
+      if (!currentPlayerId) {
+        Alert.alert('Error', 'Player ID not found. Please restart the game.');
+        setIsValidatingName(false);
+        return;
+      }
+
+      // Check if name is available
+      const isAvailable = await nameValidationService.isNameAvailable(
+        trimmedName,
+        currentPlayerId
+      );
+
+      if (!isAvailable) {
+        setNameValidationError(
+          'This name is already taken. Please choose a different name.'
+        );
+        setIsValidatingName(false);
+        return;
+      }
+
+      // Update name in Firebase
+      const nameUpdated = await nameValidationService.updatePlayerName(
+        currentPlayerName || '',
+        trimmedName,
+        currentPlayerId
+      );
+
+      if (nameUpdated) {
+        // Update local state
+        setPlayerName(trimmedName);
+        setEditingName(false);
+        setNewPlayerName('');
+        setNameValidationError(null);
+
+        Alert.alert(
+          'Name Updated',
+          `Your name has been changed to "${trimmedName}".`
+        );
+      } else {
+        Alert.alert(
+          'Update Failed',
+          'Failed to update your name. Please try again.'
+        );
+      }
+    } catch (error) {
+      console.error('Error updating name:', error);
+      Alert.alert('Error', 'Unable to update name. Please try again.');
+    } finally {
+      setIsValidatingName(false);
+    }
+  };
+
+  const handleCancelEditName = () => {
+    setEditingName(false);
+    setNewPlayerName('');
+    setNameValidationError(null);
   };
 
   return (
     <View style={styles.container}>
-      <GameHUD 
-        customHeaderText="Game Settings" 
+      <GameHUD
+        customHeaderText="Game Settings"
         customLocationText="Principal's Office"
       />
-      
-      <View style={styles.content}>
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Player Info</Text>
+
+          <View style={styles.playerInfoContainer}>
+            <Text style={styles.playerInfoLabel}>Player Name:</Text>
+            {editingName ? (
+              <View style={styles.nameEditContainer}>
+                <TextInput
+                  style={[
+                    styles.nameInput,
+                    nameValidationError && styles.nameInputError,
+                  ]}
+                  value={newPlayerName}
+                  onChangeText={(text) => {
+                    setNewPlayerName(text);
+                    setNameValidationError(null); // Clear error when user types
+                  }}
+                  placeholder="Enter your name"
+                  placeholderTextColor="#999"
+                  maxLength={20}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSaveName}
+                  editable={!isValidatingName}
+                />
+
+                {nameValidationError && (
+                  <Text style={styles.nameErrorText}>
+                    {nameValidationError}
+                  </Text>
+                )}
+                <View style={styles.nameButtonContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.nameButton,
+                      styles.saveButton,
+                      isValidatingName && styles.disabledNameButton,
+                    ]}
+                    onPress={handleSaveName}
+                    disabled={isValidatingName}
+                  >
+                    {isValidatingName ? (
+                      <View style={styles.nameLoadingContainer}>
+                        <ActivityIndicator size="small" color="#2d5a2d" />
+                        <Text style={styles.saveButtonText}>Checking...</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.nameButton, styles.cancelButton]}
+                    onPress={handleCancelEditName}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.nameDisplayContainer}>
+                <Text style={styles.playerNameText}>
+                  {currentPlayerName || 'Player'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.editNameButton}
+                  onPress={handleEditName}
+                >
+                  <Text style={styles.editNameButtonText}>✏️ Edit</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Game Controls</Text>
-          
+
           <TouchableOpacity
             style={[styles.button, styles.titleScreenButton]}
             onPress={handleReturnToTitleScreen}
@@ -147,7 +356,7 @@ export default function Settings() {
               Go back to main menu (progress saved)
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}
             onPress={handleRestartGame}
@@ -163,6 +372,11 @@ export default function Settings() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Beta Leaderboard</Text>
+          <ScoreboardButton position="custom" style={styles.scoreboardButton} />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <Text style={styles.aboutText}>
             CandyWarz - The ultimate school trading simulation game
@@ -171,7 +385,7 @@ export default function Settings() {
             Build your candy empire, collect jokers, and dominate the market!
           </Text>
         </View>
-      </View>
+      </ScrollView>
 
       <ConfirmationModal
         visible={confirmModal.visible}
@@ -184,7 +398,6 @@ export default function Settings() {
         onCancel={confirmModal.onCancel || (() => resetConfirmModal())}
         theme="school"
       />
-
     </View>
   );
 }
@@ -196,6 +409,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 20,
   },
   section: {
@@ -257,5 +472,114 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 8,
     textAlign: 'center',
+  },
+  scoreboardButton: {
+    alignSelf: 'stretch',
+  },
+  // Player info styles
+  playerInfoContainer: {
+    marginBottom: 15,
+  },
+  playerInfoLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b4423',
+    marginBottom: 10,
+    fontFamily: 'CrayonPastel',
+  },
+  nameDisplayContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fef7e7',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#d4a574',
+  },
+  playerNameText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b4423',
+    fontFamily: 'CrayonPastel',
+    flex: 1,
+  },
+  editNameButton: {
+    backgroundColor: '#d6e8ff',
+    borderWidth: 1,
+    borderColor: '#5c7cb8',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  editNameButtonText: {
+    fontSize: 14,
+    color: '#4a5a8a',
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
+  },
+  nameEditContainer: {
+    gap: 10,
+  },
+  nameInput: {
+    backgroundColor: '#fef7e7',
+    borderWidth: 2,
+    borderColor: '#d4a574',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    fontFamily: 'CrayonPastel',
+    color: '#6b4423',
+  },
+  nameButtonContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  nameButton: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  saveButton: {
+    backgroundColor: '#d4f6d4',
+    borderColor: '#4a7c4a',
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d5a2d',
+    fontFamily: 'CrayonPastel',
+  },
+  cancelButton: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#ef4444',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#dc2626',
+    fontFamily: 'CrayonPastel',
+  },
+  nameInputError: {
+    borderColor: '#ef4444',
+    borderWidth: 3,
+  },
+  nameErrorText: {
+    color: '#dc2626',
+    fontSize: 12,
+    fontFamily: 'CrayonPastel',
+    marginTop: 5,
+    marginBottom: 5,
+  },
+  disabledNameButton: {
+    opacity: 0.6,
+  },
+  nameLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
 });

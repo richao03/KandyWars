@@ -17,7 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { RECESS_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -697,9 +697,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={GYM_JOKERS}
+        jokers={RECESS_JOKERS}
         theme="recess"
-        subject="Gym"
+        subject="Recess"
         onComplete={onComplete}
       />
     );

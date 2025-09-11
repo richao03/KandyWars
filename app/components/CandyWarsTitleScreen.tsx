@@ -10,6 +10,11 @@ import {
 } from 'react-native';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import DifficultySelectionModal from './DifficultySelectionModal';
+import NamePromptModal from './NamePromptModal';
+import { useWallet } from '../../src/context/WalletContext';
+import { nameValidationService } from '../../src/services/nameValidationService';
+import { scoreboardService } from '../../src/services/firebase';
+import { savePlayerNameStatus } from '../../src/utils/persistence';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,9 +29,12 @@ export default function CandyWarsTitleScreen({
   onContinue,
   onSettings,
 }: CandyWarsTitleScreenProps) {
+  const wallet = useWallet();
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard' | null>(null);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonsShown = useRef(false);
 
@@ -36,6 +44,8 @@ export default function CandyWarsTitleScreen({
     setAnimationComplete(false);
     setShowButtons(false);
     setShowDifficultyModal(false);
+    setShowNamePrompt(false);
+    setSelectedDifficulty(null);
     buttonsShown.current = false;
     buttonOpacity.setValue(0);
   }, []);
@@ -60,19 +70,82 @@ export default function CandyWarsTitleScreen({
     }).start();
   };
 
-  const handleNewGamePress = () => {
+  const handleNewGamePress = async () => {
+    // Reset wallet first before showing difficulty selection
+    if (wallet?.resetWallet) {
+      console.log('🎬 Resetting wallet before difficulty selection');
+      await wallet.resetWallet();
+    }
     setShowDifficultyModal(true);
   };
 
   const handleDifficultySelect = (difficulty: 'easy' | 'medium' | 'hard') => {
     setShowDifficultyModal(false);
-    if (onNewGame) {
-      onNewGame(difficulty);
+    setSelectedDifficulty(difficulty);
+    
+    // Check if user already has a name (loaded from Firebase on app start)
+    if (wallet?.playerName) {
+      console.log('🎬 User already has a name:', wallet.playerName, ', proceeding with existing name');
+      // Initialize wallet with difficulty and existing name
+      wallet?.initializeWallet(difficulty, wallet.playerName);
+      if (onNewGame) {
+        onNewGame(difficulty);
+      }
+    } else {
+      console.log('🎬 User does not have a name, showing name prompt');
+      setShowNamePrompt(true);
     }
   };
 
   const handleCloseDifficultyModal = () => {
     setShowDifficultyModal(false);
+  };
+
+  const handleNameSubmit = async (name: string) => {
+    console.log('🎬 Name submitted:', name);
+    setShowNamePrompt(false);
+    
+    if (selectedDifficulty && onNewGame && wallet?.playerId) {
+      try {
+        // Initialize Firebase services
+        await scoreboardService.initialize();
+        
+        // Reserve the name in Firebase using the wallet's player ID
+        const nameReserved = await nameValidationService.reserveName(name, wallet.playerId);
+        
+        if (nameReserved) {
+          console.log('✅ Name reserved successfully in Firebase');
+          // Update local wallet state with the new name
+          wallet?.setPlayerName(name);
+          await savePlayerNameStatus(true);
+        } else {
+          console.warn('⚠️ Failed to reserve name in Firebase, proceeding anyway');
+          // Still update local state
+          wallet?.setPlayerName(name);
+        }
+        
+        // Initialize wallet with both difficulty and name
+        wallet?.initializeWallet(selectedDifficulty, name);
+        onNewGame(selectedDifficulty);
+      } catch (error) {
+        console.error('Error during name submission:', error);
+        // Still proceed with the game and update local state
+        wallet?.setPlayerName(name);
+        wallet?.initializeWallet(selectedDifficulty, name);
+        onNewGame(selectedDifficulty);
+      }
+    }
+  };
+
+  const handleNameSkip = () => {
+    console.log('🎬 Name skipped, using default');
+    setShowNamePrompt(false);
+    
+    if (selectedDifficulty && onNewGame) {
+      // Initialize wallet with difficulty and default name
+      wallet?.initializeWallet(selectedDifficulty, 'Player');
+      onNewGame(selectedDifficulty);
+    }
   };
 
   console.log('🎬 CandyWarsTitleScreen: Rendering - showButtons:', showButtons, 'animationComplete:', animationComplete);
@@ -130,6 +203,12 @@ export default function CandyWarsTitleScreen({
           visible={showDifficultyModal}
           onSelectDifficulty={handleDifficultySelect}
           onClose={handleCloseDifficultyModal}
+        />
+
+        <NamePromptModal
+          visible={showNamePrompt}
+          onSubmitName={handleNameSubmit}
+          onSkip={handleNameSkip}
         />
       </ImageBackground>
     </View>

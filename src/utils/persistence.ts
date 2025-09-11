@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   JOKERS: 'candyWarz_jokers',
   SEED: 'candyWarz_seed',
   PROCESSED_EVENTS: 'candyWarz_processedEvents',
+  PLAYER_ID: 'candyWarz_playerId',
+  PLAYER_NAME_STATUS: 'candyWarz_playerNameStatus',
 } as const;
 
 // Generic save/load functions
@@ -96,4 +98,16 @@ export const loadProcessedEvents = async (): Promise<Set<string>> => {
   const events = await loadData(STORAGE_KEYS.PROCESSED_EVENTS, []);
   return new Set(events);
 };
+
+export const savePlayerId = (playerId: string) => 
+  saveData(STORAGE_KEYS.PLAYER_ID, playerId);
+
+export const loadPlayerId = (): Promise<string | null> => 
+  loadData(STORAGE_KEYS.PLAYER_ID, null);
+
+export const savePlayerNameStatus = (hasSetName: boolean) => 
+  saveData(STORAGE_KEYS.PLAYER_NAME_STATUS, hasSetName);
+
+export const loadPlayerNameStatus = (): Promise<boolean> => 
+  loadData(STORAGE_KEYS.PLAYER_NAME_STATUS, false);
 

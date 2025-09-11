@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { loadJokers, saveJokers } from '../utils/persistence';
+import { scoreboardService } from '../services/firebase';
 
 export interface Joker {
   id: number;
@@ -31,7 +32,7 @@ type JokerContextType = {
   jokers: Joker[];
   activeEffects: ActiveJokerEffect[];
   isLoaded: boolean;
-  addJoker: (joker: Joker) => void;
+  addJoker: (joker: Joker, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => void;
   removeJoker: (jokerId: number) => void;
   hasJoker: (jokerId: number) => boolean;
   getJokersBySubject: (subject: string) => Joker[];
@@ -78,13 +79,20 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
     saveJokers(jokersData);
   }, [jokers, activeEffects, isLoaded]);
 
-  const addJoker = (joker: Joker) => {
+  const addJoker = (joker: Joker, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
     setJokers((prev) => {
       // Prevent duplicates
       if (prev.some((j) => j.id === joker.id)) {
         return prev;
       }
       const newJokers = [...prev, joker];
+      
+      // Track joker obtained from minigame
+      if (source === 'minigame' && minigameType) {
+        scoreboardService.trackJokerFromMinigame(joker.name, joker.id, minigameType).catch(error => {
+          console.error('Failed to track joker from minigame:', error);
+        });
+      }
       
       // Immediately save when adding a new joker
       if (isLoaded) {

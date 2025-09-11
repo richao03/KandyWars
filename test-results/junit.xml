@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="CandyWarz Tests" tests="13" failures="0" errors="0" time="2.587">
+  <testsuite name="Basic Functionality Tests" errors="0" failures="0" skipped="0" timestamp="2025-09-10T05:30:48" time="2.283" tests="13">
+    <testcase classname="Basic Functionality Tests Mathematical Operations" name="should calculate day from periodCount correctly" time="0.004">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Mathematical Operations" name="should calculate period from periodCount correctly" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Mathematical Operations" name="should handle wallet balance calculations" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Mathematical Operations" name="should calculate difficulty-based piggy bank amounts" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Mathematical Operations" name="should calculate average cost correctly" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Game State Validation" name="should validate period boundaries" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Game State Validation" name="should validate money amounts" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Game State Validation" name="should handle floating point precision" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Array and Object Operations" name="should manage candy inventory correctly" time="0.002">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Array and Object Operations" name="should manage joker collections correctly" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Random Number Generation" name="should generate numbers within ranges" time="0.001">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Random Number Generation" name="should calculate probabilities correctly" time="0">
+    </testcase>
+    <testcase classname="Basic Functionality Tests Type Safety" name="should handle type validation" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>

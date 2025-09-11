@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
-import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -624,9 +624,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={GYM_JOKERS}
+        jokers={HOME_EC_JOKERS}
         theme="art"
-        subject="Art"
+        subject="Home Economics"
         onComplete={onComplete}
       />
     );

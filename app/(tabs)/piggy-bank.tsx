@@ -59,22 +59,21 @@ export default function PiggyBankPage() {
       return;
     }
 
-    // Check for Deposit Bonus joker when depositing
-    let finalAmount = amount;
+    // Check for Deposit Bonus joker to show appropriate message
     let bonusApplied = false;
+    let finalAmount = amount;
     if (mode === 'deposit') {
       const depositBonusJoker = findJokerById(jokers, JOKER_IDS.DEPOSIT_BONUS);
       if (depositBonusJoker) {
-        finalAmount = amount * 1.1; // Apply 10% bonus
+        finalAmount = amount * 1.1; // Calculate final amount for display
         bonusApplied = true;
-        console.log(
-          `💰 Deposit Bonus: Applied 10% bonus. Original: $${amount.toFixed(2)}, Final: $${finalAmount.toFixed(2)}`
-        );
       }
     }
 
-    const success =
-      mode === 'deposit' ? stashMoney(finalAmount) : withdrawFromStash(amount);
+    // Handle the transaction - stashMoney will handle deposit bonus internally
+    const success = mode === 'deposit' 
+      ? stashMoney(amount, jokers) // Pass jokers to handle deposit bonus
+      : withdrawFromStash(amount);
 
     if (success) {
       const depositMessage = bonusApplied

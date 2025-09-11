@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useJokers, Joker as JokerType } from '../../src/context/JokerContext';
+import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 
 interface Joker {
   id: number;
@@ -27,21 +28,38 @@ interface JokerSelectionProps {
 export default function JokerSelection({ jokers, theme, subject, onComplete }: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
   const [hasRerolled, setHasRerolled] = useState(false);
-  const { addJoker } = useJokers();
+  const { addJoker, getJokersBySubject: getUserJokersBySubject } = useJokers();
+
+  // Get user's jokers for this subject
+  const userJokers = getUserJokersBySubject(subject);
+  // Use user's jokers if they have any, otherwise fall back to provided jokers
+  const availableJokers = userJokers.length > 0 ? userJokers : jokers;
 
   const selectRandomJokers = () => {
-    const shuffled = [...jokers].sort(() => Math.random() - 0.5);
+    const shuffled = [...availableJokers].sort(() => Math.random() - 0.5);
     setSelectedJokers(shuffled.slice(0, 3));
   };
 
   const rerollJokers = () => {
-    const shuffled = [...jokers].sort(() => Math.random() - 0.5);
+    // For reroll, get fresh random jokers from the full pool for this subject
+    const allSubjectJokers = getJokersBySubject(subject);
+    const shuffled = [...allSubjectJokers].sort(() => Math.random() - 0.5);
     setSelectedJokers(shuffled.slice(0, 2)); // Only 2 jokers on reroll
     setHasRerolled(true); // Disable further rerolls
   };
 
   const handleJokerChoice = (jokerId: number) => {
-    const selectedJoker = jokers.find(j => j.id === jokerId);
+    // Look for the joker in the current selectedJokers or fall back to available jokers
+    let selectedJoker = selectedJokers.find(j => j.id === jokerId);
+    if (!selectedJoker) {
+      selectedJoker = availableJokers.find(j => j.id === jokerId);
+    }
+    // If still not found (for rerolled jokers), look in the full subject pool
+    if (!selectedJoker) {
+      const allSubjectJokers = getJokersBySubject(subject);
+      selectedJoker = allSubjectJokers.find(j => j.id === jokerId);
+    }
+    
     if (selectedJoker) {
       // Determine type from the joker's effects duration
       // If all effects are one-time, it's a one-time joker, otherwise persistent

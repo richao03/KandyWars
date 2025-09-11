@@ -1054,6 +1054,8 @@ export function convertLegacyJoker(legacyJoker: any): StandardizedJoker {
     name: legacyJoker.name,
     description: legacyJoker.description,
     subject: 'Unknown',
+    type: 'persistent',
+    flavorText: '',
     effects: [], // Would need to be mapped based on legacy effect
   };
 }
@@ -1082,3 +1084,40 @@ export const ALL_JOKERS = {
   Gym: GYM_JOKERS,
   Recess: RECESS_JOKERS,
 };
+
+// Utility function to process effects by target from a list of jokers
+export function processEffectsByTarget(jokers: any[], targetType: EffectTarget): Array<{
+  jokerName: string;
+  amount: number;
+  operation: EffectOperation;
+}> {
+  const results: Array<{
+    jokerName: string;
+    amount: number;
+    operation: EffectOperation;
+  }> = [];
+
+  if (!jokers || jokers.length === 0) {
+    return results;
+  }
+
+  for (const joker of jokers) {
+    // Find the joker in our standardized list
+    const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.id === joker.id);
+    
+    if (standardizedJoker?.effects) {
+      // Look for effects that match the target
+      for (const effect of standardizedJoker.effects) {
+        if (effect.target === targetType) {
+          results.push({
+            jokerName: standardizedJoker.name,
+            amount: effect.amount,
+            operation: effect.operation,
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+}

@@ -43,7 +43,8 @@ export class JokerService {
     jokers: any[],
     currentPeriod: number,
     inventoryLimit?: number,
-    candyCount?: number
+    candyCount?: number,
+    activeEffects: any[] = []
   ): number {
     // Debug logging for inventory_limit target
     if (target === 'inventory_limit') {
@@ -92,8 +93,21 @@ export class JokerService {
             this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
           }
         } else if (jokerName === 'Market Crash' && target === 'candy_price') {
-          // Market Crash applies immediately when activated
-          this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          // Market Crash only applies if it has been activated this period
+          const isActivated = activeEffects.some(
+            (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+          );
+          if (isActivated) {
+            this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          }
+        } else if (standardizedJoker.type === 'one-time' && target === 'candy_price') {
+          // One-time candy price jokers only apply if activated this period
+          const isActivated = activeEffects.some(
+            (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+          );
+          if (isActivated) {
+            this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          }
         } else {
           // Add the joker normally
           if (target === 'inventory_limit') {
@@ -238,11 +252,13 @@ export class JokerService {
 
   // Get detailed price breakdown showing base price and individual joker effects
   // Effects are applied in order: persistent, limited duration, then one-time
+  // Now includes both candy_price and sell_multiplier effects for comprehensive display
   public getPriceBreakdown(
     basePrice: number,
     jokers: any[],
     currentPeriod: number,
-    inventoryLimit?: number
+    inventoryLimit?: number,
+    activeEffects: any[] = []
   ): {
     basePrice: number;
     jokerEffects: Array<{
@@ -250,6 +266,8 @@ export class JokerService {
       jokerEmoji: string;
       effect: string;
       amount: number;
+      effectType: 'buy' | 'sell';
+      isActive: boolean;
     }>;
     finalPrice: number;
   } {
@@ -260,6 +278,8 @@ export class JokerService {
         jokerEmoji: string;
         effect: string;
         amount: number;
+        effectType: 'buy' | 'sell';
+        isActive: boolean;
       }>,
       finalPrice: basePrice,
     };
@@ -275,16 +295,16 @@ export class JokerService {
 
       if (!standardizedJoker) return;
 
-      // Check if this joker affects candy prices
+      // Check if this joker affects candy prices, sell multipliers, or escalating price increases (Trojan Horse)
       const priceEffects = standardizedJoker.effects.filter(
-        (effect) => effect.target === 'candy_price'
+        (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase'
       );
 
       priceEffects.forEach((effect) => {
         let shouldApply = true;
         let jokerEmoji = '🃏';
 
-        // Handle conditional jokers
+        // Handle conditional jokers and assign emojis
         if (jokerName === 'Even Stevens') {
           shouldApply = inventoryLimit ? inventoryLimit % 2 === 0 : false;
           jokerEmoji = '📊';
@@ -297,19 +317,68 @@ export class JokerService {
           jokerEmoji = '📈';
         } else if (jokerName === 'Propacandies') {
           jokerEmoji = '📰';
+        } else if (jokerName === 'Pursuasion') {
+          jokerEmoji = '🗣️';
+        } else if (jokerName === 'Trojan Horse') {
+          jokerEmoji = '🐴';
         }
-        if (shouldApply) {
+        // Determine if the joker is currently active
+        let isActive = false;
+        if (effect.duration === 'persistent') {
+          isActive = true;
+        } else if (effect.duration === 'one-time') {
+          isActive = activeEffects.some(
+            (activeEffect) => activeEffect.jokerId === joker.id && activeEffect.period === currentPeriod
+          );
+        }
+
+        // Determine effect type
+        const effectType: 'buy' | 'sell' = (effect.target === 'candy_price' || effect.target === 'escalating_price_increase') ? 'buy' : 'sell';
+
+        if (shouldApply || !isActive) { // Show all relevant effects, even if not active
           let effectAmount = 0;
           let effectText = '';
 
-          if (effect.operation === 'add') {
-            effectAmount = effect.amount;
-            effectText = `+$${effect.amount.toFixed(2)}`;
-            currentPrice += effect.amount;
-          } else if (effect.operation === 'multiply') {
-            effectAmount = currentPrice * (effect.amount - 1); // Amount added by multiplication
-            effectText = `×${effect.amount} (+$${effectAmount.toFixed(2)})`;
-            currentPrice *= effect.amount;
+          if (effect.target === 'candy_price') {
+            // Only apply to current price calculation if active
+            if (isActive && shouldApply) {
+              if (effect.operation === 'add') {
+                effectAmount = effect.amount;
+                effectText = `+$${effect.amount.toFixed(2)}`;
+                currentPrice += effect.amount;
+              } else if (effect.operation === 'multiply') {
+                effectAmount = currentPrice * (effect.amount - 1);
+                effectText = `×${effect.amount} (+$${effectAmount.toFixed(2)})`;
+                currentPrice *= effect.amount;
+              }
+            } else {
+              // Show potential effect even if not active
+              if (effect.operation === 'add') {
+                effectAmount = effect.amount;
+                effectText = `+$${effect.amount.toFixed(2)}`;
+              } else if (effect.operation === 'multiply') {
+                effectAmount = basePrice * (effect.amount - 1);
+                effectText = `×${effect.amount}`;
+              }
+            }
+          } else if (effect.target === 'sell_multiplier') {
+            // Show sell multiplier effects
+            if (effect.operation === 'multiply') {
+              const percentage = (effect.amount - 1) * 100;
+              effectText = `+${percentage.toFixed(0)}% selling`;
+              effectAmount = percentage;
+            }
+          } else if (effect.target === 'escalating_price_increase') {
+            // Special handling for Trojan Horse escalating price increase
+            const periodWithinDay = currentPeriod % 8;
+            const priceIncrease = (periodWithinDay + 1) * effect.amount;
+            effectText = `+$${priceIncrease.toFixed(2)} (period ${periodWithinDay + 1})`;
+            effectAmount = priceIncrease;
+            
+            // Apply to current price if active
+            if (isActive && shouldApply) {
+              currentPrice += priceIncrease;
+            }
           }
 
           breakdown.jokerEffects.push({
@@ -317,6 +386,8 @@ export class JokerService {
             jokerEmoji: jokerEmoji,
             effect: effectText,
             amount: effectAmount,
+            effectType: effectType,
+            isActive: isActive && shouldApply,
           });
         }
       });
@@ -335,7 +406,7 @@ export class JokerService {
 
       if (standardizedJoker) {
         const priceEffects = standardizedJoker.effects.filter(
-          (effect) => effect.target === 'candy_price'
+          (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase'
         );
 
         if (priceEffects.length > 0) {
@@ -344,7 +415,13 @@ export class JokerService {
           if (firstEffect.duration === 'persistent') {
             persistentJokers.push(joker);
           } else if (firstEffect.duration === 'one-time') {
-            oneTimeJokers.push(joker);
+            // Only include one-time jokers if they have been activated
+            const isActivated = activeEffects.some(
+              (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+            );
+            if (isActivated) {
+              oneTimeJokers.push(joker);
+            }
           } else if (typeof firstEffect.duration === 'number') {
             limitedDurationJokers.push(joker);
           }
@@ -387,10 +464,11 @@ export class JokerService {
     return multiplier;
   }
 
-  // Check if a joker has one-time sell multiplier effect (like Digital Lock)
+  // Check if a joker has one-time sell multiplier effect and has been activated
   public hasOneTimeSellMultiplier(
     jokers: any[],
-    currentPeriod: number
+    currentPeriod: number,
+    activeEffects: any[]
   ): { hasEffect: boolean; jokerName?: string; multiplier?: number } {
     for (const joker of jokers) {
       const jokerName = this.cleanJokerName(joker.name);
@@ -406,11 +484,18 @@ export class JokerService {
         );
 
         if (sellEffects.length > 0) {
-          return {
-            hasEffect: true,
-            jokerName: jokerName,
-            multiplier: sellEffects[0].amount,
-          };
+          // Check if this joker has been activated for this period
+          const isActivated = activeEffects.some(
+            (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+          );
+          
+          if (isActivated) {
+            return {
+              hasEffect: true,
+              jokerName: jokerName,
+              multiplier: sellEffects[0].amount,
+            };
+          }
         }
       }
     }

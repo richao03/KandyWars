@@ -166,6 +166,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const [processedEvents, setProcessedEvents] = useState<Set<number>>(
     new Set()
   );
+  
+  // Track which periods have had Trojan Horse effect applied
+  const [processedTrojanHorsePeriods, setProcessedTrojanHorsePeriods] = useState<Set<number>>(
+    new Set()
+  );
 
   // Process current event effects
   useEffect(() => {
@@ -237,27 +242,29 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const trojanHorseJoker = findJokerById(jokers, JOKER_IDS.TROJAN_HORSE);
     
-    if (trojanHorseJoker) {
-      // Calculate price increase based on counter ($10, $20, $30, etc.)
-      const priceIncrease = (trojanHorseCounter + 1) * 10;
+    if (trojanHorseJoker && !processedTrojanHorsePeriods.has(periodCount)) {
+      // Calculate price increase based on period within current day (resets daily)
+      // There are 8 periods per day, so get the period within the current day
+      const periodWithinDay = periodCount % 8;
+      const priceIncrease = (periodWithinDay + 1) * 10;
       
-      console.log(`🐴 Trojan Horse: Applying +$${priceIncrease} to all candy prices (counter: ${trojanHorseCounter})`);
+      console.log(`🐴 Trojan Horse: Applying +$${priceIncrease} to all candy prices for period ${periodCount} (day period ${periodWithinDay + 1}/8)`);
       
       // Apply price increase to all candies for current period
       const candyTypes = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
       
       candyTypes.forEach(candyType => {
-        const currentPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
-        if (currentPrice > 0) {
-          const newPrice = currentPrice + priceIncrease;
+        const originalPrice = getOriginalCandyPrice(candyType, periodCount);
+        if (originalPrice > 0) {
+          const newPrice = originalPrice + priceIncrease;
           modifyCandyPrice(candyType, periodCount, newPrice);
         }
       });
       
-      // Increment counter for next period
-      setTrojanHorseCounter(prev => prev + 1);
+      // Mark this period as processed
+      setProcessedTrojanHorsePeriods(prev => new Set(prev).add(periodCount));
     }
-  }, [periodCount, jokers, isInitialized, gameData, trojanHorseCounter, modifyCandyPrice]);
+  }, [periodCount, jokers, isInitialized, gameData, modifyCandyPrice, getOriginalCandyPrice, processedTrojanHorsePeriods]);
 
   useEffect(() => {
     // Check for hints about next period's events
@@ -279,15 +286,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
       const tapedInJoker = findJokerById(jokers, JOKER_IDS.TAPPED_IN);
-      const predictorJoker = findJokerById(jokers, JOKER_IDS.PREDICTOR);
 
       let hintChance = 0.25; // Base 25% chance
 
-      if (predictorJoker) {
-        hintChance = 1.0; // Predictor joker shows all hints (100% chance)
-        // console.log('Predictor active - setting 100% hint chance');
-      } else if (tapedInJoker) {
-        hintChance = 0.5;
+      if (tapedInJoker) {
+        hintChance = 1.0; // Tapped In joker shows all hints (100% chance)
+        // console.log('Tapped In active - setting 100% hint chance');
       } else {
         // console.log('No hint jokers - using base 25% chance');
       }
@@ -329,19 +333,37 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const startAfterSchool = () => {
     setIsAfterSchool(true);
-    // Reset Trojan Horse counter when after school starts
-    setTrojanHorseCounter(0);
-    console.log('🐴 Trojan Horse: Counter reset to 0 after school');
+    // Note: Trojan Horse effect is now based on period count, not a separate counter
   };
 
   const startNewDay = () => {
+    console.log('🎮 GameContext: startNewDay called');
+    console.log('🎮 GameContext: Current periodCount before startNewDay:', periodCount);
+    console.log('🎮 GameContext: Current day/period:', day, period);
+    
     setIsAfterSchool(false);
     setHasStudiedTonight(false); // Reset study status for new day
-    // Increment to next day's first period
-    incrementPeriod('home room');
+    
+    // Calculate the periodCount for the first period of the next day
+    const currentDay = Math.floor(periodCount / 8) + 1;
+    const nextDayPeriodCount = currentDay * 8; // Start of next day (period 1)
+    
+    console.log('🎮 GameContext: Advancing from periodCount', periodCount, 'to', nextDayPeriodCount);
+    
+    setPeriodCount(nextDayPeriodCount);
+    setCurrentLocation('home room'); // Reset to home room for new day
+    setLocationHistory([{ period: nextDayPeriodCount, location: 'home room' }]);
+    
+    console.log('🎮 GameContext: startNewDay completed, new day/period should be:', Math.floor(nextDayPeriodCount / 8) + 1, (nextDayPeriodCount % 8) + 1);
   };
 
   const resetGame = async () => {
+    console.log('🔄 GameContext: Resetting game...');
+    
+    // Clear all saved game data FIRST
+    await clearAllGameData();
+    
+    // Then reset all state
     setPeriodCount(0);
     setCurrentLocation('home room');
     setLocationHistory([{ period: 0, location: 'home room' }]);
@@ -349,10 +371,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setHasStudiedTonight(false);
     setTrojanHorseCounter(0);
     setProcessedEvents(new Set()); // Clear processed events
-
-    // Clear all saved game data
-    await clearAllGameData();
-    console.log('Game reset and all saved data cleared');
+    setProcessedTrojanHorsePeriods(new Set()); // Clear processed Trojan Horse periods
+    
+    // Force save the reset state
+    const resetState = {
+      periodCount: 0,
+      currentLocation: 'home room' as Location,
+      locationHistory: [{ period: 0, location: 'home room' as Location }],
+      isAfterSchool: false,
+      hasStudiedTonight: false,
+      trojanHorseCounter: 0,
+    };
+    await saveGameState(resetState);
+    
+    console.log('✅ GameContext: Game reset complete, period set to 0');
   };
 
   const markStudiedTonight = () => {

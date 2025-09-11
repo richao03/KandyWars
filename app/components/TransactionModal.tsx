@@ -15,6 +15,8 @@ type PriceBreakdown = {
     jokerEmoji: string;
     effect: string;
     amount: number;
+    effectType: 'buy' | 'sell';
+    isActive: boolean;
   }>;
   finalPrice: number;
 };
@@ -152,14 +154,27 @@ export default function TransactionModal({
             <View style={styles.divider} />
 
             {priceBreakdown.jokerEffects.map((effect, index) => (
-              <View key={index} style={styles.breakdownRow}>
-                <Text style={styles.jokerEffectLabel}>
-                  {effect.jokerEmoji} {effect.jokerName}:
+              <View key={index} style={[
+                styles.breakdownRow,
+                !effect.isActive && styles.inactiveEffectRow
+              ]}>
+                <Text style={[
+                  styles.jokerEffectLabel,
+                  !effect.isActive && styles.inactiveEffectText
+                ]}>
+                  {effect.jokerEmoji} {effect.jokerName}
+                  {effect.effectType === 'sell' ? ' (Sell)' : ''}
+                  {!effect.isActive ? ' (Inactive)' : ''}:
                 </Text>
                 <Text
                   style={[
                     styles.jokerEffectValue,
-                    { color: effect.amount >= 0 ? '#22c55e' : '#ef4444' },
+                    { 
+                      color: effect.isActive 
+                        ? (effect.amount >= 0 ? '#22c55e' : '#ef4444')
+                        : '#999'
+                    },
+                    !effect.isActive && styles.inactiveEffectText
                   ]}
                 >
                   {effect.effect}
@@ -209,18 +224,6 @@ export default function TransactionModal({
             maximumTrackTintColor="#ccc"
           />
 
-          {/* Bulk Discount Notification */}
-          {qualifiesForBulkDiscount && mode === 'buy' && (
-            <View style={styles.bulkDiscountContainer}>
-              <Text style={styles.bulkDiscountLabel}>
-                🎯 Bulk Discount Applied!
-              </Text>
-              <Text style={styles.bulkDiscountDescription}>
-                10% off for purchasing more than {Math.floor(inventoryLimit / 2)} items
-              </Text>
-            </View>
-          )}
-
           <View style={styles.totalValueContainer}>
             <Text style={styles.totalValueLabel}>Total Value:</Text>
             <Text
@@ -233,11 +236,11 @@ export default function TransactionModal({
             </Text>
           </View>
 
+          {/* Combined Bulk Discount Notification */}
           {qualifiesForBulkDiscount && mode === 'buy' && (
-            <View style={styles.savingsContainer}>
-              <Text style={styles.savingsLabel}>You Save:</Text>
-              <Text style={styles.savingsAmount}>
-                ${((quantity * candy.cost) - (quantity * finalUnitPrice)).toFixed(2)}
+            <View style={styles.bulkDiscountContainer}>
+              <Text style={styles.bulkDiscountLabel}>
+                🎯 Bulk Discount Applied! You Save: ${((quantity * candy.cost) - (quantity * finalUnitPrice)).toFixed(2)}
               </Text>
             </View>
           )}
@@ -287,14 +290,14 @@ export default function TransactionModal({
 const styles = StyleSheet.create({
   modal: {
     justifyContent: 'center',
-    margin: 20,
+    margin: 15,
   },
   container: {
     backgroundColor: '#fefaf5', // Warm paper background
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'stretch',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#d4a574', // Brown crayon border
     shadowColor: '#8b4513',
     shadowOffset: { width: 2, height: 4 },
@@ -303,9 +306,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   title: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
     color: '#6b4423', // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
@@ -313,9 +316,9 @@ const styles = StyleSheet.create({
   },
   priceInfoContainer: {
     backgroundColor: '#fff9e6',
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 10,
+    borderRadius: 10,
+    padding: 8,
+    marginVertical: 6,
     borderWidth: 1,
     borderColor: '#e6d4b7',
   },
@@ -323,7 +326,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 4,
+    marginVertical: 2,
   },
   priceLabel: {
     fontSize: 14,
@@ -337,18 +340,18 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
   },
   sliderSection: {
-    marginTop: 20,
+    marginTop: 12,
   },
   quantityLabel: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '600',
     alignSelf: 'center',
     color: '#8b4513',
     backgroundColor: '#fff9e6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginBottom: 6,
     borderWidth: 2,
     borderColor: '#f4d03f',
   },
@@ -356,10 +359,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 15,
+    marginTop: 8,
     backgroundColor: '#f0f9ff',
-    padding: 12,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: '#bae6fd',
   },
@@ -371,7 +374,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   totalValueAmount: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     fontFamily: 'CrayonPastel',
   },
@@ -379,10 +382,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 6,
     backgroundColor: '#f0fdf4',
-    padding: 10,
-    borderRadius: 10,
+    padding: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#bbf7d0',
   },
@@ -399,21 +402,21 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
   },
   buttonRow: {
-    marginTop: 20,
+    marginTop: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   tabContainer: {
     flexDirection: 'row',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 6,
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   tab: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#cc7a00',
     backgroundColor: '#fff',
@@ -425,22 +428,22 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#8b4513',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 14,
   },
   priceBreakdownContainer: {
     backgroundColor: '#f0f8ff',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 10,
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 6,
     borderWidth: 2,
     borderColor: '#4a90e2',
   },
   breakdownTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#4a90e2',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     fontFamily: 'CrayonPastel',
   },
   breakdownRow: {
@@ -506,49 +509,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bulkDiscountContainer: {
-    backgroundColor: '#e0f2fe',
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 2,
-    borderColor: '#0ea5e9',
+    backgroundColor: '#dcfce7',
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#16a34a',
     alignItems: 'center',
   },
   bulkDiscountLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0c4a6e',
-    fontFamily: 'CrayonPastel',
-    marginBottom: 4,
-  },
-  bulkDiscountDescription: {
-    fontSize: 12,
-    color: '#075985',
-    fontFamily: 'CrayonPastel',
-    textAlign: 'center',
-  },
-  savingsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    backgroundColor: '#dcfce7',
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-  },
-  savingsLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#15803d',
     fontFamily: 'CrayonPastel',
-    marginRight: 8,
+    textAlign: 'center',
   },
-  savingsAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#16a34a',
-    fontFamily: 'CrayonPastel',
+  inactiveEffectRow: {
+    opacity: 0.6,
+  },
+  inactiveEffectText: {
+    color: '#999',
+    fontStyle: 'italic',
   },
 });
