@@ -3,7 +3,6 @@ export type TutorialStage =
   | 'day1_first_buy'
   | 'day1_first_sell'
   | 'day1_period3'
-  | 'first_after_school'
   | 'day2_start'
   | 'day2_joker'
   | 'day3_advanced';
@@ -155,46 +154,6 @@ export const PROGRESSIVE_TUTORIALS: Record<TutorialStage, TutorialSequence> = {
     ],
   },
 
-  first_after_school: {
-    id: 'first_after_school',
-    stage: 'first_after_school',
-    name: 'After School Activities',
-    autoTrigger: true,
-    steps: [
-      {
-        id: 'after_school_intro',
-        title: "🌅 School's Out!",
-        description:
-          'Great first day! After school, you have several options to prepare for tomorrow.',
-        character: 'teacher',
-        position: 'center',
-      },
-      {
-        id: 'piggy_bank_intro',
-        title: '🐷 Save Your Money',
-        description:
-          "The Piggy Bank keeps your profits safe. Money here won't be lost if things go wrong. Smart dealers always save!",
-        character: 'student',
-        position: 'center',
-      },
-      {
-        id: 'deli_intro',
-        title: '🏪 Visit the Deli',
-        description:
-          'At the deli, you might find special joker cards or unique opportunities. Worth checking out!',
-        character: 'student',
-        position: 'center',
-      },
-      {
-        id: 'study_option',
-        title: '📚 Study at Home',
-        description:
-          'Studying can unlock jokers with new aura abilities and instant skills. \n\n Knowledge is power in the candy trade!',
-        character: 'teacher',
-        position: 'center',
-      },
-    ],
-  },
 
   day2_start: {
     id: 'day2_start',
@@ -316,7 +275,6 @@ export const getNextTutorialStage = (
     'day1_first_buy',
     'day1_first_sell',
     'day1_period3',
-    'first_after_school',
     'day2_start',
     'day2_joker',
     'day3_advanced',
@@ -374,8 +332,6 @@ export const shouldShowTutorial = (
     case 'day1_period3':
       return gameState.day === 1 && gameState.period === 3;
 
-    case 'first_after_school':
-      return gameState.day === 1 && gameState.isAfterSchool === true;
 
     case 'day2_start':
       return gameState.day === 2 && gameState.period === 1;

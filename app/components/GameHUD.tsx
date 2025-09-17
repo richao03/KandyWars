@@ -24,6 +24,7 @@ interface GameHUDProps {
   customHeaderText?: string;
   customLocationText?: string;
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
+  inventoryWrapper?: (children: React.ReactNode) => React.ReactNode;
 }
 
 export default function GameHUD({
@@ -33,6 +34,7 @@ export default function GameHUD({
   customHeaderText,
   customLocationText,
   flavorTextWrapper,
+  inventoryWrapper,
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
@@ -90,15 +92,29 @@ export default function GameHUD({
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.statBox, styles.inventoryBox]}
-            onPress={() => setInventoryModalVisible(true)}
-          >
-            <Text style={statTitleStyle}>Inventory</Text>
-            <Text style={styles.inventoryAmount}>
-              {totalInventory || 0}/{inventoryCapacity || 30}
-            </Text>
-          </TouchableOpacity>
+          {inventoryWrapper ? (
+            inventoryWrapper(
+              <TouchableOpacity
+                style={[styles.statBox, styles.inventoryBox]}
+                onPress={() => setInventoryModalVisible(true)}
+              >
+                <Text style={statTitleStyle}>Inventory</Text>
+                <Text style={styles.inventoryAmount}>
+                  {totalInventory || 0}/{inventoryCapacity || 30}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <TouchableOpacity
+              style={[styles.statBox, styles.inventoryBox]}
+              onPress={() => setInventoryModalVisible(true)}
+            >
+              <Text style={statTitleStyle}>Inventory</Text>
+              <Text style={styles.inventoryAmount}>
+                {totalInventory || 0}/{inventoryCapacity || 30}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Location badge */}

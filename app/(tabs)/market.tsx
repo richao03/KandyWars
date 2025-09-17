@@ -512,14 +512,16 @@ function Market(props) {
   };
 
   const handleNextDay = () => {
-    console.log('🔵 handleNextDay called - period:', period, 'hasActiveEvent:', hasActiveEvent);
+    console.log('🔵 handleNextDay called - period:', period, 'day:', day, 'hasActiveEvent:', hasActiveEvent);
     // Trigger success haptic feedback when advancing to next period
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     if (period === 8) {
       // End of day - show day stats first
-      console.log('🔵 Period 8 - showing day stats modal');
+      console.log('🔵 Period 8 reached - showing day stats modal for day:', day);
+      console.log('🔵 Current dayStatsModalVisible state:', dayStatsModalVisible);
       setDayStatsModalVisible(true);
+      console.log('🔵 setDayStatsModalVisible(true) called');
     } else {
       // Check if there's an active event
       if (hasActiveEvent) {
@@ -571,8 +573,10 @@ function Market(props) {
 
       // Then show day stats modal (this simulates end of day)
       setTimeout(() => {
-        console.log('🏠 Now showing DayStatsModal');
+        console.log('🏠 Now showing DayStatsModal for day:', day);
+        console.log('🏠 Current dayStatsModalVisible state before setting:', dayStatsModalVisible);
         setDayStatsModalVisible(true);
+        console.log('🏠 setDayStatsModalVisible(true) called via End Day');
       }, 100);
     }, 200);
   };
@@ -729,31 +733,11 @@ function Market(props) {
           </TouchableOpacity>
         )}
 
-        {/* DEBUG: Market Tutorial Trigger */}
-        <TouchableOpacity
-          style={{
-            position: 'absolute',
-            top: 100,
-            right: 20,
-            backgroundColor: 'red',
-            padding: 10,
-            borderRadius: 5,
-            zIndex: 1000,
-          }}
-          onPress={() => {
-            console.log('🐛 DEBUG: Manual market tutorial trigger');
-            console.log('🐛 DEBUG: Current copilot state - isFirstStep:', isFirstStep, 'currentStep:', currentStep);
-            startCopilot();
-            console.log('🐛 DEBUG: Manual startCopilot() call completed');
-          }}
-        >
-          <Text style={{ color: 'white', fontSize: 12 }}>MARKET TUTORIAL</Text>
-        </TouchableOpacity>
 
 
         <CopilotStep
           text="Here's the candy market! Each candy has a different price. Tap on any candy to buy or sell it. Prices change throughout the day!"
-          order={2}
+          order={3}
           name="market_list"
         >
           <CopilotView>
@@ -821,7 +805,7 @@ function Market(props) {
 
         <CopilotStep
           text="Use these buttons to advance time. 'Next Period' moves to the next class, and 'End Day' skips straight to after school!"
-          order={3}
+          order={4}
           name="market_buttons"
         >
           <CopilotView style={styles.buttonContainer}>
@@ -879,7 +863,11 @@ function Market(props) {
       <DayStatsModal
         visible={dayStatsModalVisible}
         onClose={handleDayStatsClose}
-        stats={getTotalStats()}
+        stats={(() => {
+          const stats = getTotalStats();
+          console.log('📊 DayStatsModal stats:', stats, 'visible:', dayStatsModalVisible, 'day:', day);
+          return stats;
+        })()}
         day={day}
       />
 

@@ -21,6 +21,15 @@ export default function DayStatsModal({
   stats,
   day,
 }: DayStatsModalProps) {
+  console.log('📊 DayStatsModal rendering - visible:', visible, 'day:', day, 'stats:', stats);
+
+  if (!visible) {
+    console.log('📊 DayStatsModal not visible, returning null');
+    return null;
+  }
+
+  console.log('📊 DayStatsModal is visible, rendering modal');
+
   return (
     <Modal
       isVisible={visible}

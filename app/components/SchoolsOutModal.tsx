@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTabBar } from '../../src/context/TabBarContext';
 
 interface SchoolsOutModalProps {
@@ -15,13 +15,17 @@ export default function SchoolsOutModal({
 }: SchoolsOutModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
 
+  const handleComplete = () => {
+    showTabBar();
+    onComplete();
+  };
+
   useEffect(() => {
     if (visible) {
       hideTabBar();
       // Auto-dismiss after 2.5 seconds
       const timer = setTimeout(() => {
-        showTabBar();
-        onComplete();
+        handleComplete();
       }, 2500);
 
       return () => {
@@ -34,7 +38,11 @@ export default function SchoolsOutModal({
   if (!visible) return null;
 
   return (
-    <View style={styles.overlay}>
+    <TouchableOpacity
+      style={styles.overlay}
+      activeOpacity={1}
+      onPress={handleComplete}
+    >
       <View style={styles.container}>
         <Image
           source={require('../../assets/images/schoolsOut.png')}
@@ -42,8 +50,9 @@ export default function SchoolsOutModal({
           resizeMode="contain"
         />
         <Text style={styles.text}>Time to head home!</Text>
+        <Text style={styles.tapText}>Tap to continue</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -80,5 +89,16 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
+    marginBottom: 20,
+  },
+  tapText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    opacity: 0.8,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
