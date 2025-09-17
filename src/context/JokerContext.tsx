@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { loadJokers, saveJokers } from '../utils/persistence';
 import { scoreboardService } from '../services/firebase';
+import { useTutorial } from './TutorialContext';
 
 export interface Joker {
   id: number;
@@ -44,6 +45,8 @@ type JokerContextType = {
   clearActiveEffect: (jokerId: number) => void;
   reorderJokers: (newOrder: Joker[]) => void;
   resetJokers: () => void;
+  registerOnFirstJoker: (callback: () => void) => void;
+  unregisterOnFirstJoker: (callback: () => void) => void;
 };
 
 const JokerContext = createContext<JokerContextType | undefined>(undefined);
@@ -54,6 +57,7 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
   const [jokers, setJokers] = useState<Joker[]>([]);
   const [activeEffects, setActiveEffects] = useState<ActiveJokerEffect[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [onFirstJokerCallbacks, setOnFirstJokerCallbacks] = useState<(() => void)[]>([]);
 
   // Load jokers data on mount
   useEffect(() => {
@@ -85,6 +89,16 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
       if (prev.some((j) => j.id === joker.id)) {
         return prev;
       }
+
+      // Check if this is the first joker being added
+      const isFirstJoker = prev.length === 0;
+      if (isFirstJoker) {
+        // Trigger all registered callbacks for first joker
+        setTimeout(() => {
+          onFirstJokerCallbacks.forEach(callback => callback());
+        }, 500);
+      }
+
       const newJokers = [...prev, joker];
       
       // Track joker obtained from minigame
@@ -159,6 +173,14 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('Jokers and active effects reset to initial state');
   };
 
+  const registerOnFirstJoker = (callback: () => void) => {
+    setOnFirstJokerCallbacks(prev => [...prev, callback]);
+  };
+
+  const unregisterOnFirstJoker = (callback: () => void) => {
+    setOnFirstJokerCallbacks(prev => prev.filter(cb => cb !== callback));
+  };
+
   return (
     <JokerContext.Provider
       value={{
@@ -173,6 +195,8 @@ export const JokerProvider: React.FC<{ children: React.ReactNode }> = ({
         clearActiveEffect,
         reorderJokers,
         resetJokers,
+        registerOnFirstJoker,
+        unregisterOnFirstJoker,
       }}
     >
       {children}

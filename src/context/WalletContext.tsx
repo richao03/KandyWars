@@ -8,7 +8,7 @@ import { nameValidationService } from '../services/nameValidationService';
 type WalletContextType = {
   balance: number;
   stashedAmount: number;
-  difficulty: 'easy' | 'medium' | 'hard' | null;
+  difficultyLevel: number | null;
   playerName: string | null;
   playerId: string | null;
   isFirstTimeDifficultySelection: boolean;
@@ -17,10 +17,9 @@ type WalletContextType = {
   addAllowance: (jokers?: any[], periodCount?: number) => number; // Returns amount received
   stashMoney: (amount: number, jokers?: any[]) => boolean;
   withdrawFromStash: (amount: number) => boolean;
-  confiscateStash: (jokers?: any[], periodCount?: number) => number; // Returns amount confiscated
   stealMoney: (amount: number, jokers?: any[], periodCount?: number) => number; // Returns amount stolen from balance
   resetWallet: () => void;
-  initializeWallet: (difficulty?: 'easy' | 'medium' | 'hard', playerName?: string) => void;
+  initializeWallet: (level?: number, playerName?: string) => void;
   setPlayerName: (name: string) => void;
   hasExistingName: () => Promise<boolean>;
 };
@@ -30,7 +29,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [balance, setBalance] = useState(20); // starting cash
   const [stashedAmount, setStashedAmount] = useState(0); // money in piggy bank
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | null>(null); // current difficulty
+  const [difficultyLevel, setDifficultyLevel] = useState<number | null>(null); // current difficulty level (1-8)
   const [playerName, setPlayerNameState] = useState<string | null>(null); // player name
   const [playerId, setPlayerId] = useState<string | null>(null); // unique player ID
   const [isFirstTimeDifficultySelection, setIsFirstTimeDifficultySelection] = useState(true); // track first time
@@ -43,7 +42,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const defaultWallet = { 
         balance: 20, 
         stashedAmount: 0, 
-        difficulty: null, 
+        difficultyLevel: null, 
         playerName: null,
         playerId: null,
         isFirstTimeDifficultySelection: true 
@@ -55,7 +54,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       setBalance(savedWallet.balance ?? 20);
       setStashedAmount(savedWallet.stashedAmount ?? 0);
-      setDifficulty(savedWallet.difficulty ?? null);
+      setDifficultyLevel(savedWallet.difficultyLevel ?? null);
       
       // First check for persistent player ID, then load Firebase name
       const persistentPlayerId = await loadPlayerId();
@@ -97,11 +96,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Save wallet data whenever it changes
   useEffect(() => {
     if (!isLoaded) return; // Don't save during initial load
-    const walletData = { balance, stashedAmount, difficulty, playerName, playerId, isFirstTimeDifficultySelection };
+    const walletData = { balance, stashedAmount, difficultyLevel, playerName, playerId, isFirstTimeDifficultySelection };
     console.log('💰 WalletContext: Saving wallet data:', walletData);
     console.log('💰 WalletContext: isLoaded:', isLoaded);
     saveWallet(walletData);
-  }, [balance, stashedAmount, difficulty, playerName, playerId, isFirstTimeDifficultySelection, isLoaded]);
+  }, [balance, stashedAmount, difficultyLevel, playerName, playerId, isFirstTimeDifficultySelection, isLoaded]);
 
   const spend = (amount: number): boolean => {
     if (balance >= amount) {
@@ -213,15 +212,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return false;
   };
 
-  const confiscateStash = (jokers?: any[], periodCount?: number): number => {
-    // DEPRECATED: This function is no longer used for confiscation events
-    // Confiscation events now only affect candy inventory (half, rounded down)
-    // The piggy bank (stash) and wallet should NOT be touched during confiscation
-    // Keeping this function for backward compatibility but it does nothing
-    
-    console.log('⚠️ confiscateStash called but does nothing - confiscation only affects candy inventory now');
-    return 0;
-  };
 
   const stealMoney = (amount: number, jokers?: any[], periodCount?: number): number => {
     // Check for money protection from Safe Deposit joker
@@ -246,7 +236,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     setBalance(20); // Reset to starting cash
     setStashedAmount(0); // Reset stash
-    setDifficulty(null); // Reset difficulty
+    setDifficultyLevel(null); // Reset difficulty level
     // Don't reset player name - keep it for persistent user experience
     // setPlayerNameState(null); // Keep player name loaded from Firebase
     // Don't reset player ID - keep it persistent across game resets
@@ -255,19 +245,18 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     console.log('Wallet reset to initial state (keeping player ID and name for persistence)');
   };
 
-  const initializeWallet = (difficulty?: 'easy' | 'medium' | 'hard', playerName?: string) => {
+  const initializeWallet = (level?: number, playerName?: string) => {
     console.log('💰 WalletContext: initializeWallet called!');
-    console.log('💰 WalletContext: Difficulty:', difficulty);
+    console.log('💰 WalletContext: Level:', level);
     console.log('💰 WalletContext: Player Name:', playerName);
     console.log('💰 WalletContext: Current balance before init:', balance);
     console.log('💰 WalletContext: Current stashedAmount before init:', stashedAmount);
-    console.trace('💰 WalletContext: initializeWallet call stack trace');
     
     setBalance(20); // Starting cash is always 20
     
-    // Store the difficulty for future use
-    if (difficulty) {
-      setDifficulty(difficulty);
+    // Store the difficulty level for future use
+    if (level) {
+      setDifficultyLevel(level);
       setIsFirstTimeDifficultySelection(false); // Mark that difficulty has been selected
     }
     
@@ -276,22 +265,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setPlayerNameState(playerName);
     }
     
-    // Set piggy bank balance based on difficulty (negative amounts represent debt)
-    switch (difficulty) {
-      case 'easy':
-        setStashedAmount(-5000);
-        break;
-      case 'medium':
-        setStashedAmount(-10000);
-        break;
-      case 'hard':
-        setStashedAmount(-30000);
-        break;
-      default:
-        setStashedAmount(0); // Default case
-    }
+    // Set piggy bank balance based on level (negative amounts represent debt)
+    // Level 1 = $5000, Level 2 = $10000, etc.
+    const debtAmount = level ? level * 5000 : 0;
+    setStashedAmount(-debtAmount);
     
-    console.log(`💰 WalletContext: Wallet initialized for ${difficulty || 'default'} difficulty - balance: 20, stashedAmount: ${difficulty === 'easy' ? -5000 : difficulty === 'medium' ? -10000 : difficulty === 'hard' ? -30000 : 0}, playerName: ${playerName || 'none'}`);
+    console.log(`💰 WalletContext: Wallet initialized for level ${level || 'default'} - balance: 20, debt: $${debtAmount}, playerName: ${playerName || 'none'}`);
   };
 
   const setPlayerName = (name: string) => {
@@ -315,7 +294,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     <WalletContext.Provider value={{ 
       balance, 
       stashedAmount,
-      difficulty,
+      difficultyLevel,
       playerName,
       playerId,
       isFirstTimeDifficultySelection,
@@ -324,7 +303,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       addAllowance,
       stashMoney,
       withdrawFromStash,
-      confiscateStash,
       stealMoney,
       resetWallet,
       initializeWallet,

@@ -248,6 +248,45 @@ class NameValidationService {
   }
 
   /**
+   * Clear a player's name from Firebase (for complete data reset)
+   */
+  async clearPlayerName(playerId: string, playerName: string): Promise<boolean> {
+    if (!this.isInitialized) {
+      console.log('🏷️ NameValidationService: Initializing before clearPlayerName...');
+      await this.initialize();
+    }
+
+    try {
+      console.log('🏷️ NameValidationService: Clearing ALL names for player:', playerId);
+
+      // Find ALL documents for this player ID (not just matching name)
+      const q = query(
+        collection(db, 'player_names'),
+        where('playerId', '==', playerId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      console.log('🏷️ NameValidationService: Found', querySnapshot.size, 'documents to delete');
+
+      if (!querySnapshot.empty) {
+        // Delete ALL documents for this player
+        for (const docSnapshot of querySnapshot.docs) {
+          console.log('🏷️ NameValidationService: Deleting document:', docSnapshot.id, 'with data:', docSnapshot.data());
+          await deleteDoc(doc(db, 'player_names', docSnapshot.id));
+        }
+        console.log('✅ NameValidationService: All player names cleared successfully');
+        return true;
+      }
+
+      console.log('⚠️ NameValidationService: No names found to clear for player:', playerId);
+      return false;
+    } catch (error) {
+      console.error('❌ NameValidationService: Failed to clear player name:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get suggested alternative names when a name is taken
    */
   async getSuggestedNames(baseName: string): Promise<string[]> {

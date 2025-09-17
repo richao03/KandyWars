@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -88,10 +89,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     [periodCount]
   );
 
-  // Debug logging for day/period calculation (only when values change)
-  // console.log(
-  //   `📅 Day/Period Debug: periodCount=${periodCount}, calculated day=${day}, calculated period=${period}`
-  // );
 
   // Load game state on mount
   useEffect(() => {
@@ -106,9 +103,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       };
 
       const savedState = await loadGameState(defaultState);
-
-      console.log('💾 GameContext - Loading saved state:', savedState);
-      console.log('💾 GameContext - Default state was:', defaultState);
 
       setPeriodCount(savedState.periodCount ?? 0);
       setCurrentLocation(savedState.currentLocation || 'home room');
@@ -272,16 +266,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       (e) => e.period === periodCount + 1 && e.hint
     );
 
-    // Debug logging for events (commented out for performance)
-    // const allEventsWithHints = gameData?.periodEvents?.filter((e) => e.hint) || [];
-    // console.log(
-    //   `All events with hints:`,
-    //   allEventsWithHints.map((e) => `Period ${e.period}: ${e.effect || 'Unknown'}`)
-    // );
-    // console.log(
-    //   `Looking for event at period ${periodCount + 1}:`,
-    //   gameData?.periodEvents?.filter((e) => e.period === periodCount + 1) || []
-    // );
 
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
@@ -297,18 +281,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       const randomRoll = Math.random();
-      // console.log(
-      //   `Random roll: ${randomRoll}, Hint chance: ${hintChance}, Will show hint: ${randomRoll < hintChance}`
-      // );
 
       if (randomRoll < hintChance) {
-        // console.log(`Setting hint: "${nextPeriodEvent.hint}"`);
         setHint(nextPeriodEvent.hint);
       } else if (currentEvent?.effect) {
-        // console.log('No hint shown, showing current event');
         setEvent(currentEvent.effect);
       } else {
-        // console.log('No hint shown, showing DEFAULT');
         setEvent('DEFAULT');
       }
     } else if (currentEvent?.effect) {
@@ -318,7 +296,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [periodCount, currentLocation, jokers]);
 
-  const incrementPeriod = (location: Location) => {
+  const incrementPeriod = useCallback((location: Location) => {
     const newPeriodCount = periodCount + 1;
     setPeriodCount(newPeriodCount);
     setCurrentLocation(location);
@@ -329,14 +307,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Trigger candy generation for "Something from Nothing" joker
     // This will be handled by a separate effect in InventoryContext
-  };
+  }, [periodCount]);
 
-  const startAfterSchool = () => {
+  const startAfterSchool = useCallback(() => {
     setIsAfterSchool(true);
     // Note: Trojan Horse effect is now based on period count, not a separate counter
-  };
+  }, []);
 
-  const startNewDay = () => {
+  const startNewDay = useCallback(() => {
     console.log('🎮 GameContext: startNewDay called');
     console.log('🎮 GameContext: Current periodCount before startNewDay:', periodCount);
     console.log('🎮 GameContext: Current day/period:', day, period);
@@ -355,7 +333,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setLocationHistory([{ period: nextDayPeriodCount, location: 'home room' }]);
     
     console.log('🎮 GameContext: startNewDay completed, new day/period should be:', Math.floor(nextDayPeriodCount / 8) + 1, (nextDayPeriodCount % 8) + 1);
-  };
+  }, [periodCount, day, period]);
 
   const resetGame = async () => {
     console.log('🔄 GameContext: Resetting game...');
@@ -387,9 +365,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('✅ GameContext: Game reset complete, period set to 0');
   };
 
-  const markStudiedTonight = () => {
+  const markStudiedTonight = useCallback(() => {
     setHasStudiedTonight(true);
-  };
+  }, []);
 
   const revertToPreviousPeriod = (): boolean => {
     if (periodCount > 0) {

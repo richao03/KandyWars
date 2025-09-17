@@ -73,7 +73,7 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
   const { removeAllFromInventory, confiscateHalfInventory } = useInventory();
   const { jokers } = useJokers();
-  const { confiscateStash, add: addToWallet, balance, stealMoney } = useWallet();
+  const { add: addToWallet, balance, stealMoney } = useWallet();
   const [currentEvent, setCurrentEvent] = useState<SpecialEventEffect | null>(
     null
   );

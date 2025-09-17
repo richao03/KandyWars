@@ -6,7 +6,7 @@ import {
   View,
   ScrollView,
 } from 'react-native';
-import Modal from 'react-native-modal';
+import Modal from './ReanimatedModal';
 
 type InventoryItem = {
   name: string;

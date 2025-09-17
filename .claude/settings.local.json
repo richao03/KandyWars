@@ -30,7 +30,9 @@
       "Bash(security delete-internet-password:*)",
       "Bash(security find-internet-password:*)",
       "Bash(firebase init:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "WebSearch",
+      "Bash(xargs:*)"
     ],
     "deny": []
   }

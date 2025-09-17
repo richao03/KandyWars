@@ -1,6 +1,6 @@
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   ImageBackground,
   StyleSheet,
@@ -45,6 +45,16 @@ export default function PiggyBankPage() {
 
   const maxAmount =
     mode === 'deposit' ? Math.max(0, balance) : Math.max(0, stashedAmount);
+
+  // Calculate dynamic font size for stashed amount based on text length
+  const stashedAmountText = `$${stashedAmount.toFixed(2)}`;
+  const stashedAmountFontSize = useMemo(() => {
+    const textLength = stashedAmountText.length;
+    if (textLength <= 8) return 28; // Normal size for amounts like $1000.00
+    if (textLength <= 10) return 24; // Slightly smaller for $10000.00
+    if (textLength <= 12) return 20; // Smaller for $-30000.00
+    return 18; // Even smaller for very large negative amounts
+  }, [stashedAmountText]);
 
   const handleTransaction = () => {
     if (amount <= 0) {
@@ -132,8 +142,8 @@ export default function PiggyBankPage() {
           <View style={styles.piggyBankContainer}>
             <View style={styles.piggyBankInfo}>
               <Text style={styles.piggyBankLabel}>Stashed Away</Text>
-              <Text style={styles.piggyBankAmount}>
-                ${stashedAmount.toFixed(2)}
+              <Text style={[styles.piggyBankAmount, { fontSize: stashedAmountFontSize }]} numberOfLines={1} adjustsFontSizeToFit>
+                {stashedAmountText}
               </Text>
             </View>
           </View>

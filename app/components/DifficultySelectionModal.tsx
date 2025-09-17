@@ -1,15 +1,17 @@
 import React from 'react';
 import {
-  View,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Modal,
+  View,
 } from 'react-native';
 
 interface DifficultySelectionModalProps {
   visible: boolean;
-  onSelectDifficulty: (difficulty: 'easy' | 'medium' | 'hard') => void;
+  onSelectDifficulty: (level: number) => void;
   onClose: () => void;
 }
 
@@ -18,33 +20,78 @@ export default function DifficultySelectionModal({
   onSelectDifficulty,
   onClose,
 }: DifficultySelectionModalProps) {
-  const difficultyOptions = [
+  const levelOptions = [
     {
-      key: 'easy' as const,
-      title: 'Easy',
-      description: 'Perfect for beginners',
+      level: 1,
+      title: 'Level 1',
       piggyBank: -5000,
-      color: '#d4f6d4',
+      image: require('../../assets/images/doggs/pug.png'),
+      color: '#e8f5e8',
       borderColor: '#4a7c4a',
       textColor: '#2d5a2d',
     },
     {
-      key: 'medium' as const,
-      title: 'Medium',
-      description: 'Balanced challenge',
+      level: 2,
+      title: 'Level 2',
       piggyBank: -10000,
-      color: '#ffd6e8',
-      borderColor: '#b85c8a',
-      textColor: '#8a4a6b',
+      image: require('../../assets/images/doggs/brussleGriffon.png'),
+      color: '#f0e8f5',
+      borderColor: '#7c4a7c',
+      textColor: '#5a2d5a',
     },
     {
-      key: 'hard' as const,
-      title: 'Hard',
-      description: 'For experienced players',
+      level: 3,
+      title: 'Level 3',
+      piggyBank: -15000,
+      image: require('../../assets/images/doggs/evee.png'),
+      color: '#e8f0f5',
+      borderColor: '#4a7c8a',
+      textColor: '#2d5a6b',
+    },
+    {
+      level: 4,
+      title: 'Level 4',
+      piggyBank: -20000,
+      image: require('../../assets/images/doggs/byul.png'),
+      color: '#f5f0e8',
+      borderColor: '#8a7c4a',
+      textColor: '#6b5a2d',
+    },
+    {
+      level: 5,
+      title: 'Level 5',
+      piggyBank: -25000,
+      image: require('../../assets/images/doggs/caneCorso.png'),
+      color: '#f5e8e8',
+      borderColor: '#8a4a4a',
+      textColor: '#6b2d2d',
+    },
+    {
+      level: 6,
+      title: 'Level 6',
       piggyBank: -30000,
-      color: '#d6e8ff',
-      borderColor: '#5c7cb8',
-      textColor: '#4a5a8a',
+      image: require('../../assets/images/doggs/pitbull.png'),
+      color: '#f0f5e8',
+      borderColor: '#7c8a4a',
+      textColor: '#5a6b2d',
+    },
+    {
+      level: 7,
+      title: 'Level 7',
+      piggyBank: -35000,
+      image: require('../../assets/images/doggs/afghan.png'),
+      color: '#e8e8f5',
+      borderColor: '#4a4a8a',
+      textColor: '#2d2d6b',
+    },
+    {
+      level: 8,
+      title: 'Level 8',
+      piggyBank: -40000,
+      image: require('../../assets/images/doggs/germanShepard.png'),
+      color: '#f5f5f0',
+      borderColor: '#8a8a7c',
+      textColor: '#6b6b5a',
     },
   ];
 
@@ -57,35 +104,52 @@ export default function DifficultySelectionModal({
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>Choose Difficulty</Text>
-          <Text style={styles.subtitle}>Select your starting challenge</Text>
-          
-          <View style={styles.optionsContainer}>
-            {difficultyOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.difficultyButton,
-                  {
-                    backgroundColor: option.color,
-                    borderColor: option.borderColor,
-                  },
-                ]}
-                onPress={() => onSelectDifficulty(option.key)}
-              >
-                <Text style={[styles.difficultyTitle, { color: option.textColor }]}>
-                  {option.title}
-                </Text>
-                <Text style={[styles.difficultyDescription, { color: option.textColor }]}>
-                  {option.description}
-                </Text>
-                <Text style={[styles.piggyBankText, { color: option.textColor }]}>
-                  Piggy Bank: ${option.piggyBank.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
+          <Text style={styles.title}>Choose your pet!</Text>
+          <Text style={styles.subtitle}>Select your challenge level</Text>
+
+          <ScrollView
+            style={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.optionsContainer}>
+              {levelOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.level}
+                  style={[
+                    styles.difficultyButton,
+                    {
+                      backgroundColor: option.color,
+                      borderColor: option.borderColor,
+                    },
+                  ]}
+                  onPress={() => onSelectDifficulty(option.level)}
+                >
+                  <View style={styles.buttonContent}>
+                    <Image source={option.image} style={styles.dogImage} />
+                    <View style={styles.textContent}>
+                      <Text
+                        style={[
+                          styles.difficultyTitle,
+                          { color: option.textColor },
+                        ]}
+                      >
+                        {option.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.piggyBankText,
+                          { color: option.textColor },
+                        ]}
+                      >
+                        Piggy Bank: ${option.piggyBank.toLocaleString()}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
           <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
@@ -106,14 +170,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 30,
-    width: '85%',
-    maxWidth: 400,
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '85%',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    width: '100%',
+    maxHeight: 400,
+    borderWidth: 3,
+    borderColor: '#d4a574',
+    padding: 8,
+    borderRadius: 10,
+    marginBottom: 24,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    fontFamily: 'DonGraffiti',
+    fontFamily: 'CrayonPastel',
     color: '#333',
     marginBottom: 10,
     textAlign: 'center',
@@ -131,31 +205,45 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   difficultyButton: {
-    paddingVertical: 20,
-    paddingHorizontal: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     borderRadius: 15,
     borderWidth: 3,
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 6,
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  dogImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    marginRight: 15,
+    resizeMode: 'contain',
+  },
+  textContent: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
   difficultyTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: 'bold',
     fontFamily: 'CrayonPastel',
     marginBottom: 5,
   },
   difficultyDescription: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'CrayonPastel',
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 5,
   },
   piggyBankText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'CrayonPastel',
   },

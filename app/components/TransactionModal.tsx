@@ -2,7 +2,7 @@ import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useState, useMemo } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from 'react-native-modal';
+import Modal from './ReanimatedModal';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';

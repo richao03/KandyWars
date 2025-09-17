@@ -1,5 +1,5 @@
 import { Marquee } from '@animatereactnative/marquee';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
@@ -23,6 +23,7 @@ interface GameHUDProps {
   theme?: 'school' | 'evening';
   customHeaderText?: string;
   customLocationText?: string;
+  flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
 }
 
 export default function GameHUD({
@@ -31,6 +32,7 @@ export default function GameHUD({
   theme = 'school',
   customHeaderText,
   customLocationText,
+  flavorTextWrapper,
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
@@ -53,6 +55,16 @@ export default function GameHUD({
   const locationText =
     customLocationText || locationNames[currentLocation] || 'Home Room';
 
+  // Calculate dynamic font size for piggy bank amount based on text length
+  const piggyAmountText = `$${(stashedAmount || 0).toFixed(2)}`;
+  const piggyFontSize = useMemo(() => {
+    const textLength = piggyAmountText.length;
+    if (textLength <= 8) return 14; // Normal size for amounts like $1000.00
+    if (textLength <= 10) return 12; // Slightly smaller for $10000.00
+    if (textLength <= 12) return 10; // Smaller for $-30000.00
+    return 9; // Even smaller for very large negative amounts
+  }, [piggyAmountText]);
+
   return (
     <View style={containerStyle}>
       {/* Header with day/period */}
@@ -60,60 +72,79 @@ export default function GameHUD({
         <Text style={headerStyle}>{headerText}</Text>
       </View>
 
-      {/* Stats in crayon boxes */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statBox, styles.cashBox]}>
-          <Text style={statTitleStyle}>Wallet</Text>
-          <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
-        </View>
+        {/* Stats in crayon boxes */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statBox, styles.cashBox]}>
+            <Text style={statTitleStyle}>Wallet</Text>
+            <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
+          </View>
 
-        <View style={[styles.statBox, styles.piggyBox]}>
-          <Text style={statTitleStyle}>Piggy Bank</Text>
-          <Text style={styles.piggyAmount}>
-            ${(stashedAmount || 0).toFixed(2)}
-          </Text>
-        </View>
+          <View style={[styles.statBox, styles.piggyBox]}>
+            <Text style={statTitleStyle}>Piggy Bank</Text>
+            <Text
+              style={[styles.piggyAmount, { fontSize: piggyFontSize }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {piggyAmountText}
+            </Text>
+          </View>
 
-        <TouchableOpacity
-          style={[styles.statBox, styles.inventoryBox]}
-          onPress={() => setInventoryModalVisible(true)}
-        >
-          <Text style={statTitleStyle}>Inventory</Text>
-          <Text style={styles.inventoryAmount}>
-            {totalInventory || 0}/{inventoryCapacity || 30}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Location badge */}
-      <View style={styles.locationRow}>
-        <View style={styles.locationBadge}>
-          <Text style={styles.locationText}>@ {locationText}</Text>
-        </View>
-      </View>
-
-      {/* Flavor text scroll */}
-      {text && (
-        <View style={styles.flavorContainer}>
-          <Marquee
-            spacing={250}
-            speed={0.75}
-            style={styles.marquee}
-            delay={2000}
+          <TouchableOpacity
+            style={[styles.statBox, styles.inventoryBox]}
+            onPress={() => setInventoryModalVisible(true)}
           >
-            <Text style={styles.flavor}>{text}</Text>
-          </Marquee>
+            <Text style={statTitleStyle}>Inventory</Text>
+            <Text style={styles.inventoryAmount}>
+              {totalInventory || 0}/{inventoryCapacity || 30}
+            </Text>
+          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Inventory Modal */}
-      <InventoryModal
-        visible={inventoryModalVisible}
-        onClose={() => setInventoryModalVisible(false)}
-        inventory={inventory}
-        totalCount={totalInventory}
-        capacity={inventoryCapacity}
-      />
+        {/* Location badge */}
+        <View style={styles.locationRow}>
+          <View style={styles.locationBadge}>
+            <Text style={styles.locationText}>@ {locationText}</Text>
+          </View>
+        </View>
+
+        {/* Flavor text scroll */}
+        {text && (
+          flavorTextWrapper ? (
+            flavorTextWrapper(
+              <View style={styles.flavorContainer}>
+                <Marquee
+                  spacing={250}
+                  speed={0.75}
+                  style={styles.marquee}
+                  delay={2000}
+                >
+                  <Text style={styles.flavor}>{text}</Text>
+                </Marquee>
+              </View>
+            )
+          ) : (
+            <View style={styles.flavorContainer}>
+              <Marquee
+                spacing={250}
+                speed={0.75}
+                style={styles.marquee}
+                delay={2000}
+              >
+                <Text style={styles.flavor}>{text}</Text>
+              </Marquee>
+            </View>
+          )
+        )}
+
+        {/* Inventory Modal */}
+        <InventoryModal
+          visible={inventoryModalVisible}
+          onClose={() => setInventoryModalVisible(false)}
+          inventory={inventory}
+          totalCount={totalInventory}
+          capacity={inventoryCapacity}
+        />
     </View>
   );
 }

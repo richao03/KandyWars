@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from 'react-native-modal';
+import React from 'react';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// import Modal from './ReanimatedModal';
 
 export type Location = 
   | 'gym' 
@@ -38,40 +38,25 @@ const locationColors: Record<Location, {bg: string, border: string}> = {
 };
 
 export default function LocationModal({ visible, onClose, onSelectLocation }: LocationModalProps) {
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
+  React.useEffect(() => {
+    console.log('🟡 LocationModal - visible prop changed to:', visible);
+  }, [visible]);
 
   const handleLocationSelect = (location: Location) => {
-    setSelectedLocation(location);
-    setIsClosing(true);
-  };
-
-  const handleModalHide = () => {
-    if (selectedLocation) {
-      onSelectLocation(selectedLocation);
-      setSelectedLocation(null);
-    }
-    setIsClosing(false);
+    console.log('🟡 Location selected:', location);
+    onSelectLocation(location);
     onClose();
   };
 
   return (
     <Modal
-      isVisible={visible && !isClosing}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={250}
-      animationOutTiming={200}
-      backdropTransitionInTiming={250}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      onModalHide={handleModalHide}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modalContainer}
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
     >
-      <View style={styles.modal}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modal}>
         <Text style={styles.title}>Where do you want to go?</Text>
         
         <View style={styles.locationGrid}>
@@ -97,12 +82,20 @@ export default function LocationModal({ visible, onClose, onSelectLocation }: Lo
         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
   modalContainer: {
     justifyContent: 'center',
     margin: 20,

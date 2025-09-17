@@ -5,7 +5,7 @@
  * and privacy controls for score submission.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import Modal from 'react-native-modal';
+import Modal from './ReanimatedModal';
 import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { ScoreboardEntry, scoreboardService } from '../../src/services/firebase';
 
@@ -30,7 +30,7 @@ interface ScoreboardModalProps {
 
 const { width: screenWidth } = Dimensions.get('window');
 
-export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
+export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(({
   visible,
   onClose,
   onSubmitScore,
@@ -56,8 +56,8 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   const [topMinigames, setTopMinigames] = useState<Array<{minigameType: string, count: number}>>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
-  // Load analytics data
-  const loadAnalytics = async () => {
+  // Load analytics data with debouncing
+  const loadAnalytics = useCallback(async () => {
     if (analyticsLoading) return;
     
     setAnalyticsLoading(true);
@@ -76,26 +76,31 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     } finally {
       setAnalyticsLoading(false);
     }
-  };
+  }, [analyticsLoading]);
 
+  // Optimize data loading with debounced effect
   useEffect(() => {
     if (visible) {
-      // Only refresh if we don't have data yet
-      if (topScores.length === 0 && !isLoading) {
-        console.log('📊 ScoreboardModal: No data exists, fetching...');
-        refreshScoreboard();
-      } else {
-        console.log('📊 ScoreboardModal: Data already exists, skipping fetch');
-      }
+      // Use setTimeout to delay heavy operations until after animation
+      const delayedLoad = setTimeout(() => {
+        // Only refresh if we don't have data yet
+        if (topScores.length === 0 && !isLoading) {
+          console.log('📊 ScoreboardModal: No data exists, fetching...');
+          refreshScoreboard();
+        }
+        
+        // Load analytics data when modal opens, but only if needed
+        if (topJokersFromMinigames.length === 0 || topMinigames.length === 0) {
+          loadAnalytics();
+        }
+      }, 300); // Delay to allow modal animation to complete
       
-      // Load analytics data when modal opens
-      if (topJokersFromMinigames.length === 0 || topMinigames.length === 0) {
-        loadAnalytics();
-      }
-      
+      // Immediate UI updates that don't block animation
       setTempPlayerName(playerName);
+      
+      return () => clearTimeout(delayedLoad);
     }
-  }, [visible, playerName]); // Re-added playerName to dependencies for proper sync
+  }, [visible, playerName, topScores.length, isLoading, topJokersFromMinigames.length, topMinigames.length, refreshScoreboard, loadAnalytics]);
 
 
   const formatBalance = (balance: number): string => {
@@ -473,7 +478,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       </View>
     </Modal>
   );
-};
+});
 
 const styles = StyleSheet.create({
   modal: {

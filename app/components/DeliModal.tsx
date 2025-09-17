@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from 'react-native-modal';
+import Modal from './ReanimatedModal';
 import TransactionModal from './TransactionModal';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';

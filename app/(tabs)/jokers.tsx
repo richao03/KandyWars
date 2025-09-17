@@ -82,7 +82,7 @@ function JokersPage() {
   // Current user's jokers for "Inventory" tab - organize into rows like the "All" tab
   const inventoryJokers = useMemo(() => {
     if (!jokers || jokers.length === 0) return [];
-    
+
     // Group jokers into rows of 2 for proper 2-column layout like the "All" tab
     const jokersInRows = [];
     for (let i = 0; i < jokers.length; i += 2) {
@@ -141,7 +141,6 @@ function JokersPage() {
     </View>
   );
 
-
   return (
     <View style={containerStyles}>
       <GameHUD
@@ -162,10 +161,7 @@ function JokersPage() {
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === 'inventory' && styles.activeTab,
-            ]}
+            style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
             onPress={() => setActiveTab('inventory')}
           >
             <Text
@@ -174,15 +170,12 @@ function JokersPage() {
                 activeTab === 'inventory' && styles.activeTabText,
               ]}
             >
-              🎒 Mine ({jokers.length})
+              🎒 Owned ({jokers.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === 'see-all' && styles.activeTab,
-            ]}
+            style={[styles.tab, activeTab === 'see-all' && styles.activeTab]}
             onPress={() => setActiveTab('see-all')}
           >
             <Text
@@ -208,12 +201,8 @@ function JokersPage() {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>
-              🎒
-            </Text>
-            <Text style={styles.emptyText}>
-              No jokers in inventory
-            </Text>
+            <Text style={styles.emptyIcon}>🎒</Text>
+            <Text style={styles.emptyText}>No jokers in inventory</Text>
             <Text style={styles.emptySubtext}>
               Study different subjects to earn jokers!
             </Text>
@@ -226,9 +215,7 @@ function JokersPage() {
           renderItem={renderJokerRow}
           renderSectionHeader={({ section: { title } }) => (
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {title}
-              </Text>
+              <Text style={styles.sectionTitle}>{title}</Text>
             </View>
           )}
           contentContainerStyle={styles.list}

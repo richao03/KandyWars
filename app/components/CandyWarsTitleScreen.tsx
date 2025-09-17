@@ -8,9 +8,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import DifficultySelectionModal from './DifficultySelectionModal';
 import NamePromptModal from './NamePromptModal';
+import StoryModal from './StoryModal';
 import { useWallet } from '../../src/context/WalletContext';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import { scoreboardService } from '../../src/services/firebase';
@@ -19,7 +21,7 @@ import { savePlayerNameStatus } from '../../src/utils/persistence';
 const { width, height } = Dimensions.get('window');
 
 interface CandyWarsTitleScreenProps {
-  onNewGame?: (difficulty: 'easy' | 'medium' | 'hard') => void;
+  onNewGame?: (level: number) => void;
   onContinue?: () => void;
   onSettings?: () => void;
 }
@@ -34,8 +36,10 @@ export default function CandyWarsTitleScreen({
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard' | null>(null);
+  const [showStoryModal, setShowStoryModal] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const backgroundOpacity = useRef(new Animated.Value(1)).current;
   const buttonsShown = useRef(false);
 
   // Reset component state when it mounts/re-mounts
@@ -45,9 +49,11 @@ export default function CandyWarsTitleScreen({
     setShowButtons(false);
     setShowDifficultyModal(false);
     setShowNamePrompt(false);
-    setSelectedDifficulty(null);
+    setShowStoryModal(false);
+    setSelectedLevel(null);
     buttonsShown.current = false;
     buttonOpacity.setValue(0);
+    backgroundOpacity.setValue(1);
   }, []);
 
   const handleAnimationComplete = () => {
@@ -79,33 +85,65 @@ export default function CandyWarsTitleScreen({
     setShowDifficultyModal(true);
   };
 
-  const handleDifficultySelect = (difficulty: 'easy' | 'medium' | 'hard') => {
+  const handleDifficultySelect = (level: number) => {
     setShowDifficultyModal(false);
-    setSelectedDifficulty(difficulty);
+    setSelectedLevel(level);
     
-    // Check if user already has a name (loaded from Firebase on app start)
-    if (wallet?.playerName) {
-      console.log('🎬 User already has a name:', wallet.playerName, ', proceeding with existing name');
-      // Initialize wallet with difficulty and existing name
-      wallet?.initializeWallet(difficulty, wallet.playerName);
-      if (onNewGame) {
-        onNewGame(difficulty);
-      }
-    } else {
-      console.log('🎬 User does not have a name, showing name prompt');
-      setShowNamePrompt(true);
-    }
+    // Start fade to black, then show story modal
+    console.log('🎬 Starting fade to black for level:', level);
+    Animated.timing(backgroundOpacity, {
+      toValue: 0,
+      duration: 800,
+      useNativeDriver: true,
+    }).start(() => {
+      // Show story modal after fade to black completes
+      console.log('🎬 Showing story modal for level:', level);
+      setShowStoryModal(true);
+    });
   };
 
   const handleCloseDifficultyModal = () => {
     setShowDifficultyModal(false);
   };
 
+  const handleStoryContinue = () => {
+    setShowStoryModal(false);
+
+    if (!selectedLevel) return;
+
+    // Check if user already has a name (loaded from Firebase on app start)
+    if (wallet?.playerName) {
+      console.log('🎬 User already has a name:', wallet.playerName, ', proceeding to story screen');
+      // Initialize wallet with level and existing name
+      wallet?.initializeWallet(selectedLevel, wallet.playerName);
+
+      // Call the new game reset logic before navigating to story screen
+      if (onNewGame) {
+        onNewGame(selectedLevel);
+      }
+
+      // Navigate to story screen instead of directly to game
+      console.log('🎬 Attempting to navigate to story-screen');
+      setTimeout(() => {
+        try {
+          console.log('🎬 Executing delayed navigation to story-screen');
+          router.replace('/story-screen');
+          console.log('🎬 Navigation call completed');
+        } catch (error) {
+          console.error('🎬 Navigation error:', error);
+        }
+      }, 500);
+    } else {
+      console.log('🎬 User does not have a name, showing name prompt');
+      setShowNamePrompt(true);
+    }
+  };
+
   const handleNameSubmit = async (name: string) => {
     console.log('🎬 Name submitted:', name);
     setShowNamePrompt(false);
     
-    if (selectedDifficulty && onNewGame && wallet?.playerId) {
+    if (selectedLevel && onNewGame && wallet?.playerId) {
       try {
         // Initialize Firebase services
         await scoreboardService.initialize();
@@ -124,15 +162,29 @@ export default function CandyWarsTitleScreen({
           wallet?.setPlayerName(name);
         }
         
-        // Initialize wallet with both difficulty and name
-        wallet?.initializeWallet(selectedDifficulty, name);
-        onNewGame(selectedDifficulty);
+        // Initialize wallet with both level and name
+        wallet?.initializeWallet(selectedLevel, name);
+
+        // Call the new game reset logic before navigating to story screen
+        if (onNewGame) {
+          onNewGame(selectedLevel);
+        }
+
+        // Navigate to story screen instead of directly to game
+        router.push('/story-screen');
       } catch (error) {
         console.error('Error during name submission:', error);
         // Still proceed with the game and update local state
         wallet?.setPlayerName(name);
-        wallet?.initializeWallet(selectedDifficulty, name);
-        onNewGame(selectedDifficulty);
+        wallet?.initializeWallet(selectedLevel, name);
+
+        // Call the new game reset logic before navigating to story screen
+        if (onNewGame) {
+          onNewGame(selectedLevel);
+        }
+
+        // Navigate to story screen instead of directly to game
+        router.push('/story-screen');
       }
     }
   };
@@ -140,11 +192,12 @@ export default function CandyWarsTitleScreen({
   const handleNameSkip = () => {
     console.log('🎬 Name skipped, using default');
     setShowNamePrompt(false);
-    
-    if (selectedDifficulty && onNewGame) {
-      // Initialize wallet with difficulty and default name
-      wallet?.initializeWallet(selectedDifficulty, 'Player');
-      onNewGame(selectedDifficulty);
+
+    if (selectedLevel) {
+      // Initialize wallet with level and default name
+      wallet?.initializeWallet(selectedLevel, 'Player');
+      // Navigate to story screen instead of directly to game
+      router.push('/story-screen');
     }
   };
 
@@ -152,65 +205,73 @@ export default function CandyWarsTitleScreen({
 
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/images/titleScreen.png')}
-        style={styles.backgroundContainer}
-        resizeMode="cover"
-        onLoad={() => console.log('🖼️ Background image loaded successfully')}
-        onError={(error) => console.error('❌ Background image failed to load:', error)}
-      >
-        <View style={styles.titleWrapper}>
-          <ExactFontHandwriting 
-            onAnimationComplete={handleAnimationComplete}
-            onCandyComplete={handleCandyComplete}
-          />
-        </View>
+      <Animated.View style={[styles.backgroundWrapper, { opacity: backgroundOpacity }]}>
+        <ImageBackground
+          source={require('../../assets/images/titleScreen.png')}
+          style={styles.backgroundContainer}
+          resizeMode="cover"
+          onLoad={() => console.log('🖼️ Background image loaded successfully')}
+          onError={(error) => console.error('❌ Background image failed to load:', error)}
+        >
+          <View style={styles.titleWrapper}>
+            <ExactFontHandwriting 
+              onAnimationComplete={handleAnimationComplete}
+              onCandyComplete={handleCandyComplete}
+            />
+          </View>
 
-        {showButtons && (
-          <Animated.View
-            style={[styles.buttonContainer, { opacity: buttonOpacity }]}
-          >
-            <TouchableOpacity
-              style={[styles.button, styles.newGameButton]}
-              onPress={handleNewGamePress}
+          {showButtons && (
+            <Animated.View
+              style={[styles.buttonContainer, { opacity: buttonOpacity }]}
             >
-              <Text style={[styles.buttonText, styles.newGameText]}>
-                New Game
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.newGameButton]}
+                onPress={handleNewGamePress}
+              >
+                <Text style={[styles.buttonText, styles.newGameText]}>
+                  New Game
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.continueButton]}
-              onPress={onContinue}
-            >
-              <Text style={[styles.buttonText, styles.continueText]}>
-                Continue
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.continueButton]}
+                onPress={onContinue}
+              >
+                <Text style={[styles.buttonText, styles.continueText]}>
+                  Continue
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, styles.settingsButton]}
-              onPress={onSettings}
-            >
-              <Text style={[styles.buttonText, styles.settingsText]}>
-                Settings
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+              <TouchableOpacity
+                style={[styles.button, styles.settingsButton]}
+                onPress={onSettings}
+              >
+                <Text style={[styles.buttonText, styles.settingsText]}>
+                  Settings
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+        </ImageBackground>
+      </Animated.View>
 
-        <DifficultySelectionModal
-          visible={showDifficultyModal}
-          onSelectDifficulty={handleDifficultySelect}
-          onClose={handleCloseDifficultyModal}
-        />
+      <DifficultySelectionModal
+        visible={showDifficultyModal}
+        onSelectDifficulty={handleDifficultySelect}
+        onClose={handleCloseDifficultyModal}
+      />
 
-        <NamePromptModal
-          visible={showNamePrompt}
-          onSubmitName={handleNameSubmit}
-          onSkip={handleNameSkip}
-        />
-      </ImageBackground>
+      <StoryModal
+        visible={showStoryModal}
+        level={selectedLevel || 1}
+        onContinue={handleStoryContinue}
+      />
+
+      <NamePromptModal
+        visible={showNamePrompt}
+        onSubmitName={handleNameSubmit}
+        onSkip={handleNameSkip}
+      />
     </View>
   );
 }
@@ -219,6 +280,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  backgroundWrapper: {
+    flex: 1,
   },
   backgroundContainer: {
     flex: 1,

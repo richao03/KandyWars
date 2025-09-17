@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -7,8 +7,14 @@ interface MaskRevealTitleProps {
   onAnimationComplete?: () => void;
 }
 
-export default function MaskRevealTitle({ onAnimationComplete }: MaskRevealTitleProps) {
+const MaskRevealTitle = React.memo(({ onAnimationComplete }: MaskRevealTitleProps) => {
   const revealAnimation = useRef(new Animated.Value(0)).current;
+
+  const handleAnimationComplete = useCallback(() => {
+    if (onAnimationComplete) {
+      setTimeout(onAnimationComplete, 500);
+    }
+  }, [onAnimationComplete]);
 
   useEffect(() => {
     // Animate from left to right reveal
@@ -16,12 +22,8 @@ export default function MaskRevealTitle({ onAnimationComplete }: MaskRevealTitle
       toValue: 1,
       duration: 2500,
       useNativeDriver: false,
-    }).start(() => {
-      if (onAnimationComplete) {
-        setTimeout(onAnimationComplete, 500);
-      }
-    });
-  }, []);
+    }).start(handleAnimationComplete);
+  }, [handleAnimationComplete]);
 
   // Calculate the width of the mask that reveals the text
   const maskWidth = revealAnimation.interpolate({
@@ -76,7 +78,9 @@ export default function MaskRevealTitle({ onAnimationComplete }: MaskRevealTitle
       />
     </View>
   );
-}
+});
+
+export default MaskRevealTitle;
 
 const styles = StyleSheet.create({
   container: {

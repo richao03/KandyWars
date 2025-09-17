@@ -19,6 +19,7 @@ import {
   query,
   serverTimestamp,
   where,
+  updateDoc,
 } from 'firebase/firestore';
 
 // Firebase configuration - YOU NEED TO REPLACE THESE WITH YOUR PROJECT CONFIG
@@ -493,6 +494,73 @@ class ScoreboardService {
     } catch (error) {
       console.error('❌ Failed to fetch minigame analytics:', error);
       return [];
+    }
+  }
+
+  // Tutorial Progress Methods
+  async getTutorialProgress(playerId: string): Promise<{ completedTutorials: string[] } | null> {
+    if (!this.isInitialized) {
+      console.log('❌ Cannot get tutorial progress - not initialized');
+      return null;
+    }
+
+    try {
+      const tutorialQuery = query(
+        collection(db, 'tutorialProgress'),
+        where('playerId', '==', playerId),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(tutorialQuery);
+      if (snapshot.empty) {
+        console.log('📚 No tutorial progress found for player:', playerId);
+        return null;
+      }
+
+      const data = snapshot.docs[0].data();
+      console.log('📚 Tutorial progress loaded from Firebase:', data.completedTutorials);
+      return { completedTutorials: data.completedTutorials || [] };
+    } catch (error) {
+      console.error('❌ Failed to get tutorial progress:', error);
+      return null;
+    }
+  }
+
+  async updateTutorialProgress(playerId: string, completedTutorials: string[]): Promise<void> {
+    if (!this.isInitialized) {
+      console.log('❌ Cannot update tutorial progress - not initialized');
+      return;
+    }
+
+    try {
+      // Check if document exists
+      const tutorialQuery = query(
+        collection(db, 'tutorialProgress'),
+        where('playerId', '==', playerId),
+        limit(1)
+      );
+
+      const snapshot = await getDocs(tutorialQuery);
+
+      if (snapshot.empty) {
+        // Create new document
+        await addDoc(collection(db, 'tutorialProgress'), {
+          playerId,
+          completedTutorials,
+          lastUpdated: serverTimestamp(),
+        });
+        console.log('📚 Created new tutorial progress document');
+      } else {
+        // Update existing document
+        const docRef = snapshot.docs[0].ref;
+        await updateDoc(docRef, {
+          completedTutorials,
+          lastUpdated: serverTimestamp(),
+        });
+        console.log('📚 Updated tutorial progress');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update tutorial progress:', error);
     }
   }
 }

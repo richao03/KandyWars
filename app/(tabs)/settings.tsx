@@ -11,12 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
 import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
+import { useTutorial } from '../../src/context/TutorialContext';
 import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -30,6 +32,7 @@ export default function Settings() {
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
+  const { resetAllTutorials, tutorialEnabled, setTutorialEnabled } = useTutorial();
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
@@ -93,29 +96,29 @@ export default function Settings() {
           // Reset all game data
           await resetGame();
 
-          // Reset all contexts except wallet (we'll initialize it with difficulty)
+          // Reset all contexts
           resetInventory();
           resetJokers();
           resetFlavorText();
+          resetAllTutorials();
 
-          // Initialize wallet with current difficulty (or default to 'medium' if none set)
-          const difficultyToUse = currentDifficulty || 'medium';
-          initializeWallet(difficultyToUse);
-
-          // Generate new seed for fresh game
+          // Generate new seed for fresh game FIRST (this clears the seed context)
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
+
+          // Reset wallet completely (don't initialize with difficulty yet - let title screen handle it)
+          resetWallet();
 
           // Show success modal
           setConfirmModal({
             visible: true,
             title: 'Game Restarted',
-            message: `A fresh game has started with ${difficultyToUse} difficulty!`,
+            message: `Starting a fresh game! Please select your difficulty.`,
             emoji: '✨',
             onConfirm: () => {
               resetConfirmModal();
-              // Navigate to market after user acknowledges
-              router.replace('/(tabs)/market');
+              // Navigate to title screen to properly start a new game
+              router.replace('/title-screen');
             },
           });
         } catch (error) {
@@ -137,6 +140,7 @@ export default function Settings() {
       },
     });
   };
+
 
   const handleReturnToTitleScreen = () => {
     console.log('🏠 Return to Title Screen button clicked');
@@ -256,6 +260,130 @@ export default function Settings() {
     setNameValidationError(null);
   };
 
+  const handleResetTutorial = () => {
+    setConfirmModal({
+      visible: true,
+      title: 'Reset Tutorial',
+      message: 'This will reset all tutorial progress and show the tutorial again when you start playing. Are you sure?',
+      emoji: '📚',
+      confirmText: 'Reset Tutorial',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        console.log('📚 Resetting tutorial progress');
+        resetConfirmModal();
+        try {
+          await resetAllTutorials();
+          Alert.alert(
+            'Tutorial Reset',
+            'Tutorial progress has been reset. You\'ll see the tutorial again when you play.'
+          );
+        } catch (error) {
+          console.error('Failed to reset tutorial:', error);
+          Alert.alert('Error', 'Failed to reset tutorial. Please try again.');
+        }
+      },
+      onCancel: () => {
+        console.log('❌ Tutorial reset canceled');
+        resetConfirmModal();
+      },
+    });
+  };
+
+  const handleToggleTutorial = () => {
+    const newState = !tutorialEnabled;
+    setTutorialEnabled(newState);
+    Alert.alert(
+      'Tutorial ' + (newState ? 'Enabled' : 'Disabled'),
+      newState
+        ? 'Tutorial hints will be shown during gameplay.'
+        : 'Tutorial hints have been disabled.'
+    );
+  };
+
+  const handleClearAllData = () => {
+    setConfirmModal({
+      visible: true,
+      title: '⚠️ Clear All Data',
+      message: 'WARNING: This will delete ALL saved data including game progress, player name, joker cards, and settings. You will start as a completely new player. This action cannot be undone!',
+      emoji: '🗑️',
+      confirmText: 'DELETE EVERYTHING',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        console.log('🗑️ Clearing all data...');
+        resetConfirmModal();
+        setIsRestarting(true);
+
+        try {
+          // Get the current player ID before clearing
+          const currentPlayerId = walletContext?.playerId;
+          const currentPlayerName = walletContext?.playerName;
+
+          // Clear the Firebase name association if we have a player ID
+          if (currentPlayerId && currentPlayerName) {
+            console.log('🗑️ Clearing Firebase name association for:', currentPlayerId);
+            try {
+              await nameValidationService.clearPlayerName(currentPlayerId, currentPlayerName);
+            } catch (error) {
+              console.error('Failed to clear Firebase name:', error);
+            }
+          }
+
+          // Clear ALL AsyncStorage data
+          const allKeys = await AsyncStorage.getAllKeys();
+          console.log('🗑️ Found keys to clear:', allKeys);
+          await AsyncStorage.multiRemove(allKeys);
+
+          // Clear AsyncStorage again with specific keys to make sure
+          const specificKeys = [
+            'candyWarz_playerId',
+            'playerName',
+            'wallet_balance',
+            'wallet_difficulty',
+            'wallet_piggyBank',
+            'tutorial_progress',
+            'tutorial_enabled',
+            'game_state',
+            'inventory',
+            'jokers',
+            'flavor_text_shown'
+          ];
+
+          await AsyncStorage.multiRemove(specificKeys);
+
+          // Reset all game contexts
+          await resetGame();
+          resetWallet();
+          resetInventory();
+          resetJokers();
+          resetFlavorText();
+          await resetAllTutorials();
+
+          // Generate new seed
+          const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          setSeed(newSeed);
+
+          console.log('✅ All data cleared successfully');
+
+          // Add a delay to ensure all operations complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          console.log('✅ Navigating to root as new player');
+
+          // Navigate to root which should show the title screen
+          router.replace('/');
+        } catch (error) {
+          console.error('Failed to clear all data:', error);
+          Alert.alert('Error', 'Failed to clear all data. Please try again.');
+          setIsRestarting(false);
+        }
+      },
+      onCancel: () => {
+        console.log('❌ Clear all data canceled');
+        resetConfirmModal();
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <GameHUD
@@ -369,6 +497,47 @@ export default function Settings() {
               Delete all progress and start fresh
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.clearDataButton]}
+            onPress={handleClearAllData}
+            disabled={isRestarting}
+          >
+            <Text style={styles.clearDataButtonText}>
+              {isRestarting ? 'Clearing...' : '🗑️ Clear All Data'}
+            </Text>
+            <Text style={styles.buttonSubtext}>
+              Start as a completely new player
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tutorial</Text>
+
+          <TouchableOpacity
+            style={[styles.button, styles.tutorialButton]}
+            onPress={handleToggleTutorial}
+          >
+            <Text style={styles.tutorialButtonText}>
+              {tutorialEnabled ? '✅ Tutorial Enabled' : '❌ Tutorial Disabled'}
+            </Text>
+            <Text style={styles.buttonSubtext}>
+              {tutorialEnabled ? 'Helpful hints will appear during gameplay' : 'Play without tutorial hints'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.tutorialButton]}
+            onPress={handleResetTutorial}
+          >
+            <Text style={styles.tutorialButtonText}>
+              📚 Reset Tutorial Progress
+            </Text>
+            <Text style={styles.buttonSubtext}>
+              Start the tutorial from the beginning
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -475,6 +644,28 @@ const styles = StyleSheet.create({
   },
   scoreboardButton: {
     alignSelf: 'stretch',
+  },
+  tutorialButton: {
+    backgroundColor: '#f3e8ff', // Light purple background
+    borderWidth: 2,
+    borderColor: '#9333ea', // Purple border
+  },
+  tutorialButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#7c2d93', // Dark purple text
+    marginBottom: 4,
+  },
+  clearDataButton: {
+    backgroundColor: '#8b0000', // Dark red
+    borderColor: '#660000',
+    shadowColor: '#440000',
+  },
+  clearDataButtonText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#fff',
+    fontFamily: 'CrayonPastel',
   },
   // Player info styles
   playerInfoContainer: {

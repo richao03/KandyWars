@@ -7,6 +7,7 @@ import { useGame } from '../src/context/GameContext';
 import { useInventory } from '../src/context/InventoryContext';
 import { useJokers } from '../src/context/JokerContext';
 import { useFlavorText } from '../src/context/FlavorTextContext';
+import { useSeed } from '../src/context/SeedContext';
 import { nameValidationService } from '../src/services/nameValidationService';
 import { loadPlayerId } from '../src/utils/persistence';
 
@@ -16,6 +17,7 @@ export default function TitleScreenPage() {
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
+  const { setSeed } = useSeed();
   const [refreshKey, setRefreshKey] = useState(0);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [firebaseCheckComplete, setFirebaseCheckComplete] = useState(false);
@@ -75,20 +77,24 @@ export default function TitleScreenPage() {
     }, [])
   );
 
-  const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard') => {
+  const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
     try {
       // Reset all game data for a fresh start
       await resetGame();
-      
+
       // Reset all contexts
       resetInventory();
       resetJokers();
       resetFlavorText();
-      
+
+      // Generate new seed for fresh game data and candy prices
+      const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setSeed(newSeed);
+
       // Note: Wallet reset and initialization is already handled in CandyWarsTitleScreen
       // when the user selects difficulty and optionally enters a name
       // Don't call resetWallet() here as it would override the debt set by initializeWallet()
-      
+
       router.replace('/(tabs)/market');
     } catch (error) {
       console.error('Error starting new game:', error);
@@ -96,6 +102,7 @@ export default function TitleScreenPage() {
   };
 
   const handleContinue = () => {
+    // Navigate directly to market tab
     router.replace('/(tabs)/market');
   };
 

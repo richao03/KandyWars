@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ImageBackground,
   StyleSheet,
@@ -9,6 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  CopilotStep,
+  useCopilot,
+  walkthroughable,
+} from 'react-native-copilot';
 import { useDailyStats } from '../../src/context/DailyStatsContext';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/context/GameContext';
@@ -20,7 +25,11 @@ import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 
-export default function AfterSchoolPage() {
+const CopilotText = walkthroughable(Text);
+const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
+const CopilotView = walkthroughable(View);
+
+function AfterSchoolPage() {
   const navigation = useNavigation();
   const { day, startNewDay, hasStudiedTonight, periodCount } = useGame();
   const { resetDailyStats } = useDailyStats();
@@ -28,6 +37,19 @@ export default function AfterSchoolPage() {
   const { jokers } = useJokers();
   const { setEvent } = useFlavorText();
   const { trackGameCompleted } = useScoreboard();
+  const { start: startCopilot, currentStep, isVisible } = useCopilot();
+
+  // Debug re-renders
+  useEffect(() => {
+    console.log('🔄 AfterSchoolPage re-rendered', {
+      day,
+      hasStudiedTonight,
+      balance,
+      stashedAmount,
+      currentStep,
+      isVisible,
+    });
+  });
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
   const [goingToSchoolModalVisible, setGoingToSchoolModalVisible] =
@@ -40,6 +62,20 @@ export default function AfterSchoolPage() {
   useEffect(() => {
     setEvent('AFTERNOON');
   }, [setEvent]);
+
+  // Auto-start tutorial on first after school - DISABLED FOR DEBUGGING
+  // useEffect(() => {
+  //   if (day === 1) {
+  //     setTimeout(() => {
+  //       console.log('🎓 Auto-starting after-school tutorial for day 1');
+  //       try {
+  //         startCopilot();
+  //       } catch (error) {
+  //         console.error('🎓 Failed to auto-start tutorial:', error);
+  //       }
+  //     }, 1500); // Increased delay to ensure components are rendered
+  //   }
+  // }, [day, startCopilot]);
 
   const handleStudy = () => {
     if (hasStudiedTonight) {
@@ -63,8 +99,11 @@ export default function AfterSchoolPage() {
 
   const handleSleepConfirm = () => {
     console.log('🌙 AfterSchool: handleSleepConfirm called');
-    console.log('🌙 AfterSchool: Current wallet balance before allowance:', balance);
-    
+    console.log(
+      '🌙 AfterSchool: Current wallet balance before allowance:',
+      balance
+    );
+
     // Close the sleep modal and add allowance before showing going to school modal
     setSleepConfirmModalVisible(false);
 
@@ -78,36 +117,47 @@ export default function AfterSchoolPage() {
 
   const handleGoingToSchoolComplete = async () => {
     console.log('🌙 AfterSchool: handleGoingToSchoolComplete called');
-    console.log('🌙 AfterSchool: Current wallet balance before startNewDay:', balance);
+    console.log(
+      '🌙 AfterSchool: Current wallet balance before startNewDay:',
+      balance
+    );
     console.log('🌙 AfterSchool: Current day:', day);
     console.log('🌙 AfterSchool: Current stashedAmount (debt):', stashedAmount);
-    
+
     // Close the interstitial
     setGoingToSchoolModalVisible(false);
-    
+
     // Check if this is the end of day 5 (game should end after 5 days)
     if (day >= 5) {
       console.log('🎯 Game End: 5 days completed, checking win/lose condition');
-      
+
       // Calculate final score (balance + stashedAmount)
       const finalScore = balance + stashedAmount;
-      console.log('🎯 Final Score:', finalScore, '(balance:', balance, '+ stashed:', stashedAmount, ')');
-      
+      console.log(
+        '🎯 Final Score:',
+        finalScore,
+        '(balance:',
+        balance,
+        '+ stashed:',
+        stashedAmount,
+        ')'
+      );
+
       // Player wins if they have paid off all debt (stashedAmount >= 0)
       const hasWon = stashedAmount >= 0;
       console.log('🎯 Player', hasWon ? 'WON' : 'LOST');
-      
+
       setGameResult(hasWon ? 'won' : 'lost');
-      
+
       // Track game completion in scoreboard
       await trackGameCompleted();
       console.log('🎯 Game completion tracked in scoreboard');
-      
+
       // Show game end modal
       setGameEndModalVisible(true);
       return; // Don't start a new day, game is over
     }
-    
+
     // Reset daily stats and start new day (only if game hasn't ended)
     resetDailyStats(balance);
     console.log('🌙 AfterSchool: Daily stats reset, calling startNewDay...');
@@ -130,69 +180,141 @@ export default function AfterSchoolPage() {
     router.push('/title-screen');
   };
 
-  const renderCircleOption = (item, index) => (
-    <TouchableOpacity
-      key={item.id}
-      style={[styles.circleOption, item.disabled && styles.disabledCircle]}
-      onPress={item.disabled ? undefined : item.onPress}
-      disabled={item.disabled}
-    >
-      <Text style={[styles.circleEmoji, item.disabled && styles.disabledEmoji]}>
-        {item.emoji}
-      </Text>
-      <Text style={[styles.circleTitle, item.disabled && styles.disabledText]}>
-        {item.title}
-      </Text>
-    </TouchableOpacity>
-  );
+  const renderCircleOption = useCallback((item, index) => {
+    const getTutorialText = (id) => {
+      switch (id) {
+        case 'study':
+          return 'Studying can unlock jokers with new aura abilities and instant skills. \n\nKnowledge is power in the candy trade!';
+        case 'stash':
+          return 'Save your money for your pet here, saved money cannot be lost. \n\nA dollar saved is a dollar earned!';
+        case 'deli':
+          return 'At the deli, you can find candies at the most fairest price. They will only sell to you, they do not buy.';
+        case 'sleep':
+          return 'Get some sleep, wake up refreshed for another day of school, hustle, and trades.';
+        default:
+          return 'This is one of your after-school activity options.';
+      }
+    };
 
-  const options = [
-    {
-      id: 'study',
-      emoji: '📚',
-      title: 'Study at Home',
-      desc: hasStudiedTonight
-        ? "You've already studied tonight. Rest up!"
-        : 'Cozy up with your books by the warm lamplight',
-      onPress: () => handleStudy(),
-      disabled: hasStudiedTonight,
-    },
-    {
-      id: 'stash',
-      emoji: '🔐',
-      title: 'Go to Your Stash',
-      desc: 'Make sure no one is following you',
-      onPress: () => handleStashMoney(),
-    },
-    {
-      id: 'deli',
-      emoji: '🏪',
-      title: 'Visit the Corner Deli',
-      desc: 'Take an evening stroll to the neighborhood store',
-      onPress: () => handleGoDeli(),
-    },
-    {
-      id: 'sleep',
-      emoji: '😴',
-      title: 'Go to Sleep',
-      desc: 'Rest up and start a new day at school tomorrow',
-      onPress: () => handleGoToSleep(),
-    },
-  ];
+    return (
+      <CopilotStep
+        key={item.id}
+        text={getTutorialText(item.id)}
+        order={index + 2} // Start from 2 since HUD is order 1
+        name={`afterschool_${item.id}`}
+      >
+        <CopilotTouchableOpacity
+          style={[styles.circleOption, item.disabled && styles.disabledCircle]}
+          onPress={item.disabled ? undefined : item.onPress}
+          disabled={item.disabled}
+        >
+          <Text
+            style={[styles.circleEmoji, item.disabled && styles.disabledEmoji]}
+          >
+            {item.emoji}
+          </Text>
+          <Text
+            style={[styles.circleTitle, item.disabled && styles.disabledText]}
+          >
+            {item.title}
+          </Text>
+        </CopilotTouchableOpacity>
+      </CopilotStep>
+    );
+  }, []);
+
+  const options = useMemo(
+    () => [
+      {
+        id: 'study',
+        emoji: '📚',
+        title: 'Study at Home',
+        desc: hasStudiedTonight
+          ? "You've already studied tonight. Rest up!"
+          : 'Cozy up with your books by the warm lamplight',
+        onPress: () => handleStudy(),
+        disabled: hasStudiedTonight,
+      },
+      {
+        id: 'stash',
+        emoji: '🔐',
+        title: 'Go to Your Stash',
+        desc: 'Make sure no one is following you',
+        onPress: () => handleStashMoney(),
+      },
+      {
+        id: 'deli',
+        emoji: '🏪',
+        title: 'Visit the Corner Deli',
+        desc: 'Take an evening stroll to the neighborhood store',
+        onPress: () => handleGoDeli(),
+      },
+      {
+        id: 'sleep',
+        emoji: '😴',
+        title: 'Go to Sleep',
+        desc: 'Rest up and start a new day at school tomorrow',
+        onPress: () => handleGoToSleep(),
+      },
+    ],
+    [hasStudiedTonight]
+  );
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor="#2a1845" />
+
+      {/* DEBUG: After-school Tutorial Trigger */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          top: 50,
+          right: 20,
+          backgroundColor: 'blue',
+          padding: 10,
+          borderRadius: 5,
+          zIndex: 1000,
+        }}
+        onPress={() => {
+          console.log('🐛 DEBUG: Manual after-school tutorial trigger');
+          console.log('🐛 DEBUG: Current step:', currentStep);
+          console.log('🐛 DEBUG: Is visible:', isVisible);
+          console.log('🐛 DEBUG: Starting Copilot tutorial...');
+
+          try {
+            startCopilot();
+            setTimeout(() => {
+              console.log('🐛 DEBUG: After start - Current step:', currentStep);
+              console.log('🐛 DEBUG: After start - Is visible:', isVisible);
+            }, 500);
+          } catch (error) {
+            console.error('🐛 DEBUG: Error starting copilot:', error);
+          }
+        }}
+      >
+        <Text style={{ color: 'white', fontSize: 12 }}>
+          AFTER-SCHOOL TUTORIAL
+        </Text>
+      </TouchableOpacity>
+
       <ImageBackground
         source={require('../../assets/images/evening-street.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <GameHUD
-          theme="evening"
-          customHeaderText={`After School - Day ${day}`}
-          customLocationText="Peaceful Evening"
-        />
+        <CopilotStep
+          text="Great first day! After school, you have several options to prepare for tomorrow. Your HUD shows your progress."
+          order={1}
+          name="afterschool_hud"
+        >
+          <CopilotView>
+            <GameHUD
+              theme="evening"
+              customHeaderText={`After School - Day ${day}`}
+              customLocationText="Peaceful Evening"
+            />
+          </CopilotView>
+        </CopilotStep>
 
         <View style={styles.optionsContainer}>
           <View style={styles.optionsGrid}>
@@ -299,3 +421,10 @@ const styles = StyleSheet.create({
     color: '#666',
   },
 });
+
+// Create a memoized version of the AfterSchoolPage
+const MemoizedAfterSchoolPage = React.memo(AfterSchoolPage);
+
+// Wrap with CopilotProvider to isolate tutorial
+// Export AfterSchoolPage directly without wrapper
+export default AfterSchoolPage;

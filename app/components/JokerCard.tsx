@@ -1,12 +1,12 @@
 import React, { memo, useMemo, useState } from 'react';
 import {
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Modal from './ReanimatedModal';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/context/GameContext';
 import { useInventory } from '../../src/context/InventoryContext';
