@@ -13,7 +13,7 @@ import { loadPlayerId } from '../src/utils/persistence';
 
 export default function TitleScreenPage() {
   const walletContext = useWallet();
-  const { resetGame } = useGame();
+  const { resetGame, lastActiveView } = useGame();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
@@ -102,12 +102,16 @@ export default function TitleScreenPage() {
   };
 
   const handleContinue = () => {
-    // Navigate directly to market tab
-    router.replace('/(tabs)/market');
+    // Navigate to the last active view (after-school or market)
+    if (lastActiveView === 'after-school') {
+      router.replace('/(tabs)/after-school');
+    } else {
+      router.replace('/(tabs)/market');
+    }
   };
 
   const handleSettings = () => {
-    router.push('/(tabs)/settings');
+    router.push('/title-settings');
   };
 
   // Show loading screen while checking Firebase

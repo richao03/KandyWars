@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Dimensions,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useTabBar } from '../../src/context/TabBarContext';
 
 interface SchoolsOutModalProps {
@@ -38,10 +45,8 @@ export default function SchoolsOutModal({
   if (!visible) return null;
 
   return (
-    <TouchableOpacity
+    <View
       style={styles.overlay}
-      activeOpacity={1}
-      onPress={handleComplete}
     >
       <View style={styles.container}>
         <Image
@@ -49,10 +54,10 @@ export default function SchoolsOutModal({
           style={styles.image}
           resizeMode="contain"
         />
-        <Text style={styles.text}>Time to head home!</Text>
-        <Text style={styles.tapText}>Tap to continue</Text>
+        <Text style={styles.text}>It's 3PM</Text>
+        <Text style={styles.tapText}>Time to head home!</Text>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 

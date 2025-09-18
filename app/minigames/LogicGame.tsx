@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -60,6 +61,7 @@ const CANDY_TYPES_LEVEL_3 = [
 
 export default function LogicGame({ onComplete }: LogicGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
+  const { trackMinigamePlayed } = useScoreboard();
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Screen dimensions - responsive sizing
@@ -74,6 +76,15 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const [gameComplete, setGameComplete] = useState(false);
   const [allLevelsComplete, setAllLevelsComplete] = useState(false);
   const [maxAttempts] = useState(6);
+
+  // Start game
+  const startGame = () => {
+    // Track minigame play for analytics
+    trackMinigamePlayed('logic');
+
+    setGameState('playing');
+    generateSecretCode();
+  };
 
   // Get candy types for current level
   const getCurrentCandyTypes = () => {
@@ -327,10 +338,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
           <TouchableOpacity
             style={styles.startGameButton}
-            onPress={() => {
-              setGameState('playing');
-              generateSecretCode();
-            }}
+            onPress={startGame}
           >
             <Text style={styles.startGameButtonText}>
               🎮 Start Logic Challenge!

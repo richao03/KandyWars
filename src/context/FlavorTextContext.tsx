@@ -8,6 +8,8 @@ import React, {
 
 type FlavorTextContextType = {
   text: string;
+  isHint: boolean;
+  eventType: FlavorEvent | 'HINT' | null;
   setEvent: (event: FlavorEvent) => void;
   setManual: (message: string) => void;
   setFlavorText: (text: string) => void;
@@ -198,6 +200,8 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [currentEvent, setCurrentEvent] = useState('DEFAULT');
   const [text, setText] = useState(getRandomFlavor('DEFAULT'));
+  const [isHint, setIsHint] = useState(false);
+  const [eventType, setEventType] = useState<FlavorEvent | 'HINT' | null>('DEFAULT');
 
   // Removed problematic interval that was causing unnecessary re-renders
 
@@ -208,36 +212,48 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setEvent = useCallback((event: FlavorEvent) => {
     setText(getRandomFlavor(event));
+    setIsHint(false);
+    setEventType(event);
   }, []);
 
   const setManual = useCallback((message: string) => {
     setText(message);
+    setIsHint(false);
+    setEventType(null);
   }, []);
 
   const setFlavorText = useCallback((text: string) => {
     setText(text);
+    setIsHint(false);
+    setEventType(null);
   }, []);
 
   const setHint = useCallback((hintText: string) => {
     setText(hintText);
+    setIsHint(true);
+    setEventType('HINT');
   }, []);
 
   const resetFlavorText = useCallback(() => {
     setCurrentEvent('DEFAULT');
     setText(getRandomFlavor('DEFAULT'));
+    setIsHint(false);
+    setEventType('DEFAULT');
     console.log('Flavor text reset to initial state');
   }, []);
 
   const contextValue = useMemo(
     () => ({
       text,
+      isHint,
+      eventType,
       setEvent,
       setManual,
       setFlavorText,
       setHint,
       resetFlavorText,
     }),
-    [text, setEvent, setManual, setFlavorText, setHint, resetFlavorText]
+    [text, isHint, eventType, setEvent, setManual, setFlavorText, setHint, resetFlavorText]
   );
 
   return (

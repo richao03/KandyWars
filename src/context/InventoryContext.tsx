@@ -1,11 +1,17 @@
 // context/InventoryContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { loadInventory, saveInventory } from '../utils/persistence';
-import { useJokers } from './JokerContext';
-import { useGame } from './GameContext';
-import { useWallet } from './WalletContext';
-import { JokerService } from '../utils/jokerService';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
+import { JokerService } from '../utils/jokerService';
+import { loadInventory, saveInventory } from '../utils/persistence';
+import { useGame } from './GameContext';
+import { useJokers } from './JokerContext';
+import { useWallet } from './WalletContext';
 
 export type InventoryItem = {
   name: string;
@@ -19,7 +25,12 @@ type InventoryContextType = {
   inventory: Inventory;
   addToInventory: (name: string, quantity: number, price: number) => boolean;
   removeFromInventory: (name: string, quantity: number) => boolean;
-  convertCandyType: (fromType: string, fromQuantity: number, toType: string, toPrice: number) => boolean;
+  convertCandyType: (
+    fromType: string,
+    fromQuantity: number,
+    toType: string,
+    toPrice: number
+  ) => boolean;
   getTotalInventoryCount: () => number;
   getInventoryLimit: () => number;
   removeAllFromInventory: () => void;
@@ -45,12 +56,20 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Memoize inventory limit calculation to prevent excessive recalculations
   const memoizedInventoryLimit = useMemo(() => {
-    return jokerService.applyJokerEffects(inventoryLimit, 'inventory_limit', jokers, periodCount);
+    return jokerService.applyJokerEffects(
+      inventoryLimit,
+      'inventory_limit',
+      jokers,
+      periodCount
+    );
   }, [inventoryLimit, jokers, periodCount, jokerService]);
 
   // Memoize total inventory count
   const memoizedTotalCount = useMemo(() => {
-    return Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+    return Object.values(inventory).reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
   }, [inventory]);
 
   // Load inventory on mount
@@ -76,13 +95,18 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // Check if it's period 1 (start of school day) and we haven't processed this day yet
     if (period === 1 && day !== lastProcessedDay && day > 0) {
-      const homeMadeJoker = jokers.find(j => j.name === 'Home Made');
+      const homeMadeJoker = jokers.find((j) => j.name === 'Home Made');
       if (homeMadeJoker) {
-        const totalCandies = Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+        const totalCandies = Object.values(inventory).reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        );
         if (totalCandies > 0) {
           const bonus = totalCandies * 10; // $10 per candy
           addMoney(bonus);
-          console.log(`🏠 Home Made: Earned $${bonus} for bringing ${totalCandies} candies to school on day ${day}`);
+          console.log(
+            `🏠 Home Made: Earned $${bonus} for bringing ${totalCandies} candies to school on day ${day}`
+          );
         }
       }
       setLastProcessedDay(day);
@@ -92,16 +116,27 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
   // Handle candy generation from "Something from Nothing" joker
   useEffect(() => {
     if (!isLoaded || periodCount === 0) return; // Don't generate on initial load or period 0
-    
-    const somethingFromNothing = findJokerById(jokers, JOKER_IDS.SOMETHING_FROM_NOTHING);
+
+    const somethingFromNothing = findJokerById(
+      jokers,
+      JOKER_IDS.SOMETHING_FROM_NOTHING
+    );
     if (somethingFromNothing) {
-      const CANDY_TYPES = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
-      
+      const CANDY_TYPES = [
+        'Bubble Gum',
+        'M&Ms',
+        'Skittles',
+        'Snickers',
+        'Sour Patch Kids',
+        'Warheads',
+        'Jaw Breaker',
+      ];
+
       // Add one of each candy type
-      CANDY_TYPES.forEach(candyType => {
+      CANDY_TYPES.forEach((candyType) => {
         addToInventory(candyType, 1, 0); // Add 1 candy at $0 cost
       });
-      
+
       console.log('Something from Nothing: Generated 1 of each candy type');
     }
   }, [periodCount, jokers, isLoaded]);
@@ -113,12 +148,23 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     // Use memoized values for better performance
     const currentTotal = memoizedTotalCount;
     const actualLimit = memoizedInventoryLimit;
-    
-    console.log('📦 InventoryContext: Adding to inventory:', name, 'quantity:', quantity, 'currentTotal:', currentTotal, 'limit:', actualLimit);
-    
+
+    console.log(
+      '📦 InventoryContext: Adding to inventory:',
+      name,
+      'quantity:',
+      quantity,
+      'currentTotal:',
+      currentTotal,
+      'limit:',
+      actualLimit
+    );
+
     // Check if adding this quantity would exceed inventory limit
     if (currentTotal + quantity > actualLimit) {
-      console.log('❌ InventoryContext: Transaction rejected - would exceed limit');
+      console.log(
+        '❌ InventoryContext: Transaction rejected - would exceed limit'
+      );
       return false; // Transaction rejected due to inventory limit
     }
 
@@ -156,17 +202,17 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const confiscateHalfInventory = (): number => {
     let totalConfiscated = 0;
-    
+
     setInventory((prev) => {
       const updatedInventory: Inventory = {};
-      
+
       // Go through each candy type and take half (rounded down)
       Object.entries(prev).forEach(([candyName, item]) => {
         const halfQuantity = Math.floor(item.quantity / 2);
         const remaining = item.quantity - halfQuantity;
-        
+
         totalConfiscated += halfQuantity;
-        
+
         // Only keep the item if there's candy left
         if (remaining > 0) {
           updatedInventory[candyName] = {
@@ -174,19 +220,28 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
             quantity: remaining,
           };
         }
-        
-        console.log(`🍬 Confiscating ${halfQuantity} of ${candyName} (had ${item.quantity}, keeping ${remaining})`);
+
+        console.log(
+          `🍬 Confiscating ${halfQuantity} of ${candyName} (had ${item.quantity}, keeping ${remaining})`
+        );
       });
-      
+
       return updatedInventory;
     });
-    
+
     console.log(`🚨 Total candies confiscated: ${totalConfiscated}`);
     return totalConfiscated;
   };
   const removeFromInventory = (name: string, quantity: number): boolean => {
     const existing = inventory[name];
-    console.log('📦 InventoryContext: Removing from inventory:', name, 'quantity:', quantity, 'existing:', existing);
+    console.log(
+      '📦 InventoryContext: Removing from inventory:',
+      name,
+      'quantity:',
+      quantity,
+      'existing:',
+      existing
+    );
     if (!existing || existing.quantity < quantity) {
       console.log('❌ InventoryContext: Cannot remove - insufficient quantity');
       return false;
@@ -194,7 +249,10 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setInventory((prev) => {
       const updatedQuantity = existing.quantity - quantity;
-      console.log('📦 InventoryContext: Updated quantity after removal:', updatedQuantity);
+      console.log(
+        '📦 InventoryContext: Updated quantity after removal:',
+        updatedQuantity
+      );
       if (updatedQuantity === 0) {
         const { [name]: _, ...rest } = prev;
         return rest;
@@ -224,7 +282,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
     setInventory((prev) => {
       const newInventory = { ...prev };
       const existingTarget = prev[toType];
-      
+
       // Remove from source
       if (fromItem.quantity === fromQuantity) {
         delete newInventory[fromType];
@@ -234,11 +292,12 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
           quantity: fromItem.quantity - fromQuantity,
         };
       }
-      
+
       // Add to target
       if (existingTarget) {
         const newQuantity = existingTarget.quantity + fromQuantity;
-        const totalOldValue = existingTarget.averagePrice * existingTarget.quantity;
+        const totalOldValue =
+          existingTarget.averagePrice * existingTarget.quantity;
         const totalNewValue = toPrice * fromQuantity;
         const newAvgPrice = (totalOldValue + totalNewValue) / newQuantity;
         newInventory[toType] = {
@@ -253,7 +312,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({
           averagePrice: toPrice,
         };
       }
-      
+
       return newInventory;
     });
     return true;

@@ -43,6 +43,7 @@ const candyBasePrices: Record<string, [number, number]> = {
   Warheads: [0.25, 1.0],
   'Sour Patch Kids': [1.0, 2.75],
   'Bubble Gum': [0.1, 0.5],
+  'Jaw Breaker': [2, 5],
 };
 
 const subjects = [
@@ -175,7 +176,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       multiplier: 5,
       location: 'science lab',
       category: 'neutral',
-      heading: 'ICBM to the moon!',
+      heading: 'Warheads to the moon!',
       title: 'The jolt they need',
       subtitle:
         'Our lab friends are falling asleep, this spike of sour sugar is just what they need',
@@ -301,7 +302,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
         title: `${randomCandy} is like so hot right now!`,
         subtitle: `People cant get enough of it`,
         backgroundImage: require('../assets/images/pricehike.png'),
-        hint: '👀 Psst, I cannot tell you what, or where, but something is going to happen ... 👀',
+        hint: `👀 Psst, I cannot tell you what, or where, but you'll need some ${randomCandy}... 👀`,
       };
     },
   ];

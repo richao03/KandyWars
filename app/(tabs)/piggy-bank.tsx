@@ -125,6 +125,7 @@ export default function PiggyBankPage() {
   };
 
   return (
+    <>
     <View style={styles.container}>
       <ImageBackground
         source={require('../../assets/images/piggy-bank.png')}
@@ -243,20 +244,22 @@ export default function PiggyBankPage() {
           </TouchableOpacity>
         </View>
       </ImageBackground>
-
-      <ConfirmationModal
-        visible={confirmModal.visible}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        emoji={confirmModal.emoji}
-        confirmText="OK"
-        onConfirm={confirmModal.onConfirm}
-        onCancel={() =>
-          setConfirmModal((prev) => ({ ...prev, visible: false }))
-        }
-        theme="evening"
-      />
     </View>
+
+    <ConfirmationModal
+      visible={confirmModal.visible}
+      title={confirmModal.title}
+      message={confirmModal.message}
+      emoji={confirmModal.emoji}
+      confirmText="OK"
+      onConfirm={confirmModal.onConfirm}
+      onCancel={() =>
+        setConfirmModal((prev) => ({ ...prev, visible: false }))
+      }
+      theme="evening"
+      dismissible={false}
+    />
+    </>
   );
 }
 

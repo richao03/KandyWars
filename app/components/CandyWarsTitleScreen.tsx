@@ -64,7 +64,7 @@ export default function CandyWarsTitleScreen({
     // Prevent multiple calls using ref
     if (buttonsShown.current) return;
     buttonsShown.current = true;
-    
+
     console.log('🎨 CandyWarsTitleScreen: Showing buttons');
     // Buttons appear after "Candy" is done
     setShowButtons(true);
@@ -214,7 +214,7 @@ export default function CandyWarsTitleScreen({
           onError={(error) => console.error('❌ Background image failed to load:', error)}
         >
           <View style={styles.titleWrapper}>
-            <ExactFontHandwriting 
+            <ExactFontHandwriting
               onAnimationComplete={handleAnimationComplete}
               onCandyComplete={handleCandyComplete}
             />

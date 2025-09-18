@@ -28,9 +28,9 @@ import SleepConfirmModal from '../components/SleepConfirmModal';
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
 function AfterSchoolPage() {
-  const { day, startNewDay, hasStudiedTonight, periodCount } = useGame();
+  const { day, startNewDay, hasStudiedTonight, periodCount, setLastActiveView } = useGame();
   const { resetDailyStats } = useDailyStats();
-  const { balance, stashedAmount, addAllowance } = useWallet();
+  const { balance, stashedAmount, addAllowance, difficultyLevel } = useWallet();
   const { jokers } = useJokers();
   const { setEvent } = useFlavorText();
   const { trackGameCompleted } = useScoreboard();
@@ -44,10 +44,12 @@ function AfterSchoolPage() {
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
   const [allowanceAmount, setAllowanceAmount] = useState(0);
 
-  // Set afternoon flavor text when component loads
+  // Set afternoon flavor text when component loads and track active view
   useEffect(() => {
     setEvent('AFTERNOON');
-  }, [setEvent]);
+    // Track that user is now in after-school view
+    setLastActiveView('after-school');
+  }, [setEvent, setLastActiveView]);
 
   // Start copilot tutorial on first after-school visit
   useEffect(() => {
@@ -348,6 +350,7 @@ function AfterSchoolPage() {
         finalScore={balance + stashedAmount}
         balance={balance}
         stashedAmount={stashedAmount}
+        difficultyLevel={difficultyLevel || 1}
         onRestart={handleGameRestart}
       />
     </View>

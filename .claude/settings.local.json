@@ -1,39 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm start)",
-      "Bash(pkill:*)",
-      "Bash(true)",
-      "Bash(npx expo:*)",
-      "WebFetch(domain:www.1001fonts.com)",
-      "Bash(curl:*)",
-      "Bash(unzip:*)",
-      "Bash(npx tsc:*)",
-      "Bash(node:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)",
-      "Bash(mkdir:*)",
-      "Bash(mv:*)",
-      "Bash(rm:*)",
-      "Bash(npm install:*)",
-      "Bash(npm test)",
-      "Bash(git checkout:*)",
-      "Bash(touch:*)",
-      "Bash(npm test:*)",
-      "Bash(npm run typecheck:*)",
-      "Bash(npm run:*)",
-      "Bash(ls:*)",
-      "Bash(chmod:*)",
-      "Bash(npm uninstall:*)",
-      "Bash(cat:*)",
-      "Bash(eas:*)",
-      "Bash(security delete-internet-password:*)",
-      "Bash(security find-internet-password:*)",
-      "Bash(firebase init:*)",
-      "Bash(firebase deploy:*)",
-      "WebSearch",
-      "Bash(xargs:*)"
+      "Bash(do basename \"$file\" .tsx)",
+      "Bash(awk:*)"
     ],
-    "deny": []
+    "deny": [],
+    "ask": []
   }
 }

@@ -9,12 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  CopilotProvider,
-  CopilotStep,
-  useCopilot,
-  walkthroughable,
-} from 'react-native-copilot';
+import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useCandySales } from '../../src/context/CandySalesContext';
 import { useDailyStats } from '../../src/context/DailyStatsContext';
@@ -72,6 +67,7 @@ const baseCandies = [
   { name: 'Warheads', baseMin: 0.25, baseMax: 10 },
   { name: 'Sour Patch Kids', baseMin: 1.0, baseMax: 27 },
   { name: 'Bubble Gum', baseMin: 0.1, baseMax: 5 },
+  { name: 'Jaw Breaker', baseMin: 2, baseMax: 30 },
 ];
 
 function Market(props) {
@@ -85,18 +81,37 @@ function Market(props) {
   } = useSeed();
 
   const { balance, spend, add } = useWallet();
-  const { start: startCopilot, eventEmitter, copilotEvents, isFirstStep, currentStep } = useCopilot();
+  const {
+    start: startCopilot,
+    eventEmitter,
+    copilotEvents,
+    isFirstStep,
+    currentStep,
+  } = useCopilot();
 
   // Debug copilot state
   useEffect(() => {
-    console.log('🎓 Copilot state - isFirstStep:', isFirstStep, 'currentStep:', currentStep);
+    console.log(
+      '🎓 Copilot state - isFirstStep:',
+      isFirstStep,
+      'currentStep:',
+      currentStep
+    );
   }, [isFirstStep, currentStep]);
 
-  // Debug when component mounts
+  // Debug when component mounts and track active view
   useEffect(() => {
-    console.log('🎓 Market component mounted with Day:', day, 'Period:', period);
+    console.log(
+      '🎓 Market component mounted with Day:',
+      day,
+      'Period:',
+      period
+    );
     console.log('🎓 Market component - CopilotSteps should be rendered now');
-  }, []);
+
+    // Track that user is now in market view
+    setLastActiveView('market');
+  }, [setLastActiveView]);
   // useJokerTutorial(); // Register for joker tutorial
   const {
     inventory,
@@ -112,6 +127,7 @@ function Market(props) {
     periodCount,
     currentLocation,
     startAfterSchool,
+    setLastActiveView,
   } = useGame();
   const { hasActiveEvent } = useEventHandler();
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
@@ -124,25 +140,9 @@ function Market(props) {
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
   const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
 
-
-  // Simple auto-trigger check for Day 1 Period 1
-  const shouldShowTutorial = day === 1 && period === 1;
+  // Tutorial disabled - no automatic tutorial on day 1
+  const shouldShowTutorial = false;
   const tutorialStarted = useRef(false);
-
-  useEffect(() => {
-    console.log('🎓 Market component - Day:', day, 'Period:', period, 'Should show tutorial:', shouldShowTutorial, 'Already started:', tutorialStarted.current);
-
-    if (shouldShowTutorial && !tutorialStarted.current) {
-      console.log('🎓 Auto-starting tutorial for Day 1 Period 1 (first time)');
-      // Small delay to ensure CopilotSteps are rendered
-      setTimeout(() => {
-        console.log('🎓 Calling startCopilot() now...');
-        startCopilot();
-        console.log('🎓 startCopilot() call completed');
-        tutorialStarted.current = true; // Only set after successful call
-      }, 1500); // Increased delay slightly
-    }
-  }, [day, period, shouldShowTutorial, startCopilot]);
 
   // Show location modal after event modal is dismissed
   useEffect(() => {
@@ -163,7 +163,6 @@ function Market(props) {
       setPendingLocationModal(false);
     }
   }, [currentLocation, periodCount]);
-
 
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
@@ -320,7 +319,6 @@ function Market(props) {
           // Reset consecutive sales tracking when buying
           resetSales();
 
-
           const newQty = candy.quantityOwned + quantity;
           const newAvg =
             candy.averagePrice === null
@@ -439,7 +437,6 @@ function Market(props) {
           addCandySold(quantity); // Track daily candy sales
           removeFromInventory(candy.name, quantity);
 
-
           // Show bonus notifications if applied
           const hasAnyBonus =
             saleResult.shouldApplyCandySaladBonus ||
@@ -512,14 +509,27 @@ function Market(props) {
   };
 
   const handleNextDay = () => {
-    console.log('🔵 handleNextDay called - period:', period, 'day:', day, 'hasActiveEvent:', hasActiveEvent);
+    console.log(
+      '🔵 handleNextDay called - period:',
+      period,
+      'day:',
+      day,
+      'hasActiveEvent:',
+      hasActiveEvent
+    );
     // Trigger success haptic feedback when advancing to next period
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     if (period === 8) {
       // End of day - show day stats first
-      console.log('🔵 Period 8 reached - showing day stats modal for day:', day);
-      console.log('🔵 Current dayStatsModalVisible state:', dayStatsModalVisible);
+      console.log(
+        '🔵 Period 8 reached - showing day stats modal for day:',
+        day
+      );
+      console.log(
+        '🔵 Current dayStatsModalVisible state:',
+        dayStatsModalVisible
+      );
       setDayStatsModalVisible(true);
       console.log('🔵 setDayStatsModalVisible(true) called');
     } else {
@@ -574,7 +584,10 @@ function Market(props) {
       // Then show day stats modal (this simulates end of day)
       setTimeout(() => {
         console.log('🏠 Now showing DayStatsModal for day:', day);
-        console.log('🏠 Current dayStatsModalVisible state before setting:', dayStatsModalVisible);
+        console.log(
+          '🏠 Current dayStatsModalVisible state before setting:',
+          dayStatsModalVisible
+        );
         setDayStatsModalVisible(true);
         console.log('🏠 setDayStatsModalVisible(true) called via End Day');
       }, 100);
@@ -674,7 +687,6 @@ function Market(props) {
 
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
-
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -682,173 +694,195 @@ function Market(props) {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <CopilotStep
-          text="🎒 Welcome to Candy Wars! This is your HUD showing your wallet balance, piggy bank savings, and inventory. Let's learn how to become the school's candy mogul!"
-          order={1}
-          name="market_hud"
-        >
-          <CopilotView>
-            <GameHUD
-              isModalOpening={isTransactionModalOpening}
-              isModalOpen={selectedCandyIndex !== null}
-              flavorTextWrapper={(children) => (
-                <CopilotStep
-                  text="The Rumor Mill shows important information and hints! Keep an eye on these scrolling messages - they might reveal price trends, special events, or valuable tips from other students."
-                  order={2}
-                  name="market_rumor_mill"
-                >
-                  <CopilotView>{children}</CopilotView>
-                </CopilotStep>
-              )}
-            />
-          </CopilotView>
-        </CopilotStep>
-
-        {/* Tutorial Welcome Banner for Day 1 Period 1 */}
-        {shouldShowTutorial && (
-          <TouchableOpacity
-            style={{
-              position: 'absolute',
-              top: 50,
-              left: 20,
-              right: 20,
-              backgroundColor: 'rgba(74, 144, 226, 0.95)',
-              padding: 15,
-              borderRadius: 10,
-              zIndex: 1000,
-              borderWidth: 2,
-              borderColor: '#4a90e2',
-            }}
-            onPress={() => {
-              console.log('🎓 Starting tutorial from welcome banner');
-              startCopilot();
-            }}
+        <View style={styles.contentContainer}>
+          <CopilotStep
+            text="🎒 Welcome to Candy Wars! This is your HUD showing your wallet balance, piggy bank savings, and inventory. Let's learn how to become the school's candy mogul!"
+            order={1}
+            name="market_hud"
           >
-            <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>
-              🎒 Welcome to Candy Wars!
-            </Text>
-            <Text style={{ color: 'white', fontSize: 14, textAlign: 'center', marginTop: 5 }}>
-              Tap here to learn how to play
-            </Text>
-          </TouchableOpacity>
-        )}
-
-
-
-        <CopilotStep
-          text="Here's the candy market! Each candy has a different price. Tap on any candy to buy or sell it. Prices change throughout the day!"
-          order={3}
-          name="market_list"
-        >
-          <CopilotView>
-            <FlatList
-              data={candies}
-              keyExtractor={(item) => item.name}
-              contentContainerStyle={styles.list}
-              renderItem={useCallback(
-                ({ item, index }) => (
-                  <TouchableOpacity
-                    style={styles.item}
-                    onPress={() => openModal(index)}
+            <CopilotView>
+              <GameHUD
+                isModalOpening={isTransactionModalOpening}
+                isModalOpen={selectedCandyIndex !== null}
+                flavorTextWrapper={(children) => (
+                  <CopilotStep
+                    text="The Rumor Mill shows important information and hints! Keep an eye on these scrolling messages - they might reveal price trends, special events, or valuable tips from other students."
+                    order={2}
+                    name="market_rumor_mill"
                   >
-                    <View style={styles.candyInfo}>
-                      <View style={styles.candyNameRow}>
-                        <Text style={styles.name}>{item.name}</Text>
-                        {item.quantityOwned > 0 && (
-                          <View style={styles.ownedBadge}>
-                            <Text style={styles.ownedText}>
-                              {item.quantityOwned}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.candyPriceRow}>
-                        <Text style={styles.price}>
-                          ${item.cost.toFixed(2)}
-                        </Text>
-                        {item.cost > item.basePrice && (
-                          <Text style={styles.priceChange}>📈</Text>
-                        )}
-                        {item.cost < item.basePrice && (
-                          <Text style={styles.priceChange}>📉</Text>
-                        )}
-                        {item.quantityOwned > 0 &&
-                          item.averagePrice !== null && (
-                            <Text
-                              style={[
-                                styles.gainLoss,
-                                item.cost >= item.averagePrice
-                                  ? styles.gain
-                                  : styles.loss,
-                              ]}
-                            >
-                              {(() => {
-                                const baseGain =
-                                  (item.cost - item.averagePrice) *
-                                  item.quantityOwned;
-                                const totalGain = baseGain;
-                                return totalGain >= 0
-                                  ? `+$${totalGain.toFixed(2)}`
-                                  : `-$${Math.abs(totalGain).toFixed(2)}`;
-                              })()}
-                            </Text>
-                          )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ),
-                [openModal]
-              )}
-            />
-          </CopilotView>
-        </CopilotStep>
+                    <CopilotView>{children}</CopilotView>
+                  </CopilotStep>
+                )}
+              />
+            </CopilotView>
+          </CopilotStep>
 
-        <CopilotStep
-          text="Use these buttons to advance time. 'Next Period' moves to the next class, and 'End Day' skips straight to after school!"
-          order={4}
-          name="market_buttons"
-        >
-          <CopilotView style={styles.buttonContainer}>
-            {period === 8 ? (
-              // Period 8: Only show leave school button
-              <TouchableOpacity
-                style={styles.nextPeriodButton}
-                onPress={handleNextDay}
-                activeOpacity={0.8}
+          {/* Tutorial Welcome Banner for Day 1 Period 1 */}
+          {shouldShowTutorial && (
+            <TouchableOpacity
+              style={{
+                position: 'absolute',
+                top: 50,
+                left: 20,
+                right: 20,
+                backgroundColor: 'rgba(74, 144, 226, 0.95)',
+                padding: 15,
+                borderRadius: 10,
+                zIndex: 1000,
+                borderWidth: 2,
+                borderColor: '#4a90e2',
+              }}
+              onPress={() => {
+                console.log('🎓 Starting tutorial from welcome banner');
+                startCopilot();
+              }}
+            >
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                }}
               >
-                <Text style={styles.nextPeriodButtonText}>
-                  🏠 Leave School for the Day
-                </Text>
-                <Text style={styles.nextPeriodSubtext}>Time to head home!</Text>
-              </TouchableOpacity>
-            ) : (
-              // Periods 1-7: Show both next period and end day buttons
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.nextPeriodButton, styles.bigButton]}
-                  onPress={handleNextDay}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.nextPeriodButtonText}>
-                    ⏰ Next Period
-                  </Text>
-                  <Text style={styles.nextPeriodSubtext}>
-                    Going to period {period + 1}
-                  </Text>
-                </TouchableOpacity>
+                🎒 Welcome to Candy Wars!
+              </Text>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 14,
+                  textAlign: 'center',
+                  marginTop: 5,
+                }}
+              >
+                Tap here to learn how to play
+              </Text>
+            </TouchableOpacity>
+          )}
 
-                <TouchableOpacity
-                  style={[styles.endDayButton, styles.smallButton]}
-                  onPress={handleEndDay}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.endDayButtonText}>🏠 End Day</Text>
-                  <Text style={styles.endDaySubtext}>Skip to after school</Text>
-                </TouchableOpacity>
+          <CopilotStep
+            text="Here's the candy market! Each candy has a different price. Tap on any candy to buy or sell it. Prices change throughout the day!"
+            order={3}
+            name="market_list"
+          >
+            <CopilotView style={styles.listContainer}>
+              <FlatList
+                data={candies}
+                keyExtractor={(item) => item.name}
+                contentContainerStyle={styles.list}
+                showsVerticalScrollIndicator={true}
+                overScrollMode="never"
+                renderItem={useCallback(
+                  ({ item, index }) => (
+                    <TouchableOpacity
+                      style={styles.item}
+                      onPress={() => openModal(index)}
+                    >
+                      <View style={styles.candyInfo}>
+                        <View style={styles.candyNameRow}>
+                          <Text style={styles.name}>{item.name}</Text>
+                          {item.quantityOwned > 0 && (
+                            <View style={styles.ownedBadge}>
+                              <Text style={styles.ownedText}>
+                                {item.quantityOwned}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={styles.candyPriceRow}>
+                          <Text style={styles.price}>
+                            ${item.cost.toFixed(2)}
+                          </Text>
+                          {item.cost > item.basePrice && (
+                            <Text style={styles.priceChange}>📈</Text>
+                          )}
+                          {item.cost < item.basePrice && (
+                            <Text style={styles.priceChange}>📉</Text>
+                          )}
+                          {item.quantityOwned > 0 &&
+                            item.averagePrice !== null && (
+                              <Text
+                                style={[
+                                  styles.gainLoss,
+                                  item.cost >= item.averagePrice
+                                    ? styles.gain
+                                    : styles.loss,
+                                ]}
+                              >
+                                {(() => {
+                                  const baseGain =
+                                    (item.cost - item.averagePrice) *
+                                    item.quantityOwned;
+                                  const totalGain = baseGain;
+                                  return totalGain >= 0
+                                    ? `+$${totalGain.toFixed(2)}`
+                                    : `-$${Math.abs(totalGain).toFixed(2)}`;
+                                })()}
+                              </Text>
+                            )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ),
+                  [openModal]
+                )}
+              />
+            </CopilotView>
+          </CopilotStep>
+
+          <CopilotStep
+            text="Use these buttons to advance time. 'Next Period' moves to the next class, and 'End Day' skips straight to after school!"
+            order={4}
+            name="market_buttons"
+          >
+            <CopilotView>
+              <View style={styles.buttonContainer}>
+                {period === 8 ? (
+                  // Period 8: Only show leave school button
+                  <TouchableOpacity
+                    style={styles.nextPeriodButton}
+                    onPress={handleNextDay}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.nextPeriodButtonText}>
+                      🏠 Leave School for the Day
+                    </Text>
+                    <Text style={styles.nextPeriodSubtext}>
+                      Time to head home!
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  // Periods 1-7: Show both next period and end day buttons
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      style={[styles.nextPeriodButton, styles.bigButton]}
+                      onPress={handleNextDay}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.nextPeriodButtonText}>
+                        ⏰ Next Period
+                      </Text>
+                      <Text style={styles.nextPeriodSubtext}>
+                        Going to period {period + 1}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.endDayButton, styles.smallButton]}
+                      onPress={handleEndDay}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.endDayButtonText}>🏠 End Day</Text>
+                      <Text style={styles.endDaySubtext}>
+                        Skip to after school
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-            )}
-          </CopilotView>
-        </CopilotStep>
+            </CopilotView>
+          </CopilotStep>
+        </View>
       </ImageBackground>
 
       <LocationModal
@@ -865,7 +899,14 @@ function Market(props) {
         onClose={handleDayStatsClose}
         stats={(() => {
           const stats = getTotalStats();
-          console.log('📊 DayStatsModal stats:', stats, 'visible:', dayStatsModalVisible, 'day:', day);
+          console.log(
+            '📊 DayStatsModal stats:',
+            stats,
+            'visible:',
+            dayStatsModalVisible,
+            'day:',
+            day
+          );
           return stats;
         })()}
         day={day}
@@ -924,6 +965,7 @@ function Market(props) {
         onConfirm={handleEndDayConfirm}
         onCancel={handleEndDayCancel}
         theme="market"
+        dismissible={false}
       />
 
       {selectedCandy && (
@@ -942,7 +984,6 @@ function Market(props) {
 
       {/* EventModal for special events */}
       <EventModal />
-
     </View>
   );
 }
@@ -955,9 +996,17 @@ const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
   },
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  listContainer: {
+    flex: 1,
+    minHeight: 0,
+  },
   list: {
     padding: 16,
-    paddingBottom: 120, // Add space for the button container
+    flexGrow: 1,
   },
   item: {
     marginBottom: 12,
@@ -1042,15 +1091,13 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
   },
   buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#fefaf5',
     borderTopWidth: 3,
     borderColor: '#d4a574',
     padding: 10,
     alignItems: 'center',
+    minHeight: 80,
+    flexShrink: 0,
   },
   buttonRow: {
     flexDirection: 'row',

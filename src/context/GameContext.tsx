@@ -39,6 +39,7 @@ type GameContextType = {
   locationHistory: LocationHistory[];
   isAfterSchool: boolean;
   hasStudiedTonight: boolean;
+  lastActiveView: 'market' | 'after-school';
   incrementPeriod: (location: Location) => void;
   startAfterSchool: () => void;
   startNewDay: () => void;
@@ -46,6 +47,7 @@ type GameContextType = {
   revertToPreviousPeriod: () => boolean;
   jumpToPeriod: (targetPeriod: number) => boolean;
   markStudiedTonight: () => void;
+  setLastActiveView: (view: 'market' | 'after-school') => void;
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -60,6 +62,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
   const [isAfterSchool, setIsAfterSchool] = useState(false); // Explicitly controlled after-school mode
   const [hasStudiedTonight, setHasStudiedTonight] = useState(false);
+  const [lastActiveView, setLastActiveView] = useState<'market' | 'after-school'>('market');
   const [trojanHorseCounter, setTrojanHorseCounter] = useState(0); // Tracks escalation level
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -89,7 +92,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     [periodCount]
   );
 
-
   // Load game state on mount
   useEffect(() => {
     const loadGameData = async () => {
@@ -99,6 +101,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         locationHistory: [{ period: 0, location: 'home room' as Location }],
         isAfterSchool: false,
         hasStudiedTonight: false,
+        lastActiveView: 'market' as const,
         trojanHorseCounter: 0,
       };
 
@@ -111,6 +114,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       setIsAfterSchool(savedState.isAfterSchool ?? false);
       setHasStudiedTonight(savedState.hasStudiedTonight ?? false);
+      setLastActiveView(savedState.lastActiveView || 'market');
       setTrojanHorseCounter(savedState.trojanHorseCounter ?? 0);
       setIsLoaded(true);
       setIsInitialized(true);
@@ -134,6 +138,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       locationHistory,
       isAfterSchool,
       hasStudiedTonight,
+      lastActiveView,
       trojanHorseCounter,
     };
 
@@ -145,6 +150,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     locationHistory,
     isAfterSchool,
     hasStudiedTonight,
+    lastActiveView,
     trojanHorseCounter,
     isLoaded,
   ]);
@@ -160,11 +166,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const [processedEvents, setProcessedEvents] = useState<Set<number>>(
     new Set()
   );
-  
+
   // Track which periods have had Trojan Horse effect applied
-  const [processedTrojanHorsePeriods, setProcessedTrojanHorsePeriods] = useState<Set<number>>(
-    new Set()
-  );
+  const [processedTrojanHorsePeriods, setProcessedTrojanHorsePeriods] =
+    useState<Set<number>>(new Set());
 
   // Process current event effects
   useEffect(() => {
@@ -195,19 +200,29 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         case 'FOUND_MONEY':
           // Found money event: add money to wallet
           let moneyToAdd = currentEvent.dollarAmount || 10; // Default to $10 if not specified
-          
+
           // Check for jokers that multiply found money
-          const logicAnomalyJoker = findJokerById(jokers, JOKER_IDS.LOGIC_ANOMALY);
-          const hideAndSeekJoker = findJokerById(jokers, JOKER_IDS.HIDE_AND_SEEK);
-          
+          const logicAnomalyJoker = findJokerById(
+            jokers,
+            JOKER_IDS.LOGIC_ANOMALY
+          );
+          const hideAndSeekJoker = findJokerById(
+            jokers,
+            JOKER_IDS.HIDE_AND_SEEK
+          );
+
           if (logicAnomalyJoker) {
             moneyToAdd = moneyToAdd * 3;
-            console.log(`🧠 Logic Anomaly: Tripled found money from $${currentEvent.dollarAmount || 10} to $${moneyToAdd}`);
+            console.log(
+              `🧠 Logic Anomaly: Tripled found money from $${currentEvent.dollarAmount || 10} to $${moneyToAdd}`
+            );
           } else if (hideAndSeekJoker) {
             moneyToAdd = moneyToAdd * 3;
-            console.log(`🙈 Hide and Seek: Tripled found money from $${currentEvent.dollarAmount || 10} to $${moneyToAdd}`);
+            console.log(
+              `🙈 Hide and Seek: Tripled found money from $${currentEvent.dollarAmount || 10} to $${moneyToAdd}`
+            );
           }
-          
+
           console.log(`💰 FOUND_MONEY event: adding $${moneyToAdd}`);
           addMoney(moneyToAdd);
           // Mark this event as processed
@@ -235,37 +250,59 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isInitialized || !gameData?.candyPrices) return;
 
     const trojanHorseJoker = findJokerById(jokers, JOKER_IDS.TROJAN_HORSE);
-    
+
     if (trojanHorseJoker && !processedTrojanHorsePeriods.has(periodCount)) {
       // Calculate price increase based on period within current day (resets daily)
       // There are 8 periods per day, so get the period within the current day
       const periodWithinDay = periodCount % 8;
       const priceIncrease = (periodWithinDay + 1) * 10;
-      
-      console.log(`🐴 Trojan Horse: Applying +$${priceIncrease} to all candy prices for period ${periodCount} (day period ${periodWithinDay + 1}/8)`);
-      
+
+      console.log(
+        `🐴 Trojan Horse: Applying +$${priceIncrease} to all candy prices for period ${periodCount} (day period ${periodWithinDay + 1}/8)`
+      );
+
       // Apply price increase to all candies for current period
-      const candyTypes = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
-      
-      candyTypes.forEach(candyType => {
+      const candyTypes = [
+        'Bubble Gum',
+        'M&Ms',
+        'Skittles',
+        'Snickers',
+        'Sour Patch Kids',
+        'Warheads',
+        'Jaw Breaker',
+      ];
+
+      candyTypes.forEach((candyType) => {
         const originalPrice = getOriginalCandyPrice(candyType, periodCount);
         if (originalPrice > 0) {
           const newPrice = originalPrice + priceIncrease;
           modifyCandyPrice(candyType, periodCount, newPrice);
         }
       });
-      
+
       // Mark this period as processed
-      setProcessedTrojanHorsePeriods(prev => new Set(prev).add(periodCount));
+      setProcessedTrojanHorsePeriods((prev) => new Set(prev).add(periodCount));
     }
-  }, [periodCount, jokers, isInitialized, gameData, modifyCandyPrice, getOriginalCandyPrice, processedTrojanHorsePeriods]);
+  }, [
+    periodCount,
+    jokers,
+    isInitialized,
+    gameData,
+    modifyCandyPrice,
+    getOriginalCandyPrice,
+    processedTrojanHorsePeriods,
+  ]);
 
   useEffect(() => {
+    // Don't override flavor text when in after-school mode
+    if (isAfterSchool) {
+      return;
+    }
+
     // Check for hints about next period's events
     const nextPeriodEvent = gameData?.periodEvents?.find(
       (e) => e.period === periodCount + 1 && e.hint
     );
-
 
     if (nextPeriodEvent?.hint) {
       // Check if user has a joker that affects hint visibility
@@ -294,63 +331,80 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     } else {
       setEvent('DEFAULT');
     }
-  }, [periodCount, currentLocation, jokers]);
+  }, [periodCount, currentLocation, jokers, isAfterSchool]);
 
-  const incrementPeriod = useCallback((location: Location) => {
-    const newPeriodCount = periodCount + 1;
-    setPeriodCount(newPeriodCount);
-    setCurrentLocation(location);
-    setLocationHistory((prev) => [
-      ...prev,
-      { period: newPeriodCount, location },
-    ]);
+  const incrementPeriod = useCallback(
+    (location: Location) => {
+      const newPeriodCount = periodCount + 1;
+      setPeriodCount(newPeriodCount);
+      setCurrentLocation(location);
+      setLocationHistory((prev) => [
+        ...prev,
+        { period: newPeriodCount, location },
+      ]);
 
-    // Trigger candy generation for "Something from Nothing" joker
-    // This will be handled by a separate effect in InventoryContext
-  }, [periodCount]);
+      // Trigger candy generation for "Something from Nothing" joker
+      // This will be handled by a separate effect in InventoryContext
+    },
+    [periodCount]
+  );
 
   const startAfterSchool = useCallback(() => {
     setIsAfterSchool(true);
+    setLastActiveView('after-school');
     // Note: Trojan Horse effect is now based on period count, not a separate counter
   }, []);
 
   const startNewDay = useCallback(() => {
     console.log('🎮 GameContext: startNewDay called');
-    console.log('🎮 GameContext: Current periodCount before startNewDay:', periodCount);
+    console.log(
+      '🎮 GameContext: Current periodCount before startNewDay:',
+      periodCount
+    );
     console.log('🎮 GameContext: Current day/period:', day, period);
-    
+
     setIsAfterSchool(false);
     setHasStudiedTonight(false); // Reset study status for new day
-    
+
     // Calculate the periodCount for the first period of the next day
     const currentDay = Math.floor(periodCount / 8) + 1;
     const nextDayPeriodCount = currentDay * 8; // Start of next day (period 1)
-    
-    console.log('🎮 GameContext: Advancing from periodCount', periodCount, 'to', nextDayPeriodCount);
-    
+
+    console.log(
+      '🎮 GameContext: Advancing from periodCount',
+      periodCount,
+      'to',
+      nextDayPeriodCount
+    );
+
     setPeriodCount(nextDayPeriodCount);
     setCurrentLocation('home room'); // Reset to home room for new day
     setLocationHistory([{ period: nextDayPeriodCount, location: 'home room' }]);
-    
-    console.log('🎮 GameContext: startNewDay completed, new day/period should be:', Math.floor(nextDayPeriodCount / 8) + 1, (nextDayPeriodCount % 8) + 1);
+
+    console.log(
+      '🎮 GameContext: startNewDay completed, new day/period should be:',
+      Math.floor(nextDayPeriodCount / 8) + 1,
+      (nextDayPeriodCount % 8) + 1
+    );
   }, [periodCount, day, period]);
 
   const resetGame = async () => {
     console.log('🔄 GameContext: Resetting game...');
-    
+
     // Clear all saved game data FIRST
     await clearAllGameData();
-    
+
     // Then reset all state
     setPeriodCount(0);
     setCurrentLocation('home room');
     setLocationHistory([{ period: 0, location: 'home room' }]);
     setIsAfterSchool(false);
     setHasStudiedTonight(false);
+    setLastActiveView('market');
     setTrojanHorseCounter(0);
     setProcessedEvents(new Set()); // Clear processed events
     setProcessedTrojanHorsePeriods(new Set()); // Clear processed Trojan Horse periods
-    
+
     // Force save the reset state
     const resetState = {
       periodCount: 0,
@@ -358,15 +412,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       locationHistory: [{ period: 0, location: 'home room' as Location }],
       isAfterSchool: false,
       hasStudiedTonight: false,
+      lastActiveView: 'market' as const,
       trojanHorseCounter: 0,
     };
     await saveGameState(resetState);
-    
+
     console.log('✅ GameContext: Game reset complete, period set to 0');
   };
 
   const markStudiedTonight = useCallback(() => {
     setHasStudiedTonight(true);
+  }, []);
+
+  const handleSetLastActiveView = useCallback((view: 'market' | 'after-school') => {
+    setLastActiveView(view);
   }, []);
 
   const revertToPreviousPeriod = (): boolean => {
@@ -393,7 +452,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   const jumpToPeriod = (targetPeriod: number): boolean => {
     // Validate target period (must be >= 0 and <= current period to only go back)
     if (targetPeriod < 0 || targetPeriod > periodCount) {
-      console.warn(`Cannot jump to period ${targetPeriod}. Must be between 0 and ${periodCount}`);
+      console.warn(
+        `Cannot jump to period ${targetPeriod}. Must be between 0 and ${periodCount}`
+      );
       return false;
     }
 
@@ -421,15 +482,25 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     // Restore original candy prices for all periods after target period
     // This reverts any price manipulations that happened in the "future"
     if (seedContext?.restoreCandyPrice && seedContext?.gameData) {
-      const candyTypes = ['Bubble Gum', 'M&Ms', 'Skittles', 'Snickers', 'Sour Patch Kids', 'Warheads'];
-      
+      const candyTypes = [
+        'Bubble Gum',
+        'M&Ms',
+        'Skittles',
+        'Snickers',
+        'Sour Patch Kids',
+        'Warheads',
+        'Jaw Breaker',
+      ];
+
       for (let period = targetPeriod + 1; period <= periodCount; period++) {
-        candyTypes.forEach(candyType => {
+        candyTypes.forEach((candyType) => {
           seedContext.restoreCandyPrice(candyType, period);
         });
       }
-      
-      console.log(`🔄 Restored original candy prices for periods ${targetPeriod + 1} to ${periodCount}`);
+
+      console.log(
+        `🔄 Restored original candy prices for periods ${targetPeriod + 1} to ${periodCount}`
+      );
     }
 
     // Set the period count (this triggers other context updates)
@@ -442,11 +513,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     setCurrentLocation(targetLocation);
 
     // Remove future history entries (anything after target period)
-    setLocationHistory((prev) =>
-      prev.filter((h) => h.period <= targetPeriod)
-    );
+    setLocationHistory((prev) => prev.filter((h) => h.period <= targetPeriod));
 
-    console.log(`⚡ Tachyonic Sprint: Jumped to period ${targetPeriod}. Wallet and inventory preserved, game state reverted.`);
+    console.log(
+      `⚡ Tachyonic Sprint: Jumped to period ${targetPeriod}. Wallet and inventory preserved, game state reverted.`
+    );
     return true;
   };
 
@@ -460,6 +531,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       locationHistory,
       isAfterSchool,
       hasStudiedTonight,
+      lastActiveView,
       incrementPeriod,
       startAfterSchool,
       startNewDay,
@@ -467,6 +539,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       revertToPreviousPeriod,
       jumpToPeriod,
       markStudiedTonight,
+      setLastActiveView: handleSetLastActiveView,
     }),
     [
       day,
@@ -476,6 +549,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       locationHistory,
       isAfterSchool,
       hasStudiedTonight,
+      lastActiveView,
       incrementPeriod,
       startAfterSchool,
       startNewDay,
@@ -483,6 +557,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       revertToPreviousPeriod,
       jumpToPeriod,
       markStudiedTonight,
+      handleSetLastActiveView,
     ]
   );
 

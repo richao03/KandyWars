@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { Button, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from './ReanimatedModal';
-import TransactionModal from './TransactionModal';
+import {
+  Button,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useInventory } from '../../src/context/InventoryContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
-import { useInventory } from '../../src/context/InventoryContext';
+import Modal from './ReanimatedModal';
+import TransactionModal from './TransactionModal';
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -19,6 +26,7 @@ const baseCandies = [
   { name: 'Warheads', baseMin: 0.25, baseMax: 10 },
   { name: 'Sour Patch Kids', baseMin: 1.0, baseMax: 27 },
   { name: 'Bubble Gum', baseMin: 0.1, baseMax: 5 },
+  { name: 'Jaw Breaker', baseMin: 2, baseMax: 30 },
 ];
 
 interface DeliModalProps {
@@ -29,13 +37,15 @@ interface DeliModalProps {
 export default function DeliModal({ visible, onClose }: DeliModalProps) {
   const { gameData } = useSeed();
   const { balance, spend, add } = useWallet();
-  const { addToInventory, removeFromInventory, inventory, getInventoryLimit } = useInventory();
+  const { addToInventory, removeFromInventory, inventory, getInventoryLimit } =
+    useInventory();
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
       const prices = gameData.candyPrices[candy.name];
-      const averageCost = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-      
+      const averageCost =
+        prices.reduce((sum, price) => sum + price, 0) / prices.length;
+
       return {
         ...candy,
         cost: parseFloat(averageCost.toFixed(2)),
@@ -45,7 +55,9 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
     })
   );
 
-  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(null);
+  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
+    null
+  );
 
   const openModal = (index: number) => {
     setSelectedCandyIndex(index);
@@ -57,7 +69,7 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
 
   const handleTransaction = (quantity: number, mode: 'buy' | 'sell') => {
     if (selectedCandyIndex === null) return;
-    
+
     setCandies((prev) =>
       prev.map((candy, i) => {
         if (i !== selectedCandyIndex) return candy;
@@ -67,7 +79,11 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
           if (balance < totalCost) return candy;
 
           // Try to add to inventory first - this will check inventory limits
-          const inventorySuccess = addToInventory(candy.name, quantity, candy.cost);
+          const inventorySuccess = addToInventory(
+            candy.name,
+            quantity,
+            candy.cost
+          );
           if (!inventorySuccess) {
             // Inventory is full, transaction fails
             return candy;
@@ -79,7 +95,9 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
           const newAvg =
             candy.averagePrice === null
               ? candy.cost
-              : (candy.averagePrice * candy.quantityOwned + candy.cost * quantity) / newQty;
+              : (candy.averagePrice * candy.quantityOwned +
+                  candy.cost * quantity) /
+                newQty;
 
           return {
             ...candy,
@@ -102,20 +120,25 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
     closeModal();
   };
 
-  const selectedCandy = selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
-  
+  const selectedCandy =
+    selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
+
   // Calculate max buy quantity considering both money and inventory space
-  const totalInventory = Object.values(inventory).reduce((sum, item) => sum + item.quantity, 0);
+  const totalInventory = Object.values(inventory).reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
   const inventoryLimit = getInventoryLimit();
   const availableInventorySpace = inventoryLimit - totalInventory;
-  
-  const maxBuyQty = selectedCandy && selectedCandy.cost > 0 
-    ? Math.min(
-        Math.floor(balance / selectedCandy.cost), // Money constraint
-        availableInventorySpace // Inventory space constraint
-      )
-    : 0;
-    
+
+  const maxBuyQty =
+    selectedCandy && selectedCandy.cost > 0
+      ? Math.min(
+          Math.floor(balance / selectedCandy.cost), // Money constraint
+          availableInventorySpace // Inventory space constraint
+        )
+      : 0;
+
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   return (
@@ -136,15 +159,20 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>🏪 DELI</Text>
-          <Text style={styles.subtitle}>Stable prices • Average market rates</Text>
+          <Text style={styles.subtitle}>
+            Stable prices • Average market rates
+          </Text>
         </View>
-        
+
         <FlatList
           data={candies}
           keyExtractor={(item) => item.name}
           contentContainerStyle={styles.list}
           renderItem={({ item, index }) => (
-            <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
+            <TouchableOpacity
+              style={styles.item}
+              onPress={() => openModal(index)}
+            >
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.price}>${item.cost.toFixed(2)} (avg)</Text>
             </TouchableOpacity>

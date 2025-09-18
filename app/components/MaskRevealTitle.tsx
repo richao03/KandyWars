@@ -1,139 +1,40 @@
-import React, { useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface MaskRevealTitleProps {
-  onAnimationComplete?: () => void;
+  onComplete?: () => void;
 }
 
-const MaskRevealTitle = React.memo(({ onAnimationComplete }: MaskRevealTitleProps) => {
-  const revealAnimation = useRef(new Animated.Value(0)).current;
+export default function MaskRevealTitle({ onComplete }: MaskRevealTitleProps) {
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete?.();
+    }, 2200);
 
-  const handleAnimationComplete = useCallback(() => {
-    if (onAnimationComplete) {
-      setTimeout(onAnimationComplete, 500);
-    }
-  }, [onAnimationComplete]);
-
-  useEffect(() => {
-    // Animate from left to right reveal
-    Animated.timing(revealAnimation, {
-      toValue: 1,
-      duration: 2500,
-      useNativeDriver: false,
-    }).start(handleAnimationComplete);
-  }, [handleAnimationComplete]);
-
-  // Calculate the width of the mask that reveals the text
-  const maskWidth = revealAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-  });
+    return () => clearTimeout(timer);
+  }, [onComplete]);
 
   return (
     <View style={styles.container}>
-      {/* Hidden text (for layout) */}
-      <View style={styles.textContainer}>
-        <Text style={[styles.gameTitle, styles.candyText, styles.hiddenText]}>
-          <Text style={styles.capitalLetter}>C</Text>andy
-        </Text>
-        <Text style={[styles.gameTitle, styles.warsText, styles.hiddenText]}>
-          <Text style={styles.capitalLetter}>W</Text>ars
-        </Text>
-      </View>
-
-      {/* Animated reveal mask */}
-      <Animated.View 
-        style={[
-          styles.maskContainer,
-          { width: maskWidth }
-        ]}
-      >
-        <View style={styles.revealedTextContainer}>
-          <Text style={[styles.gameTitle, styles.candyText]}>
-            <Text style={styles.capitalLetter}>C</Text>andy
-          </Text>
-          <Text style={[styles.gameTitle, styles.warsText]}>
-            <Text style={styles.capitalLetter}>W</Text>ars
-          </Text>
-        </View>
-      </Animated.View>
-
-      {/* Optional: Pen tip indicator */}
-      <Animated.View 
-        style={[
-          styles.penTip,
-          {
-            left: revealAnimation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, width * 0.8],
-            }),
-            opacity: revealAnimation.interpolate({
-              inputRange: [0, 0.9, 1],
-              outputRange: [1, 1, 0],
-            }),
-          }
-        ]}
-      />
+      <Text style={styles.title}>Candy Warz</Text>
     </View>
   );
-});
-
-export default MaskRevealTitle;
+}
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    width: '100%',
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  textContainer: {
-    opacity: 0.1, // Faint outline
-  },
-  hiddenText: {
-    color: '#666',
-  },
-  maskContainer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    overflow: 'hidden',
-    height: '100%',
-  },
-  revealedTextContainer: {
-    width: width * 0.8,
-  },
-  gameTitle: {
-    fontSize: 70,
+  title: {
+    fontSize: 48,
     fontWeight: 'bold',
-    fontFamily: 'DonGraffiti',
-  },
-  capitalLetter: {
-    fontSize: 100,
-  },
-  candyText: {
-    color: '#ffd6e8',
-    textShadowColor: '#b85c8a',
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 6,
-    marginLeft: 60,
-    marginBottom: -20,
-  },
-  warsText: {
-    color: '#d4f6d4',
-    textShadowColor: '#4a7c4a',
-    textShadowOffset: { width: 3, height: 3 },
-    textShadowRadius: 6,
-    marginLeft: 120,
-    marginTop: -20,
-  },
-  penTip: {
-    position: 'absolute',
-    top: '50%',
-    width: 4,
-    height: 4,
-    backgroundColor: '#333',
-    borderRadius: 2,
+    color: '#8B4513',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
 });

@@ -1,12 +1,13 @@
+import { router } from 'expo-router';
 import React from 'react';
 import {
+  Image,
   Modal,
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 
 interface GameEndModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ interface GameEndModalProps {
   finalScore: number;
   balance: number;
   stashedAmount: number;
+  difficultyLevel: number;
   onRestart: () => void;
 }
 
@@ -23,11 +25,66 @@ export default function GameEndModal({
   finalScore,
   balance,
   stashedAmount,
+  difficultyLevel,
   onRestart,
 }: GameEndModalProps) {
   const handleViewScoreboard = () => {
-    router.push('/(tabs)/settings');
+    router.push('/leaderboard');
   };
+
+  // Get dog breed and image based on difficulty level
+  const getDogBreed = (level: number) => {
+    switch (level) {
+      case 1:
+        return 'Peg the Pug';
+      case 2:
+        return 'Brussels Griffon';
+      case 3:
+        return 'Evee Cat';
+      case 4:
+        return 'Byul Terrier';
+      case 5:
+        return 'Cane Corso';
+      case 6:
+        return 'Pitbull';
+      case 7:
+        return 'Afghan Hound';
+      case 8:
+        return 'German Shepherd';
+      default:
+        return 'Pug';
+    }
+  };
+
+  const getDogImage = (level: number) => {
+    switch (level) {
+      case 1:
+        return require('../../assets/images/doggs/pug.png');
+      case 2:
+        return require('../../assets/images/doggs/brussleGriffon.png');
+      case 3:
+        return require('../../assets/images/doggs/evee.png');
+      case 4:
+        return require('../../assets/images/doggs/byul.png');
+      case 5:
+        return require('../../assets/images/doggs/caneCorso.png');
+      case 6:
+        return require('../../assets/images/doggs/pitbull.png');
+      case 7:
+        return require('../../assets/images/doggs/afghan.png');
+      case 8:
+        return require('../../assets/images/doggs/germanShepard.png');
+      default:
+        return require('../../assets/images/doggs/pug.png');
+    }
+  };
+
+  const dogBreed = getDogBreed(difficultyLevel);
+  const dogImage = getDogImage(difficultyLevel);
+  const dogMessage =
+    gameResult === 'won'
+      ? `🎉 Congratulations! You successfully paid off your debt and can now adopt ${dogBreed}! 🎉`
+      : `💔 You weren't able to pay off your debt in time. ${dogBreed} has gone with another loving family. 💔`;
 
   return (
     <Modal visible={visible} animationType="fade" transparent>
@@ -35,30 +92,37 @@ export default function GameEndModal({
         <View style={styles.modalContent}>
           <View style={styles.container}>
             <Text style={styles.title}>
-              {gameResult === 'won' ? '🎉 CONGRATULATIONS! 🎉' : '💸 GAME OVER 💸'}
+              {gameResult === 'won'
+                ? '🎉 CONGRATULATIONS! 🎉'
+                : '💸 GAME OVER 💸'}
             </Text>
-            
+
+            <Image source={dogImage} style={styles.dogImage} />
+
+            <Text style={styles.dogMessage}>{dogMessage}</Text>
+
             <Text style={styles.subtitle}>
-              {gameResult === 'won' 
+              {gameResult === 'won'
                 ? 'You paid off all your debt and won!'
-                : 'You ran out of time with remaining debt.'
-              }
+                : 'You ran out of time with remaining debt.'}
             </Text>
 
             <View style={styles.scoreContainer}>
-              <Text style={styles.scoreTitle}>📊 FINAL SCORE</Text>
+              <Text style={styles.scoreTitle}>NET FINAL SCORE</Text>
               <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
-              
+
               <View style={styles.breakdown}>
-                <Text style={styles.breakdownText}>💰 Balance: ${balance.toFixed(2)}</Text>
                 <Text style={styles.breakdownText}>
-                  🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: ${Math.abs(stashedAmount).toFixed(2)}
+                  💰 Balance: ${balance.toFixed(2)}
                 </Text>
                 <Text style={styles.breakdownText}>
-                  {gameResult === 'won' 
+                  🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
+                  {Math.abs(stashedAmount).toFixed(2)}
+                </Text>
+                <Text style={styles.breakdownText}>
+                  {gameResult === 'won'
                     ? '✅ All debt paid off!'
-                    : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`
-                  }
+                    : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
                 </Text>
               </View>
             </View>
@@ -68,11 +132,17 @@ export default function GameEndModal({
             </Text>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity style={styles.button} onPress={handleViewScoreboard}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleViewScoreboard}
+              >
                 <Text style={styles.buttonText}>View Leaderboard</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity style={[styles.button, styles.restartButton]} onPress={onRestart}>
+
+              <TouchableOpacity
+                style={[styles.button, styles.restartButton]}
+                onPress={onRestart}
+              >
                 <Text style={styles.buttonText}>Play Again</Text>
               </TouchableOpacity>
             </View>
@@ -109,7 +179,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFD700',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
+  },
+  dogImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 15,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+  },
+  dogMessage: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 10,
+    fontWeight: '600',
+    lineHeight: 22,
   },
   subtitle: {
     fontSize: 16,

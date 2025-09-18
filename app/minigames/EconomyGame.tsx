@@ -10,15 +10,16 @@ import {
 } from 'react-native';
 import {
   GestureHandlerRootView,
-  PanGestureHandler,
+  Gesture,
+  GestureDetector,
 } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -268,36 +269,33 @@ function DraggableFromPalette({
   onEndFromPaletteJS,
   style,
 }: PaletteDragProps) {
-  const gesture = useAnimatedGestureHandler({
-    onStart: (e) => {
+  const panGesture = Gesture.Pan()
+    .onStart((e) => {
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
       dragScale.value = 1;
       runOnJS(onStartJS)(tile);
-    },
-    onActive: (e) => {
+    })
+    .onUpdate((e) => {
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
       runOnJS(onMoveJS)(e.absoluteX, e.absoluteY);
-    },
-    onEnd: (e) => {
+    })
+    .onEnd((e) => {
       dragScale.value = 0;
       runOnJS(onEndFromPaletteJS)(tile, e.absoluteX, e.absoluteY);
       runOnJS(onMoveJS)(-1, -1); // clear hover
-    },
-  });
+    })
+    .shouldCancelWhenOutside(false)
+    .activeOffsetX([-10, 10])
+    .activeOffsetY([-10, 10]);
 
   return (
-    <PanGestureHandler
-      onGestureEvent={gesture}
-      shouldCancelWhenOutside={false}
-      activeOffsetX={[-10, 10]}
-      activeOffsetY={[-10, 10]}
-    >
+    <GestureDetector gesture={panGesture}>
       <Animated.View style={style}>
         <Text style={styles.tileLabel}>{tile.label}</Text>
       </Animated.View>
-    </PanGestureHandler>
+    </GestureDetector>
   );
 }
 
@@ -320,38 +318,35 @@ function DraggableFromSlot({
   onMoveJS,
   onEndFromSlotJS,
 }: SlotDragProps) {
-  const gesture = useAnimatedGestureHandler({
-    onStart: (e) => {
+  const panGesture = Gesture.Pan()
+    .onStart((e) => {
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
       dragScale.value = 1;
       runOnJS(onStartJS)(tile);
-    },
-    onActive: (e) => {
+    })
+    .onUpdate((e) => {
       dragX.value = e.absoluteX;
       dragY.value = e.absoluteY;
       runOnJS(onMoveJS)(e.absoluteX, e.absoluteY);
-    },
-    onEnd: (e) => {
+    })
+    .onEnd((e) => {
       dragScale.value = 0;
       runOnJS(onEndFromSlotJS)(slotIndex, tile, e.absoluteX, e.absoluteY);
       runOnJS(onMoveJS)(-1, -1);
-    },
-  });
+    })
+    .shouldCancelWhenOutside(false)
+    .activeOffsetX([-10, 10])
+    .activeOffsetY([-10, 10]);
 
   return (
-    <PanGestureHandler
-      onGestureEvent={gesture}
-      shouldCancelWhenOutside={false}
-      activeOffsetX={[-10, 10]}
-      activeOffsetY={[-10, 10]}
-    >
+    <GestureDetector gesture={panGesture}>
       <Animated.View
         style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
       >
         <Text style={styles.slotLabel}>{tile.label}</Text>
       </Animated.View>
-    </PanGestureHandler>
+    </GestureDetector>
   );
 }
 
@@ -367,6 +362,7 @@ const LEVEL_CONFIG = [
 
 export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
+  const { trackMinigamePlayed } = useScoreboard();
 
   const [seed] = useState('candy-seed');
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
@@ -392,6 +388,14 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const dragY = useSharedValue(0);
   const dragScale = useSharedValue(0); // 0 = hidden, 1 = visible
   const [hoveredSlotIndex, setHoveredSlotIndex] = useState<number | null>(null);
+
+  // Start game
+  const startGame = () => {
+    // Track minigame play for analytics
+    trackMinigamePlayed('economy');
+
+    setGameState('playing');
+  };
 
   const resetLevel = (level: number) => {
     const p = generatePuzzle(`${seed}::L${level}`, level);
@@ -672,7 +676,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
             <TouchableOpacity
               style={styles.startGameButton}
-              onPress={() => setGameState('playing')}
+              onPress={startGame}
             >
               <Text style={styles.startGameButtonText}>
                 💼 Start Trading Challenge!
@@ -869,17 +873,18 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         >
           <View style={styles.dragOverlayCard}>
             <Text style={styles.dragOverlayText}>{dragLabelText}</Text>
-
-            <GameModal
-              visible={modal.visible}
-              title={modal.title}
-              message={modal.message}
-              emoji={modal.emoji}
-              onClose={hideModal}
-              onConfirm={modal.onConfirm}
-            />
           </View>
         </Animated.View>
+
+        <GameModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          emoji={modal.emoji}
+          onClose={hideModal}
+          onConfirm={modal.onConfirm}
+          theme="school"
+        />
       </View>
     </GestureHandlerRootView>
   );

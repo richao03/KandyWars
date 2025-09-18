@@ -111,6 +111,13 @@ export const EventHandlerProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [day, lastDay]);
 
   useEffect(() => {
+    // Skip events in the first period of each day (periodCount 0, 8, 16, 24, 32)
+    const currentPeriod = Math.max(1, (periodCount % 8) + 1);
+    if (currentPeriod === 1) {
+      console.log('Skipping events for first period of the day');
+      return;
+    }
+
     // Check for events that match current period and location
     let matchingEvent = gameData.periodEvents.find(
       (event) =>

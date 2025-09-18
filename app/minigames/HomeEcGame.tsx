@@ -3,17 +3,18 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   GestureHandlerRootView,
-  PanGestureHandler,
+  Gesture,
+  GestureDetector,
 } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
@@ -33,6 +34,7 @@ const TARGET_POSITIONS = {
 
 export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
+  const { trackMinigamePlayed } = useScoreboard();
 
   // Game state
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
@@ -141,11 +143,13 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
             if (level < 3) {
               setTimeout(() => {
+                console.log(`Level ${level} complete! Showing modal...`);
                 showModal(
                   `🎉 Level ${level} Complete!`,
                   `Ready for Level ${level + 1}?`,
                   '🎉',
                   () => {
+                    console.log(`Starting level ${level + 1}...`);
                     setLevel(level + 1);
                     initializeLevel(level + 1);
                   }
@@ -153,11 +157,13 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               }, 600);
             } else {
               setTimeout(() => {
+                console.log('All levels complete! Showing final modal...');
                 showModal(
                   '🏆 All Levels Complete!',
                   'Amazing work, Master Chef!',
                   '🏆',
                   () => {
+                    console.log('Going to joker selection...');
                     setGameState('jokerSelection');
                   }
                 );
@@ -188,29 +194,30 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   );
 
   // Gesture handler
-  const gestureHandler = useAnimatedGestureHandler({
-    onEnd: (event) => {
-      'worklet';
-      const { translationX, translationY } = event;
-      const absX = Math.abs(translationX);
-      const absY = Math.abs(translationY);
+  const panGesture = Gesture.Pan().onEnd((event) => {
+    'worklet';
+    const { translationX, translationY } = event;
+    const absX = Math.abs(translationX);
+    const absY = Math.abs(translationY);
 
-      if (absX > 50 || absY > 50) {
-        let direction: 'up' | 'down' | 'left' | 'right';
+    if (absX > 50 || absY > 50) {
+      let direction: 'up' | 'down' | 'left' | 'right';
 
-        if (absX > absY) {
-          direction = translationX > 0 ? 'right' : 'left';
-        } else {
-          direction = translationY > 0 ? 'down' : 'up';
-        }
-
-        runOnJS(handleSwipe)(direction);
+      if (absX > absY) {
+        direction = translationX > 0 ? 'right' : 'left';
+      } else {
+        direction = translationY > 0 ? 'down' : 'up';
       }
-    },
+
+      runOnJS(handleSwipe)(direction);
+    }
   });
 
   // Start game
   const startGame = useCallback(() => {
+    // Track minigame play for analytics
+    trackMinigamePlayed('home-ec');
+
     setGameState('playing');
     setLevel(1);
     setScore(0);
@@ -389,15 +396,16 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const levelConfig = getLevelConfig(level);
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          padding: ResponsiveSpacing.containerPadding(),
-          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-        },
-      ]}
-    >
+    <>
+      <View
+        style={[
+          styles.container,
+          {
+            padding: ResponsiveSpacing.containerPadding(),
+            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+          },
+        ]}
+      >
       <GestureHandlerRootView style={styles.gameContainer}>
         {/* Header */}
         <MinigameHUD
@@ -439,11 +447,11 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
           {/* Center candy */}
           {centerCandy && !isFlying && (
-            <PanGestureHandler onGestureEvent={gestureHandler}>
+            <GestureDetector gesture={panGesture}>
               <Animated.View style={[styles.centerCandy, animatedStyle]}>
                 <Text style={styles.centerCandyText}>{centerCandy}</Text>
               </Animated.View>
-            </PanGestureHandler>
+            </GestureDetector>
           )}
 
           {/* Flying candy */}
@@ -486,18 +494,21 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           >
             <Text style={styles.footerBtnText}>🚪 Leave</Text>
           </TouchableOpacity>
-
-          <GameModal
-            visible={modal.visible}
-            title={modal.title}
-            message={modal.message}
-            emoji={modal.emoji}
-            onClose={hideModal}
-            onConfirm={modal.onConfirm}
-          />
         </View>
       </GestureHandlerRootView>
-    </View>
+      </View>
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+        theme="school"
+        dismissible={modal.dismissible}
+      />
+    </>
   );
 }
 

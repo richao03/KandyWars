@@ -40,7 +40,7 @@ export default function GameHUD({
   const { day, period, currentLocation } = useGame();
   const { getTotalInventoryCount, getInventoryLimit, inventory } =
     useInventory();
-  const { text } = useFlavorText();
+  const { text, isHint, eventType } = useFlavorText();
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
 
   const totalInventory = getTotalInventoryCount();
@@ -66,6 +66,37 @@ export default function GameHUD({
     if (textLength <= 12) return 10; // Smaller for $-30000.00
     return 9; // Even smaller for very large negative amounts
   }, [piggyAmountText]);
+
+  // Get glow style based on event type
+  const getGlowStyle = useMemo(() => {
+    if (!isHint && !eventType) return {};
+
+    const glowColors = {
+      'HINT': '#FFD700', // Gold for hints
+      'FOUND_MONEY': '#32CD32', // Lime green for found money
+      'LOSE_MONEY': '#FF4444', // Red for losing money
+      'PRICE_SPIKE': '#FF6B35', // Orange for price increases
+      'PRICE_DROP': '#4CAF50', // Green for price drops
+      'JOKER_UNLOCKED': '#9C27B0', // Purple for jokers
+      'NEW_DAY': '#2196F3', // Blue for new day
+      'DEFAULT': 'transparent'
+    };
+
+    const color = glowColors[eventType as keyof typeof glowColors] || glowColors['DEFAULT'];
+
+    if (color === 'transparent') return {};
+
+    return {
+      shadowColor: color,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 1.0,
+      shadowRadius: 15,
+      elevation: 15,
+      borderColor: color,
+      borderWidth: isHint ? 3 : 2,
+      backgroundColor: isHint ? `${color}15` : `${color}08`, // Light tint background
+    };
+  }, [isHint, eventType]);
 
   return (
     <View style={containerStyle}>
@@ -125,33 +156,21 @@ export default function GameHUD({
         </View>
 
         {/* Flavor text scroll */}
-        {text && (
-          flavorTextWrapper ? (
-            flavorTextWrapper(
-              <View style={styles.flavorContainer}>
-                <Marquee
-                  spacing={250}
-                  speed={0.75}
-                  style={styles.marquee}
-                  delay={2000}
-                >
-                  <Text style={styles.flavor}>{text}</Text>
-                </Marquee>
-              </View>
-            )
-          ) : (
-            <View style={styles.flavorContainer}>
+        {text && (() => {
+          const marquee = (
+            <View style={[styles.flavorContainer, getGlowStyle]}>
               <Marquee
                 spacing={250}
                 speed={0.75}
                 style={styles.marquee}
                 delay={2000}
               >
-                <Text style={styles.flavor}>{text}</Text>
+                <Text style={[styles.flavor, isHint && styles.hintText]}>{text}</Text>
               </Marquee>
             </View>
-          )
-        )}
+          );
+          return flavorTextWrapper ? flavorTextWrapper(marquee) : marquee;
+        })()}
 
         {/* Inventory Modal */}
         <InventoryModal
@@ -302,5 +321,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 20,
     fontFamily: 'System', // Could be replaced with a more handwritten font
+  },
+  hintText: {
+    fontWeight: '700',
+    color: '#B8860B', // Darker gold for hints
+    textShadowColor: '#FFD700',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
 });

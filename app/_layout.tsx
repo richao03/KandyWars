@@ -142,7 +142,11 @@ export default function RootLayout() {
                                       options={{ headerShown: false }}
                                     />
                                     <Stack.Screen
-                                      name="debug-jokers"
+                                      name="leaderboard"
+                                      options={{ headerShown: false }}
+                                    />
+                                    <Stack.Screen
+                                      name="title-settings"
                                       options={{ headerShown: false }}
                                     />
                                   </Stack>

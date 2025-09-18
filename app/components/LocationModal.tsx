@@ -52,8 +52,8 @@ export default function LocationModal({ visible, onClose, onSelectLocation }: Lo
     <Modal
       visible={visible}
       transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
+      animationType="fade"
+      onRequestClose={undefined}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modal}>

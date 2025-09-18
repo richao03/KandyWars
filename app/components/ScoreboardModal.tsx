@@ -100,7 +100,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(({
       
       return () => clearTimeout(delayedLoad);
     }
-  }, [visible, playerName, topScores.length, isLoading, topJokersFromMinigames.length, topMinigames.length, refreshScoreboard, loadAnalytics]);
+  }, [visible, playerName, topScores.length, isLoading, topJokersFromMinigames.length, topMinigames.length, refreshScoreboard]);
 
 
   const formatBalance = (balance: number): string => {

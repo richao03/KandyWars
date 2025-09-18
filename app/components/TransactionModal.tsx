@@ -96,8 +96,8 @@ export default function TransactionModal({
       animationOutTiming={200}
       backdropTransitionInTiming={300}
       backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
+      onBackdropPress={undefined}
+      onBackButtonPress={undefined}
       useNativeDriver={true}
       hideModalContentWhileAnimating={true}
       style={styles.modal}
@@ -214,7 +214,7 @@ export default function TransactionModal({
           </Text>
 
           <Slider
-            style={{ width: '100%', height: 40 }}
+            style={{ width: '100%', height: 50, marginVertical: 10 }}
             minimumValue={0}
             maximumValue={maxQuantity}
             step={1}
@@ -290,25 +290,28 @@ export default function TransactionModal({
 const styles = StyleSheet.create({
   modal: {
     justifyContent: 'center',
-    margin: 15,
+    margin: 10,
+    marginHorizontal: 15,
   },
   container: {
     backgroundColor: '#fefaf5', // Warm paper background
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'stretch',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
     shadowColor: '#8b4513',
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 8,
+    minHeight: 450,
+    minWidth: '90%',
   },
   title: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
     color: '#6b4423', // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
@@ -316,10 +319,10 @@ const styles = StyleSheet.create({
   },
   priceInfoContainer: {
     backgroundColor: '#fff9e6',
-    borderRadius: 10,
-    padding: 8,
-    marginVertical: 6,
-    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 8,
+    borderWidth: 2,
     borderColor: '#e6d4b7',
   },
   priceRow: {
@@ -329,29 +332,30 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   priceLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
   },
   priceValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
   },
   sliderSection: {
-    marginTop: 12,
+    marginTop: 16,
+    paddingVertical: 8,
   },
   quantityLabel: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '600',
     alignSelf: 'center',
     color: '#8b4513',
     backgroundColor: '#fff9e6',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginBottom: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 8,
     borderWidth: 2,
     borderColor: '#f4d03f',
   },
@@ -359,22 +363,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
     backgroundColor: '#f0f9ff',
-    padding: 8,
-    borderRadius: 10,
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#bae6fd',
   },
   totalValueLabel: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
-    marginRight: 8,
+    marginRight: 10,
   },
   totalValueAmount: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     fontFamily: 'CrayonPastel',
   },
@@ -402,9 +406,10 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
   },
   buttonRow: {
-    marginTop: 12,
+    marginTop: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -414,9 +419,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: '#cc7a00',
     backgroundColor: '#fff',
@@ -428,7 +433,7 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#8b4513',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 16,
   },
   priceBreakdownContainer: {
     backgroundColor: '#f0f8ff',

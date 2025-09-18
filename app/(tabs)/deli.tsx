@@ -1,16 +1,22 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import GameHUD from '../components/GameHUD';
-import TransactionModal from '../components/TransactionModal';
+import React, { useEffect, useState } from 'react';
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/context/GameContext';
 import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
-import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import GameHUD from '../components/GameHUD';
+import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';
 
 type CandyForDeli = Candy & {
@@ -26,6 +32,7 @@ const baseCandies = [
   { name: 'Warheads', baseMin: 0.25, baseMax: 10 },
   { name: 'Sour Patch Kids', baseMin: 1.0, baseMax: 27 },
   { name: 'Bubble Gum', baseMin: 0.1, baseMax: 5 },
+  { name: 'Jaw Breaker', baseMin: 2, baseMax: 30 },
 ];
 
 export default function Deli() {
@@ -42,13 +49,14 @@ export default function Deli() {
     baseCandies.map((candy) => {
       // Calculate average price across all periods
       const prices = gameData.candyPrices[candy.name];
-      let averageCost = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-      
+      let averageCost =
+        prices.reduce((sum, price) => sum + price, 0) / prices.length;
+
       // Apply Vendor Kickback discount if joker is present
       if (vendorKickbackJoker) {
         averageCost = averageCost * 0.5; // 50% discount
       }
-      
+
       return {
         ...candy,
         cost: parseFloat(averageCost.toFixed(2)),
@@ -58,31 +66,41 @@ export default function Deli() {
     })
   );
 
-  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(null);
+  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
+    null
+  );
   const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
 
   // Update candy prices when jokers change
   useEffect(() => {
-    const currentVendorKickbackJoker = findJokerById(jokers, JOKER_IDS.VENDOR_KICKBACK);
-    
-    setCandies(baseCandies.map((candy) => {
-      // Calculate average price across all periods
-      const prices = gameData.candyPrices[candy.name];
-      let averageCost = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-      
-      // Apply Vendor Kickback discount if joker is present
-      if (currentVendorKickbackJoker) {
-        averageCost = averageCost * 0.5; // 50% discount
-        console.log(`🏪 Vendor Kickback: Applied 50% discount to ${candy.name} at deli`);
-      }
-      
-      return {
-        ...candy,
-        cost: parseFloat(averageCost.toFixed(2)),
-        quantityOwned: 0,
-        averagePrice: null,
-      };
-    }));
+    const currentVendorKickbackJoker = findJokerById(
+      jokers,
+      JOKER_IDS.VENDOR_KICKBACK
+    );
+
+    setCandies(
+      baseCandies.map((candy) => {
+        // Calculate average price across all periods
+        const prices = gameData.candyPrices[candy.name];
+        let averageCost =
+          prices.reduce((sum, price) => sum + price, 0) / prices.length;
+
+        // Apply Vendor Kickback discount if joker is present
+        if (currentVendorKickbackJoker) {
+          averageCost = averageCost * 0.5; // 50% discount
+          console.log(
+            `🏪 Vendor Kickback: Applied 50% discount to ${candy.name} at deli`
+          );
+        }
+
+        return {
+          ...candy,
+          cost: parseFloat(averageCost.toFixed(2)),
+          quantityOwned: 0,
+          averagePrice: null,
+        };
+      })
+    );
   }, [jokers, gameData]);
 
   const openModal = (index: number) => {
@@ -96,7 +114,7 @@ export default function Deli() {
 
   const handleTransaction = (quantity: number, mode: 'buy' | 'sell') => {
     if (selectedCandyIndex === null) return;
-    
+
     setCandies((prev) =>
       prev.map((candy, i) => {
         if (i !== selectedCandyIndex) return candy;
@@ -112,7 +130,9 @@ export default function Deli() {
           const newAvg =
             candy.averagePrice === null
               ? candy.cost
-              : (candy.averagePrice * candy.quantityOwned + candy.cost * quantity) / newQty;
+              : (candy.averagePrice * candy.quantityOwned +
+                  candy.cost * quantity) /
+                newQty;
 
           return {
             ...candy,
@@ -121,7 +141,16 @@ export default function Deli() {
           };
         } else {
           const totalGain = candy.cost * quantity;
-          console.log('🍭 Deli: Selling candy:', candy.name, 'quantity:', quantity, 'price:', candy.cost, 'totalGain:', totalGain);
+          console.log(
+            '🍭 Deli: Selling candy:',
+            candy.name,
+            'quantity:',
+            quantity,
+            'price:',
+            candy.cost,
+            'totalGain:',
+            totalGain
+          );
           add(totalGain);
           removeFromInventory(candy.name, quantity);
 
@@ -142,22 +171,27 @@ export default function Deli() {
     router.push('/(tabs)/after-school');
   };
 
-  const selectedCandy = selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
+  const selectedCandy =
+    selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
   const maxBuyQty =
-    selectedCandy && selectedCandy.cost > 0 ? Math.floor(balance / selectedCandy.cost) : 0;
+    selectedCandy && selectedCandy.cost > 0
+      ? Math.floor(balance / selectedCandy.cost)
+      : 0;
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor="#2a1845" />
-      <GameHUD 
-        theme="evening" 
+      <GameHUD
+        theme="evening"
         customHeaderText={`After School - Day ${day}`}
         customLocationText="Peaceful Evening"
       />
       <View style={styles.header}>
         <Text style={styles.title}>🏪 Corner Deli</Text>
-        <Text style={styles.subtitle}>Stable prices • Average market rates</Text>
+        <Text style={styles.subtitle}>
+          Stable prices • Average market rates
+        </Text>
       </View>
 
       {vendorKickbackJoker && (
@@ -167,25 +201,36 @@ export default function Deli() {
           </Text>
         </View>
       )}
-      
+
       <FlatList
         data={candies}
         keyExtractor={(item) => item.name}
         contentContainerStyle={styles.list}
         renderItem={({ item, index }) => (
-          <TouchableOpacity style={styles.item} onPress={() => openModal(index)}>
+          <TouchableOpacity
+            style={styles.item}
+            onPress={() => openModal(index)}
+          >
             <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.price}>Price: ${item.cost.toFixed(2)} (avg)</Text>
+            <Text style={styles.price}>
+              Price: ${item.cost.toFixed(2)} (avg)
+            </Text>
             <Text style={styles.owned}>Owned: {item.quantityOwned}</Text>
             <Text style={styles.avgPrice}>
-              Avg Price: {item.averagePrice !== null ? `$${item.averagePrice.toFixed(2)}` : '—'}
+              Avg Price:{' '}
+              {item.averagePrice !== null
+                ? `$${item.averagePrice.toFixed(2)}`
+                : '—'}
             </Text>
           </TouchableOpacity>
         )}
       />
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={handleReturnToAfterSchool}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleReturnToAfterSchool}
+        >
           <Text style={styles.backButtonText}>← Back to After School</Text>
         </TouchableOpacity>
       </View>

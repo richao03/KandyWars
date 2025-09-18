@@ -23,7 +23,6 @@ import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
-import { ScoreboardButton } from '../components/ScoreboardButton';
 
 export default function Settings() {
   const { resetGame } = useGame();
@@ -542,7 +541,17 @@ export default function Settings() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Beta Leaderboard</Text>
-          <ScoreboardButton position="custom" style={styles.scoreboardButton} />
+          <TouchableOpacity
+            style={[styles.button, styles.leaderboardButton]}
+            onPress={() => router.push('/leaderboard')}
+          >
+            <Text style={styles.leaderboardButtonText}>
+              🏆 View Leaderboard
+            </Text>
+            <Text style={styles.buttonSubtext}>
+              See how you rank against other players
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -642,8 +651,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
-  scoreboardButton: {
-    alignSelf: 'stretch',
+  leaderboardButton: {
+    backgroundColor: '#f3e8ff', // Light purple background
+    borderWidth: 2,
+    borderColor: '#fbbf24', // Gold border
+  },
+  leaderboardButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#7c2d93', // Dark purple text
+    marginBottom: 4,
   },
   tutorialButton: {
     backgroundColor: '#f3e8ff', // Light purple background

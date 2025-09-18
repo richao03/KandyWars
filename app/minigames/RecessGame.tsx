@@ -17,6 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { RECESS_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -39,8 +40,71 @@ const GESTURE_IMAGES = {
   scissors: require('../../assets/images/scissors.png'),
 };
 
+// ===== ANIMATION CONFIGURATION =====
+// Spring physics settings
+const SPRING_CONFIG = {
+  damping: 25, // Higher = less bouncy (15-30 recommended)
+  stiffness: 170, // Higher = quicker settling (100-200 recommended)
+};
+
+// Countdown animation settings
+const COUNTDOWN_CONFIG = {
+  damping: 2, // Countdown scale bounce
+  stiffness: 100, // Countdown scale speed
+  showDuration: 700, // How long countdown number shows (ms)
+  fadeDuration: 300, // How long countdown fades out (ms)
+};
+
+// Stage-specific timing settings (in milliseconds)
+const STAGE_TIMINGS = {
+  stage1: {
+    computerPreviewDuration: 1000, // How long to show computer choice
+    playerTimeLimit: 2000, // Time limit for player choice
+  },
+  stage2: {
+    decoyDuration: 700, // How long to show decoy gesture
+    realGestureDuration: 800, // How long to show real gesture
+    playerTimeLimit: 1800, // Time limit for player choice
+  },
+  stage3: {
+    firstDecoyDuration: 600, // How long to show first decoy
+    secondDecoyDuration: 600, // How long to show second decoy
+    realGestureFlash: 200, // Very quick flash of real gesture
+    playerTimeLimit: 1000, // Time limit for player choice
+  },
+  resultDisplayDuration: 2000, // How long to show result before next round
+};
+
+// Hand positions for each entrance style
+// Adjust these to control where hands end up
+const HAND_POSITIONS = {
+  // Style 0: Diagonal positioning (player top-left, CPU bottom-right)
+  style0: {
+    player: { x: -58, y: -175 }, // Negative X = left, Negative Y = up
+    cpu: { x: 112, y: 145 }, // Positive X = right, Positive Y = down
+  },
+  // Style 1: Reversed diagonal (player bottom-left, CPU top-right)
+  style1: {
+    player: { x: -49, y: 55 },
+    cpu: { x: 93, y: -76 },
+  },
+  // Style 2: Horizontal (both centered vertically)
+  style2: {
+    player: { x: -49, y: 0 },
+    cpu: { x: 98, y: 0 },
+  },
+};
+
+// Rotation angles for each entrance style
+const HAND_ROTATIONS = {
+  style0: { player: 135, cpu: 315 }, // Diagonal angles
+  style1: { player: 45, cpu: 225 }, // Opposite diagonal
+  style2: { player: 90, cpu: 270 }, // Facing each other horizontally
+};
+
 export default function RecessGame({ onComplete }: RecessGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
+  const { trackMinigamePlayed } = useScoreboard();
 
   // Game state
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'countdown', 'playing', 'result', 'jokerSelection', 'computerChoice', 'hint'
@@ -116,10 +180,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     const animateCountdown = () => {
       countdownScale.value = 0;
       countdownOpacity.value = 1;
-      countdownScale.value = withSpring(1, { damping: 2, stiffness: 100 });
+      countdownScale.value = withSpring(1, {
+        damping: COUNTDOWN_CONFIG.damping,
+        stiffness: COUNTDOWN_CONFIG.stiffness,
+      });
       countdownOpacity.value = withSequence(
-        withTiming(1, { duration: 700 }),
-        withTiming(0, { duration: 300 })
+        withTiming(1, { duration: COUNTDOWN_CONFIG.showDuration }),
+        withTiming(0, { duration: COUNTDOWN_CONFIG.fadeDuration })
       );
     };
 
@@ -185,8 +252,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       setTimeout(() => {
         setShowComputerPreview(false);
         setGameState('playing');
-        startPlayerTimeout(2000); // Generous time limit
-      }, 1000); // Show computer choice for 1 second
+        startPlayerTimeout(STAGE_TIMINGS.stage1.playerTimeLimit);
+      }, STAGE_TIMINGS.stage1.computerPreviewDuration);
     } else if (stageToUse === 2) {
       // Stage 2: Show hint animation with decoy then real gesture
       console.log(
@@ -208,9 +275,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         setTimeout(() => {
           setHintGesture(null);
           setGameState('playing');
-          startPlayerTimeout(1800); // Medium time limit
-        }, 800); // Show real gesture for 800ms
-      }, 700); // Show decoy for 700ms
+          startPlayerTimeout(STAGE_TIMINGS.stage2.playerTimeLimit);
+        }, STAGE_TIMINGS.stage2.realGestureDuration);
+      }, STAGE_TIMINGS.stage2.decoyDuration);
     } else {
       // Stage 3: Show hint with 2 decoys then quick flash of real gesture
       console.log(
@@ -236,10 +303,10 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           setTimeout(() => {
             setHintGesture(null);
             setGameState('playing');
-            startPlayerTimeout(1000); // Very short time limit
-          }, 200); // Very quick flash (200ms)
-        }, 600); // Show second decoy for 600ms
-      }, 600); // Show first decoy for 600ms
+            startPlayerTimeout(STAGE_TIMINGS.stage3.playerTimeLimit);
+          }, STAGE_TIMINGS.stage3.realGestureFlash);
+        }, STAGE_TIMINGS.stage3.secondDecoyDuration);
+      }, STAGE_TIMINGS.stage3.firstDecoyDuration);
     }
   };
 
@@ -280,9 +347,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     if (!choice) {
       // Player timed out
       const newLosses = losses + 1;
-      console.log(
-        `Player timed out! Losses: ${newLosses}/3 on stage ${stage}`
-      );
+      console.log(`Player timed out! Losses: ${newLosses}/3 on stage ${stage}`);
       setLastResult('lose');
       setLosses(newLosses);
 
@@ -310,10 +375,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             },
             false // Non-dismissible - must click to continue
           );
-        } else if (gameState !== 'levelComplete' && gameState !== 'jokerSelection') {
+        } else if (
+          gameState !== 'levelComplete' &&
+          gameState !== 'jokerSelection'
+        ) {
           startCountdown();
         }
-      }, 2000); // Wait for result animation
+      }, STAGE_TIMINGS.resultDisplayDuration);
 
       return; // Exit early to prevent duplicate processing
     } else if (computerChoice) {
@@ -331,9 +399,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
         if (newWins >= 4) {
           shouldCompleteStage = true;
-          console.log(`🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins!`);
+          console.log(
+            `🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins!`
+          );
         } else {
-          console.log(`Win ${newWins}/4 on stage ${stage} - need ${4 - newWins} more wins`);
+          console.log(
+            `Win ${newWins}/4 on stage ${stage} - need ${4 - newWins} more wins`
+          );
         }
       } else if (result === 'tie') {
         setScore((prev) => prev + 5);
@@ -359,15 +431,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
       // Show result then start next round or complete stage
       setTimeout(() => {
-        // Reset positions to edges of game area (not off-screen)
-        playerGestureX.value = -200;
-        playerGestureY.value = 0;
-        computerGestureX.value = 200;
-        computerGestureY.value = 0;
-
         // Check if stage was just completed (4 wins total)
         if (shouldCompleteStage) {
-          console.log(`🎯 Calling handleStageComplete() for stage ${stage} after showing result`);
+          console.log(
+            `🎯 Calling handleStageComplete() for stage ${stage} after showing result`
+          );
           handleStageComplete();
         } else if (isGameOver) {
           // Game over - show modal
@@ -386,9 +454,14 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           gameState !== 'jokerSelection' &&
           !isProcessingRound
         ) {
+          // Reset positions to edges of game area (not off-screen)
+          playerGestureX.value = -200;
+          playerGestureY.value = 0;
+          computerGestureX.value = 200;
+          computerGestureY.value = 0;
           startCountdown();
         }
-      }, 2000);
+      }, STAGE_TIMINGS.resultDisplayDuration);
     }
   };
 
@@ -422,17 +495,19 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             console.log(`Stage advancing from ${prev} to ${newStage}`);
             return newStage;
           });
-          
+
           // Use setTimeout to ensure state update completes before starting countdown
           setTimeout(() => {
             setRoundsPlayed(0);
             setWins(0); // Reset wins for new stage
             setLosses(0); // Reset losses for new stage
             setIsFirstRound(true); // Reset to show full countdown for new stage
-            
+
             // Pass the new stage to ensure correct stage logic is used
             setTimeout(() => {
-              console.log(`🚀 Starting countdown for newly advanced stage: ${newStage}`);
+              console.log(
+                `🚀 Starting countdown for newly advanced stage: ${newStage}`
+              );
               startCountdown(newStage);
             }, 100); // Additional delay to ensure all state updates
           }, 200); // Increased delay to ensure stage state updates properly
@@ -456,6 +531,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Start game
   const startGame = () => {
+    // Track minigame play for analytics
+    trackMinigamePlayed('recess');
+
     setGameState('countdown');
     setStage(1);
     setScore(0);
@@ -573,104 +651,97 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         );
         if (entranceStyle === 0) {
           // Position in opposite corners of game area
-          playerGestureX.value = withSpring(-70, {
-            // 🎯 ADJUST: Player X position (moved right 30px total: -100 + 30 = -70)
-            damping: 15,
-            stiffness: 100,
-          }); // Left side of game area
-          playerGestureY.value = withSpring(-140, {
-            // 🎯 ADJUST: Player Y position (moved up 40px total: -100 - 40 = -140)
-            damping: 15,
-            stiffness: 100,
-          }); // Upper portion
-          computerGestureX.value = withSpring(100, {
-            // 🎯 ADJUST: CPU X position (moved left 20px: 120 - 20 = 100)
-            damping: 15,
-            stiffness: 100,
-          }); // Right side of game area
-          computerGestureY.value = withSpring(100, {
-            // 🎯 ADJUST: CPU Y position (reduced to Y=50)
-            damping: 15,
-            stiffness: 100,
-          }); // Lower portion
-          console.log('🔥 BOTTOM-RIGHT CPU POSITION SET TO: X=100, Y=100');
+          playerGestureX.value = withSpring(
+            HAND_POSITIONS.style0.player.x,
+            SPRING_CONFIG
+          );
+          playerGestureY.value = withSpring(
+            HAND_POSITIONS.style0.player.y,
+            SPRING_CONFIG
+          );
+          computerGestureX.value = withSpring(
+            HAND_POSITIONS.style0.cpu.x,
+            SPRING_CONFIG
+          );
+          computerGestureY.value = withSpring(
+            HAND_POSITIONS.style0.cpu.y,
+            SPRING_CONFIG
+          );
+          console.log(
+            `🔥 BOTTOM-RIGHT CPU POSITION SET TO: X=${HAND_POSITIONS.style0.cpu.x}, Y=${HAND_POSITIONS.style0.cpu.y}`
+          );
         } else if (entranceStyle === 1) {
           // Position in opposite corners (reversed)
-          playerGestureX.value = withSpring(-50, {
-            // 🎯 ADJUST: Player X position (moved right 30px total: -80 + 30 = -50)
-            damping: 15,
-            stiffness: 100,
-          }); // Left side of game area
-          playerGestureY.value = withSpring(0, {
-            // 🎯 ADJUST: Player Y position (moved up 40px total: 40 - 40 = 0)
-            damping: 15,
-            stiffness: 100,
-          }); // Lower portion
-          computerGestureX.value = withSpring(80, {
-            // 🎯 ADJUST: CPU X position
-            damping: 15,
-            stiffness: 100,
-          }); // Right side of game area
-          computerGestureY.value = withSpring(-40, {
-            // 🎯 ADJUST: CPU Y position
-            damping: 15,
-            stiffness: 100,
-          }); // Upper portion
+          playerGestureX.value = withSpring(
+            HAND_POSITIONS.style1.player.x,
+            SPRING_CONFIG
+          );
+          playerGestureY.value = withSpring(
+            HAND_POSITIONS.style1.player.y,
+            SPRING_CONFIG
+          );
+          computerGestureX.value = withSpring(
+            HAND_POSITIONS.style1.cpu.x,
+            SPRING_CONFIG
+          );
+          computerGestureY.value = withSpring(
+            HAND_POSITIONS.style1.cpu.y,
+            SPRING_CONFIG
+          );
         } else {
           // Horizontal positions within game area
-          playerGestureX.value = withSpring(-50, {
-            // 🎯 ADJUST: Player X position (moved right 30px total: -80 + 30 = -50)
-            damping: 15,
-            stiffness: 100,
-          }); // Left side
-          playerGestureY.value = withSpring(10, {
-            damping: 15,
-            stiffness: 100,
-          }); // 🎯 ADJUST: Player Y position (moved up 40px total: 50 - 40 = 10)
-          computerGestureX.value = withSpring(80, {
-            // 🎯 ADJUST: CPU X position
-            damping: 15,
-            stiffness: 100,
-          }); // Right side
-          computerGestureY.value = withSpring(-50, {
-            // 🎯 ADJUST: CPU Y position (moved up 50px: 0 -> -50)
-            damping: 15,
-            stiffness: 100,
-          });
-          console.log('🔥 CENTER-RIGHT CPU POSITION SET TO: X=80, Y=-50');
+          playerGestureX.value = withSpring(
+            HAND_POSITIONS.style2.player.x,
+            SPRING_CONFIG
+          );
+          playerGestureY.value = withSpring(
+            HAND_POSITIONS.style2.player.y,
+            SPRING_CONFIG
+          );
+          computerGestureX.value = withSpring(
+            HAND_POSITIONS.style2.cpu.x,
+            SPRING_CONFIG
+          );
+          computerGestureY.value = withSpring(
+            HAND_POSITIONS.style2.cpu.y,
+            SPRING_CONFIG
+          );
+          console.log(
+            `🔥 CENTER-RIGHT CPU POSITION SET TO: X=${HAND_POSITIONS.style2.cpu.x}, Y=${HAND_POSITIONS.style2.cpu.y}`
+          );
         }
 
         // Animate rotations to final positions (maintain entrance angle for diagonals)
         if (entranceStyle === 0) {
           // Top-left/bottom-right diagonal - keep at diagonal angles
-          playerRotation.value = withSpring(135, {
-            damping: 15,
-            stiffness: 100,
-          });
-          computerRotation.value = withSpring(315, {
-            damping: 15,
-            stiffness: 100,
-          });
+          playerRotation.value = withSpring(
+            HAND_ROTATIONS.style0.player,
+            SPRING_CONFIG
+          );
+          computerRotation.value = withSpring(
+            HAND_ROTATIONS.style0.cpu,
+            SPRING_CONFIG
+          );
         } else if (entranceStyle === 1) {
           // Bottom-left/top-right diagonal - keep at diagonal angles
-          playerRotation.value = withSpring(45, {
-            damping: 15,
-            stiffness: 100,
-          });
-          computerRotation.value = withSpring(225, {
-            damping: 15,
-            stiffness: 100,
-          });
+          playerRotation.value = withSpring(
+            HAND_ROTATIONS.style1.player,
+            SPRING_CONFIG
+          );
+          computerRotation.value = withSpring(
+            HAND_ROTATIONS.style1.cpu,
+            SPRING_CONFIG
+          );
         } else {
           // Straight entrance - standard horizontal positions
-          playerRotation.value = withSpring(90, {
-            damping: 15,
-            stiffness: 100,
-          });
-          computerRotation.value = withSpring(270, {
-            damping: 15,
-            stiffness: 100,
-          });
+          playerRotation.value = withSpring(
+            HAND_ROTATIONS.style2.player,
+            SPRING_CONFIG
+          );
+          computerRotation.value = withSpring(
+            HAND_ROTATIONS.style2.cpu,
+            SPRING_CONFIG
+          );
         }
 
         // Reset the trigger

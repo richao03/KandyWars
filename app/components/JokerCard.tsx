@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Modal from './ReanimatedModal';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/context/GameContext';
 import { useInventory } from '../../src/context/InventoryContext';
@@ -15,6 +14,7 @@ import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
+import Modal from './ReanimatedModal';
 
 interface JokerCardProps {
   joker: {
@@ -42,6 +42,7 @@ const CANDY_TYPES = [
   'Snickers',
   'Sour Patch Kids',
   'Warheads',
+  'Jaw Breaker',
 ];
 
 function JokerCard({
@@ -240,6 +241,7 @@ function JokerCard({
         'Snickers',
         'Sour Patch Kids',
         'Warheads',
+        'Jaw Breaker',
       ];
       CANDY_TYPES.forEach((candy) => {
         allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
@@ -274,6 +276,7 @@ function JokerCard({
         'Snickers',
         'Sour Patch Kids',
         'Warheads',
+        'Jaw Breaker',
       ];
       CANDY_TYPES.forEach((candy) => {
         allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
@@ -659,11 +662,7 @@ function JokerCard({
       }
     } catch (error) {
       console.error('🗣️ Pursuasion: Error during activation:', error);
-      showAlert(
-        'Error',
-        'An error occurred while activating Pursuasion',
-        '❌'
-      );
+      showAlert('Error', 'An error occurred while activating Pursuasion', '❌');
     }
   };
 
@@ -721,7 +720,9 @@ function JokerCard({
               <Text style={[styles.typeIndicatorText, { color: typeColor }]}>
                 {typeText}
               </Text>
-              {joker.type === 'one-time' && !disableActivation && !isAfterSchool ? (
+              {joker.type === 'one-time' &&
+              !disableActivation &&
+              !isAfterSchool ? (
                 <TouchableOpacity
                   style={styles.activateButton}
                   onPress={handleActivate}

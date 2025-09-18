@@ -154,7 +154,6 @@ export const PROGRESSIVE_TUTORIALS: Record<TutorialStage, TutorialSequence> = {
     ],
   },
 
-
   day2_start: {
     id: 'day2_start',
     stage: 'day2_start',
@@ -331,7 +330,6 @@ export const shouldShowTutorial = (
 
     case 'day1_period3':
       return gameState.day === 1 && gameState.period === 3;
-
 
     case 'day2_start':
       return gameState.day === 2 && gameState.period === 1;

@@ -21,7 +21,7 @@ export default function GameModal({
   onClose,
   onConfirm,
   theme = 'school',
-  dismissible = true
+  dismissible = false
 }: GameModalProps) {
   const handleConfirm = () => {
     if (onConfirm) {
@@ -53,10 +53,10 @@ export function useGameModal() {
     message: '',
     emoji: '🎮',
     onConfirm: undefined as (() => void) | undefined,
-    dismissible: true
+    dismissible: false
   });
 
-  const showModal = (title: string, message: string, emoji = '🎮', onConfirm?: () => void, dismissible = true) => {
+  const showModal = (title: string, message: string, emoji = '🎮', onConfirm?: () => void, dismissible = false) => {
     setModal({ visible: true, title, message, emoji, onConfirm, dismissible });
   };
 

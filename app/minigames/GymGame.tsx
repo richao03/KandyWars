@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Dimensions,
   StyleSheet,
@@ -8,15 +8,14 @@ import {
   View,
 } from 'react-native';
 import {
+  Gesture,
+  GestureDetector,
   GestureHandlerRootView,
-  PanGestureHandler,
 } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedGestureHandler,
-} from 'react-native-reanimated';
+import Animated, { runOnJS } from 'react-native-reanimated';
 import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
@@ -32,8 +31,29 @@ interface GymGameProps {
 
 const GRID_SIZE = 15;
 const TEACHER_POS = { x: 7, y: 7 }; // Center of 15x15 grid (0-indexed)
-const START_POS = { x: 0, y: 0 };
-const GOAL_POS = { x: 14, y: 14 };
+
+// Function to get random opposite corner positions
+const getRandomCornerPositions = (): { start: Position; goal: Position } => {
+  const corners = [
+    { x: 0, y: 0 },           // top-left
+    { x: GRID_SIZE - 1, y: 0 },     // top-right
+    { x: 0, y: GRID_SIZE - 1 },     // bottom-left
+    { x: GRID_SIZE - 1, y: GRID_SIZE - 1 }, // bottom-right
+  ];
+
+  // Pick random corner for start
+  const startIndex = Math.floor(Math.random() * corners.length);
+  const start = corners[startIndex];
+
+  // Get opposite corner for goal
+  let goal: Position;
+  if (startIndex === 0) goal = corners[3]; // top-left -> bottom-right
+  else if (startIndex === 1) goal = corners[2]; // top-right -> bottom-left
+  else if (startIndex === 2) goal = corners[1]; // bottom-left -> top-right
+  else goal = corners[0]; // bottom-right -> top-left
+
+  return { start, goal };
+};
 
 // Calculate cell size to match container width
 const { width: screenWidth } = Dimensions.get('window');
@@ -42,24 +62,127 @@ const gridBorder = 4; // 2px border on each side
 const availableWidth = screenWidth - containerPadding - gridBorder;
 const CELL_SIZE = Math.floor(availableWidth / GRID_SIZE);
 
-// Generate pattern that includes all 4 directions
-const generatePattern = (length: number): string[] => {
-  const directions = ['⬆️', '⬇️', '⬅️', '➡️'];
-  const pattern: string[] = [...directions]; // Start with one of each
+// Teacher looks in repeating pattern: right, down, left, up
+const TEACHER_PATTERN = ['➡️', '⬇️', '⬅️', '⬆️'];
 
-  // Add random directions to reach desired length
-  while (pattern.length < length) {
-    const randomDir = directions[Math.floor(Math.random() * directions.length)];
-    pattern.push(randomDir);
+// Get initial position for hall monitor next to teacher
+const getInitialHallMonitorPos = (startPos: Position, goalPos: Position): Position => {
+  const adjacentPositions = [
+    { x: TEACHER_POS.x, y: TEACHER_POS.y - 1 }, // up
+    { x: TEACHER_POS.x, y: TEACHER_POS.y + 1 }, // down
+    { x: TEACHER_POS.x - 1, y: TEACHER_POS.y }, // left
+    { x: TEACHER_POS.x + 1, y: TEACHER_POS.y }, // right
+  ];
+
+  // Filter for valid positions within bounds
+  const validPositions = adjacentPositions.filter(pos =>
+    pos.x >= 0 && pos.x < GRID_SIZE &&
+    pos.y >= 0 && pos.y < GRID_SIZE &&
+    !(pos.x === startPos.x && pos.y === startPos.y) &&
+    !(pos.x === goalPos.x && pos.y === goalPos.y)
+  );
+
+  // Return random valid adjacent position, or fallback to a safe position
+  if (validPositions.length > 0) {
+    return validPositions[Math.floor(Math.random() * validPositions.length)];
   }
 
-  // Shuffle the pattern
-  for (let i = pattern.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pattern[i], pattern[j]] = [pattern[j], pattern[i]];
+  // Fallback if no valid adjacent positions (shouldn't happen with our grid)
+  return { x: TEACHER_POS.x + 1, y: TEACHER_POS.y };
+};
+
+// Initialize multiple hall monitors based on level
+const initializeHallMonitors = (levelNum: number, startPos: Position, goalPos: Position): Position[] => {
+  const numMonitors = levelNum; // Level 1 = 1 monitor, Level 2 = 2 monitors, Level 3 = 3 monitors
+  const monitors: Position[] = [];
+  const usedPositions = new Set<string>();
+
+  // Add teacher position and start/goal to avoid list
+  usedPositions.add(`${TEACHER_POS.x}-${TEACHER_POS.y}`);
+  usedPositions.add(`${startPos.x}-${startPos.y}`);
+  usedPositions.add(`${goalPos.x}-${goalPos.y}`);
+
+  // Get all adjacent positions to teacher
+  const adjacentPositions = [
+    { x: TEACHER_POS.x, y: TEACHER_POS.y - 1 }, // up
+    { x: TEACHER_POS.x, y: TEACHER_POS.y + 1 }, // down
+    { x: TEACHER_POS.x - 1, y: TEACHER_POS.y }, // left
+    { x: TEACHER_POS.x + 1, y: TEACHER_POS.y }, // right
+  ];
+
+  // Filter for valid positions within bounds and not on start/goal
+  const validAdjacentPositions = adjacentPositions.filter(pos =>
+    pos.x >= 0 && pos.x < GRID_SIZE &&
+    pos.y >= 0 && pos.y < GRID_SIZE &&
+    !(pos.x === startPos.x && pos.y === startPos.y) &&
+    !(pos.x === goalPos.x && pos.y === goalPos.y)
+  );
+
+  // Place monitors in adjacent positions to teacher
+  for (let i = 0; i < numMonitors; i++) {
+    let monitorPos: Position;
+
+    if (i < validAdjacentPositions.length && !usedPositions.has(`${validAdjacentPositions[i].x}-${validAdjacentPositions[i].y}`)) {
+      // Use available adjacent position
+      monitorPos = validAdjacentPositions[i];
+    } else {
+      // If no more adjacent positions available, use any available adjacent position not yet used
+      const availablePositions = validAdjacentPositions.filter(pos =>
+        !usedPositions.has(`${pos.x}-${pos.y}`)
+      );
+
+      if (availablePositions.length > 0) {
+        monitorPos = availablePositions[Math.floor(Math.random() * availablePositions.length)];
+      } else {
+        // Fallback: place near teacher but not necessarily adjacent
+        monitorPos = { x: TEACHER_POS.x + 1, y: TEACHER_POS.y + 1 };
+      }
+    }
+
+    monitors.push(monitorPos);
+    usedPositions.add(`${monitorPos.x}-${monitorPos.y}`);
   }
 
-  return pattern;
+  return monitors;
+};
+
+// Move hall monitor to adjacent cell (up, down, left, right)
+const moveHallMonitorAdjacent = (currentPos: Position): Position => {
+  const directions = [
+    { x: 0, y: -1 }, // up
+    { x: 0, y: 1 }, // down
+    { x: -1, y: 0 }, // left
+    { x: 1, y: 0 }, // right
+  ];
+
+  const validMoves: Position[] = [];
+
+  // Find all valid adjacent positions
+  directions.forEach((dir) => {
+    const newPos = {
+      x: currentPos.x + dir.x,
+      y: currentPos.y + dir.y,
+    };
+
+    // Check if position is within bounds and not on teacher
+    if (
+      newPos.x >= 0 &&
+      newPos.x < GRID_SIZE &&
+      newPos.y >= 0 &&
+      newPos.y < GRID_SIZE &&
+      !(newPos.x === TEACHER_POS.x && newPos.y === TEACHER_POS.y)
+    ) {
+      validMoves.push(newPos);
+    }
+  });
+
+  // If no valid moves, stay in place
+  if (validMoves.length === 0) {
+    return currentPos;
+  }
+
+  // Pick random valid move
+  return validMoves[Math.floor(Math.random() * validMoves.length)];
 };
 
 const DIRECTIONS = {
@@ -71,80 +194,53 @@ const DIRECTIONS = {
 
 export default function GymGame({ onComplete }: GymGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
+  const { trackMinigamePlayed } = useScoreboard();
 
   const [gameState, setGameState] = useState<
     'instructions' | 'playing' | 'jokerSelection'
   >('instructions');
   const [level, setLevel] = useState(1);
-  const [playerPos, setPlayerPos] = useState<Position>(START_POS);
-  const [teacherDirection, setTeacherDirection] = useState('⬆️');
-  const [patternIndex, setPatternIndex] = useState(0);
-  const [currentPattern, setCurrentPattern] = useState<string[]>([]);
+  const [cornerPositions, setCornerPositions] = useState(() => getRandomCornerPositions());
+  const [playerPos, setPlayerPos] = useState<Position>(cornerPositions.start);
+  const [teacherDirection, setTeacherDirection] = useState('➡️');
+  const [teacherPatternIndex, setTeacherPatternIndex] = useState(0);
+  const [hallMonitors, setHallMonitors] = useState<Position[]>(
+    initializeHallMonitors(1, cornerPositions.start, cornerPositions.goal)
+  );
   const [gameActive, setGameActive] = useState(false);
   const [moves, setMoves] = useState(0);
-  const [showingPattern, setShowingPattern] = useState(false);
-  const [patternDisplayIndex, setPatternDisplayIndex] = useState(0);
-  const [lostPosition, setLostPosition] = useState(-1);
   const [traveledCells, setTraveledCells] = useState<Set<string>>(new Set());
 
   // Initialize level
   const initializeLevel = (levelNum: number) => {
-    // Generate pattern based on level: Level 1 = 5, Level 2 = 7, Level 3 = 8
-    let patternLength = 5;
-    if (levelNum === 2) patternLength = 7;
-    if (levelNum === 3) patternLength = 8;
-
-    const pattern = generatePattern(patternLength);
-
-    setCurrentPattern(pattern);
-    setPatternIndex(0);
-    setTeacherDirection(pattern[0]);
-    setPlayerPos(START_POS);
+    // Generate new random corner positions for each level
+    const newCorners = getRandomCornerPositions();
+    setCornerPositions(newCorners);
+    setPlayerPos(newCorners.start);
+    setTeacherDirection(TEACHER_PATTERN[0]);
+    setTeacherPatternIndex(0);
+    setHallMonitors(initializeHallMonitors(levelNum, newCorners.start, newCorners.goal));
     setMoves(0);
-    setGameActive(false);
-    setShowingPattern(true);
-    setPatternDisplayIndex(0);
-    setLostPosition(-1);
-    setTraveledCells(new Set([`${START_POS.x}-${START_POS.y}`]));
+    setTraveledCells(new Set([`${newCorners.start.x}-${newCorners.start.y}`]));
+    setGameActive(true);
   };
 
-  // Show pattern animation
-  useEffect(() => {
-    if (!showingPattern || gameState !== 'playing') return;
-
-    const interval = setInterval(() => {
-      setPatternDisplayIndex((prev) => {
-        const nextIndex = prev + 1;
-
-        if (nextIndex >= currentPattern.length) {
-          // Pattern display complete
-          setTimeout(() => {
-            setShowingPattern(false);
-            setGameActive(true);
-            setTeacherDirection(currentPattern[0]);
-          }, 1000);
-          clearInterval(interval);
-          return prev;
-        }
-
-        return nextIndex;
-      });
-    }, 800); // Show each direction for 800ms
-
-    return () => clearInterval(interval);
-  }, [showingPattern, currentPattern, gameState]);
+  // Update teacher direction every move based on pattern
+  const updateTeacherDirection = () => {
+    const nextIndex = (teacherPatternIndex + 1) % TEACHER_PATTERN.length;
+    setTeacherPatternIndex(nextIndex);
+    setTeacherDirection(TEACHER_PATTERN[nextIndex]);
+  };
 
   const handleMove = (direction: string) => {
-    if (!gameActive || showingPattern) return;
+    if (!gameActive) return;
 
-    // Check if teacher is watching this direction
+    // Check if moving in the same direction teacher is looking - CAUGHT!
     if (direction === teacherDirection) {
-      // Caught! Game over
       setGameActive(false);
-      setLostPosition(patternIndex);
       showModal(
         '👁️ Caught by Teacher!',
-        `The teacher was looking ${teacherDirection} at position ${patternIndex + 1} and saw you move!`,
+        `The teacher was looking ${teacherDirection} and saw you move in that direction!`,
         '👁️',
         () => {
           initializeLevel(level);
@@ -153,12 +249,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
       return;
     }
 
-    // Valid move - teacher changes direction
-    const nextPatternIndex = (patternIndex + 1) % currentPattern.length;
-    setPatternIndex(nextPatternIndex);
-    setTeacherDirection(currentPattern[nextPatternIndex]);
-
-    // Move player
+    // Calculate new player position
     const delta = DIRECTIONS[direction as keyof typeof DIRECTIONS];
     const newPos = {
       x: Math.max(0, Math.min(GRID_SIZE - 1, playerPos.x + delta.x)),
@@ -170,12 +261,40 @@ export default function GymGame({ onComplete }: GymGameProps) {
       return;
     }
 
+    // Move all hall monitors to adjacent cells
+    const newHallMonitors = hallMonitors.map(monitor =>
+      moveHallMonitorAdjacent(monitor)
+    );
+
+    // Check if any hall monitor lands on same square as player - CAUGHT!
+    const caughtByMonitor = newHallMonitors.some(monitor =>
+      newPos.x === monitor.x && newPos.y === monitor.y
+    );
+
+    if (caughtByMonitor) {
+      setGameActive(false);
+      showModal(
+        '🚨 Caught by Hall Monitor!',
+        `A hall monitor moved to your position and caught you!`,
+        '🚨',
+        () => {
+          initializeLevel(level);
+        }
+      );
+      return;
+    }
+
+    // Valid move - update positions
     setPlayerPos(newPos);
+    setHallMonitors(newHallMonitors);
     setMoves((prev) => prev + 1);
     setTraveledCells((prev) => new Set([...prev, `${newPos.x}-${newPos.y}`]));
 
+    // Update teacher direction (cycles through pattern)
+    updateTeacherDirection();
+
     // Check if reached goal
-    if (newPos.x === GOAL_POS.x && newPos.y === GOAL_POS.y) {
+    if (newPos.x === cornerPositions.goal.x && newPos.y === cornerPositions.goal.y) {
       setGameActive(false);
 
       if (level < 3) {
@@ -201,36 +320,31 @@ export default function GymGame({ onComplete }: GymGameProps) {
     }
   };
 
-  // Handle swipe gestures with reanimated
-  const gestureHandler = useAnimatedGestureHandler({
-    onStart: () => {
-      // Reset values
-    },
-    onActive: () => {
-      // Track gesture
-    },
-    onEnd: (event) => {
-      const { translationX, translationY } = event;
-      const absX = Math.abs(translationX);
-      const absY = Math.abs(translationY);
+  // Handle swipe gestures with new Gesture API
+  const panGesture = Gesture.Pan().onEnd((event) => {
+    const { translationX, translationY } = event;
+    const absX = Math.abs(translationX);
+    const absY = Math.abs(translationY);
 
-      // Determine swipe direction with lower threshold
-      if (absX > 20 || absY > 20) {
-        let direction = '';
-        if (absX > absY) {
-          direction = translationX > 0 ? '➡️' : '⬅️';
-        } else {
-          direction = translationY > 0 ? '⬇️' : '⬆️';
-        }
-
-        if (direction) {
-          runOnJS(handleMove)(direction);
-        }
+    // Determine swipe direction with lower threshold
+    if (absX > 20 || absY > 20) {
+      let direction = '';
+      if (absX > absY) {
+        direction = translationX > 0 ? '➡️' : '⬅️';
+      } else {
+        direction = translationY > 0 ? '⬇️' : '⬆️';
       }
-    },
+
+      if (direction) {
+        runOnJS(handleMove)(direction);
+      }
+    }
   });
 
   const startGame = () => {
+    // Track minigame play for analytics
+    trackMinigamePlayed('gym');
+
     setGameState('playing');
     setLevel(1);
     initializeLevel(1);
@@ -251,28 +365,24 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const renderCell = (x: number, y: number) => {
     const isPlayer = playerPos.x === x && playerPos.y === y;
     const isTeacher = x === TEACHER_POS.x && y === TEACHER_POS.y;
-    const isStart = x === START_POS.x && y === START_POS.y;
-    const isGoal = x === GOAL_POS.x && y === GOAL_POS.y;
+    const isHallMonitor = hallMonitors.some(monitor => monitor.x === x && monitor.y === y);
+    const isStart = x === cornerPositions.start.x && y === cornerPositions.start.y;
+    const isGoal = x === cornerPositions.goal.x && y === cornerPositions.goal.y;
     const isTraveled = traveledCells.has(`${x}-${y}`);
 
     let cellContent = '';
     let cellStyle = styles.gridCell;
 
     if (isTeacher) {
-      // Show pattern or teacher
-      if (showingPattern) {
-        cellContent =
-          patternDisplayIndex < currentPattern.length
-            ? currentPattern[patternDisplayIndex]
-            : '👨‍🏫';
-        cellStyle = [styles.gridCell, styles.teacherCell];
-      } else {
-        cellContent = '👨‍🏫';
-        cellStyle = [styles.gridCell, styles.teacherCell];
-      }
+      // Show teacher with current direction
+      cellContent = `${teacherDirection}`;
+      cellStyle = [styles.gridCell, styles.teacherCell];
     } else if (isPlayer) {
       cellContent = '🏃‍♂️';
       cellStyle = [styles.gridCell, styles.playerCell];
+    } else if (isHallMonitor) {
+      cellContent = '🚨';
+      cellStyle = [styles.gridCell, styles.hallMonitorCell];
     } else if (isStart && !isPlayer) {
       cellContent = '🚪';
       cellStyle = [styles.gridCell, styles.startCell];
@@ -280,6 +390,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
       cellContent = '🎯';
       cellStyle = [styles.gridCell, styles.goalCell];
     } else if (isTraveled) {
+      cellContent = '';
       cellStyle = [styles.gridCell, styles.traveledCell];
     }
 
@@ -320,8 +431,22 @@ export default function GymGame({ onComplete }: GymGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>👁️</Text>
               <Text style={styles.stepText}>
-                Memorize the pattern shown at the start - the teacher follows
-                this pattern!
+                Teacher looks in repeating pattern: Right ➡️, Down ⬇️, Left ⬅️,
+                Up ⬆️
+              </Text>
+            </View>
+
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>🚨</Text>
+              <Text style={styles.stepText}>
+                Hall monitors move each turn - Level 1: 1 monitor, Level 2: 2 monitors, Level 3: 3 monitors!
+              </Text>
+            </View>
+
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepText}>
+                Don't move in the same direction the teacher is looking!
               </Text>
             </View>
 
@@ -329,22 +454,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
               <Text style={styles.stepNumber}>🎯</Text>
               <Text style={styles.stepText}>
                 Get from start (🚪) to goal (🎯) without being caught
-              </Text>
-            </View>
-
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>⚠️</Text>
-              <Text style={styles.stepText}>
-                You won't see where teacher looks! Remember the pattern and
-                count your moves!
-              </Text>
-            </View>
-
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>📊</Text>
-              <Text style={styles.stepText}>
-                Level 1: 5 directions | Level 2: 7 directions | Level 3: 8
-                directions
               </Text>
             </View>
           </View>
@@ -378,44 +487,15 @@ export default function GymGame({ onComplete }: GymGameProps) {
       >
         <MinigameHUD
           title="🏃‍♂️ Gym Class Stealth"
-          subtitle={
-            showingPattern
-              ? `Memorize the pattern! (${patternDisplayIndex + 1}/${currentPattern.length})`
-              : `Teacher is watching... somewhere!`
-          }
+          subtitle={`Teacher looking: ${teacherDirection} | ${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨 | Avoid all!`}
           leftInfo={`Level ${level}/3`}
           rightInfo={`Moves: ${moves}`}
           theme="gym"
         />
 
         <View style={styles.contentContainer}>
-          <View style={styles.patternInfo}>
-            <Text style={styles.patternInfoText}>📝 Pattern:</Text>
-            <View style={styles.patternRow}>
-              {currentPattern.map((direction, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.patternItem,
-                    index === patternIndex &&
-                      !showingPattern &&
-                      lostPosition === -1 &&
-                      styles.patternItemActive,
-                    index === lostPosition &&
-                      lostPosition !== -1 &&
-                      styles.patternItemLost,
-                  ]}
-                >
-                  <Text style={styles.patternItemText}>
-                    {showingPattern || lostPosition === index ? direction : '❓'}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
           <View style={styles.gameContainer}>
-            <PanGestureHandler onGestureEvent={gestureHandler}>
+            <GestureDetector gesture={panGesture}>
               <Animated.View style={styles.swipeArea}>
                 <View style={styles.gridContainer}>
                   {Array.from({ length: GRID_SIZE }, (_, y) => (
@@ -427,7 +507,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
                   ))}
                 </View>
               </Animated.View>
-            </PanGestureHandler>
+            </GestureDetector>
           </View>
 
           <TouchableOpacity style={styles.leaveButton} onPress={handleForfeit}>
@@ -563,6 +643,9 @@ const styles = StyleSheet.create({
   },
   teacherCell: {
     backgroundColor: '#e74c3c', // Gym red for authority
+  },
+  hallMonitorCell: {
+    backgroundColor: '#f39c12', // Warning orange for hall monitor
   },
   patternCell: {
     backgroundColor: '#ffd700',

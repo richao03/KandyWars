@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useGame } from '../../src/context/GameContext';
 import { useJokers } from '../../src/context/JokerContext';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
@@ -80,6 +81,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   // Joker effects
   const { jokers } = useJokers();
   const { periodCount } = useGame();
+  const { trackMinigamePlayed } = useScoreboard();
   const studyTimeMultiplier = useStudyTimeMultiplier(jokers, periodCount);
 
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
@@ -342,19 +344,21 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             }
           }
 
-          // Create decoy values that are much closer to the path to increase difficulty
+          // Create decoy values that are more distinct from the path for better playability
           const validDecoyValues: number[] = [];
 
-          // For each adjacent path tile, add values that are slightly off
+          // For each adjacent path tile, add values that are more visually distinct
           for (const adjPathValue of adjacentPathValues) {
-            // Generate multiple decoy options with 28% larger offsets for better distinction
+            // Generate decoy options with larger offsets for easier visual distinction
             const decoyOffsets = [
-              0.352, // 28% more than 0.275 (0.275 * 1.28)
-              -0.352,
-              1.056, // 28% more than 0.825 (0.825 * 1.28)
-              -1.056,
-              0.704, // 28% more than 0.55 (0.55 * 1.28)
-              -0.704,
+              0.75,  // Larger offset for clearer visual difference
+              -0.75,
+              1.5,   // Even larger offset
+              -1.5,
+              1.25,  // Medium-large offset
+              -1.25,
+              2.0,   // Very large offset for high contrast
+              -2.0,
             ];
 
             for (const offset of decoyOffsets) {
@@ -367,7 +371,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             }
           }
 
-          // Assign a decoy value (very close to path - 0.25 to 0.75 grade off)
+          // Assign a decoy value (more distinct from path - 0.75 to 2.0 grade off)
           if (validDecoyValues.length > 0) {
             // Remove duplicates and pick randomly
             const uniqueDecoyValues = [...new Set(validDecoyValues)];
@@ -456,6 +460,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   // Initialize game when playing starts
   useEffect(() => {
     if (gameState === 'playing') {
+      // Track minigame play for analytics
+      trackMinigamePlayed('art');
+
       setStage(1);
       initializeStage(1);
       setGameRunning(true);
@@ -685,6 +692,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     ) - 2;
 
   return (
+    <>
     <View
       style={[
         styles.container,
@@ -886,17 +894,18 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         >
           <Text style={styles.footerBtnText}>🎨 Leave</Text>
         </TouchableOpacity>
-
-        <GameModal
-          visible={modal.visible}
-          title={modal.title}
-          message={modal.message}
-          emoji={modal.emoji}
-          onClose={hideModal}
-          onConfirm={modal.onConfirm}
-        />
       </View>
     </View>
+
+    <GameModal
+      visible={modal.visible}
+      title={modal.title}
+      message={modal.message}
+      emoji={modal.emoji}
+      onClose={hideModal}
+      onConfirm={modal.onConfirm}
+    />
+    </>
   );
 }
 

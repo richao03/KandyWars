@@ -15,19 +15,18 @@ interface ConfirmationModalProps {
   dismissible?: boolean; // Allow dismissing by clicking background or back button
 }
 
-export default function ConfirmationModal({ 
-  visible, 
+export default function ConfirmationModal({
+  visible,
   title,
   message,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
-  onConfirm, 
+  onConfirm,
   onCancel,
   theme = 'school',
   emoji = '❓',
-  dismissible = true
+  dismissible = true,
 }: ConfirmationModalProps) {
-  
   // Theme-specific styles
   const getThemeStyles = () => {
     switch (theme) {
@@ -41,7 +40,7 @@ export default function ConfirmationModal({
           confirmBorder: '#3a7bc8',
           cancelBg: 'rgba(255, 255, 255, 0.2)',
           cancelBorder: 'rgba(255, 255, 255, 0.3)',
-          textColor: '#ffffff'
+          textColor: '#ffffff',
         };
       case 'market':
         return {
@@ -53,7 +52,7 @@ export default function ConfirmationModal({
           confirmBorder: '#22c55e',
           cancelBg: '#f3f4f6',
           cancelBorder: '#d1d5db',
-          textColor: '#374151'
+          textColor: '#374151',
         };
       default: // school
         return {
@@ -65,7 +64,7 @@ export default function ConfirmationModal({
           confirmBorder: '#2563eb',
           cancelBg: '#f3f4f6',
           cancelBorder: '#d1d5db',
-          textColor: '#374151'
+          textColor: '#374151',
         };
     }
   };
@@ -87,10 +86,15 @@ export default function ConfirmationModal({
       hideModalContentWhileAnimating={true}
       style={styles.modalContainer}
     >
-      <View style={[styles.modal, { 
-        backgroundColor: themeStyles.background,
-        borderColor: themeStyles.border 
-      }]}>
+      <View
+        style={[
+          styles.modal,
+          {
+            backgroundColor: themeStyles.background,
+            borderColor: themeStyles.border,
+          },
+        ]}
+      >
         <Text style={styles.emoji}>{emoji}</Text>
         <Text style={[styles.title, { color: themeStyles.titleColor }]}>
           {title}
@@ -98,29 +102,40 @@ export default function ConfirmationModal({
         <Text style={[styles.message, { color: themeStyles.messageColor }]}>
           {message}
         </Text>
-        
+
         <View style={styles.buttonContainer}>
-          <TouchableOpacity 
-            style={[styles.confirmButton, { 
-              backgroundColor: themeStyles.confirmBg,
-              borderColor: themeStyles.confirmBorder 
-            }]} 
+          <TouchableOpacity
+            style={[
+              styles.confirmButton,
+              {
+                backgroundColor: themeStyles.confirmBg,
+                borderColor: themeStyles.confirmBorder,
+              },
+            ]}
             onPress={onConfirm}
           >
             <Text style={[styles.confirmButtonText, { color: '#ffffff' }]}>
               {confirmText}
             </Text>
           </TouchableOpacity>
-          
+
           {cancelText && (
-            <TouchableOpacity 
-              style={[styles.cancelButton, { 
-                backgroundColor: themeStyles.cancelBg,
-                borderColor: themeStyles.cancelBorder 
-              }]} 
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                {
+                  backgroundColor: themeStyles.cancelBg,
+                  borderColor: themeStyles.cancelBorder,
+                },
+              ]}
               onPress={onCancel}
             >
-              <Text style={[styles.cancelButtonText, { color: themeStyles.textColor }]}>
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: themeStyles.textColor },
+                ]}
+              >
                 {cancelText}
               </Text>
             </TouchableOpacity>
@@ -135,6 +150,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     justifyContent: 'center',
     margin: 20,
+    zIndex: 2,
   },
   modal: {
     borderRadius: 24,

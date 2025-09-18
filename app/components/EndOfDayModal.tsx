@@ -34,8 +34,8 @@ export default function EndOfDayModal({
       animationOutTiming={200}
       backdropTransitionInTiming={300}
       backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
+      onBackdropPress={undefined}
+      onBackButtonPress={undefined}
       useNativeDriver={true}
       hideModalContentWhileAnimating={true}
       style={styles.modalContainer}

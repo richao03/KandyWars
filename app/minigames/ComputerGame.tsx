@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
+import { useScoreboard } from '../../src/context/ScoreboardContext';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -41,6 +42,7 @@ const TECH_EMOJIS = [
 
 export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
+  const { trackMinigamePlayed } = useScoreboard();
 
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1);
@@ -178,6 +180,16 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     }
   };
 
+  // Start game
+  const startGame = () => {
+    // Track minigame play for analytics
+    trackMinigamePlayed('computer');
+
+    setGameState('playing');
+    setLevel(1);
+    initializeLevel(1);
+  };
+
   const handleLevelComplete = () => {
     setIsGameActive(false);
 
@@ -202,10 +214,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     }
   };
 
-  const selectRandomJokers = () => {
-    const shuffled = [...COMPUTER_JOKERS].sort(() => Math.random() - 0.5);
-    setSelectedJokers(shuffled.slice(0, 3));
-  };
 
   const handleJokerChoice = (jokerId: number) => {
     console.log(
@@ -282,11 +290,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
           <TouchableOpacity
             style={styles.startGameButton}
-            onPress={() => {
-              setGameState('playing');
-              setLevel(1);
-              initializeLevel(1);
-            }}
+            onPress={startGame}
           >
             <Text style={styles.startGameButtonText}>💻 Start Challenge!</Text>
           </TouchableOpacity>
@@ -303,6 +307,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   }
 
   return (
+    <>
     <View
       style={[
         styles.container,
@@ -475,17 +480,18 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         >
           <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
         </TouchableOpacity>
-
-        <GameModal
-          visible={modal.visible}
-          title={modal.title}
-          message={modal.message}
-          emoji={modal.emoji}
-          onClose={hideModal}
-          onConfirm={modal.onConfirm}
-        />
       </View>
     </View>
+
+    <GameModal
+      visible={modal.visible}
+      title={modal.title}
+      message={modal.message}
+      emoji={modal.emoji}
+      onClose={hideModal}
+      onConfirm={modal.onConfirm}
+    />
+    </>
   );
 }
 
