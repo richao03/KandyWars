@@ -11,12 +11,13 @@ import {
 import { router } from 'expo-router';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import DifficultySelectionModal from './DifficultySelectionModal';
-import NamePromptModal from './NamePromptModal';
 import StoryModal from './StoryModal';
 import { useWallet } from '../../src/context/WalletContext';
-import { nameValidationService } from '../../src/services/nameValidationService';
-import { scoreboardService } from '../../src/services/firebase';
-import { savePlayerNameStatus } from '../../src/utils/persistence';
+import { useGame } from '../../src/context/GameContext';
+import { useInventory } from '../../src/context/InventoryContext';
+import { useJokers } from '../../src/context/JokerContext';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useSeed } from '../../src/context/SeedContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,10 +33,14 @@ export default function CandyWarsTitleScreen({
   onSettings,
 }: CandyWarsTitleScreenProps) {
   const wallet = useWallet();
+  const { resetGame } = useGame();
+  const { resetInventory } = useInventory();
+  const { resetJokers } = useJokers();
+  const { resetFlavorText } = useFlavorText();
+  const { setSeed } = useSeed();
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
-  const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
@@ -48,13 +53,13 @@ export default function CandyWarsTitleScreen({
     setAnimationComplete(false);
     setShowButtons(false);
     setShowDifficultyModal(false);
-    setShowNamePrompt(false);
     setShowStoryModal(false);
     setSelectedLevel(null);
     buttonsShown.current = false;
     buttonOpacity.setValue(0);
     backgroundOpacity.setValue(1);
   }, []);
+
 
   const handleAnimationComplete = () => {
     setAnimationComplete(true);
@@ -88,7 +93,7 @@ export default function CandyWarsTitleScreen({
   const handleDifficultySelect = (level: number) => {
     setShowDifficultyModal(false);
     setSelectedLevel(level);
-    
+
     // Start fade to black, then show story modal
     console.log('🎬 Starting fade to black for level:', level);
     Animated.timing(backgroundOpacity, {
@@ -106,100 +111,41 @@ export default function CandyWarsTitleScreen({
     setShowDifficultyModal(false);
   };
 
-  const handleStoryContinue = () => {
+  const handleStoryContinue = async () => {
     setShowStoryModal(false);
 
     if (!selectedLevel) return;
 
-    // Check if user already has a name (loaded from Firebase on app start)
-    if (wallet?.playerName) {
-      console.log('🎬 User already has a name:', wallet.playerName, ', proceeding to story screen');
-      // Initialize wallet with level and existing name
-      wallet?.initializeWallet(selectedLevel, wallet.playerName);
+    // Reset all game data for a fresh start
+    console.log('🔄 CandyWarsTitleScreen: Starting game reset...');
+    try {
+      await resetGame();
+      // Reset all contexts
+      resetInventory();
+      resetJokers();
+      resetFlavorText();
 
-      // Call the new game reset logic before navigating to story screen
-      if (onNewGame) {
-        onNewGame(selectedLevel);
-      }
-
-      // Navigate to story screen instead of directly to game
-      console.log('🎬 Attempting to navigate to story-screen');
-      setTimeout(() => {
-        try {
-          console.log('🎬 Executing delayed navigation to story-screen');
-          router.replace('/story-screen');
-          console.log('🎬 Navigation call completed');
-        } catch (error) {
-          console.error('🎬 Navigation error:', error);
-        }
-      }, 500);
-    } else {
-      console.log('🎬 User does not have a name, showing name prompt');
-      setShowNamePrompt(true);
+      // Generate new seed for fresh game data and candy prices
+      const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setSeed(newSeed);
+      console.log('🔄 CandyWarsTitleScreen: Game reset complete');
+    } catch (error) {
+      console.error('🔄 CandyWarsTitleScreen: Game reset failed:', error);
     }
+
+    // Preserve existing player name - don't clear it unnecessarily
+    // The story screen will handle name prompting if needed
+    const existingPlayerName = wallet?.playerName;
+    console.log('🎬 Preserving existing player name:', existingPlayerName);
+
+    // Initialize wallet with the selected level and existing player name
+    wallet?.initializeWallet(selectedLevel, existingPlayerName);
+
+    // Always go to story screen first, username check happens there
+    console.log('🎬 Going to story screen after story modal');
+    router.push('/story-screen');
   };
 
-  const handleNameSubmit = async (name: string) => {
-    console.log('🎬 Name submitted:', name);
-    setShowNamePrompt(false);
-    
-    if (selectedLevel && onNewGame && wallet?.playerId) {
-      try {
-        // Initialize Firebase services
-        await scoreboardService.initialize();
-        
-        // Reserve the name in Firebase using the wallet's player ID
-        const nameReserved = await nameValidationService.reserveName(name, wallet.playerId);
-        
-        if (nameReserved) {
-          console.log('✅ Name reserved successfully in Firebase');
-          // Update local wallet state with the new name
-          wallet?.setPlayerName(name);
-          await savePlayerNameStatus(true);
-        } else {
-          console.warn('⚠️ Failed to reserve name in Firebase, proceeding anyway');
-          // Still update local state
-          wallet?.setPlayerName(name);
-        }
-        
-        // Initialize wallet with both level and name
-        wallet?.initializeWallet(selectedLevel, name);
-
-        // Call the new game reset logic before navigating to story screen
-        if (onNewGame) {
-          onNewGame(selectedLevel);
-        }
-
-        // Navigate to story screen instead of directly to game
-        router.push('/story-screen');
-      } catch (error) {
-        console.error('Error during name submission:', error);
-        // Still proceed with the game and update local state
-        wallet?.setPlayerName(name);
-        wallet?.initializeWallet(selectedLevel, name);
-
-        // Call the new game reset logic before navigating to story screen
-        if (onNewGame) {
-          onNewGame(selectedLevel);
-        }
-
-        // Navigate to story screen instead of directly to game
-        router.push('/story-screen');
-      }
-    }
-  };
-
-  const handleNameSkip = () => {
-    console.log('🎬 Name skipped, using default');
-    setShowNamePrompt(false);
-
-    if (selectedLevel) {
-      // Initialize wallet with level and default name
-      wallet?.initializeWallet(selectedLevel, 'Player');
-      // Navigate to story screen instead of directly to game
-      router.push('/story-screen');
-    }
-  };
 
   console.log('🎬 CandyWarsTitleScreen: Rendering - showButtons:', showButtons, 'animationComplete:', animationComplete);
 
@@ -267,11 +213,6 @@ export default function CandyWarsTitleScreen({
         onContinue={handleStoryContinue}
       />
 
-      <NamePromptModal
-        visible={showNamePrompt}
-        onSubmitName={handleNameSubmit}
-        onSkip={handleNameSkip}
-      />
     </View>
   );
 }

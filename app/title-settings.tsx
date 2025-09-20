@@ -11,11 +11,11 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useTutorial } from '../src/context/TutorialContext';
+import { useWallet } from '../src/context/WalletContext';
 import ConfirmationModal from './components/ConfirmationModal';
 
 export default function TitleSettings() {
-  const { resetAllTutorials, tutorialEnabled, setTutorialEnabled } = useTutorial();
+  const walletContext = useWallet();
 
   const [isResetting, setIsResetting] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
@@ -57,22 +57,29 @@ export default function TitleSettings() {
           setIsResetting(true);
           console.log('🗑️ Starting complete data reset...');
 
-          // Clear all AsyncStorage data
+          // Clear all AsyncStorage data first
           await AsyncStorage.clear();
+          console.log('🗑️ AsyncStorage cleared');
 
-          // Reset tutorial context
-          resetAllTutorials();
+          // Reset all contexts to their initial state
 
-          console.log('✅ All data cleared successfully');
+          // Reset wallet context completely (including username and player ID)
+          if (walletContext) {
+            // Use the complete reset method to clear all wallet data including username
+            await walletContext.completeReset();
+            console.log('🗑️ Wallet completely reset including username and player ID');
+          }
+
+          console.log('✅ All data cleared and contexts reset successfully');
 
           Alert.alert(
             'Data Reset Complete',
-            'All game data has been permanently deleted. The app will now restart.',
+            'All game data has been permanently deleted. Please restart the app to complete the reset.',
             [
               {
                 text: 'OK',
                 onPress: () => {
-                  // Navigate back to title screen
+                  // Navigate back to title screen which will reload with fresh state
                   router.replace('/title-screen');
                 },
               },
@@ -89,21 +96,6 @@ export default function TitleSettings() {
     );
   };
 
-  const handleResetTutorials = () => {
-    showConfirmModal(
-      'Reset Tutorials',
-      'This will reset all tutorial progress. You will see tutorials again when you start playing.',
-      () => {
-        resetAllTutorials();
-        hideConfirmModal();
-        Alert.alert('Tutorials Reset', 'All tutorial progress has been reset.');
-      }
-    );
-  };
-
-  const toggleTutorials = () => {
-    setTutorialEnabled(!tutorialEnabled);
-  };
 
   return (
     <View style={styles.container}>
@@ -126,43 +118,6 @@ export default function TitleSettings() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Tutorial Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📚 Tutorial Settings</Text>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={toggleTutorials}
-          >
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingTitle}>Enable Tutorials</Text>
-              <Text style={styles.settingDescription}>
-                Show helpful tutorials when playing the game
-              </Text>
-            </View>
-            <View style={[
-              styles.toggle,
-              tutorialEnabled ? styles.toggleOn : styles.toggleOff
-            ]}>
-              <Text style={styles.toggleText}>
-                {tutorialEnabled ? 'ON' : 'OFF'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingItem}
-            onPress={handleResetTutorials}
-          >
-            <View style={styles.settingLeft}>
-              <Text style={styles.settingTitle}>Reset Tutorials</Text>
-              <Text style={styles.settingDescription}>
-                Reset all tutorial progress to see them again
-              </Text>
-            </View>
-            <Text style={styles.actionText}>Reset</Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Data Management */}
         <View style={styles.section}>

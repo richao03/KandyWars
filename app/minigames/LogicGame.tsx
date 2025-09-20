@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -70,6 +71,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1); // 1, 2, 3
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [secretCode, setSecretCode] = useState<string[]>([]);
   const [currentGuess, setCurrentGuess] = useState<string[]>(['', '', '', '']);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -186,7 +188,11 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
     // Check if solved (all correct)
     if (feedback.every((f) => f === 'correct')) {
+      // Success haptic feedback - level completed!
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       setGameComplete(true);
+      setCompletedLevel(level); // Mark this level as completed
 
       if (level < 3) {
         // Level complete, move to next level
@@ -213,11 +219,24 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       }
     } else if (newAttempts.length >= maxAttempts) {
       // Game over - too many attempts
-      showModal(
-        '🚨 Game Over!',
-        `You've used all ${maxAttempts} attempts. The answer was: ${secretCode.join('')}`
-      );
+      if (completedLevel > 0) {
+        // Player completed at least one level, award jokers based on completion
+        setGameState('jokerSelection');
+      } else {
+        // Player didn't complete any level - game over, no reward
+        showModal(
+          '🚨 Game Over!',
+          `You've used all ${maxAttempts} attempts on Level 1. The answer was: ${secretCode.join('')}.\n\nNo joker rewards earned. Better luck next time!`,
+          '🚨',
+          () => {
+            router.back(); // Return to study page without reward
+          }
+        );
+      }
     } else {
+      // Incorrect guess - medium haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
       // Continue guessing
       setCurrentGuess(['', '', '', '']);
     }
@@ -227,6 +246,9 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const handleCandySelect = (candy: string) => {
     const nextEmptyIndex = currentGuess.findIndex((slot) => slot === '');
     if (nextEmptyIndex !== -1) {
+      // Light haptic feedback for candy selection
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
       const newGuess = [...currentGuess];
       newGuess[nextEmptyIndex] = candy;
       setCurrentGuess(newGuess);
@@ -284,6 +306,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         theme="candy"
         subject="Logic"
         onComplete={onComplete}
+        rewardTier={completedLevel as 1 | 2 | 3}
+        completionLevel={completedLevel as 1 | 2 | 3}
       />
     );
   }
@@ -292,26 +316,24 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>
-            🍭 Logic Study Session! 🧩
-          </Text>
+          <Text style={styles.instructionsTitle}>Logic Study Session!</Text>
 
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>📝 How to Solve:</Text>
+            <Text style={styles.instructionsHeader}>How to Solve:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepNumber}>1. </Text>
               <Text style={styles.stepText}>
                 Crack the secret 4-candy code using logic
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🔑</Text>
+              <Text style={styles.stepNumber}>2. </Text>
               <Text style={styles.stepText}>
                 Colors show correct position, wrong position, or not in code
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepNumber}>3. </Text>
               <Text style={styles.stepText}>
                 Only 6 attempts per level - think carefully!
               </Text>
@@ -336,13 +358,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.startGameButton}
-            onPress={startGame}
-          >
-            <Text style={styles.startGameButtonText}>
-              🎮 Start Logic Challenge!
-            </Text>
+          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
+            <Text style={styles.startGameButtonText}>Start Challenge!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -357,102 +374,177 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          padding: ResponsiveSpacing.containerPadding(),
-          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-        },
-      ]}
-    >
+    <View style={styles.container}>
       {/* Fixed Header */}
-      <MinigameHUD
-        title="🍭 Candy Riddle"
-        subtitle="Crack the secret candy code!"
-        leftInfo={`Level ${level}/3`}
-        rightInfo={`Attempts: ${attempts.length}/${maxAttempts}`}
-        theme="logic"
-      />
+      <View
+        style={[
+          styles.headerContainer,
+          {
+            padding: ResponsiveSpacing.containerPadding(),
+          },
+        ]}
+      >
+        <MinigameHUD
+          title="Candy Riddle"
+          subtitle="Crack the secret candy code!"
+          leftInfo={`Level ${level}/3`}
+          rightInfo={`Attempts: ${attempts.length}/${maxAttempts}`}
+          theme="logic"
+        />
+      </View>
 
-      {/* Scrollable Content Area */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>🍭 Make Your Guess:</Text>
+      {/* Scrollable Content Area - Limited height to fit screen */}
+      <View
+        style={[
+          styles.gameContent,
+          {
+            paddingHorizontal: ResponsiveSpacing.containerPadding(),
+          },
+        ]}
+      >
+        <ScrollView
+          style={styles.contentScrollView}
+          contentContainerStyle={styles.contentScrollContainer}
+          showsVerticalScrollIndicator={true}
+        >
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>🍭 Make Your Guess:</Text>
 
-        {/* Scrollable area for attempts with max height for 4 rows */}
-        <View style={styles.attemptsScrollContainer}>
-          <ScrollView
-            ref={scrollViewRef}
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={styles.attemptsScrollContent}
-          >
-            {/* Previous attempts displayed inline */}
-            {attempts.map((attempt, attemptIndex) => (
-              <View key={attemptIndex} style={styles.guessDisplay}>
-                {attempt.candies.map((candy, candyIndex) => (
-                  <View
-                    key={candyIndex}
-                    style={[
-                      styles.guessSlot,
-                      styles.filledSlot,
-                      getFeedbackStyle(attempt.feedback[candyIndex]),
-                    ]}
-                  >
-                    <Text style={styles.guessSlotText}>{candy}</Text>
+            {/* Scrollable area for attempts with max height for 4 rows */}
+            <View style={styles.attemptsScrollContainer}>
+              <ScrollView
+                ref={scrollViewRef}
+                showsVerticalScrollIndicator={true}
+                contentContainerStyle={styles.attemptsScrollContent}
+              >
+                {/* Previous attempts displayed inline */}
+                {attempts.map((attempt, attemptIndex) => (
+                  <View key={attemptIndex} style={styles.guessDisplay}>
+                    {attempt.candies.map((candy, candyIndex) => (
+                      <View
+                        key={candyIndex}
+                        style={[
+                          styles.guessSlot,
+                          styles.filledSlot,
+                          getFeedbackStyle(attempt.feedback[candyIndex]),
+                        ]}
+                      >
+                        <Text style={styles.guessSlotText}>{candy}</Text>
+                      </View>
+                    ))}
                   </View>
                 ))}
-              </View>
-            ))}
 
-            {/* Current guess display */}
-            <View style={styles.guessDisplay}>
-              {[0, 1, 2, 3].map((index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.guessSlot,
-                    currentGuess[index] !== '' && styles.filledSlot,
-                  ]}
-                  onPress={() => handlePositionSelect(index)}
-                >
-                  <Text style={styles.guessSlotText}>
-                    {currentGuess[index] || '?'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                {/* Current guess display */}
+                <View style={styles.guessDisplay}>
+                  {[0, 1, 2, 3].map((index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.guessSlot,
+                        currentGuess[index] !== '' && styles.filledSlot,
+                      ]}
+                      onPress={() => handlePositionSelect(index)}
+                    >
+                      <Text style={styles.guessSlotText}>
+                        {currentGuess[index] || '?'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
-          </ScrollView>
-        </View>
 
-        {/* Candy selection palette */}
-        <View style={styles.candyPalette}>
-          <View style={styles.candyOptions}>
-            {getCurrentCandyTypes().map((candy, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.candyOption,
-                  !currentGuess.includes('') && styles.candyOptionDisabled,
-                ]}
-                onPress={() => handleCandySelect(candy)}
-                disabled={!currentGuess.includes('')}
-              >
-                <Text style={styles.candyOptionText}>{candy}</Text>
-              </TouchableOpacity>
-            ))}
+            {/* Candy selection palette */}
+            <View style={styles.candyPalette}>
+              <View style={styles.candyOptions}>
+                {/* First row */}
+                <View
+                  style={[
+                    styles.candyRow,
+                    getCurrentCandyTypes().length > 12 &&
+                      styles.candyRowCompact,
+                  ]}
+                >
+                  {getCurrentCandyTypes()
+                    .slice(0, Math.ceil(getCurrentCandyTypes().length / 2))
+                    .map((candy, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.candyOption,
+                          getCurrentCandyTypes().length > 12 &&
+                            styles.candyOptionCompact,
+                          !currentGuess.includes('') &&
+                            styles.candyOptionDisabled,
+                        ]}
+                        onPress={() => handleCandySelect(candy)}
+                        disabled={!currentGuess.includes('')}
+                      >
+                        <Text
+                          style={[
+                            styles.candyOptionText,
+                            getCurrentCandyTypes().length > 12 &&
+                              styles.candyOptionTextCompact,
+                          ]}
+                        >
+                          {candy}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+                {/* Second row */}
+                <View
+                  style={[
+                    styles.candyRow,
+                    getCurrentCandyTypes().length > 12 &&
+                      styles.candyRowCompact,
+                  ]}
+                >
+                  {getCurrentCandyTypes()
+                    .slice(Math.ceil(getCurrentCandyTypes().length / 2))
+                    .map((candy, index) => (
+                      <TouchableOpacity
+                        key={
+                          index + Math.ceil(getCurrentCandyTypes().length / 2)
+                        }
+                        style={[
+                          styles.candyOption,
+                          getCurrentCandyTypes().length > 12 &&
+                            styles.candyOptionCompact,
+                          !currentGuess.includes('') &&
+                            styles.candyOptionDisabled,
+                        ]}
+                        onPress={() => handleCandySelect(candy)}
+                        disabled={!currentGuess.includes('')}
+                      >
+                        <Text
+                          style={[
+                            styles.candyOptionText,
+                            getCurrentCandyTypes().length > 12 &&
+                              styles.candyOptionTextCompact,
+                          ]}
+                        >
+                          {candy}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                currentGuess.includes('') && styles.submitButtonDisabled,
+              ]}
+              onPress={handleSubmitGuess}
+              disabled={currentGuess.includes('')}
+            >
+              <Text style={styles.submitButtonText}>🍭 Try Pattern</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            currentGuess.includes('') && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmitGuess}
-          disabled={currentGuess.includes('')}
-        >
-          <Text style={styles.submitButtonText}>🍭 Try Pattern</Text>
-        </TouchableOpacity>
+        </ScrollView>
       </View>
 
       {/* Fixed Bottom Buttons */}
@@ -462,6 +554,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           {
             gap: ResponsiveSpacing.buttonGap(),
             paddingVertical: ResponsiveSpacing.buttonPadding(),
+            paddingHorizontal: ResponsiveSpacing.containerPadding(),
           },
         ]}
       >
@@ -490,9 +583,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#2c2c2c',
   },
-  contentScrollArea: {
+  headerContainer: {
+    backgroundColor: '#2c2c2c',
+    paddingBottom: 0,
+  },
+  gameContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    backgroundColor: '#2c2c2c',
+  },
+  contentScrollView: {
+    flex: 1,
   },
   contentScrollContainer: {
     paddingBottom: 20,
@@ -599,14 +699,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   candyOptions: {
+    flexDirection: 'column',
+    gap: 8,
+  },
+  candyRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
   },
+  candyRowCompact: {
+    gap: 4, // Reduce gap for level 3 (16 candies)
+  },
   candyOption: {
-    width: 50,
-    height: 50,
+    width: 45,
+    height: 45,
     backgroundColor: '#404040',
     borderWidth: 2,
     borderColor: '#666',
@@ -614,11 +720,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  candyOptionCompact: {
+    width: 38, // Smaller size for level 3 (16 candies)
+    height: 38,
+  },
   candyOptionDisabled: {
     opacity: 0.3,
   },
   candyOptionText: {
     fontSize: 25,
+  },
+  candyOptionTextCompact: {
+    fontSize: 20, // Smaller text for level 3 (16 candies)
   },
   submitButton: {
     backgroundColor: '#1890ff',
@@ -809,6 +922,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
+    lineHeight: 22,
   },
   stepText: {
     fontSize: 16,

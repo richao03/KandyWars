@@ -8,7 +8,9 @@ import React, {
 } from 'react';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 import {
+  checkAndClearForceResetFlag,
   clearAllGameData,
+  clearGameProgress,
   loadGameState,
   saveGameState,
 } from '../utils/persistence';
@@ -100,12 +102,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         currentLocation: 'home room' as Location,
         locationHistory: [{ period: 0, location: 'home room' as Location }],
         isAfterSchool: false,
-        hasStudiedTonight: false,
         lastActiveView: 'market' as const,
         trojanHorseCounter: 0,
       };
 
-      const savedState = await loadGameState(defaultState);
+      // Check if we should force reset to default state
+      const shouldForceReset = await checkAndClearForceResetFlag();
+      console.log('🔄 GameContext: Force reset flag:', shouldForceReset);
+
+      const savedState = shouldForceReset ? defaultState : await loadGameState(defaultState);
+
+      console.log('🎮 GameContext: Loaded saved state:', savedState);
+      console.log('🎮 GameContext: Default state was:', defaultState);
+      console.log('🎮 GameContext: Used force reset:', shouldForceReset);
 
       setPeriodCount(savedState.periodCount ?? 0);
       setCurrentLocation(savedState.currentLocation || 'home room');
@@ -113,15 +122,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
         savedState.locationHistory || [{ period: 0, location: 'home room' }]
       );
       setIsAfterSchool(savedState.isAfterSchool ?? false);
-      setHasStudiedTonight(savedState.hasStudiedTonight ?? false);
+      console.log('🎮 GameContext: Loading hasStudiedTonight from storage:', savedState.hasStudiedTonight);
+      // Don't load hasStudiedTonight from storage, let it be controlled by the game flow
+      // This ensures it's always false when entering after-school from market
+      setHasStudiedTonight(false);
       setLastActiveView(savedState.lastActiveView || 'market');
       setTrojanHorseCounter(savedState.trojanHorseCounter ?? 0);
       setIsLoaded(true);
       setIsInitialized(true);
 
       console.log(
-        '💾 GameContext - Set periodCount to:',
-        savedState.periodCount ?? 0
+        '💾 GameContext - Final periodCount set to:',
+        savedState.periodCount ?? 0,
+        'which means Day:',
+        Math.max(1, Math.floor((savedState.periodCount ?? 0) / 8) + 1),
+        'Period:',
+        Math.max(1, ((savedState.periodCount ?? 0) % 8) + 1)
       );
     };
 
@@ -137,7 +153,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       currentLocation,
       locationHistory,
       isAfterSchool,
-      hasStudiedTonight,
+      // Don't save hasStudiedTonight - it should reset when app restarts
       lastActiveView,
       trojanHorseCounter,
     };
@@ -149,7 +165,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     currentLocation,
     locationHistory,
     isAfterSchool,
-    hasStudiedTonight,
     lastActiveView,
     trojanHorseCounter,
     isLoaded,
@@ -350,8 +365,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const startAfterSchool = useCallback(() => {
+    console.log('🎮 GameContext: startAfterSchool called');
     setIsAfterSchool(true);
     setLastActiveView('after-school');
+    // Reset hasStudiedTonight when entering after-school for current day
+    // This ensures the study button is available when first entering after-school
+    console.log('🎮 GameContext: About to set hasStudiedTonight to false');
+    setHasStudiedTonight(false);
+    console.log('🎮 GameContext: setHasStudiedTonight(false) called');
     // Note: Trojan Horse effect is now based on period count, not a separate counter
   }, []);
 
@@ -392,7 +413,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('🔄 GameContext: Resetting game...');
 
     // Clear all saved game data FIRST
-    await clearAllGameData();
+    await clearGameProgress();
 
     // Then reset all state
     setPeriodCount(0);
@@ -411,7 +432,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({
       currentLocation: 'home room' as Location,
       locationHistory: [{ period: 0, location: 'home room' as Location }],
       isAfterSchool: false,
-      hasStudiedTonight: false,
       lastActiveView: 'market' as const,
       trojanHorseCounter: 0,
     };

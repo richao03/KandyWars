@@ -8,18 +8,12 @@ import {
   View,
 } from 'react-native';
 import Animated, {
-  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withTiming,
-  cancelAnimation,
-  useAnimatedReaction,
 } from 'react-native-reanimated';
-import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
@@ -32,23 +26,27 @@ export default function MathGame({ onComplete }: MathGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { width: screenWidth } = Dimensions.get('window');
   const { trackMinigamePlayed } = useScoreboard();
-  
+
   // Game states
-  const [gameState, setGameState] = useState<'instructions' | 'playing' | 'jokerSelection'>('instructions');
+  const [gameState, setGameState] = useState<
+    'instructions' | 'playing' | 'jokerSelection'
+  >('instructions');
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [gameActive, setGameActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
   const [matchesCompleted, setMatchesCompleted] = useState(0);
-  
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
+  const [jokerRewardTier, setJokerRewardTier] = useState(0); // Track joker reward tier for selection
+
   // Number sequences
   const [numbersSequence, setNumbersSequence] = useState<number[]>([]);
   const [matchedIndices, setMatchedIndices] = useState<number[]>([]);
-  
+
   // Animation values
   const translateX = useSharedValue(0);
   const flashValue = useSharedValue(0);
-  
+
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,13 +56,15 @@ export default function MathGame({ onComplete }: MathGameProps) {
   const numbersSequenceRef = useRef<number[]>([]);
   const matchedIndicesRef = useRef<number[]>([]);
   const matchesCompletedRef = useRef(0);
-  
+  const completedLevelRef = useRef(0); // Track completed level with ref for immediate access
+  const jokerRewardTierRef = useRef(0); // Track joker reward tier with ref
+
   // Constants
   const NUMBER_WIDTH = 60;
   const NUMBER_SPACING = 10;
   const TOTAL_NUMBER_WIDTH = NUMBER_WIDTH + NUMBER_SPACING;
   const SCROLL_SPEED = 1; // pixels per interval (16ms)
-  
+
   // Level configurations
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
@@ -78,25 +78,28 @@ export default function MathGame({ onComplete }: MathGameProps) {
         return { speed: 1 };
     }
   };
-  
+
   // Generate random numbers
   const generateRandomNumbers = (count: number): number[] => {
-    return Array.from({ length: count }, () => Math.floor(Math.random() * 10) + 1);
+    return Array.from(
+      { length: count },
+      () => Math.floor(Math.random() * 10) + 1
+    );
   };
-  
+
   // Get rightmost unmatched number
   const getRightmostNumber = (): { number: number; index: number } => {
     if (numbersSequence.length === 0) return { number: 1, index: -1 };
-    
+
     for (let i = numbersSequence.length - 1; i >= 0; i--) {
       if (!matchedIndices.includes(i)) {
         return { number: numbersSequence[i], index: i };
       }
     }
-    
+
     return { number: 1, index: -1 };
   };
-  
+
   // Initialize numbers
   const initializeNumbers = () => {
     const sequence = generateRandomNumbers(10);
@@ -106,25 +109,25 @@ export default function MathGame({ onComplete }: MathGameProps) {
     matchedIndicesRef.current = [];
     translateX.value = -600; // Start off screen to the left
   };
-  
+
   // Start scrolling animation using setInterval
   const startScrollAnimation = () => {
     if (animationRef.current) {
       clearInterval(animationRef.current);
     }
-    
+
     const config = getLevelConfig(level);
     const speed = SCROLL_SPEED * config.speed;
-    
+
     animationRef.current = setInterval(() => {
       if (!gameActiveRef.current) {
         stopScrollAnimation();
         return;
       }
-      
+
       // Directly update the shared value
       translateX.value = translateX.value + speed;
-      
+
       // Check if rightmost unmatched number reached the edge
       // Find rightmost unmatched number using refs for better performance
       let rightmostIndex = -1;
@@ -134,18 +137,18 @@ export default function MathGame({ onComplete }: MathGameProps) {
           break;
         }
       }
-      
+
       if (rightmostIndex >= 0 && containerWidth.current > 0) {
         const currentX = translateX.value;
         // Calculate position relative to the scrollingRow
         // The scrollingRow starts with translateX of -600 and moves right
         const numberLeftEdge = rightmostIndex * TOTAL_NUMBER_WIDTH;
         const numberRightEdge = numberLeftEdge + NUMBER_WIDTH;
-        
+
         // The visible area starts at x=0 in container coordinates
         // When translateX + numberRightEdge >= containerWidth, the number hits the edge
         const absoluteRightEdge = currentX + numberRightEdge;
-        
+
         // Container width is the visible area
         if (absoluteRightEdge >= containerWidth.current) {
           // Game over!
@@ -157,7 +160,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       }
     }, 16); // ~60fps
   };
-  
+
   // Stop scrolling animation
   const stopScrollAnimation = () => {
     if (animationRef.current) {
@@ -165,7 +168,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       animationRef.current = null;
     }
   };
-  
+
   // Handle game over
   const handleGameOver = () => {
     setGameActive(false);
@@ -173,51 +176,96 @@ export default function MathGame({ onComplete }: MathGameProps) {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    
-    showModal(
-      '💥 Game Over!',
-      `A number reached the edge! You completed ${matchesCompletedRef.current} matches.`,
-      '💥',
-      () => {
-        // Restart level
-        setMatchesCompleted(0);
-        matchesCompletedRef.current = 0;
-        initializeNumbers();
-        setGameActive(true);
-        startTimer();
-        setTimeout(() => {
-          startScrollAnimation();
-        }, 500);
-      }
+
+    console.log(
+      `💥 MathGame handleGameOver: completedLevel = ${completedLevel}, completedLevelRef = ${completedLevelRef.current}, level = ${level}`
     );
+
+    // Use ref for immediate access, then fall back to state and level calculation
+    let levelsCompleted = Math.max(
+      completedLevelRef.current,
+      completedLevel,
+      level - 1
+    );
+
+    console.log(
+      `💥 MathGame calculated levelsCompleted = ${levelsCompleted} (matches: ${matchedIndices.length})`
+    );
+
+    if (levelsCompleted > 0) {
+      // Player completed at least one level, award jokers based on completion
+      const jokerCount = levelsCompleted;
+      const rerollText =
+        levelsCompleted > 1
+          ? ` and ${levelsCompleted - 1} reroll${levelsCompleted > 2 ? 's' : ''}`
+          : '';
+
+      // Store the reward tier for joker selection
+      setJokerRewardTier(levelsCompleted);
+      jokerRewardTierRef.current = levelsCompleted;
+
+      showModal(
+        '💥 Game Over!',
+        `A number reached the edge! Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
+        '🎁',
+        () => {
+          setGameState('jokerSelection');
+        }
+      );
+    } else {
+      // Player didn't complete any level, show restart option
+      showModal(
+        '💥 Game Over!',
+        `A number reached the edge! You completed ${matchesCompletedRef.current} matches.`,
+        '💥',
+        () => {
+          // Restart level
+          setMatchesCompleted(0);
+          matchesCompletedRef.current = 0;
+          initializeNumbers();
+          setGameActive(true);
+          startTimer();
+          setTimeout(() => {
+            startScrollAnimation();
+          }, 500);
+        }
+      );
+    }
   };
-  
+
   // Handle bottom number click
   const handleBottomNumberClick = (clickedNumber: number) => {
     if (!gameActive) return;
-    
+
     const rightmost = getRightmostNumber();
     if (rightmost.index === -1) return;
-    
+
     const sum = rightmost.number + clickedNumber;
-    
+
     if (sum === 10) {
       // Correct match!
       const newMatchedIndices = [...matchedIndices, rightmost.index];
       setMatchedIndices(newMatchedIndices);
       matchedIndicesRef.current = newMatchedIndices; // Update ref
-      
+
       const newMatchesCompleted = matchesCompleted + 1;
       setMatchesCompleted(newMatchesCompleted);
       matchesCompletedRef.current = newMatchesCompleted;
-      
+
       // Check if all numbers matched (completed set of 10)
       if (newMatchedIndices.length >= 10) {
         // Set completed after completing a full set of 10 numbers
         stopScrollAnimation();
         setGameActive(false);
-        
+
         // Show completion modal for the set
+        // Mark this level as completed
+        console.log(`🎯 MathGame: Setting completedLevel to ${level}`);
+        setCompletedLevel(level);
+        completedLevelRef.current = level; // Set ref immediately for timing-sensitive checks
+        setJokerRewardTier(level); // Also set reward tier immediately
+        jokerRewardTierRef.current = level; // Set ref for immediate access
+
         showModal(
           '🎯 Set Complete!',
           `Great job! You completed all 10 numbers. Ready for the next level?`,
@@ -233,15 +281,15 @@ export default function MathGame({ onComplete }: MathGameProps) {
         );
         return;
       }
-      
+
       // Add score
-      setScore(prev => prev + 10);
+      setScore((prev) => prev + 10);
     } else {
       // Wrong answer
-      setScore(prev => Math.max(0, prev - 5));
+      setScore((prev) => Math.max(0, prev - 5));
     }
   };
-  
+
   // Complete level
   const completeLevel = () => {
     setGameActive(false);
@@ -249,7 +297,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    
+
     if (level < 3) {
       showModal(
         `🎉 Level ${level} Complete!`,
@@ -260,20 +308,20 @@ export default function MathGame({ onComplete }: MathGameProps) {
         }
       );
     } else {
-      showModal(
-        '🏆 Math Master!',
-        'You completed all levels!',
-        '🏆',
-        () => {
-          setGameState('jokerSelection');
-        }
-      );
+      // Mark this level as completed
+      setCompletedLevel(level);
+      setJokerRewardTier(level);
+      jokerRewardTierRef.current = level;
+
+      showModal('🏆 Math Master!', 'You completed all levels!', '🏆', () => {
+        setGameState('jokerSelection');
+      });
     }
   };
-  
+
   // Next level
   const nextLevel = () => {
-    setLevel(prev => prev + 1);
+    setLevel((prev) => prev + 1);
     setMatchesCompleted(0);
     matchesCompletedRef.current = 0;
     setTimeLeft(60);
@@ -284,13 +332,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
       startScrollAnimation();
     }, 500);
   };
-  
+
   // Timer
   const startTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    
+
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           handleTimeUp();
           return 0;
@@ -299,26 +347,47 @@ export default function MathGame({ onComplete }: MathGameProps) {
       });
     }, 1000);
   };
-  
+
   const handleTimeUp = () => {
     setGameActive(false);
     stopScrollAnimation();
     if (timerRef.current) clearInterval(timerRef.current);
-    
-    showModal(
-      "⏰ Time's Up!",
-      `Level ${level} complete! Score: ${score}`,
-      '⏰',
-      () => {
-        if (level < 3) {
-          nextLevel();
-        } else {
+
+    console.log(
+      `⏰ MathGame handleTimeUp: completedLevel = ${completedLevel}, level = ${level}`
+    );
+
+    // Use the maximum of completedLevel state or level-1 to handle timing issues
+    const levelsCompleted = Math.max(completedLevel, level - 1);
+
+    if (levelsCompleted > 0) {
+      // Player completed at least one level, award jokers based on completion
+      const jokerCount = levelsCompleted;
+      const rerollText =
+        levelsCompleted > 1
+          ? ` and ${levelsCompleted - 1} reroll${levelsCompleted > 2 ? 's' : ''}`
+          : '';
+
+      // Store the reward tier for joker selection
+      setJokerRewardTier(levelsCompleted);
+      jokerRewardTierRef.current = levelsCompleted;
+
+      showModal(
+        "⏰ Time's Up!",
+        `Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
+        '🎁',
+        () => {
           setGameState('jokerSelection');
         }
-      }
-    );
+      );
+    } else {
+      // Player didn't complete any level, show restart option
+      showModal("⏰ Time's Up!", 'Try again from Level 1?', '⏰', () => {
+        setGameState('instructions');
+      });
+    }
   };
-  
+
   // Start game
   const startGame = () => {
     // Track minigame play for analytics
@@ -333,13 +402,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
     initializeNumbers();
     setGameActive(true);
     startTimer();
-    
+
     // Start scrolling after a delay
     setTimeout(() => {
       startScrollAnimation();
     }, 500);
   };
-  
+
   // Cleanup
   useEffect(() => {
     return () => {
@@ -349,7 +418,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       }
     };
   }, []);
-  
+
   // Keep gameActiveRef in sync
   useEffect(() => {
     gameActiveRef.current = gameActive;
@@ -357,65 +426,76 @@ export default function MathGame({ onComplete }: MathGameProps) {
       stopScrollAnimation();
     }
   }, [gameActive]);
-  
+
   // Animated styles
   const scrollAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
-  
+
   const flashAnimatedStyle = useAnimatedStyle(() => ({
     backgroundColor: flashValue.value ? 'rgba(0, 255, 0, 0.3)' : '#1a3d1a',
   }));
-  
+
   // Render instructions
   if (gameState === 'instructions') {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>📐 Math Challenge! 📏</Text>
-          
+          <Text style={styles.instructionsTitle}>Math Challenge!</Text>
+
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>📝 How to Play:</Text>
-            
+            <Text style={styles.instructionsHeader}>How to Play:</Text>
+
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepNumber}>1.</Text>
+
               <Text style={styles.stepText}>
-                Make 10 with rightmost number
+                Add to 10 with rightmost number
               </Text>
             </View>
-            
+
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
                 Don't let numbers reach the edge!
               </Text>
             </View>
           </View>
-          
+
           <TouchableOpacity style={styles.startButton} onPress={startGame}>
             <Text style={styles.startButtonText}>Start Game!</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
-  
+
   // Render joker selection
   if (gameState === 'jokerSelection') {
+    // Use ref value to avoid state timing issues
+    const finalRewardTier = jokerRewardTierRef.current || jokerRewardTier || 1;
+    console.log(
+      `🎁 MathGame JokerSelection: jokerRewardTier = ${jokerRewardTier}, jokerRewardTierRef = ${jokerRewardTierRef.current}, using = ${finalRewardTier}`
+    );
     return (
       <JokerSelection
         jokers={MATH_JOKERS}
         theme="math"
         subject="Math"
         onComplete={onComplete}
+        rewardTier={finalRewardTier as 1 | 2 | 3}
+        completionLevel={finalRewardTier as 1 | 2 | 3}
       />
     );
   }
-  
+
   // Render game
   return (
     <View style={styles.container}>
@@ -424,14 +504,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
         centerInfo={`Matches: ${matchedIndices.length}/10`}
-        rightInfo={`⏱️ ${timeLeft}s`}
         theme="math"
       />
-      
+
       {/* Scrolling numbers */}
       <View style={styles.scrollContainer}>
         <Text style={styles.rowLabel}>Scrolling Numbers:</Text>
-        <View 
+        <View
           ref={containerRef}
           style={styles.numbersContainer}
           onLayout={(e) => {
@@ -443,19 +522,24 @@ export default function MathGame({ onComplete }: MathGameProps) {
               if (matchedIndices.includes(index)) {
                 return null;
               }
-              
+
               const isRightmost = index === getRightmostNumber().index;
-              
+
               return (
                 <View
                   key={index}
                   style={[
                     styles.numberBox,
                     isRightmost && styles.rightmostBox,
-                    { marginRight: NUMBER_SPACING }
+                    { marginRight: NUMBER_SPACING },
                   ]}
                 >
-                  <Text style={[styles.numberText, isRightmost && styles.rightmostText]}>
+                  <Text
+                    style={[
+                      styles.numberText,
+                      isRightmost && styles.rightmostText,
+                    ]}
+                  >
                     {number}
                   </Text>
                 </View>
@@ -464,11 +548,11 @@ export default function MathGame({ onComplete }: MathGameProps) {
           </Animated.View>
         </View>
       </View>
-      
+
       {/* Bottom numbers */}
       <View style={styles.bottomContainer}>
         <View style={styles.bottomRow}>
-          {[0, 1, 2, 3, 4].map(num => (
+          {[0, 1, 2, 3, 4].map((num) => (
             <TouchableOpacity
               key={num}
               style={styles.bottomNumberBox}
@@ -480,7 +564,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
           ))}
         </View>
         <View style={styles.bottomRow}>
-          {[5, 6, 7, 8, 9].map(num => (
+          {[5, 6, 7, 8, 9].map((num) => (
             <TouchableOpacity
               key={num}
               style={styles.bottomNumberBox}
@@ -492,7 +576,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
           ))}
         </View>
       </View>
-      
+
       {/* Leave button */}
       <TouchableOpacity
         style={styles.leaveButton}
@@ -507,7 +591,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       >
         <Text style={styles.leaveButtonText}>🚪 Leave</Text>
       </TouchableOpacity>
-      
+
       <GameModal
         visible={modal.visible}
         title={modal.title}

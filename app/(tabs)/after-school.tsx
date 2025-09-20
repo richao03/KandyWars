@@ -28,7 +28,36 @@ import SleepConfirmModal from '../components/SleepConfirmModal';
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
 function AfterSchoolPage() {
-  const { day, startNewDay, hasStudiedTonight, periodCount, setLastActiveView } = useGame();
+  const {
+    day,
+    startNewDay,
+    hasStudiedTonight,
+    periodCount,
+    setLastActiveView,
+    markStudiedTonight,
+    startAfterSchool,
+  } = useGame();
+
+  console.log('🌅 AfterSchoolPage: hasStudiedTonight =', hasStudiedTonight);
+
+  // Force reset hasStudiedTonight when entering after-school to prevent stale state
+  useEffect(() => {
+    console.log('🌅 AfterSchoolPage: Component mounted/focused, ensuring hasStudiedTonight is correct');
+    // Safety net: When first entering after-school, the study button should always be available
+    // This ensures the state is correct regardless of timing issues
+    if (hasStudiedTonight) {
+      console.log('🌅 AfterSchoolPage: hasStudiedTonight is true - calling startAfterSchool to fix this');
+      // Call startAfterSchool to reset the state properly
+      startAfterSchool();
+    } else {
+      console.log('🌅 AfterSchoolPage: hasStudiedTonight is correctly false');
+    }
+  }, []); // Only run on mount
+
+  // Track hasStudiedTonight changes
+  useEffect(() => {
+    console.log('🌅 AfterSchoolPage: hasStudiedTonight changed to:', hasStudiedTonight);
+  }, [hasStudiedTonight]);
   const { resetDailyStats } = useDailyStats();
   const { balance, stashedAmount, addAllowance, difficultyLevel } = useWallet();
   const { jokers } = useJokers();
@@ -105,6 +134,12 @@ function AfterSchoolPage() {
   const handleGoToSleep = () => {
     // Show confirmation modal instead of immediately ending the day
     setSleepConfirmModalVisible(true);
+  };
+
+  // DEBUG: Temporary button to test hasStudiedTonight state
+  const handleDebugReset = () => {
+    console.log('🔧 DEBUG: Manual reset of hasStudiedTonight state');
+    startAfterSchool(); // This should reset hasStudiedTonight to false
   };
 
   const handleSleepConfirm = () => {
@@ -194,7 +229,7 @@ function AfterSchoolPage() {
     () => [
       {
         id: 'study',
-        emoji: '📚',
+
         title: 'Study at Home',
         desc: hasStudiedTonight
           ? "You've already studied tonight. Rest up!"
@@ -204,21 +239,18 @@ function AfterSchoolPage() {
       },
       {
         id: 'stash',
-        emoji: '🔐',
         title: 'Go to Your Stash',
         desc: 'Make sure no one is following you',
         onPress: () => handleStashMoney(),
       },
       {
         id: 'deli',
-        emoji: '🏪',
         title: 'Visit the Corner Deli',
         desc: 'Take an evening stroll to the neighborhood store',
         onPress: () => handleGoDeli(),
       },
       {
         id: 'sleep',
-        emoji: '😴',
         title: 'Go to Sleep',
         desc: 'Rest up and start a new day at school tomorrow',
         onPress: () => handleGoToSleep(),
@@ -244,29 +276,29 @@ function AfterSchoolPage() {
 
         <View style={styles.optionsContainer}>
           <View style={styles.optionsGrid}>
-{useMemo(() => {
+            {useMemo(() => {
               const shouldShowTutorial = day === 1;
 
               const stepConfigs = {
                 study: {
                   order: 1,
                   name: 'study_step',
-                  text: '📚 Study at Home: play mini-games to win jokers with auras or instant abilities, knowledge is power!',
+                  text: 'Study at Home: play mini-games to win jokers with auras or instant abilities, knowledge is power!',
                 },
                 stash: {
                   order: 2,
                   name: 'stash_step',
-                  text: '🔐 Go to Your Stash: stash your money away for the pet fund, a dollar saved is a dollar earned',
+                  text: 'Go to Your Stash: stash your money away for the pet fund, a dollar saved is a dollar earned',
                 },
                 deli: {
                   order: 3,
                   name: 'deli_step',
-                  text: '🏪 Visit the Corner Deli: come shoot the breeze and hang out, you can always find fair priced candy around the corner!',
+                  text: 'Visit the Corner Deli: come shoot the breeze and hang out, you can always find fair priced candy around the corner!',
                 },
                 sleep: {
                   order: 4,
                   name: 'sleep_step',
-                  text: '😴 Go to Sleep: End the day, get your daily allowance, and start fresh tomorrow at school. We rest to travel further!',
+                  text: 'Go to Sleep: End the day, get your daily allowance, and start fresh tomorrow at school. We rest to travel further!',
                 },
               };
 
@@ -274,9 +306,10 @@ function AfterSchoolPage() {
                 const stepConfig = stepConfigs[item.id];
 
                 // Create button component once
-                const ButtonComponent = shouldShowTutorial && stepConfig
-                  ? CopilotTouchableOpacity
-                  : TouchableOpacity;
+                const ButtonComponent =
+                  shouldShowTutorial && stepConfig
+                    ? CopilotTouchableOpacity
+                    : TouchableOpacity;
 
                 const button = (
                   <ButtonComponent
@@ -288,14 +321,6 @@ function AfterSchoolPage() {
                     onPress={item.disabled ? undefined : item.onPress}
                     disabled={item.disabled}
                   >
-                    <Text
-                      style={[
-                        styles.circleEmoji,
-                        item.disabled && styles.disabledEmoji,
-                      ]}
-                    >
-                      {item.emoji}
-                    </Text>
                     <Text
                       style={[
                         styles.circleTitle,
@@ -327,7 +352,12 @@ function AfterSchoolPage() {
           </View>
         </View>
         <View style={styles.buttonContainer}>
-          {/* Optional: Add a button here if needed */}
+          {/* DEBUG: Temporary button to test state reset */}
+          {hasStudiedTonight && (
+            <TouchableOpacity style={styles.debugButton} onPress={handleDebugReset}>
+              <Text style={styles.debugButtonText}>🔧 DEBUG: Reset Study State</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ImageBackground>
 
@@ -352,6 +382,7 @@ function AfterSchoolPage() {
         stashedAmount={stashedAmount}
         difficultyLevel={difficultyLevel || 1}
         onRestart={handleGameRestart}
+        onClose={() => setGameEndModalVisible(false)}
       />
     </View>
   );
@@ -425,6 +456,19 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#666',
+  },
+  debugButton: {
+    backgroundColor: 'rgba(255, 0, 0, 0.7)',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginTop: 10,
+  },
+  debugButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 

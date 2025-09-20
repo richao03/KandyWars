@@ -17,6 +17,7 @@ interface GameEndModalProps {
   stashedAmount: number;
   difficultyLevel: number;
   onRestart: () => void;
+  onClose?: () => void;
 }
 
 export default function GameEndModal({
@@ -27,9 +28,17 @@ export default function GameEndModal({
   stashedAmount,
   difficultyLevel,
   onRestart,
+  onClose,
 }: GameEndModalProps) {
   const handleViewScoreboard = () => {
-    router.push('/leaderboard');
+    // Close the modal first, then navigate to leaderboard
+    if (onClose) {
+      onClose();
+    }
+    // Small delay to ensure modal closes smoothly before navigation
+    setTimeout(() => {
+      router.push('/leaderboard');
+    }, 100);
   };
 
   // Get dog breed and image based on difficulty level
@@ -175,7 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#FFD700',
     textAlign: 'center',

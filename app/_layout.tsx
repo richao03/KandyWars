@@ -16,7 +16,6 @@ import { SeedProvider } from '../src/context/SeedContext';
 import { TabBarProvider } from '../src/context/TabBarContext';
 import { WalletProvider } from '../src/context/WalletContext';
 import { ScoreboardProvider } from '../src/context/ScoreboardContext';
-import { TutorialProvider } from '../src/context/TutorialContext';
 import StudioTitleScreen from './components/StudioTitleScreen';
 
 // Keep the splash screen visible while we fetch resources
@@ -67,7 +66,6 @@ export default function RootLayout() {
                         <DailyStatsProvider>
                           <EventHandlerProvider>
                             <ScoreboardProvider>
-                              <TutorialProvider>
                                 <CopilotProvider
                                   overlay="svg"
                                   animated={true}
@@ -153,7 +151,6 @@ export default function RootLayout() {
                                   )}
                                   </TabBarProvider>
                                 </CopilotProvider>
-                              </TutorialProvider>
                             </ScoreboardProvider>
                           </EventHandlerProvider>
                         </DailyStatsProvider>

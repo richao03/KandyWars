@@ -52,6 +52,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [maxTurns, setMaxTurns] = useState(0);
   const [isGameActive, setIsGameActive] = useState(false);
   const [showingAllCards, setShowingAllCards] = useState(false);
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
 
   // Level configuration: [pairs, maxTurns]
   const levelConfig = {
@@ -171,10 +172,21 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       if (turns + 1 >= maxTurns) {
         setTimeout(() => {
           setIsGameActive(false);
-          showModal(
-            '💥 System Breach Failed!',
-            'You ran out of turns! Try again?'
-          );
+
+          if (completedLevel > 0) {
+            // Player completed at least one level, award jokers based on completion
+            setGameState('jokerSelection');
+          } else {
+            // Player didn't complete any level, show restart option
+            showModal(
+              '💥 System Breach Failed!',
+              'You ran out of turns! Try again?',
+              '💥',
+              () => {
+                setGameState('instructions');
+              }
+            );
+          }
         }, 2000);
       }
     }
@@ -192,6 +204,9 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   const handleLevelComplete = () => {
     setIsGameActive(false);
+
+    // Mark this level as completed
+    setCompletedLevel(level);
 
     if (level < 3) {
       showModal(
@@ -213,7 +228,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       );
     }
   };
-
 
   const handleJokerChoice = (jokerId: number) => {
     console.log(
@@ -254,6 +268,8 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         theme="computer"
         subject="Computer"
         onComplete={onComplete}
+        rewardTier={completedLevel as 1 | 2 | 3}
+        completionLevel={completedLevel as 1 | 2 | 3}
       />
     );
   }
@@ -262,37 +278,32 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>
-            💻 Computer Study Session! ⚡
-          </Text>
+          <Text style={styles.instructionsTitle}>Computer Study Session!</Text>
 
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>📝 How to Solve:</Text>
+            <Text style={styles.instructionsHeader}>How to Solve:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
                 Match tech component pairs to hack the system
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🔑</Text>
+              <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
                 Flip cards to reveal hidden icons, find matches
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepNumber}>3.</Text>
               <Text style={styles.stepText}>
                 Limited attempts - memorize positions carefully!
               </Text>
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.startGameButton}
-            onPress={startGame}
-          >
-            <Text style={styles.startGameButtonText}>💻 Start Challenge!</Text>
+          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
+            <Text style={styles.startGameButtonText}>Start Challenge!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -308,189 +319,189 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   return (
     <>
-    <View
-      style={[
-        styles.container,
-        {
-          padding: ResponsiveSpacing.containerPadding(),
-          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-        },
-      ]}
-    >
-      <MinigameHUD
-        title="💻 Hack the System"
-        subtitle="Match the tech pairs to infiltrate the network!"
-        leftInfo={`Level ${level}/3`}
-        rightInfo={`Turns: ${turns}/${maxTurns}`}
-        theme="computer"
-      />
-
-      <View style={styles.gameContainer}>
-        {level === 3 ? (
-          <View style={[styles.cardGrid, getGridStyle()]}>
-            {/* Render 6 rows of 4 cards each for level 3 */}
-            {Array.from({ length: 6 }, (_, rowIndex) => (
-              <View key={rowIndex} style={styles.grid4x6Row}>
-                {cards.slice(rowIndex * 4, rowIndex * 4 + 4).map((card) => (
-                  <TouchableOpacity
-                    key={card.id}
-                    style={getCardStyle()}
-                    onPress={() => handleCardPress(card.id)}
-                    disabled={!isGameActive || card.isMatched}
-                  >
-                    <FlipCard
-                      style={styles.flipCard}
-                      friction={6}
-                      perspective={1000}
-                      flipHorizontal={true}
-                      flipVertical={false}
-                      flip={card.isFlipped || card.isMatched}
-                      clickable={false}
-                    >
-                      {/* Front (back of card) */}
-                      <View style={styles.cardBack}>
-                        <Text style={styles.cardBackText}></Text>
-                      </View>
-                      {/* Back (front of card with emoji) */}
-                      <View
-                        style={[
-                          styles.cardFront,
-                          card.isMatched && styles.cardMatched,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.cardEmoji,
-                            level === 3 && styles.cardEmojiSmall,
-                          ]}
-                        >
-                          {card.emoji}
-                        </Text>
-                      </View>
-                    </FlipCard>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ))}
-          </View>
-        ) : level === 2 ? (
-          <View style={[styles.cardGrid, getGridStyle()]}>
-            {/* Render 4 rows of 4 cards each for level 2 */}
-            {Array.from({ length: 4 }, (_, rowIndex) => (
-              <View key={rowIndex} style={styles.grid4x4Row}>
-                {cards.slice(rowIndex * 4, rowIndex * 4 + 4).map((card) => (
-                  <TouchableOpacity
-                    key={card.id}
-                    style={getCardStyle()}
-                    onPress={() => handleCardPress(card.id)}
-                    disabled={!isGameActive || card.isMatched}
-                  >
-                    <FlipCard
-                      style={styles.flipCard}
-                      friction={6}
-                      perspective={1000}
-                      flipHorizontal={true}
-                      flipVertical={false}
-                      flip={card.isFlipped || card.isMatched}
-                      clickable={false}
-                    >
-                      {/* Front (back of card) */}
-                      <View style={styles.cardBack}>
-                        <Text style={styles.cardBackText}></Text>
-                      </View>
-                      {/* Back (front of card with emoji) */}
-                      <View
-                        style={[
-                          styles.cardFront,
-                          card.isMatched && styles.cardMatched,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.cardEmoji,
-                            level === 3 && styles.cardEmojiSmall,
-                          ]}
-                        >
-                          {card.emoji}
-                        </Text>
-                      </View>
-                    </FlipCard>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View style={[styles.cardGrid, getGridStyle()]}>
-            {cards.map((card) => (
-              <TouchableOpacity
-                key={card.id}
-                style={getCardStyle()}
-                onPress={() => handleCardPress(card.id)}
-                disabled={!isGameActive || card.isMatched}
-              >
-                <FlipCard
-                  style={styles.flipCard}
-                  friction={6}
-                  perspective={1000}
-                  flipHorizontal={true}
-                  flipVertical={false}
-                  flip={card.isFlipped || card.isMatched}
-                  clickable={false}
-                >
-                  {/* Front (back of card) */}
-                  <View style={styles.cardBack}>
-                    <Text style={styles.cardBackText}></Text>
-                  </View>
-                  {/* Back (front of card with emoji) */}
-                  <View
-                    style={[
-                      styles.cardFront,
-                      card.isMatched && styles.cardMatched,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.cardEmoji,
-                        level === 3 && styles.cardEmojiSmall,
-                      ]}
-                    >
-                      {card.emoji}
-                    </Text>
-                  </View>
-                </FlipCard>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-
       <View
         style={[
-          styles.bottomButtons,
+          styles.container,
           {
-            gap: ResponsiveSpacing.buttonGap(),
-            paddingVertical: ResponsiveSpacing.buttonPadding(),
+            padding: ResponsiveSpacing.containerPadding(),
+            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.instructionsButton}
-          onPress={handleForfeit}
-        >
-          <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <MinigameHUD
+          title="💻 Hack the System"
+          subtitle="Match the tech pairs to infiltrate the network!"
+          leftInfo={`Level ${level}/3`}
+          rightInfo={`Turns: ${turns}/${maxTurns}`}
+          theme="computer"
+        />
 
-    <GameModal
-      visible={modal.visible}
-      title={modal.title}
-      message={modal.message}
-      emoji={modal.emoji}
-      onClose={hideModal}
-      onConfirm={modal.onConfirm}
-    />
+        <View style={styles.gameContainer}>
+          {level === 3 ? (
+            <View style={[styles.cardGrid, getGridStyle()]}>
+              {/* Render 6 rows of 4 cards each for level 3 */}
+              {Array.from({ length: 6 }, (_, rowIndex) => (
+                <View key={rowIndex} style={styles.grid4x6Row}>
+                  {cards.slice(rowIndex * 4, rowIndex * 4 + 4).map((card) => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={getCardStyle()}
+                      onPress={() => handleCardPress(card.id)}
+                      disabled={!isGameActive || card.isMatched}
+                    >
+                      <FlipCard
+                        style={styles.flipCard}
+                        friction={6}
+                        perspective={1000}
+                        flipHorizontal={true}
+                        flipVertical={false}
+                        flip={card.isFlipped || card.isMatched}
+                        clickable={false}
+                      >
+                        {/* Front (back of card) */}
+                        <View style={styles.cardBack}>
+                          <Text style={styles.cardBackText}></Text>
+                        </View>
+                        {/* Back (front of card with emoji) */}
+                        <View
+                          style={[
+                            styles.cardFront,
+                            card.isMatched && styles.cardMatched,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.cardEmoji,
+                              level === 3 && styles.cardEmojiSmall,
+                            ]}
+                          >
+                            {card.emoji}
+                          </Text>
+                        </View>
+                      </FlipCard>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : level === 2 ? (
+            <View style={[styles.cardGrid, getGridStyle()]}>
+              {/* Render 4 rows of 4 cards each for level 2 */}
+              {Array.from({ length: 4 }, (_, rowIndex) => (
+                <View key={rowIndex} style={styles.grid4x4Row}>
+                  {cards.slice(rowIndex * 4, rowIndex * 4 + 4).map((card) => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={getCardStyle()}
+                      onPress={() => handleCardPress(card.id)}
+                      disabled={!isGameActive || card.isMatched}
+                    >
+                      <FlipCard
+                        style={styles.flipCard}
+                        friction={6}
+                        perspective={1000}
+                        flipHorizontal={true}
+                        flipVertical={false}
+                        flip={card.isFlipped || card.isMatched}
+                        clickable={false}
+                      >
+                        {/* Front (back of card) */}
+                        <View style={styles.cardBack}>
+                          <Text style={styles.cardBackText}></Text>
+                        </View>
+                        {/* Back (front of card with emoji) */}
+                        <View
+                          style={[
+                            styles.cardFront,
+                            card.isMatched && styles.cardMatched,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.cardEmoji,
+                              level === 3 && styles.cardEmojiSmall,
+                            ]}
+                          >
+                            {card.emoji}
+                          </Text>
+                        </View>
+                      </FlipCard>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={[styles.cardGrid, getGridStyle()]}>
+              {cards.map((card) => (
+                <TouchableOpacity
+                  key={card.id}
+                  style={getCardStyle()}
+                  onPress={() => handleCardPress(card.id)}
+                  disabled={!isGameActive || card.isMatched}
+                >
+                  <FlipCard
+                    style={styles.flipCard}
+                    friction={6}
+                    perspective={1000}
+                    flipHorizontal={true}
+                    flipVertical={false}
+                    flip={card.isFlipped || card.isMatched}
+                    clickable={false}
+                  >
+                    {/* Front (back of card) */}
+                    <View style={styles.cardBack}>
+                      <Text style={styles.cardBackText}></Text>
+                    </View>
+                    {/* Back (front of card with emoji) */}
+                    <View
+                      style={[
+                        styles.cardFront,
+                        card.isMatched && styles.cardMatched,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.cardEmoji,
+                          level === 3 && styles.cardEmojiSmall,
+                        ]}
+                      >
+                        {card.emoji}
+                      </Text>
+                    </View>
+                  </FlipCard>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View
+          style={[
+            styles.bottomButtons,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.instructionsButton}
+            onPress={handleForfeit}
+          >
+            <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      />
     </>
   );
 }
@@ -785,6 +796,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
+    lineHeight: 22,
   },
   stepText: {
     fontSize: 16,

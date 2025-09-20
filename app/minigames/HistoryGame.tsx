@@ -115,6 +115,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   const [currentPuzzle, setCurrentPuzzle] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [completedPuzzles, setCompletedPuzzles] = useState(0);
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [gameComplete, setGameComplete] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
@@ -175,6 +176,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
       if (newCompleted >= 3) {
         // Game complete after 3 puzzles
         setGameComplete(true);
+        setCompletedLevel(3); // All puzzles completed = level 3
         showModal(
           '🏛️ History Master!',
           'Excellent work decoding ancient messages!',
@@ -184,7 +186,8 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
           }
         );
       } else {
-        // Move to next puzzle
+        // Move to next puzzle and update completed level
+        setCompletedLevel(newCompleted); // Update completed level for partial completion
         showModal(
           '✅ Correct!',
           `Well done! Ready for cipher ${newCompleted + 1}?`,
@@ -195,11 +198,32 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
         );
       }
     } else {
-      // Wrong answer
-      showModal(
-        '❌ Not quite right',
-        'Try decoding the message again. Remember to shift each letter!'
-      );
+      // Wrong answer - no immediate game over, but track if any progress was made
+      if (completedPuzzles === 0) {
+        // No progress yet, show retry
+        showModal(
+          '❌ Not quite right',
+          'Try decoding the message again. Remember to shift each letter!'
+        );
+      } else {
+        // Some progress made, but this answer was wrong
+        // Check if player wants to continue or get jokers for partial completion
+        showModal(
+          '❌ Not quite right',
+          `You've solved ${completedPuzzles} puzzles so far. Try again or collect rewards?`,
+          '❌',
+          () => {
+            // Continue trying
+          },
+          true, // dismissible
+          'Try Again',
+          () => {
+            // Award jokers for partial completion
+            setGameState('jokerSelection');
+          },
+          'Collect Rewards'
+        );
+      }
     }
   };
 
@@ -240,6 +264,8 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
         theme="economy"
         subject="History"
         onComplete={onComplete}
+        rewardTier={completedLevel as 1 | 2 | 3}
+        completionLevel={completedLevel as 1 | 2 | 3}
       />
     );
   }

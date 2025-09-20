@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Image, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useTabBar } from '../../src/context/TabBarContext';
 
@@ -12,6 +12,18 @@ const { width, height } = Dimensions.get('window');
 
 export default function GoingToSchoolModal({ visible, allowanceAmount, onComplete }: GoingToSchoolModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
+
+  // NEW_DAY flavor text array
+  const newDayTexts = [
+    'New day, new sugar rush.',
+    'You zip up your backpack. Time to hustle.',
+    'New day, same kingpin',
+  ];
+
+  // Pick a random text from the NEW_DAY array
+  const randomNewDayText = useMemo(() => {
+    return newDayTexts[Math.floor(Math.random() * newDayTexts.length)];
+  }, [visible]); // Re-randomize when modal becomes visible
 
   useEffect(() => {
     if (visible) {
@@ -39,7 +51,7 @@ export default function GoingToSchoolModal({ visible, allowanceAmount, onComplet
           style={styles.image}
           resizeMode="contain"
         />
-        <Text style={styles.text}>Time for school!</Text>
+        <Text style={styles.text}>{randomNewDayText}</Text>
         {allowanceAmount && (
           <Text style={styles.allowanceText}>
             Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!

@@ -1,5 +1,11 @@
 import { router } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   LayoutChangeEvent,
   ScrollView,
@@ -9,9 +15,9 @@ import {
   View,
 } from 'react-native';
 import {
-  GestureHandlerRootView,
   Gesture,
   GestureDetector,
+  GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -141,58 +147,61 @@ function applyTrade(inv: Inventory, trade: TradeTile): Inventory {
 /** =========================
  *  Generator (multi-step trading)
  *  ========================= */
-function generatePuzzle(seed: string, levelIndex: number): Puzzle {
+function generatePuzzle(levelIndex: number): Puzzle {
   const config = LEVEL_CONFIG[levelIndex];
-  const rng = makePRNG(`${seed}::level=${levelIndex}`);
-  
+  // Use true Math.random() for genuine randomness
+  const rng = () => Math.random();
+
   // Pick goal item and create trading chain
   const goal: Item = pick(rng, ALL_ITEMS);
   const chainItems: Item[] = [goal];
-  
+
   // Build chain backwards: goal <- item(n-1) <- ... <- item1 <- startItem
   // For config.steps trades, we need config.steps + 1 items in the chain
   for (let i = 0; i < config.steps; i++) {
     const nextItem = pick(rng, ALL_ITEMS, chainItems);
     chainItems.unshift(nextItem);
   }
-  
-  // Create the solution trades (always 1 for 1)
+
+  // Create the solution trades (always 1 for 1) with random IDs
   const solutionTrades: TradeTile[] = [];
   for (let i = 0; i < config.steps; i++) {
     const giveItem = chainItems[i];
     const getItem = chainItems[i + 1];
-    
+    const randomId = Math.floor(Math.random() * 1000000); // Random ID to prevent sorting patterns
+
     solutionTrades.push({
-      id: `sol-${i}-${giveItem}->${getItem}`,
+      id: `trade-${randomId}-${giveItem}-${getItem}`,
       give: { [giveItem]: 1 },
       get: { [getItem]: 1 },
       label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
       source: 'palette',
     });
   }
-  
+
   // Starting inventory is what we need for the first trade
   const startInventory: Inventory = { ...solutionTrades[0].give };
-  
+
   // Generate dummy trades
   const dummyTrades: TradeTile[] = [];
   const usedItems = new Set(chainItems);
-  
+
   for (let i = 0; i < config.dummyTrades; i++) {
     // Pick items not in the solution chain for dummy trades
-    const availableItems = ALL_ITEMS.filter(item => !usedItems.has(item));
+    const availableItems = ALL_ITEMS.filter((item) => !usedItems.has(item));
     if (availableItems.length < 2) {
       // If we run out of unused items, reuse items but avoid creating shortcuts
       const giveItem = pick(rng, ALL_ITEMS);
       const getItem = pick(rng, ALL_ITEMS, [giveItem]);
-      
+
       // Make sure dummy trade doesn't accidentally create a shortcut to goal
       if (getItem === goal && Object.keys(startInventory).includes(giveItem)) {
         continue; // Skip this dummy trade
       }
-      
+
+      const randomId = Math.floor(Math.random() * 1000000);
       dummyTrades.push({
-        id: `dummy-${i}-${giveItem}->${getItem}`,
+        id: `trade-${randomId}-${giveItem}-${getItem}`,
         give: { [giveItem]: 1 },
         get: { [getItem]: 1 },
         label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
@@ -200,35 +209,82 @@ function generatePuzzle(seed: string, levelIndex: number): Puzzle {
       });
       continue;
     }
-    
+
     const giveItem = pick(rng, availableItems);
     const getItem = pick(rng, availableItems, [giveItem]);
-    
+
+    const randomId = Math.floor(Math.random() * 1000000);
     dummyTrades.push({
-      id: `dummy-${i}-${giveItem}->${getItem}`,
+      id: `trade-${randomId}-${giveItem}-${getItem}`,
       give: { [giveItem]: 1 },
       get: { [getItem]: 1 },
       label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
       source: 'palette',
     });
-    
+
     usedItems.add(giveItem);
     usedItems.add(getItem);
   }
-  
-  // Combine and shuffle all trades
-  const allTrades = [...solutionTrades, ...dummyTrades];
-  for (let i = allTrades.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [allTrades[i], allTrades[j]] = [allTrades[j], allTrades[i]];
+
+  // Randomly interleave solution and dummy trades instead of concatenating
+  const allTrades: TradeTile[] = [];
+  const solutionCopy = [...solutionTrades];
+  const dummyCopy = [...dummyTrades];
+
+  // Randomly pick from either solution or dummy trades to build the array
+  while (solutionCopy.length > 0 || dummyCopy.length > 0) {
+    if (solutionCopy.length > 0 && dummyCopy.length > 0) {
+      // Both arrays have items, randomly pick one
+      if (Math.random() < 0.5) {
+        allTrades.push(solutionCopy.shift()!);
+      } else {
+        allTrades.push(dummyCopy.shift()!);
+      }
+    } else if (solutionCopy.length > 0) {
+      // Only solution trades left
+      allTrades.push(solutionCopy.shift()!);
+    } else {
+      // Only dummy trades left
+      allTrades.push(dummyCopy.shift()!);
+    }
   }
-  
+
+  // Still do multiple shuffle passes for extra randomization
+  for (let pass = 0; pass < 5; pass++) {
+    // Fisher-Yates shuffle
+    for (let i = allTrades.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allTrades[i], allTrades[j]] = [allTrades[j], allTrades[i]];
+    }
+
+    // Additional random swaps
+    for (let i = 0; i < allTrades.length * 3; i++) {
+      const a = Math.floor(Math.random() * allTrades.length);
+      const b = Math.floor(Math.random() * allTrades.length);
+      [allTrades[a], allTrades[b]] = [allTrades[b], allTrades[a]];
+    }
+  }
+
   const totalSlots = config.steps + config.dummyTrades;
-  return { 
-    startInventory, 
-    goal, 
-    tiles: allTrades, 
-    steps: totalSlots 
+
+  // Debug: Log the generated puzzle details
+  console.log(`🎲 Level ${levelIndex + 1} Puzzle Generated:`);
+  console.log(
+    `   Start: ${Object.keys(startInventory)
+      .map((item) => CATALOG[item as Item])
+      .join('')}`
+  );
+  console.log(`   Goal: ${CATALOG[goal]}`);
+  console.log(
+    `   Solution tiles: ${solutionTrades.map((t) => t.label).join(', ')}`
+  );
+  console.log(`   All tiles: ${allTrades.map((t) => t.label).join(', ')}`);
+
+  return {
+    startInventory,
+    goal,
+    tiles: allTrades,
+    steps: totalSlots,
   };
 }
 
@@ -356,7 +412,7 @@ function DraggableFromSlot({
 // Level configuration: [steps, dummyTrades]
 const LEVEL_CONFIG = [
   { steps: 3, dummyTrades: 0 }, // Level 1: 3 steps, no dummy trades
-  { steps: 4, dummyTrades: 4 }, // Level 2: 4 steps, 4 dummy trades  
+  { steps: 4, dummyTrades: 4 }, // Level 2: 4 steps, 4 dummy trades
   { steps: 5, dummyTrades: 7 }, // Level 3: 5 steps, 7 dummy trades
 ];
 
@@ -364,13 +420,14 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
 
-  const [seed] = useState('candy-seed');
-  const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
+  // No seed needed - using Math.random() directly for true randomness
+  const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection', 'gameover'
   const [levelIndex, setLevelIndex] = useState(0);
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
+  const [timeLeft, setTimeLeft] = useState(60); // 60 second timer
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [puzzle, setPuzzle] = useState<Puzzle>(() =>
-    generatePuzzle(`${seed}::L${0}`, 0)
-  );
+  const [puzzle, setPuzzle] = useState<Puzzle>(() => generatePuzzle(0));
   const [slots, setSlots] = useState<(TradeTile | null)[]>(() =>
     Array(puzzle.steps).fill(null)
   );
@@ -389,16 +446,66 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const dragScale = useSharedValue(0); // 0 = hidden, 1 = visible
   const [hoveredSlotIndex, setHoveredSlotIndex] = useState<number | null>(null);
 
+  // Timer effect
+  useEffect(() => {
+    if (gameState === 'playing' && timeLeft > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (gameState === 'playing' && timeLeft === 0) {
+      // Time's up - game over
+      handleGameOver('Time ran out!');
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [gameState, timeLeft]);
+
+  // Game over handler
+  const handleGameOver = (reason: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setGameState('gameover');
+
+    // If player completed at least 1 level, they get a joker reward
+    if (completedLevel > 0) {
+      showModal(
+        "⏰ Time's Up!",
+        `${reason}\n\nYou completed ${completedLevel} level${completedLevel !== 1 ? 's' : ''}!\n\nYou've earned ${completedLevel} joker${completedLevel !== 1 ? 's' : ''} for your efforts!`,
+        '🎯',
+        () => {
+          hideModal();
+          setTimeout(() => {
+            setGameState('jokerSelection');
+          }, 100);
+        }
+      );
+    } else {
+      // No levels completed - no reward
+      showModal(
+        '⏰ Game Over!',
+        `${reason}\n\nYou didn't complete any levels. Try again to earn joker rewards!`,
+        '❌',
+        () => {
+          router.back();
+        }
+      );
+    }
+  };
+
   // Start game
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('economy');
 
+    // Generate a fresh puzzle for level 1
+    resetLevel(0);
     setGameState('playing');
+    setTimeLeft(60); // 60 seconds for level 1
   };
 
   const resetLevel = (level: number) => {
-    const p = generatePuzzle(`${seed}::L${level}`, level);
+    const p = generatePuzzle(level);
     setPuzzle(p);
     setSlots(Array(p.steps).fill(null));
     setAvailable(p.tiles);
@@ -525,46 +632,66 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const executePlan = () => {
     let inv: Inventory = { ...puzzle.startInventory };
     let tradesExecuted = 0;
-    
+
     for (let i = 0; i < slots.length; i++) {
       const tile = slots[i];
       if (!tile) continue;
-      
+
       if (!canAfford(inv, tile.give)) {
         showModal(
           '❌ Plan Failed',
-          `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`
+          `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`,
+          '❌'
         );
         return;
       }
       inv = applyTrade(inv, tile);
       tradesExecuted++;
     }
-    
+
     const success = (inv[puzzle.goal] || 0) >= 1;
     if (success) {
       const isLast = levelIndex === LEVEL_CONFIG.length - 1;
-      
+
       if (isLast) {
+        console.log('🎯 Economy Game: Final level completed!', {
+          levelIndex,
+          completedLevel,
+        });
+        // Mark final level as completed and stop timer
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setCompletedLevel(levelIndex + 1);
+
         // All levels complete - go to joker selection
+        console.log('🎯 Economy Game: Showing victory modal...');
         showModal(
           '🏆 Trading Master!',
-          `Incredible! You've mastered all trading levels!\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}`,
+          `Incredible! You've mastered all trading levels!\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\n⏱️ Time left: ${timeLeft}s`,
           '🏆',
           () => {
-            setGameState('jokerSelection');
+            console.log(
+              '🎯 Economy Game: Victory modal confirmed, switching to joker selection'
+            );
+            hideModal();
+            setTimeout(() => {
+              setGameState('jokerSelection');
+            }, 100);
           }
         );
       } else {
+        // Mark this level as completed
+        setCompletedLevel(levelIndex + 1);
+
         // Level complete - advance to next level
         showModal(
           '🎉 Level Complete!',
-          `Excellent multi-step trading! You used ${tradesExecuted} trades.\nReady for Level ${levelIndex + 2}?\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}`,
+          `Excellent multi-step trading! You used ${tradesExecuted} trades.\nReady for Level ${levelIndex + 2}?\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\n⏱️ Time left: ${timeLeft}s`,
           '🎉',
           () => {
             const nextLevel = levelIndex + 1;
             setLevelIndex(nextLevel);
             resetLevel(nextLevel);
+            setTimeLeft(60); // Reset timer to 60 seconds for next level
           }
         );
       }
@@ -633,12 +760,20 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   };
 
   if (gameState === 'jokerSelection') {
+    console.log(
+      '🃏 Economy Game: Showing joker selection, completedLevel:',
+      completedLevel
+    );
+    // Ensure completedLevel is at least 1 and at most 3
+    const rewardLevel = Math.max(1, Math.min(3, completedLevel)) as 1 | 2 | 3;
     return (
       <JokerSelection
         jokers={ECONOMY_JOKERS}
         theme="economy"
         subject="Economy"
         onComplete={onComplete}
+        rewardTier={rewardLevel}
+        completionLevel={rewardLevel}
       />
     );
   }
@@ -649,25 +784,32 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <View style={styles.container}>
           <View style={styles.instructionsContainer}>
             <Text style={styles.instructionsTitle}>
-              💼 Economics Study Session! 📈
+              Economics Study Session!ho
             </Text>
 
             <View style={styles.instructionsCard}>
-              <Text style={styles.instructionsHeader}>📊 How to Trade:</Text>
+              <Text style={styles.instructionsHeader}>How to Trade:</Text>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>🔗</Text>
+                <Text style={styles.stepNumber}>1. </Text>
                 <Text style={styles.stepText}>
                   Build multi-step trading chains to reach your goal candy
                 </Text>
               </View>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>📋</Text>
+                <Text style={styles.stepNumber}>2. </Text>
                 <Text style={styles.stepText}>
-                  Level 1: 3 steps • Level 2: 4 steps • Level 3: 5 steps - no shortcuts!
+                  Level 1: 3 steps • Level 2: 4 steps • Level 3: 5 steps - no
+                  shortcuts!
                 </Text>
               </View>
               <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>🎯</Text>
+                <Text style={styles.stepNumber}>3. </Text>
+                <Text style={styles.stepText}>
+                  You have 60 seconds per level to complete the trading chain!
+                </Text>
+              </View>
+              <View style={styles.instructionStep}>
+                <Text style={styles.stepNumber}>4. </Text>
                 <Text style={styles.stepText}>
                   Drag tiles to slots in the correct order to execute your plan
                 </Text>
@@ -678,9 +820,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
               style={styles.startGameButton}
               onPress={startGame}
             >
-              <Text style={styles.startGameButtonText}>
-                💼 Start Trading Challenge!
-              </Text>
+              <Text style={styles.startGameButtonText}>Start Trading!</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -708,11 +848,13 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       >
         {/* Header */}
         <MinigameHUD
-          title="💱 Barter Trading"
+          title="Barter Trading"
           subtitle="Trade your way to the goal candy!"
-          leftInfo={`Level ${levelIndex + 1}/${LEVEL_CONFIG.length} • Slots: ${puzzle.steps}`}
-          centerInfo={`Start: ${fmtInv(puzzle.startInventory) || 'Empty'}`}
-          rightInfo={`Goal: ${CATALOG[puzzle.goal]} ${puzzle.goal}`}
+          leftInfo={`Level ${levelIndex + 1}/3 • Time: ${timeLeft}s`}
+          centerInfo={`Start: ${Object.keys(puzzle.startInventory)
+            .map((item) => CATALOG[item as Item])
+            .join('')}`}
+          rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
           theme="economy"
         />
 
@@ -1263,6 +1405,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
+    lineHeight: 22,
   },
   stepText: {
     fontSize: 16,

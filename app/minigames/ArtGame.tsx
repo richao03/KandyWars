@@ -86,6 +86,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [stage, setStage] = useState(1); // 1, 2, 3
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [currentPosition, setCurrentPosition] = useState<{
     row: number;
@@ -351,13 +352,13 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           for (const adjPathValue of adjacentPathValues) {
             // Generate decoy options with larger offsets for easier visual distinction
             const decoyOffsets = [
-              0.75,  // Larger offset for clearer visual difference
+              0.75, // Larger offset for clearer visual difference
               -0.75,
-              1.5,   // Even larger offset
+              1.5, // Even larger offset
               -1.5,
-              1.25,  // Medium-large offset
+              1.25, // Medium-large offset
               -1.25,
-              2.0,   // Very large offset for high contrast
+              2.0, // Very large offset for high contrast
               -2.0,
             ];
 
@@ -447,14 +448,21 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   const handleMistakesUp = () => {
     setIsGameActive(false);
 
-    showModal(
-      '❌ No More Chances!',
-      "You've used all your chances! Try again?",
-      '❌',
-      () => {
-        initializeStage(stage);
-      }
-    );
+    if (completedLevel > 0) {
+      // Player completed at least one stage, award jokers based on completion
+      setGameState('jokerSelection');
+    } else {
+      // Player didn't complete any stage, show restart option
+      showModal(
+        '❌ No More Chances!',
+        "You've used all your chances! Try again from Level 1?",
+        '❌',
+        () => {
+          setStage(1);
+          initializeStage(1);
+        }
+      );
+    }
   };
 
   // Initialize game when playing starts
@@ -545,6 +553,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         // Stage complete!
         setStageComplete(true);
         setIsGameActive(false);
+        setCompletedLevel(stage); // Mark this stage as completed
 
         // Show celebration and next stage option
         setTimeout(() => {
@@ -635,6 +644,8 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         theme="art"
         subject="Home Economics"
         onComplete={onComplete}
+        rewardTier={completedLevel as 1 | 2 | 3}
+        completionLevel={completedLevel as 1 | 2 | 3}
       />
     );
   }
@@ -643,24 +654,24 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>🎨 Art Study Session! 🖌️</Text>
+          <Text style={styles.instructionsTitle}>Art Study Session! 🖌️</Text>
 
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>🎯 How to Create:</Text>
+            <Text style={styles.instructionsHeader}>How to Create:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepNumber}>1. </Text>
               <Text style={styles.stepText}>
                 Follow the color sequence from START to GOAL
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🔑</Text>
+              <Text style={styles.stepNumber}>2. </Text>
               <Text style={styles.stepText}>
                 Use the color key - each step must be the next shade
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepNumber}>3.</Text>
               <Text style={styles.stepText}>
                 Wrong move = lose chance and restart (5 chances total)
               </Text>
@@ -671,7 +682,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             style={styles.startGameButton}
             onPress={() => setGameState('playing')}
           >
-            <Text style={styles.startGameButtonText}>🎨 Start Creating!</Text>
+            <Text style={styles.startGameButtonText}>Start Challenge!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -693,218 +704,230 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
   return (
     <>
-    <View
-      style={[
-        styles.container,
-        {
-          padding: ResponsiveSpacing.containerPadding(),
-          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-        },
-      ]}
-    >
-      <Animated.View style={flashStyle} />
-
-      {/* Color Key - matches current grid colors exactly */}
-      <View style={styles.header}>
-        <MinigameHUD
-          title="🎨 Art Creation"
-          subtitle="Follow the subtle color gradation path - artistic precision required!"
-          leftInfo={`Level ${stage}/3`}
-          rightInfo={`❤️ ${mistakesLeft}/5`}
-          theme="gym"
-        />
-
-        {/* Color Key - shows the correct path sequence */}
-        <View style={styles.colorKeyContainer}>
-          <Text style={styles.colorKeyTitle}>
-            Path Sequence (Follow in Order):
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.colorKeyScroll}
-          >
-            <View style={styles.colorKeyRow}>
-              {tiles.length > 0 &&
-                (() => {
-                  // Find the current color scheme
-                  const currentScheme =
-                    COLOR_SCHEMES.find((scheme) => {
-                      const testPalette = generateColorPalette(
-                        scheme.hue,
-                        stage
-                      );
-                      return tiles.some(
-                        (tile) =>
-                          tile.color ===
-                          testPalette[Math.floor(tile.shadeValue * 2)]
-                      );
-                    }) || COLOR_SCHEMES[0];
-
-                  const fullPalette = generateColorPalette(
-                    currentScheme.hue,
-                    stage
-                  );
-
-                  // Get start and goal tiles
-                  const startTile = tiles.find(t => t.isStart);
-                  const goalTile = tiles.find(t => t.isGoal);
-                  
-                  if (!startTile || !goalTile) return [];
-
-                  // Determine if path goes from light to dark or dark to light
-                  const startShade = startTile.shadeValue;
-                  const goalShade = goalTile.shadeValue;
-                  const isAscending = startShade < goalShade;
-                  
-                  // Generate the complete path sequence based on start and goal
-                  const sequentialPath = [];
-                  const stepSize = 0.5;
-                  
-                  // Always include start value first
-                  const startRounded = Math.round(startShade * 2) / 2;
-                  sequentialPath.push(startRounded);
-                  
-                  if (isAscending) {
-                    // Light to dark: increment by 0.5 from start+0.5 until goalShade
-                    for (let shade = startShade + stepSize; shade <= goalShade; shade += stepSize) {
-                      const roundedShade = Math.round(shade * 2) / 2;
-                      if (!sequentialPath.includes(roundedShade)) {
-                        sequentialPath.push(roundedShade);
-                      }
-                    }
-                  } else {
-                    // Dark to light: decrement by 0.5 from start-0.5 until goalShade
-                    for (let shade = startShade - stepSize; shade >= goalShade; shade -= stepSize) {
-                      const roundedShade = Math.round(shade * 2) / 2;
-                      if (!sequentialPath.includes(roundedShade)) {
-                        sequentialPath.push(roundedShade);
-                      }
-                    }
-                  }
-                  
-                  // Always ensure goal is included last (if not already)
-                  const goalRounded = Math.round(goalShade * 2) / 2;
-                  if (!sequentialPath.includes(goalRounded)) {
-                    sequentialPath.push(goalRounded);
-                  }
-
-                  return sequentialPath.map((shadeValue, index) => {
-                    // Use the same color calculation as the actual path tiles
-                    const maxShadeInGame = Math.max(startShade, goalShade);
-                    const normalizedShade = shadeValue / Math.max(maxShadeInGame, 1);
-                    const paletteIndex = Math.min(
-                      fullPalette.length - 1,
-                      Math.floor(normalizedShade * (fullPalette.length - 1))
-                    );
-                    
-                    const backgroundColor = fullPalette[Math.max(0, paletteIndex)];
-                    // Use floating point safe comparison
-                    const isStart = Math.abs(shadeValue - startShade) < 0.001;
-                    const isGoal = Math.abs(shadeValue - goalShade) < 0.001;
-                    
-                    return (
-                      <View
-                        key={shadeValue}
-                        style={[
-                          styles.colorKeySwatch,
-                          { backgroundColor },
-                          isStart && styles.startSwatch,
-                          isGoal && styles.goalSwatch,
-                        ]}
-                      >
-                        <Text style={styles.colorKeyNumber}>
-                          {isStart ? '🎨' : isGoal ? '🏆' : (index + 1)}
-                        </Text>
-                      </View>
-                    );
-                  });
-                })()}
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-
-      {/* Game Container */}
-      <Animated.View style={[styles.gameContainer, shakeStyle]}>
-        {/* Grid - Create rows explicitly */}
-        <View style={[styles.gridContainer, { width: screenWidth }]}>
-          {Array.from({ length: stageConfig.gridSize }, (_, rowIndex) => (
-            <View key={`row-${rowIndex}`} style={styles.gridRow}>
-              {Array.from({ length: stageConfig.gridSize }, (_, colIndex) => {
-                const tile = tiles.find(
-                  (t) => t.row === rowIndex && t.col === colIndex
-                );
-                if (!tile) return null;
-
-                const isCurrentPosition =
-                  currentPosition?.row === tile.row &&
-                  currentPosition?.col === tile.col;
-                const isInPath = currentPath.some(
-                  (p) => p.row === tile.row && p.col === tile.col
-                );
-
-                // Remove green highlighting - players must use visual skills only
-
-                return (
-                  <TouchableOpacity
-                    key={tile.id}
-                    style={[
-                      styles.tile,
-                      {
-                        width: tileSize,
-                        height: tileSize,
-                        backgroundColor: tile.color,
-                      },
-                      tile.isStart && styles.startTile,
-                      tile.isGoal && styles.goalTile,
-                      isCurrentPosition && styles.currentTile,
-                      isInPath && !isCurrentPosition && styles.pathTile,
-                    ]}
-                    onPress={() => handleTilePress(tile.row, tile.col)}
-                  >
-                    {tile.isStart && (
-                      <Text style={styles.tileLabel}>START</Text>
-                    )}
-                    {tile.isGoal && <Text style={styles.tileLabel}>GOAL</Text>}
-                    {isCurrentPosition && (
-                      <Text style={styles.playerMarker}>🖌️</Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ))}
-        </View>
-      </Animated.View>
-
-      {/* Footer - Outside gameContainer to prevent overlap */}
       <View
         style={[
-          styles.footer,
+          styles.container,
           {
-            gap: ResponsiveSpacing.buttonGap(),
-            paddingVertical: ResponsiveSpacing.buttonPadding(),
+            padding: ResponsiveSpacing.containerPadding(),
+            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
           },
         ]}
       >
-        <TouchableOpacity
-          style={[styles.footerBtn, styles.leaveBtn]}
-          onPress={handleForfeit}
-        >
-          <Text style={styles.footerBtnText}>🎨 Leave</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <Animated.View style={flashStyle} />
 
-    <GameModal
-      visible={modal.visible}
-      title={modal.title}
-      message={modal.message}
-      emoji={modal.emoji}
-      onClose={hideModal}
-      onConfirm={modal.onConfirm}
-    />
+        {/* Color Key - matches current grid colors exactly */}
+        <View style={styles.header}>
+          <MinigameHUD
+            title="🎨 Art Creation"
+            subtitle="Follow the subtle color gradation path - artistic precision required!"
+            leftInfo={`Level ${stage}/3`}
+            rightInfo={`❤️ ${mistakesLeft}/5`}
+            theme="gym"
+          />
+
+          {/* Color Key - shows the correct path sequence */}
+          <View style={styles.colorKeyContainer}>
+            <Text style={styles.colorKeyTitle}>
+              Path Sequence (Follow in Order):
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.colorKeyScroll}
+            >
+              <View style={styles.colorKeyRow}>
+                {tiles.length > 0 &&
+                  (() => {
+                    // Find the current color scheme
+                    const currentScheme =
+                      COLOR_SCHEMES.find((scheme) => {
+                        const testPalette = generateColorPalette(
+                          scheme.hue,
+                          stage
+                        );
+                        return tiles.some(
+                          (tile) =>
+                            tile.color ===
+                            testPalette[Math.floor(tile.shadeValue * 2)]
+                        );
+                      }) || COLOR_SCHEMES[0];
+
+                    const fullPalette = generateColorPalette(
+                      currentScheme.hue,
+                      stage
+                    );
+
+                    // Get start and goal tiles
+                    const startTile = tiles.find((t) => t.isStart);
+                    const goalTile = tiles.find((t) => t.isGoal);
+
+                    if (!startTile || !goalTile) return [];
+
+                    // Determine if path goes from light to dark or dark to light
+                    const startShade = startTile.shadeValue;
+                    const goalShade = goalTile.shadeValue;
+                    const isAscending = startShade < goalShade;
+
+                    // Generate the complete path sequence based on start and goal
+                    const sequentialPath = [];
+                    const stepSize = 0.5;
+
+                    // Always include start value first
+                    const startRounded = Math.round(startShade * 2) / 2;
+                    sequentialPath.push(startRounded);
+
+                    if (isAscending) {
+                      // Light to dark: increment by 0.5 from start+0.5 until goalShade
+                      for (
+                        let shade = startShade + stepSize;
+                        shade <= goalShade;
+                        shade += stepSize
+                      ) {
+                        const roundedShade = Math.round(shade * 2) / 2;
+                        if (!sequentialPath.includes(roundedShade)) {
+                          sequentialPath.push(roundedShade);
+                        }
+                      }
+                    } else {
+                      // Dark to light: decrement by 0.5 from start-0.5 until goalShade
+                      for (
+                        let shade = startShade - stepSize;
+                        shade >= goalShade;
+                        shade -= stepSize
+                      ) {
+                        const roundedShade = Math.round(shade * 2) / 2;
+                        if (!sequentialPath.includes(roundedShade)) {
+                          sequentialPath.push(roundedShade);
+                        }
+                      }
+                    }
+
+                    // Always ensure goal is included last (if not already)
+                    const goalRounded = Math.round(goalShade * 2) / 2;
+                    if (!sequentialPath.includes(goalRounded)) {
+                      sequentialPath.push(goalRounded);
+                    }
+
+                    return sequentialPath.map((shadeValue, index) => {
+                      // Use the same color calculation as the actual path tiles
+                      const maxShadeInGame = Math.max(startShade, goalShade);
+                      const normalizedShade =
+                        shadeValue / Math.max(maxShadeInGame, 1);
+                      const paletteIndex = Math.min(
+                        fullPalette.length - 1,
+                        Math.floor(normalizedShade * (fullPalette.length - 1))
+                      );
+
+                      const backgroundColor =
+                        fullPalette[Math.max(0, paletteIndex)];
+                      // Use floating point safe comparison
+                      const isStart = Math.abs(shadeValue - startShade) < 0.001;
+                      const isGoal = Math.abs(shadeValue - goalShade) < 0.001;
+
+                      return (
+                        <View
+                          key={shadeValue}
+                          style={[
+                            styles.colorKeySwatch,
+                            { backgroundColor },
+                            isStart && styles.startSwatch,
+                            isGoal && styles.goalSwatch,
+                          ]}
+                        >
+                          <Text style={styles.colorKeyNumber}>
+                            {isStart ? '🎨' : isGoal ? '🏆' : index + 1}
+                          </Text>
+                        </View>
+                      );
+                    });
+                  })()}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+
+        {/* Game Container */}
+        <Animated.View style={[styles.gameContainer, shakeStyle]}>
+          {/* Grid - Create rows explicitly */}
+          <View style={[styles.gridContainer, { width: screenWidth }]}>
+            {Array.from({ length: stageConfig.gridSize }, (_, rowIndex) => (
+              <View key={`row-${rowIndex}`} style={styles.gridRow}>
+                {Array.from({ length: stageConfig.gridSize }, (_, colIndex) => {
+                  const tile = tiles.find(
+                    (t) => t.row === rowIndex && t.col === colIndex
+                  );
+                  if (!tile) return null;
+
+                  const isCurrentPosition =
+                    currentPosition?.row === tile.row &&
+                    currentPosition?.col === tile.col;
+                  const isInPath = currentPath.some(
+                    (p) => p.row === tile.row && p.col === tile.col
+                  );
+
+                  // Remove green highlighting - players must use visual skills only
+
+                  return (
+                    <TouchableOpacity
+                      key={tile.id}
+                      style={[
+                        styles.tile,
+                        {
+                          width: tileSize,
+                          height: tileSize,
+                          backgroundColor: tile.color,
+                        },
+                        tile.isStart && styles.startTile,
+                        tile.isGoal && styles.goalTile,
+                        isCurrentPosition && styles.currentTile,
+                        isInPath && !isCurrentPosition && styles.pathTile,
+                      ]}
+                      onPress={() => handleTilePress(tile.row, tile.col)}
+                    >
+                      {tile.isStart && (
+                        <Text style={styles.tileLabel}>START</Text>
+                      )}
+                      {tile.isGoal && (
+                        <Text style={styles.tileLabel}>GOAL</Text>
+                      )}
+                      {isCurrentPosition && (
+                        <Text style={styles.playerMarker}>🖌️</Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* Footer - Outside gameContainer to prevent overlap */}
+        <View
+          style={[
+            styles.footer,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.footerBtn, styles.leaveBtn]}
+            onPress={handleForfeit}
+          >
+            <Text style={styles.footerBtnText}>🎨 Leave</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+      />
     </>
   );
 }
@@ -1177,6 +1200,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
+    lineHeight: 22,
   },
   stepText: {
     fontSize: 16,

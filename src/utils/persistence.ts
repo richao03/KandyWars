@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   PROCESSED_EVENTS: 'candyWarz_processedEvents',
   PLAYER_ID: 'candyWarz_playerId',
   PLAYER_NAME_STATUS: 'candyWarz_playerNameStatus',
+  FORCE_RESET_FLAG: 'candyWarz_forceResetFlag',
 } as const;
 
 // Generic save/load functions
@@ -45,6 +46,40 @@ export const clearData = async (key: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error(`Failed to clear ${key}:`, error);
+    return false;
+  }
+};
+
+export const clearGameProgress = async (): Promise<boolean> => {
+  try {
+    // Clear only game progress data, preserve player identity
+    const gameProgressKeys = [
+      STORAGE_KEYS.GAME_STATE,
+      STORAGE_KEYS.INVENTORY,
+      STORAGE_KEYS.WALLET,
+      STORAGE_KEYS.JOKERS,
+      STORAGE_KEYS.SEED,
+      STORAGE_KEYS.PROCESSED_EVENTS,
+    ];
+    await AsyncStorage.multiRemove(gameProgressKeys);
+    console.log('🗑️ Cleared game progress data successfully (preserved player identity)');
+
+    // Set force reset flag to ensure GameContext ignores any remaining saved state
+    await setForceResetFlag();
+    console.log('🔄 Set force reset flag for next GameContext load');
+
+    // Double-check that game state is actually cleared
+    const gameState = await AsyncStorage.getItem(STORAGE_KEYS.GAME_STATE);
+    if (gameState) {
+      console.warn('⚠️ Game state still exists after clear, forcing removal');
+      await AsyncStorage.removeItem(STORAGE_KEYS.GAME_STATE);
+    } else {
+      console.log('✅ Confirmed game state cleared');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to clear game progress data:', error);
     return false;
   }
 };
@@ -108,6 +143,17 @@ export const loadPlayerId = (): Promise<string | null> =>
 export const savePlayerNameStatus = (hasSetName: boolean) => 
   saveData(STORAGE_KEYS.PLAYER_NAME_STATUS, hasSetName);
 
-export const loadPlayerNameStatus = (): Promise<boolean> => 
+export const loadPlayerNameStatus = (): Promise<boolean> =>
   loadData(STORAGE_KEYS.PLAYER_NAME_STATUS, false);
+
+export const setForceResetFlag = (): Promise<boolean> =>
+  saveData(STORAGE_KEYS.FORCE_RESET_FLAG, true);
+
+export const checkAndClearForceResetFlag = async (): Promise<boolean> => {
+  const shouldReset = await loadData(STORAGE_KEYS.FORCE_RESET_FLAG, false);
+  if (shouldReset) {
+    await clearData(STORAGE_KEYS.FORCE_RESET_FLAG);
+  }
+  return shouldReset;
+};
 

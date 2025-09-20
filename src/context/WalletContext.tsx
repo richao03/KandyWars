@@ -19,6 +19,7 @@ type WalletContextType = {
   withdrawFromStash: (amount: number) => boolean;
   stealMoney: (amount: number, jokers?: any[], periodCount?: number) => number; // Returns amount stolen from balance
   resetWallet: () => void;
+  completeReset: () => void;
   initializeWallet: (level?: number, playerName?: string) => void;
   setPlayerName: (name: string) => void;
   hasExistingName: () => Promise<boolean>;
@@ -233,7 +234,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const resetWallet = async () => {
     // Don't release the player's name from Firebase during wallet reset
     // Names should only be released when user explicitly changes them in settings
-    
+
     setBalance(20); // Reset to starting cash
     setStashedAmount(0); // Reset stash
     setDifficultyLevel(null); // Reset difficulty level
@@ -243,6 +244,17 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // setPlayerId(null); // Keep player ID for Firebase name tracking
     setIsFirstTimeDifficultySelection(true); // Reset first time flag
     console.log('Wallet reset to initial state (keeping player ID and name for persistence)');
+  };
+
+  const completeReset = async () => {
+    // Complete reset including player name and ID - used for "Reset All Data"
+    setBalance(20); // Reset to starting cash
+    setStashedAmount(0); // Reset stash
+    setDifficultyLevel(null); // Reset difficulty level
+    setPlayerNameState(null); // Clear player name completely
+    setPlayerId(null); // Clear player ID completely
+    setIsFirstTimeDifficultySelection(true); // Reset first time flag
+    console.log('Wallet completely reset to factory defaults (all data cleared)');
   };
 
   const initializeWallet = (level?: number, playerName?: string) => {
@@ -305,6 +317,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       withdrawFromStash,
       stealMoney,
       resetWallet,
+      completeReset,
       initializeWallet,
       setPlayerName,
       hasExistingName

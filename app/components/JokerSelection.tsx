@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useJokers, Joker as JokerType } from '../../src/context/JokerContext';
+import { Joker as JokerType, useJokers } from '../../src/context/JokerContext';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 
 interface Joker {
@@ -23,49 +23,72 @@ interface JokerSelectionProps {
   theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy' | 'gym';
   subject: string;
   onComplete: () => void;
+  rewardTier?: 1 | 2 | 3; // 1 = 1 joker no reroll, 2 = 2 jokers + 1 reroll, 3 = 3 jokers + 2 rerolls
+  completionLevel?: 1 | 2 | 3; // Which level the player completed before failing/winning
 }
 
-export default function JokerSelection({ jokers, theme, subject, onComplete }: JokerSelectionProps) {
+export default function JokerSelection({
+  jokers,
+  theme,
+  subject,
+  onComplete,
+  rewardTier = 3,
+  completionLevel = 3,
+}: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
-  const [hasRerolled, setHasRerolled] = useState(false);
+  const [rerollsUsed, setRerollsUsed] = useState(0);
   const { addJoker, getJokersBySubject: getUserJokersBySubject } = useJokers();
 
-  // Get user's jokers for this subject
+  // Get user's jokers for this subject (for reference, not used for selection anymore)
   const userJokers = getUserJokersBySubject(subject);
-  // Use user's jokers if they have any, otherwise fall back to provided jokers
-  const availableJokers = userJokers.length > 0 ? userJokers : jokers;
+  // Always use the full joker pool for minigame rewards (provided jokers)
+  // Don't limit to user's existing jokers as that prevents proper rewards
+  const availableJokers = jokers;
 
   const selectRandomJokers = () => {
     const shuffled = [...availableJokers].sort(() => Math.random() - 0.5);
-    setSelectedJokers(shuffled.slice(0, 3));
+    const jokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
+    const selected = shuffled.slice(0, jokerCount);
+    setSelectedJokers(selected);
   };
 
   const rerollJokers = () => {
     // For reroll, get fresh random jokers from the full pool for this subject
     const allSubjectJokers = getJokersBySubject(subject);
     const shuffled = [...allSubjectJokers].sort(() => Math.random() - 0.5);
-    setSelectedJokers(shuffled.slice(0, 2)); // Only 2 jokers on reroll
-    setHasRerolled(true); // Disable further rerolls
+
+    // Reroll gives fewer jokers based on tier
+    let rerollJokerCount;
+    if (rewardTier === 2)
+      rerollJokerCount = 1; // Level 2: reroll for 1 joker
+    else if (rewardTier === 3)
+      rerollJokerCount = 2; // Level 3: reroll for 2 jokers
+    else rerollJokerCount = 0; // Level 1: no reroll
+
+    setSelectedJokers(shuffled.slice(0, rerollJokerCount));
+    setRerollsUsed((prev) => prev + 1);
   };
 
   const handleJokerChoice = (jokerId: number) => {
     // Look for the joker in the current selectedJokers or fall back to available jokers
-    let selectedJoker = selectedJokers.find(j => j.id === jokerId);
+    let selectedJoker = selectedJokers.find((j) => j.id === jokerId);
     if (!selectedJoker) {
-      selectedJoker = availableJokers.find(j => j.id === jokerId);
+      selectedJoker = availableJokers.find((j) => j.id === jokerId);
     }
     // If still not found (for rerolled jokers), look in the full subject pool
     if (!selectedJoker) {
       const allSubjectJokers = getJokersBySubject(subject);
-      selectedJoker = allSubjectJokers.find(j => j.id === jokerId);
+      selectedJoker = allSubjectJokers.find((j) => j.id === jokerId);
     }
-    
+
     if (selectedJoker) {
       // Determine type from the joker's effects duration
       // If all effects are one-time, it's a one-time joker, otherwise persistent
-      const isOneTime = selectedJoker.effects?.every((e: any) => e.duration === 'one-time') ?? false;
+      const isOneTime =
+        selectedJoker.effects?.every((e: any) => e.duration === 'one-time') ??
+        false;
       const jokerType = isOneTime ? 'one-time' : 'persistent';
-      
+
       // Add joker to inventory with full structure
       const jokerToAdd: JokerType = {
         id: selectedJoker.id,
@@ -74,10 +97,11 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
         subject: subject || selectedJoker.subject,
         theme: theme,
         type: jokerType, // Keep for backwards compatibility with jokers page
-        effect: selectedJoker.effect || selectedJoker.effects?.[0]?.target || '',
-        effects: selectedJoker.effects // Include the full effects array!
+        effect:
+          selectedJoker.effect || selectedJoker.effects?.[0]?.target || '',
+        effects: selectedJoker.effects, // Include the full effects array!
       };
-      
+
       addJoker(jokerToAdd);
     }
     onComplete();
@@ -167,75 +191,136 @@ export default function JokerSelection({ jokers, theme, subject, onComplete }: J
   };
 
   const themeStyles = getThemeStyles();
-  const getEmoji = () => {
+
+  const getButtonText = () => {
+    const count = rewardTier;
     switch (theme) {
-      case 'math': return '🎓';
-      case 'computer': return '🎭';
-      case 'homeec': return '👩‍🍳';
-      case 'economy': return '🏛️';
-      case 'gym': return '🏃‍♂️';
-      default: return '🍭';
+      case 'math':
+        return `📊 Show ${count} Math Concept${count > 1 ? 's' : ''}`;
+      case 'computer':
+        return `💻 Show ${count} Hack Tool${count > 1 ? 's' : ''}`;
+      case 'homeec':
+        return `🍳 Show ${count} Kitchen Tool${count > 1 ? 's' : ''}`;
+      case 'economy':
+        return `🏛️ Show ${count} Trade Tool${count > 1 ? 's' : ''}`;
+      case 'gym':
+        return `🏃‍♂️ Show ${count} Fitness Tool${count > 1 ? 's' : ''}`;
+      default:
+        return `🍭 Show ${count} Candy Tool${count > 1 ? 's' : ''}`;
     }
   };
 
-  const getButtonText = () => {
-    switch (theme) {
-      case 'math': return '📊 Show 3 Math Concepts';
-      case 'computer': return '💻 Show 3 Hack Tools';
-      case 'homeec': return '🍳 Show 3 Kitchen Tools';
-      case 'economy': return '🏛️ Show 3 Trade Tools';
-      case 'gym': return '🏃‍♂️ Show 3 Fitness Tools';
-      default: return '🍭 Show 3 Candy Tools';
-    }
+  // Helper functions for reroll logic
+  const getMaxRerolls = () => {
+    if (rewardTier === 2) return 1; // Level 2: 1 reroll allowed
+    if (rewardTier === 3) return 2; // Level 3: 2 rerolls allowed
+    return 0; // Level 1: no rerolls
+  };
+
+  const canReroll = () => {
+    return rerollsUsed < getMaxRerolls() && rewardTier > 1;
+  };
+
+  const getRerollDescription = () => {
+    const remaining = getMaxRerolls() - rerollsUsed;
+    if (rewardTier === 2) return `${remaining} reroll left, 1 card`;
+    if (rewardTier === 3)
+      return `${remaining} reroll${remaining > 1 ? 's' : ''} left, 2 cards`;
+    return '';
+  };
+
+  const getRewardDescription = () => {
+    if (completionLevel === 1) return 'You completed Level 1!';
+    if (completionLevel === 2) return 'You completed Level 2!';
+    if (completionLevel === 3) return 'You mastered all 3 levels!';
+    return 'Great job!';
   };
 
   return (
     <View style={[styles.container, themeStyles.container]}>
       <View style={styles.jokerContainer}>
         <Text style={[styles.jokerTitle, themeStyles.title]}>
-          {getEmoji()} Choose Your {subject} Tool!
+          Choose Your {subject} Joker!
         </Text>
         <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
-          Select one powerful ability to master the game:
+          {getRewardDescription()} {'\n'} Select one powerful ability:
         </Text>
-        
+
         {selectedJokers.length === 0 && (
-          <TouchableOpacity 
-            style={[styles.generateButton, themeStyles.generateButton]} 
+          <TouchableOpacity
+            style={[styles.generateButton, themeStyles.generateButton]}
             onPress={selectRandomJokers}
           >
-            <Text style={[styles.generateButtonText, themeStyles.generateButtonText]}>
+            <Text
+              style={[
+                styles.generateButtonText,
+                themeStyles.generateButtonText,
+              ]}
+            >
               {getButtonText()}
             </Text>
           </TouchableOpacity>
         )}
 
-        {selectedJokers.map((joker) => (
-          <TouchableOpacity
-            key={joker.id}
-            style={[styles.jokerCard, themeStyles.jokerCard]}
-            onPress={() => handleJokerChoice(joker.id)}
-          >
-            <Text style={[styles.jokerName, themeStyles.jokerName]}>{joker.name}</Text>
-            <Text style={[styles.jokerDescription, themeStyles.jokerDescription]}>
-              {joker.description}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {selectedJokers.map((joker) => {
+          // Determine if this joker is instant or aura
+          const isOneTime =
+            joker.effects?.every((e: any) => e.duration === 'one-time') ??
+            false;
+          const jokerType = isOneTime ? 'instant' : 'aura';
+          const typeEmoji = isOneTime ? '⚡' : '🔮';
 
-        {selectedJokers.length > 0 && !hasRerolled && (
-          <TouchableOpacity 
-            style={[styles.rerollButton, themeStyles.generateButton]} 
+          return (
+            <TouchableOpacity
+              key={joker.id}
+              style={[styles.jokerCard, themeStyles.jokerCard]}
+              onPress={() => handleJokerChoice(joker.id)}
+            >
+              <View style={styles.jokerHeader}>
+                <Text style={[styles.jokerName, themeStyles.jokerName]}>
+                  {joker.name}
+                </Text>
+                <View
+                  style={[
+                    styles.typeIndicator,
+                    isOneTime ? styles.instantIndicator : styles.auraIndicator,
+                  ]}
+                >
+                  <Text style={styles.typeEmoji}>{typeEmoji}</Text>
+                  <Text
+                    style={[
+                      styles.typeText,
+                      isOneTime ? styles.instantText : styles.auraText,
+                    ]}
+                  >
+                    {jokerType.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+              <Text
+                style={[styles.jokerDescription, themeStyles.jokerDescription]}
+              >
+                {joker.description}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        {selectedJokers.length > 0 && canReroll() && (
+          <TouchableOpacity
+            style={[styles.rerollButton, themeStyles.generateButton]}
             onPress={rerollJokers}
           >
-            <Text style={[styles.rerollButtonText, themeStyles.generateButtonText]}>
-              🎲 Reroll (2 cards only)
+            <Text
+              style={[styles.rerollButtonText, themeStyles.generateButtonText]}
+            >
+              🎲 Reroll ({getRerollDescription()})
             </Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity 
-          style={[styles.skipButton, themeStyles.skipButton]} 
+        <TouchableOpacity
+          style={[styles.skipButton, themeStyles.skipButton]}
           onPress={onComplete}
         >
           <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
@@ -291,16 +376,51 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
+  jokerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   jokerName: {
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'CrayonPastel',
-    marginBottom: 4,
+    flex: 1,
   },
   jokerDescription: {
     fontSize: 14,
     fontFamily: 'CrayonPastel',
     lineHeight: 18,
+  },
+  typeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  instantIndicator: {
+    borderColor: '#ffc107',
+  },
+  auraIndicator: {
+    borderColor: '#0066cc',
+  },
+  typeEmoji: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  typeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
+  },
+  instantText: {
+    color: '#b8860b',
+  },
+  auraText: {
+    color: '#0066cc',
   },
   skipButton: {
     paddingVertical: 12,

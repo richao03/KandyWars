@@ -81,11 +81,11 @@ const HAND_POSITIONS = {
   // Style 0: Diagonal positioning (player top-left, CPU bottom-right)
   style0: {
     player: { x: -58, y: -175 }, // Negative X = left, Negative Y = up
-    cpu: { x: 112, y: 145 }, // Positive X = right, Positive Y = down
+    cpu: { x: 122, y: 145 }, // Positive X = right, Positive Y = down
   },
   // Style 1: Reversed diagonal (player bottom-left, CPU top-right)
   style1: {
-    player: { x: -49, y: 55 },
+    player: { x: -59, y: 55 },
     cpu: { x: 93, y: -76 },
   },
   // Style 2: Horizontal (both centered vertically)
@@ -110,10 +110,10 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'countdown', 'playing', 'result', 'jokerSelection', 'computerChoice', 'hint'
   const [debugMode, setDebugMode] = useState(false); // DEBUG: Set to true to see all positions
   const [stage, setStage] = useState(1); // 1, 2, or 3
+  const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [score, setScore] = useState(0);
   const [roundsPlayed, setRoundsPlayed] = useState(0);
   const [countdownNumber, setCountdownNumber] = useState(3);
-  const [isFirstRound, setIsFirstRound] = useState(true);
   const [entranceStyleIndex, setEntranceStyleIndex] = useState(0);
   const [playerChoice, setPlayerChoice] = useState<Gesture | null>(null);
   const [computerChoice, setComputerChoice] = useState<Gesture | null>(null);
@@ -125,10 +125,12 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   const [showComputerPreview, setShowComputerPreview] = useState(false);
   const [hintGesture, setHintGesture] = useState<Gesture | null>(null);
   const [playerTimeLimit, setPlayerTimeLimit] = useState(1500); // Time limit for player choice
+  const [showTimerLine, setShowTimerLine] = useState(false);
 
   // Animation values
   const countdownScale = useSharedValue(0);
   const countdownOpacity = useSharedValue(0);
+  const timerLineWidth = useSharedValue(1);
   const playerGestureX = useSharedValue(-500);
   const playerGestureY = useSharedValue(0);
   const playerRotation = useSharedValue(90); // Base rotation for player
@@ -161,13 +163,17 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   };
 
   // Start countdown (full countdown for first round, just "GO!" for subsequent rounds)
-  const startCountdown = (forceStage?: number) => {
+  const startCountdown = (
+    forceStage?: number,
+    currentRoundsPlayed?: number
+  ) => {
     setGameState('countdown');
     setPlayerChoice(null);
     setComputerChoice(null);
     setIsProcessingRound(false);
     setHintGesture(null); // Clear any previous hints
     setShowComputerPreview(false); // Clear any previous previews
+    setShowTimerLine(false); // Clear any previous timer
 
     // Reset animation positions and rotations (within game area)
     playerGestureX.value = -200;
@@ -190,8 +196,14 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       );
     };
 
-    if (isFirstRound) {
-      // Full countdown for first round: 3, 2, 1, GO!
+    // Only show full countdown (3,2,1,GO) for first round of each stage
+    // All other rounds just show "GO!"
+    const roundsToCheck =
+      currentRoundsPlayed !== undefined ? currentRoundsPlayed : roundsPlayed;
+    const isFirstRoundOfStage = roundsToCheck === 0;
+
+    if (isFirstRoundOfStage) {
+      // Full countdown: 3, 2, 1, GO!
       setCountdownNumber(3);
       let count = 3;
 
@@ -210,7 +222,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         if (count === 0) {
           setCountdownNumber(0); // Show "GO!"
           animateCountdown();
-          setIsFirstRound(false); // Mark that first round is done
 
           setTimeout(() => {
             startPlayingRound(forceStage);
@@ -221,7 +232,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         }
       }, 1000);
     } else {
-      // Subsequent rounds: just "GO!"
+      // Just show "GO!" for subsequent rounds
       setCountdownNumber(0); // Show "GO!"
       animateCountdown();
 
@@ -314,6 +325,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   const startPlayerTimeout = (timeLimit: number) => {
     const roundId = ++currentRoundId.current;
 
+    // Show and animate timer line
+    setShowTimerLine(true);
+    timerLineWidth.value = 1;
+    timerLineWidth.value = withTiming(0, { duration: timeLimit });
+
     playerTimeoutRef.current = setTimeout(() => {
       if (
         roundId === currentRoundId.current &&
@@ -321,6 +337,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         gameState === 'playing' &&
         !isProcessingRound
       ) {
+        setShowTimerLine(false);
         handlePlayerChoice(null); // Time out - player loses
       }
     }, timeLimit);
@@ -344,15 +361,28 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       playerTimeoutRef.current = null;
     }
 
-    if (!choice) {
-      // Player timed out
-      const newLosses = losses + 1;
-      console.log(`Player timed out! Losses: ${newLosses}/3 on stage ${stage}`);
-      setLastResult('lose');
-      setLosses(newLosses);
+    // Hide timer line
+    setShowTimerLine(false);
 
-      // Check if player has lost 3 times (game over)
-      const isGameOver = newLosses >= 3;
+    if (!choice) {
+      // Player timed out - use functional update to avoid stale state
+      let isGameOver = false;
+      setLosses((currentLosses) => {
+        const newLosses = currentLosses + 1;
+        console.log(
+          `Player timed out! Losses: ${newLosses}/3 on stage ${stage}`
+        );
+
+        // Check if player has lost 3 times (game over)
+        isGameOver = newLosses >= 3;
+        if (isGameOver) {
+          console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
+        }
+
+        return newLosses;
+      });
+      setLastResult('lose');
+
       if (isGameOver) {
         console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
       }
@@ -360,26 +390,38 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       // Set game state and continue automatically
       setGameState('result');
       shouldAnimate.value = true;
-      setRoundsPlayed((prev) => prev + 1);
+      const newRoundsPlayed = roundsPlayed + 1;
+      setRoundsPlayed(newRoundsPlayed);
 
       // No modal - automatically continue after showing result
       setTimeout(() => {
         if (isGameOver) {
-          // Game over - show modal
-          showModal(
-            '💀 Game Over!',
-            'You lost 3 times! Better luck next time!',
-            '💀',
-            () => {
-              router.back();
-            },
-            false // Non-dismissible - must click to continue
-          );
+          // Game over - check if player completed any stage
+          if (completedLevel > 0) {
+            // Player completed at least one stage, award jokers based on completion
+            setGameState('jokerSelection');
+          } else {
+            // Player didn't complete any stage, show restart option
+            showModal(
+              '💀 Game Over!',
+              'You lost 3 times! Try again from Stage 1?',
+              '💀',
+              () => {
+                setStage(1);
+                setScore(0);
+                setRoundsPlayed(0);
+                setWins(0);
+                setLosses(0);
+                startCountdown();
+              },
+              false // Non-dismissible - must click to continue
+            );
+          }
         } else if (
           gameState !== 'levelComplete' &&
           gameState !== 'jokerSelection'
         ) {
-          startCountdown();
+          startCountdown(undefined, newRoundsPlayed);
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
 
@@ -410,15 +452,18 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       } else if (result === 'tie') {
         setScore((prev) => prev + 5);
       } else {
-        const newLosses = losses + 1;
-        console.log(`Loss! Losses: ${newLosses}/3 on stage ${stage}`);
-        setLosses(newLosses);
+        setLosses((currentLosses) => {
+          const newLosses = currentLosses + 1;
+          console.log(`Loss! Losses: ${newLosses}/3 on stage ${stage}`);
 
-        // Check if player has lost 3 times (game over)
-        if (newLosses >= 3) {
-          console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
-          isGameOver = true;
-        }
+          // Check if player has lost 3 times (game over)
+          if (newLosses >= 3) {
+            console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
+            isGameOver = true;
+          }
+
+          return newLosses;
+        });
       }
 
       // Set game state first
@@ -427,7 +472,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       // Trigger animations using the shared value trigger
       shouldAnimate.value = true;
 
-      setRoundsPlayed((prev) => prev + 1);
+      const newRoundsPlayed = roundsPlayed + 1;
+      setRoundsPlayed(newRoundsPlayed);
 
       // Show result then start next round or complete stage
       setTimeout(() => {
@@ -438,17 +484,28 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           );
           handleStageComplete();
         } else if (isGameOver) {
-          // Game over - show modal
+          // Game over - check if player completed any stage
           console.log(`💀 Showing game over modal after result animation`);
-          showModal(
-            '💀 Game Over!',
-            'You lost 3 times! Better luck next time!',
-            '💀',
-            () => {
-              router.back();
-            },
-            false // Non-dismissible - must click to continue
-          );
+          if (completedLevel > 0) {
+            // Player completed at least one stage, award jokers based on completion
+            setGameState('jokerSelection');
+          } else {
+            // Player didn't complete any stage, show restart option
+            showModal(
+              '💀 Game Over!',
+              'You lost 3 times! Try again from Stage 1?',
+              '💀',
+              () => {
+                setStage(1);
+                setScore(0);
+                setRoundsPlayed(0);
+                setWins(0);
+                setLosses(0);
+                startCountdown();
+              },
+              false // Non-dismissible - must click to continue
+            );
+          }
         } else if (
           gameState !== 'levelComplete' &&
           gameState !== 'jokerSelection' &&
@@ -459,7 +516,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           playerGestureY.value = 0;
           computerGestureX.value = 200;
           computerGestureY.value = 0;
-          startCountdown();
+          startCountdown(undefined, newRoundsPlayed);
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
     }
@@ -470,6 +527,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     console.log(`🎊 handleStageComplete called for stage ${stage}`);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
+
+    // Mark this stage as completed
+    setCompletedLevel(stage);
 
     // Clear any pending timeouts by setting gameState first
     setGameState('levelComplete');
@@ -501,7 +561,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             setRoundsPlayed(0);
             setWins(0); // Reset wins for new stage
             setLosses(0); // Reset losses for new stage
-            setIsFirstRound(true); // Reset to show full countdown for new stage
 
             // Pass the new stage to ensure correct stage logic is used
             setTimeout(() => {
@@ -540,7 +599,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     setRoundsPlayed(0);
     setWins(0);
     setLosses(0);
-    setIsFirstRound(true); // Reset first round flag
     setEntranceStyleIndex(0); // Reset entrance style rotation
 
     startCountdown();
@@ -596,6 +654,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     transform: [{ rotate: `${computerRotation.value}deg` }],
   }));
 
+  const timerLineStyle = useAnimatedStyle(() => ({
+    width: `${timerLineWidth.value * 100}%`,
+  }));
+
+
   // Handle gesture animations with useAnimatedReaction
   useAnimatedReaction(
     () => shouldAnimate.value,
@@ -612,31 +675,31 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         // Image is 225x225, sleeve is roughly at 180px from center of image
 
         if (entranceStyle === 0) {
-          // Style 1: Start from corners - sleeve at edge
-          // For diagonal at 135°, offset so sleeve touches corner
-          playerGestureX.value = -280; // Sleeve at left edge
-          playerGestureY.value = -200; // Sleeve at top edge
-          computerGestureX.value = 280; // Sleeve at right edge
-          computerGestureY.value = 200; // Sleeve at bottom edge
+          // Style 1: Start from corners - arms hidden within game area
+          // For diagonal at 135°, start from true diagonal corner for angled entrance
+          playerGestureX.value = -220; // Start further out diagonally
+          playerGestureY.value = -180; // Start further out diagonally
+          computerGestureX.value = 200; // Start further out diagonally for angled entrance
+          computerGestureY.value = 200; // Start further out diagonally for angled entrance
 
           // Angles for diagonal entrance
           playerRotation.value = 135;
           computerRotation.value = 315;
         } else if (entranceStyle === 1) {
-          // Style 2: Opposite corners - sleeve at edge
-          playerGestureX.value = -280; // Sleeve at left edge
-          playerGestureY.value = 200; // Sleeve at bottom edge
-          computerGestureX.value = 280; // Sleeve at right edge
-          computerGestureY.value = -200; // Sleeve at top edge
+          // Style 2: Opposite corners - arms hidden within game area
+          playerGestureX.value = -180; // Arm hidden within left edge
+          playerGestureY.value = 150; // Arm hidden within bottom edge
+          computerGestureX.value = 180; // Arm hidden within right edge
+          computerGestureY.value = -150; // Arm hidden within top edge
 
           // Angles for diagonal entrance
           playerRotation.value = 45;
           computerRotation.value = 225;
         } else {
-          // Style 3: Straight from sides - sleeve at edge
-          playerGestureX.value = -320; // Sleeve at left edge
+          // Style 3: Straight from sides - arms hidden within game area
+          playerGestureX.value = -200; // Arm hidden within left edge
           playerGestureY.value = 0;
-          computerGestureX.value = 320; // Sleeve at right edge
+          computerGestureX.value = 200; // Arm hidden within right edge
           computerGestureY.value = 0;
 
           // Standard horizontal rotations
@@ -772,6 +835,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         theme="recess"
         subject="Recess"
         onComplete={onComplete}
+        rewardTier={completedLevel as 1 | 2 | 3}
+        completionLevel={completedLevel as 1 | 2 | 3}
       />
     );
   }
@@ -781,25 +846,25 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>
-            ✂️ Rock Paper Scissors Battle! 🪨
+            Rock Paper Scissors Battle!
           </Text>
 
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>🎮 How to Play:</Text>
+            <Text style={styles.instructionsHeader}>How to Play:</Text>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🎯</Text>
+              <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
                 Beat the computer at Rock Paper Scissors
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>🔑</Text>
+              <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
                 Choose quickly after countdown - timing matters!
               </Text>
             </View>
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>⚠️</Text>
+              <Text style={styles.stepNumber}>3.</Text>
               <Text style={styles.stepText}>
                 Need 4 wins in a row per stage, 3 losses = game over
               </Text>
@@ -807,7 +872,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           </View>
 
           <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
-            <Text style={styles.startGameButtonText}>🎮 Start Battle!</Text>
+            <Text style={styles.startGameButtonText}>Start Battle!</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -833,7 +898,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     >
       {/* Header */}
       <MinigameHUD
-        title="✂️ Rock Paper Scissors! 🪨"
+        title="Rock Paper Scissors!"
         subtitle={`Round ${roundsPlayed + 1} | Wins: ${wins}/4 | Losses: ${losses}/3`}
         leftInfo={`Stage ${stage}/3`}
         rightInfo={`Score: ${score}`}
@@ -842,6 +907,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
       {/* Game Area */}
       <View style={styles.gameArea}>
+        {/* Timer Line */}
+        {showTimerLine && (
+          <View style={styles.timerContainer}>
+            <Animated.View style={[styles.timerLine, timerLineStyle]} />
+          </View>
+        )}
+
         {/* Countdown */}
         {gameState === 'countdown' && (
           <Animated.View
@@ -1391,6 +1463,7 @@ const styles = StyleSheet.create({
     fontFamily: 'CrayonPastel',
     marginRight: 10,
     minWidth: 20,
+    lineHeight: 22,
   },
   stepText: {
     fontSize: 16,
@@ -1484,5 +1557,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     fontFamily: 'CrayonPastel',
+  },
+  // Timer line styles
+  timerContainer: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 3,
+    zIndex: 100,
+  },
+  timerLine: {
+    height: '100%',
+    backgroundColor: '#FF6B6B',
+    borderRadius: 3,
   },
 });

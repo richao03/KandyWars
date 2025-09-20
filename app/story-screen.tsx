@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useWallet } from '../src/context/WalletContext';
+import NamePromptModal from './components/NamePromptModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -154,7 +155,7 @@ const getStoryLines = (breed: string, cost: string) => {
           { text: `There it was, the most perfect ` },
           { text: breed, color: '#6b4423' },
           { text: ` you ever did see. You have one week to stack up ` },
-          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `$${cost}`, color: '#85BB65' },
           { text: ` needed to bring it home.` },
         ],
       });
@@ -168,10 +169,10 @@ const getStoryLines = (breed: string, cost: string) => {
   story.push({
     highlights: [
       {
-        text: 'The hallways are buzzing, the cafeteria is whispering, and the ',
+        text: 'The hallways are buzzing, the cafeteria is whispering, and ',
       },
-      { text: 'joker', color: '#9333ea' },
-      { text: ' bookmarks in your study books are yearning to be found.' },
+      { text: 'jokers', color: '#ffe135' },
+      { text: ' are yearning to be found in your studybooks.' },
     ],
   });
 
@@ -180,22 +181,41 @@ const getStoryLines = (breed: string, cost: string) => {
 
   // Add the final motivational line
   story.push({
-    text: "With a pocket full of dreams and candies, it's time to embrace the hallway and hug the block. It's time to run the school!",
-    highlights: [],
+    text: "They don't call you the for no reason, ",
+    highlights: [
+      { text: "They don't call you " },
+      { text: 'The Candy King ', color: '#7851A9' },
+      { text: 'for nothing, ' },
+      {
+        text: "it's time to embrace the hallway and hug the block. It's time to run the school!",
+      },
+    ],
   });
 
   return story;
 };
 
 export default function StoryScreen() {
-  console.log('🎬 StoryScreen component mounting');
   const wallet = useWallet();
   const currentLevel = wallet?.difficultyLevel || 1;
   const dogBreed = getDogBreed(currentLevel);
-  const storyLines = getStoryLines(
-    dogBreed,
-    Math.abs(wallet?.stashedAmount || 0).toLocaleString()
-  );
+  const debtAmount = Math.abs(wallet?.stashedAmount || 0);
+
+  const storyLines = getStoryLines(dogBreed, debtAmount.toLocaleString());
+
+  // Early return if story data is invalid
+  if (!storyLines || storyLines.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <View style={styles.textContainer}>
+          <Text style={styles.storyText}>
+            Error: No story available. Please restart the game.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
@@ -203,6 +223,8 @@ export default function StoryScreen() {
   const [showSkip, setShowSkip] = useState(false);
   const [showContinue, setShowContinue] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
 
   const typewriterSpeed = 25; // milliseconds per character
   const lineDelay = 400; // delay between lines
@@ -213,7 +235,9 @@ export default function StoryScreen() {
 
   // Initialize with a small delay to prevent flash
   useEffect(() => {
+    console.log('🎬 StoryScreen: Initializing...');
     const initTimer = setTimeout(() => {
+      console.log('🎬 StoryScreen: Setting isReady to true');
       setIsReady(true);
     }, 100);
     return () => clearTimeout(initTimer);
@@ -224,6 +248,11 @@ export default function StoryScreen() {
     if (!isReady) return; // Don't start until ready
 
     if (currentLineIndex >= storyLines.length) {
+      // Safety check: don't auto-show continue if story is empty or something is wrong
+      if (storyLines.length === 0) {
+        return;
+      }
+
       setIsTyping(false);
       setShowContinue(true);
       return;
@@ -235,9 +264,9 @@ export default function StoryScreen() {
 
     // Get the full text content for typing
     const fullText =
-      currentLine.highlights.length > 0
+      currentLine.highlights && currentLine.highlights.length > 0
         ? currentLine.highlights.map((h) => h.text).join('')
-        : currentLine.text;
+        : currentLine.text || '';
 
     const typeInterval = setInterval(() => {
       if (charIndex <= fullText.length) {
@@ -253,7 +282,7 @@ export default function StoryScreen() {
     }, typewriterSpeed);
 
     return () => clearInterval(typeInterval);
-  }, [currentLineIndex, isReady]);
+  }, [currentLineIndex, isReady, storyLines.length]);
 
   // Cursor blink animation
   useEffect(() => {
@@ -338,16 +367,29 @@ export default function StoryScreen() {
   }, []);
 
   const handleSkip = () => {
+    setUserHasInteracted(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.replace('/(tabs)/market');
+    // Check if user has a name, if not show name modal, otherwise go to market
+    if (!wallet?.playerName || wallet.playerName.trim() === '') {
+      setShowNameModal(true);
+    } else {
+      router.replace('/(tabs)/market');
+    }
   };
 
   const handleContinue = () => {
+    setUserHasInteracted(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace('/(tabs)/market');
+    // Check if user has a name, if not show name modal, otherwise go to market
+    if (!wallet?.playerName || wallet.playerName.trim() === '') {
+      setShowNameModal(true);
+    } else {
+      router.replace('/(tabs)/market');
+    }
   };
 
   const handleTapToSkip = () => {
+    setUserHasInteracted(true);
     if (currentLineIndex < storyLines.length - 1) {
       // Skip to end
       setCurrentLineIndex(storyLines.length);
@@ -357,6 +399,33 @@ export default function StoryScreen() {
     }
   };
 
+  const handleNameSubmit = async (name: string) => {
+    setShowNameModal(false);
+
+    if (wallet?.setPlayerName) {
+      wallet.setPlayerName(name);
+    }
+
+    // Initialize wallet with the name and go to market
+    if (wallet?.difficultyLevel) {
+      wallet?.initializeWallet(wallet.difficultyLevel, name);
+    }
+
+    router.replace('/(tabs)/market');
+  };
+
+  const handleNameSkip = () => {
+    setShowNameModal(false);
+
+    // Initialize wallet with default name and go to market
+    if (wallet?.difficultyLevel) {
+      wallet?.initializeWallet(wallet.difficultyLevel, 'Player');
+      wallet?.setPlayerName('Player');
+    }
+
+    router.replace('/(tabs)/market');
+  };
+
   // Render styled text with colors
   const renderStyledText = () => {
     const result = [];
@@ -364,7 +433,7 @@ export default function StoryScreen() {
     // Add all previous completed lines
     for (let i = 0; i < currentLineIndex; i++) {
       const line = storyLines[i];
-      if (line.highlights.length > 0) {
+      if (line.highlights && line.highlights.length > 0) {
         // Render highlighted text
         line.highlights.forEach((highlight, idx) => {
           result.push(
@@ -399,7 +468,7 @@ export default function StoryScreen() {
     // Add current line being typed
     if (currentLineIndex < storyLines.length && displayedText) {
       const currentLine = storyLines[currentLineIndex];
-      if (currentLine.highlights.length > 0) {
+      if (currentLine.highlights && currentLine.highlights.length > 0) {
         // For highlighted lines, we need to figure out which parts to show
         let charCount = 0;
         currentLine.highlights.forEach((highlight, idx) => {
@@ -524,13 +593,20 @@ export default function StoryScreen() {
             style={styles.continueButton}
             onPress={handleContinue}
           >
-            <Text style={styles.continueText}>🚀 Start Trading!</Text>
+            <Text style={styles.continueText}>Start Day 1</Text>
           </TouchableOpacity>
           <Text style={styles.tapHint}>
             Your future best friend is waiting...
           </Text>
         </View>
       )}
+
+      {/* Nested Name Modal */}
+      <NamePromptModal
+        visible={showNameModal}
+        onSubmitName={handleNameSubmit}
+        onSkip={handleNameSkip}
+      />
     </View>
   );
 }

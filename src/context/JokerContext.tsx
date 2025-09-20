@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { loadJokers, saveJokers } from '../utils/persistence';
 import { scoreboardService } from '../services/firebase';
-import { useTutorial } from './TutorialContext';
 
 export interface Joker {
   id: number;

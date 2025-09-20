@@ -20,6 +20,8 @@ const subjects = [
 export default function StudyPage() {
   const { day, hasStudiedTonight, markStudiedTonight } = useGame();
 
+  console.log('📚 StudyPage: hasStudiedTonight =', hasStudiedTonight);
+
   const handleSubjectSelect = (subject: string) => {
     if (hasStudiedTonight) {
       // User has already studied tonight, prevent further studying

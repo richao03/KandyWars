@@ -134,7 +134,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
     'The vending machine ate someone’s dollar. It might be personal.',
     'There’s a line outside the nurse’s office — sugar crash victims, maybe.',
     'You overhear `Gum is selling for double in Gym class.`',
-    'The principal made an announcement about “suspicious sugar activity.',
+    'The principal made an announcement about “suspicious sugar activity."',
     'Someone’s trading Warheads for answers to the quiz.',
     'There’s a secret candy stash behind the library globe.',
     'Someone’s got a fresh haul — the rustle of wrappers is unmistakable.',
@@ -145,7 +145,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
 
     "There's a faded `Candy King 2023` badge on your backpack.",
 
-    'A teacher confiscated candy and muttered, `Again with the gum?`',
+    'A teacher confiscated somones candy and muttered, `Again with the gum?`',
 
     'A desk drawer smells like sour apple.',
 
@@ -201,7 +201,9 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentEvent, setCurrentEvent] = useState('DEFAULT');
   const [text, setText] = useState(getRandomFlavor('DEFAULT'));
   const [isHint, setIsHint] = useState(false);
-  const [eventType, setEventType] = useState<FlavorEvent | 'HINT' | null>('DEFAULT');
+  const [eventType, setEventType] = useState<FlavorEvent | 'HINT' | null>(
+    'DEFAULT'
+  );
 
   // Removed problematic interval that was causing unnecessary re-renders
 
@@ -253,7 +255,16 @@ export const FlavorTextProvider: React.FC<{ children: React.ReactNode }> = ({
       setHint,
       resetFlavorText,
     }),
-    [text, isHint, eventType, setEvent, setManual, setFlavorText, setHint, resetFlavorText]
+    [
+      text,
+      isHint,
+      eventType,
+      setEvent,
+      setManual,
+      setFlavorText,
+      setHint,
+      resetFlavorText,
+    ]
   );
 
   return (

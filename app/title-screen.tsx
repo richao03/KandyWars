@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
 import { useWallet } from '../src/context/WalletContext';
@@ -12,6 +12,7 @@ import { nameValidationService } from '../src/services/nameValidationService';
 import { loadPlayerId } from '../src/utils/persistence';
 
 export default function TitleScreenPage() {
+  const searchParams = useLocalSearchParams();
   const walletContext = useWallet();
   const { resetGame, lastActiveView } = useGame();
   const { resetInventory } = useInventory();
@@ -21,7 +22,6 @@ export default function TitleScreenPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [firebaseCheckComplete, setFirebaseCheckComplete] = useState(false);
-
   const initializeWallet = walletContext?.initializeWallet || (() => {});
 
   // Load player data from Firebase before showing title screen
@@ -79,22 +79,12 @@ export default function TitleScreenPage() {
 
   const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
     try {
-      // Reset all game data for a fresh start
-      await resetGame();
+      // Note: Game reset is now handled in CandyWarsTitleScreen.handleStoryContinue()
+      // after difficulty selection to ensure proper timing
+      console.log('📱 TitleScreen: handleNewGame called - game reset will happen after difficulty selection');
 
-      // Reset all contexts
-      resetInventory();
-      resetJokers();
-      resetFlavorText();
-
-      // Generate new seed for fresh game data and candy prices
-      const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      setSeed(newSeed);
-
-      // Note: Wallet reset and initialization is already handled in CandyWarsTitleScreen
-      // when the user selects difficulty and optionally enters a name
-      // Don't call resetWallet() here as it would override the debt set by initializeWallet()
-
+      // Navigate to market - but this won't actually be reached since
+      // CandyWarsTitleScreen handles the flow directly to story screen
       router.replace('/(tabs)/market');
     } catch (error) {
       console.error('Error starting new game:', error);

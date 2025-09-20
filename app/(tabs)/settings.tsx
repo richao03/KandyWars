@@ -18,7 +18,6 @@ import { useInventory } from '../../src/context/InventoryContext';
 import { useJokers } from '../../src/context/JokerContext';
 import { useSeed } from '../../src/context/SeedContext';
 import { useWallet } from '../../src/context/WalletContext';
-import { useTutorial } from '../../src/context/TutorialContext';
 import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -31,7 +30,6 @@ export default function Settings() {
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
-  const { resetAllTutorials, tutorialEnabled, setTutorialEnabled } = useTutorial();
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
@@ -99,7 +97,6 @@ export default function Settings() {
           resetInventory();
           resetJokers();
           resetFlavorText();
-          resetAllTutorials();
 
           // Generate new seed for fresh game FIRST (this clears the seed context)
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -259,45 +256,6 @@ export default function Settings() {
     setNameValidationError(null);
   };
 
-  const handleResetTutorial = () => {
-    setConfirmModal({
-      visible: true,
-      title: 'Reset Tutorial',
-      message: 'This will reset all tutorial progress and show the tutorial again when you start playing. Are you sure?',
-      emoji: '📚',
-      confirmText: 'Reset Tutorial',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        console.log('📚 Resetting tutorial progress');
-        resetConfirmModal();
-        try {
-          await resetAllTutorials();
-          Alert.alert(
-            'Tutorial Reset',
-            'Tutorial progress has been reset. You\'ll see the tutorial again when you play.'
-          );
-        } catch (error) {
-          console.error('Failed to reset tutorial:', error);
-          Alert.alert('Error', 'Failed to reset tutorial. Please try again.');
-        }
-      },
-      onCancel: () => {
-        console.log('❌ Tutorial reset canceled');
-        resetConfirmModal();
-      },
-    });
-  };
-
-  const handleToggleTutorial = () => {
-    const newState = !tutorialEnabled;
-    setTutorialEnabled(newState);
-    Alert.alert(
-      'Tutorial ' + (newState ? 'Enabled' : 'Disabled'),
-      newState
-        ? 'Tutorial hints will be shown during gameplay.'
-        : 'Tutorial hints have been disabled.'
-    );
-  };
 
   const handleClearAllData = () => {
     setConfirmModal({
@@ -339,8 +297,6 @@ export default function Settings() {
             'wallet_balance',
             'wallet_difficulty',
             'wallet_piggyBank',
-            'tutorial_progress',
-            'tutorial_enabled',
             'game_state',
             'inventory',
             'jokers',
@@ -355,7 +311,6 @@ export default function Settings() {
           resetInventory();
           resetJokers();
           resetFlavorText();
-          await resetAllTutorials();
 
           // Generate new seed
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -511,33 +466,6 @@ export default function Settings() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tutorial</Text>
-
-          <TouchableOpacity
-            style={[styles.button, styles.tutorialButton]}
-            onPress={handleToggleTutorial}
-          >
-            <Text style={styles.tutorialButtonText}>
-              {tutorialEnabled ? '✅ Tutorial Enabled' : '❌ Tutorial Disabled'}
-            </Text>
-            <Text style={styles.buttonSubtext}>
-              {tutorialEnabled ? 'Helpful hints will appear during gameplay' : 'Play without tutorial hints'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.tutorialButton]}
-            onPress={handleResetTutorial}
-          >
-            <Text style={styles.tutorialButtonText}>
-              📚 Reset Tutorial Progress
-            </Text>
-            <Text style={styles.buttonSubtext}>
-              Start the tutorial from the beginning
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Beta Leaderboard</Text>

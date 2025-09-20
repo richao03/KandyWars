@@ -38,7 +38,6 @@ import TransactionModal from '../components/TransactionModal';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
-// import { useJokerTutorial } from '../../src/hooks/useJokerTutorial';
 
 type PriceBreakdown = {
   basePrice: number;
@@ -82,22 +81,31 @@ function Market(props) {
 
   const { balance, spend, add } = useWallet();
   const {
-    start: startCopilot,
+    start,
+    stop: stopCopilot,
     eventEmitter,
     copilotEvents,
     isFirstStep,
     currentStep,
+    visible,
   } = useCopilot();
 
-  // Debug copilot state
+  // Debug copilot state and events
   useEffect(() => {
     console.log(
       '🎓 Copilot state - isFirstStep:',
       isFirstStep,
       'currentStep:',
-      currentStep
+      currentStep,
+      'copilotEvents:',
+      copilotEvents
     );
-  }, [isFirstStep, currentStep]);
+
+    // Log available events
+    if (eventEmitter && eventEmitter._events) {
+      console.log('🎓 Available events:', Object.keys(eventEmitter._events));
+    }
+  }, [isFirstStep, currentStep, copilotEvents, eventEmitter]);
 
   // Debug when component mounts and track active view
   useEffect(() => {
@@ -112,7 +120,6 @@ function Market(props) {
     // Track that user is now in market view
     setLastActiveView('market');
   }, [setLastActiveView]);
-  // useJokerTutorial(); // Register for joker tutorial
   const {
     inventory,
     addToInventory,
@@ -139,10 +146,39 @@ function Market(props) {
   useEmptyInventoryBonus(); // This hook handles Embrace the Grind joker bonus
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
   const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
-
-  // Tutorial disabled - no automatic tutorial on day 1
-  const shouldShowTutorial = false;
+  // Tutorial using Copilot - check if we should show tutorial for day 1 period 1 (period starts at 0)
+  // Also check tutorial completion status
+  const shouldShowTutorial = day === 1 && periodCount === 0;
   const tutorialStarted = useRef(false);
+
+  // Debug tutorial conditions
+  console.log('🎓 Tutorial Debug:', {
+    day,
+    periodCount,
+    shouldShowTutorial,
+    tutorialStarted: tutorialStarted.current,
+    isFirstStep,
+    currentStep,
+    copilotVisible: visible,
+  });
+
+  // Simple tutorial auto-start (copied from after-school.tsx pattern)
+  useEffect(() => {
+    if (shouldShowTutorial && !tutorialStarted.current) {
+      console.log(
+        '🎓 Auto-starting tutorial - simple approach like after-school.tsx'
+      );
+
+      // Small delay to ensure UI is ready (same as after-school.tsx)
+      const timeoutId = setTimeout(() => {
+        console.log('🎯 Starting market copilot tutorial');
+        tutorialStarted.current = true;
+        start();
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [shouldShowTutorial, start]);
 
   // Show location modal after event modal is dismissed
   useEffect(() => {
@@ -717,49 +753,6 @@ function Market(props) {
             </CopilotView>
           </CopilotStep>
 
-          {/* Tutorial Welcome Banner for Day 1 Period 1 */}
-          {shouldShowTutorial && (
-            <TouchableOpacity
-              style={{
-                position: 'absolute',
-                top: 50,
-                left: 20,
-                right: 20,
-                backgroundColor: 'rgba(74, 144, 226, 0.95)',
-                padding: 15,
-                borderRadius: 10,
-                zIndex: 1000,
-                borderWidth: 2,
-                borderColor: '#4a90e2',
-              }}
-              onPress={() => {
-                console.log('🎓 Starting tutorial from welcome banner');
-                startCopilot();
-              }}
-            >
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                }}
-              >
-                🎒 Welcome to Candy Wars!
-              </Text>
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 14,
-                  textAlign: 'center',
-                  marginTop: 5,
-                }}
-              >
-                Tap here to learn how to play
-              </Text>
-            </TouchableOpacity>
-          )}
-
           <CopilotStep
             text="Here's the candy market! Each candy has a different price. Tap on any candy to buy or sell it. Prices change throughout the day!"
             order={3}
@@ -799,27 +792,6 @@ function Market(props) {
                           {item.cost < item.basePrice && (
                             <Text style={styles.priceChange}>📉</Text>
                           )}
-                          {item.quantityOwned > 0 &&
-                            item.averagePrice !== null && (
-                              <Text
-                                style={[
-                                  styles.gainLoss,
-                                  item.cost >= item.averagePrice
-                                    ? styles.gain
-                                    : styles.loss,
-                                ]}
-                              >
-                                {(() => {
-                                  const baseGain =
-                                    (item.cost - item.averagePrice) *
-                                    item.quantityOwned;
-                                  const totalGain = baseGain;
-                                  return totalGain >= 0
-                                    ? `+$${totalGain.toFixed(2)}`
-                                    : `-$${Math.abs(totalGain).toFixed(2)}`;
-                                })()}
-                              </Text>
-                            )}
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -860,7 +832,7 @@ function Market(props) {
                       activeOpacity={0.8}
                     >
                       <Text style={styles.nextPeriodButtonText}>
-                        ⏰ Next Period
+                        Next Period
                       </Text>
                       <Text style={styles.nextPeriodSubtext}>
                         Going to period {period + 1}
@@ -872,7 +844,7 @@ function Market(props) {
                       onPress={handleEndDay}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.endDayButtonText}>🏠 End Day</Text>
+                      <Text style={styles.endDayButtonText}>End Day</Text>
                       <Text style={styles.endDaySubtext}>
                         Skip to after school
                       </Text>
@@ -1009,8 +981,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   item: {
-    marginBottom: 12,
-    padding: 16,
+    marginBottom: 6,
+    padding: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 16,
     borderWidth: 3,
