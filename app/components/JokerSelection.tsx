@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Joker as JokerType, useJokers } from '../../src/context/JokerContext';
+import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 
 interface Joker {

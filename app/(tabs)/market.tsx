@@ -11,25 +11,28 @@ import {
 } from 'react-native';
 import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
-import { useCandySales } from '../../src/context/CandySalesContext';
-import { useDailyStats } from '../../src/context/DailyStatsContext';
-import { useEventHandler } from '../../src/context/EventHandlerContext';
-import { useGame } from '../../src/context/GameContext';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useSeed } from '../../src/context/SeedContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useCandySales } from '../../src/hooks/useCandySales';
+import { useDailyStats } from '../../src/hooks/useDailyStats';
+import { useEventHandler } from '../../src/hooks/useEventHandler';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
 import { useDiamondHand } from '../../src/hooks/useDiamondHand';
 import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { JokerService } from '../../src/utils/jokerService';
+import { Candy } from '../types';
 import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EndOfDayModal from '../components/EndOfDayModal';
 import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
+import InventoryModal from '../components/InventoryModal';
 import LocationModal, { Location } from '../components/LocationModal';
 import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
@@ -136,8 +139,10 @@ function Market(props) {
     startAfterSchool,
     setLastActiveView,
   } = useGame();
-  const { hasActiveEvent } = useEventHandler();
+  const { hasActiveEvent: hasActiveEventFn } = useEventHandler();
+  const hasActiveEvent = hasActiveEventFn();
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
+  const { setEvent, setFlavorText, setHint } = useFlavorText();
   const { addSale, resetSales, consecutivePeriodSales } = useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
   const { activeEffects, jokers, removeJoker } = useJokers();
@@ -200,9 +205,93 @@ function Market(props) {
     }
   }, [currentLocation, periodCount]);
 
+  // Update flavor text when period changes
+  useEffect(() => {
+
+    // Check for current event at current location
+    const currentEvent = gameData.periodEvents.find(
+      e => e.period === periodCount && e.location === currentLocation
+    );
+
+    // Check if there's an upcoming event at current location
+    const nextPeriodEvent = gameData.periodEvents.find(
+      e => e.period === periodCount + 1 && e.location === currentLocation
+    );
+
+    if (periodCount === 0) {
+      setEvent('NEW_DAY');
+    } else if (currentEvent && currentEvent.description) {
+      // Show the current event description
+      if (currentEvent.effect === 'PRICE_SPIKE') {
+        setEvent('PRICE_SPIKE');
+      } else if (currentEvent.effect === 'PRICE_DROP') {
+        setEvent('PRICE_DROP');
+      } else if (currentEvent.effect === 'FOUND_MONEY') {
+        setEvent('FOUND_MONEY');
+      } else if (currentEvent.effect === 'LOSE_MONEY') {
+        setEvent('LOSE_MONEY');
+      } else if (currentEvent.effect === 'STASH_LOCKED') {
+        setEvent('STASH_LOCKED');
+      }
+      // Also show the event's specific description
+      setTimeout(() => setFlavorText(currentEvent.description || ''), 100);
+    } else if (nextPeriodEvent && nextPeriodEvent.hint) {
+      // Check if jokers affect hint chance
+      const baseHintChance = 0.7; // 70% base chance
+      const effectiveHintChance = jokerService.applyJokerEffects(
+        baseHintChance,
+        'hint_chance',
+        jokers,
+        periodCount,
+        baseHintChance,
+        undefined,
+        activeEffects
+      );
+
+      if (Math.random() < effectiveHintChance) {
+        // Use the actual hint from the event template
+        setHint(nextPeriodEvent.hint);
+      } else {
+        // Show period-specific flavor text instead of hint
+        if (periodCount <= 2) {
+          setEvent('MORNING_TRADE');
+        } else if (periodCount >= 4 && periodCount <= 6) {
+          setEvent('LUNCH_RUSH');
+        } else if (periodCount >= 7) {
+          setEvent('FINAL_PERIOD');
+        } else {
+          setEvent('PERIOD_CHANGE');
+        }
+      }
+    } else if (nextPeriodEvent) {
+      // If there's an event but no hint defined, show regular flavor text
+      if (periodCount <= 2) {
+        setEvent('MORNING_TRADE');
+      } else if (periodCount >= 4 && periodCount <= 6) {
+        setEvent('LUNCH_RUSH');
+      } else if (periodCount >= 7) {
+        setEvent('FINAL_PERIOD');
+      } else {
+        setEvent('PERIOD_CHANGE');
+      }
+    } else {
+      // Period-specific flavor text based on time of day
+      if (periodCount <= 2) {
+        setEvent('MORNING_TRADE');
+      } else if (periodCount >= 4 && periodCount <= 6) {
+        setEvent('LUNCH_RUSH');
+      } else if (periodCount >= 7) {
+        setEvent('FINAL_PERIOD');
+      } else {
+        setEvent('PERIOD_CHANGE');
+      }
+    }
+  }, [periodCount, currentLocation, gameData.periodEvents, setEvent, setFlavorText, setHint, jokers, activeEffects, jokerService]);
+
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
       ...candy,
+      basePrice: candy.baseMin, // Add basePrice property
       cost: candy.baseMin, // Initialize with base minimum price
       quantityOwned: 0,
       averagePrice: null,
@@ -251,14 +340,17 @@ function Market(props) {
             ? currentEvent.priceOverride
             : currentPrice;
 
+        // Note: Price storage moved to separate useEffect to avoid setState during render
+
         // Get inventory information for this candy
-        const inventoryItem = inventory[candy.name];
+        const inventoryItem = inventory.find(item => item.name === candy.name);
 
         return {
           ...candy,
+          basePrice: trueBasePrice, // Update basePrice for accurate comparison
           cost: finalCost,
           quantityOwned: inventoryItem?.quantity || 0,
-          averagePrice: inventoryItem?.averagePrice || null,
+          averagePrice: inventoryItem?.price || null,
           priceBreakdown:
             currentEvent?.priceOverride === undefined
               ? priceBreakdown
@@ -272,8 +364,37 @@ function Market(props) {
     currentLocation,
     inventory,
     jokers,
+    activeEffects,
     getInventoryLimit,
   ]);
+
+  // Separate effect to store candy prices to avoid setState during render
+  useEffect(() => {
+    baseCandies.forEach((candy) => {
+      if (!gameData.candyPrices[candy.name]?.[periodCount]) {
+        // Calculate the same price as in the candies state update
+        const seed = candy.name.charCodeAt(0) + periodCount;
+        const random = Math.sin(seed) * 10000;
+        const normalizedRandom = random - Math.floor(random);
+        const trueBasePrice = candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
+
+        // Check for current location-specific events with price overrides
+        const currentEvent = gameData.periodEvents.find(
+          (e) =>
+            e.period === periodCount &&
+            e.location === currentLocation &&
+            e.candy === candy.name &&
+            e.priceOverride !== undefined
+        );
+
+        const finalCost = currentEvent?.priceOverride !== undefined
+          ? currentEvent.priceOverride
+          : (gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice);
+
+        modifyCandyPrice(candy.name, finalCost, periodCount);
+      }
+    });
+  }, [periodCount, currentLocation, gameData.periodEvents, gameData.candyPrices, modifyCandyPrice]);
 
   const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
     null
@@ -309,6 +430,7 @@ function Market(props) {
   });
   const [endDayConfirmVisible, setEndDayConfirmVisible] = useState(false);
   const [isEarlyEndDay, setIsEarlyEndDay] = useState(false);
+  const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -375,19 +497,9 @@ function Market(props) {
           // Record sale for Drought Relief tracking
           recordDroughtSale();
 
-          // Check for sale bonuses
-          const saleResult = addSale(candy.name);
+          // Record the sale
+          addSale(candy.name);
           let multiplier = 1;
-
-          // Apply Candy Salad bonus if applicable
-          if (saleResult.shouldApplyCandySaladBonus) {
-            multiplier *= 5;
-          }
-
-          // Apply Jump Rope Rhythm bonus if applicable
-          if (saleResult.shouldApplyJumpRopeBonus) {
-            multiplier *= 1.33;
-          }
 
           // Check for one-time sell multiplier jokers (like Pursuasion)
           const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(
@@ -475,8 +587,6 @@ function Market(props) {
 
           // Show bonus notifications if applied
           const hasAnyBonus =
-            saleResult.shouldApplyCandySaladBonus ||
-            saleResult.shouldApplyJumpRopeBonus ||
             sellMultiplierInfo.hasEffect ||
             (hopscotchJoker && period % 2 === 0) ||
             (swingsetJoker && consecutivePeriodSales > 1);
@@ -493,12 +603,6 @@ function Market(props) {
                   `🗣️ ${sellMultiplierInfo.jokerName}: ${sellMultiplierInfo.multiplier}x multiplier`
                 );
               }
-              if (saleResult.shouldApplyCandySaladBonus) {
-                bonusDetails.push(`🥗 Candy Salad: 5x bonus`);
-              }
-              if (saleResult.shouldApplyJumpRopeBonus) {
-                bonusDetails.push(`🪩 Jump Rope Rhythm: 33% bonus (3rd sale)`);
-              }
               if (hopscotchJoker && period % 2 === 0) {
                 bonusDetails.push(
                   `🏃 Hopscotch Bonus: 20% bonus (even period)`
@@ -513,9 +617,6 @@ function Market(props) {
               if (bonusDetails.length > 1) {
                 title = 'Multiple Bonuses!';
                 emoji = '🎉';
-              } else if (saleResult.shouldApplyJumpRopeBonus) {
-                title = 'Jump Rope Rhythm!';
-                emoji = '🪩';
               }
 
               message =
@@ -590,6 +691,9 @@ function Market(props) {
     console.log('Market - Location selected:', location);
     setLocationModalVisible(false); // Ensure modal closes
     incrementPeriod(location);
+
+    // Update flavor text for new location
+    setEvent('PERIOD_CHANGE');
   };
 
   const handleEndDay = () => {
@@ -740,6 +844,7 @@ function Market(props) {
               <GameHUD
                 isModalOpening={isTransactionModalOpening}
                 isModalOpen={selectedCandyIndex !== null}
+                onInventoryPress={() => setInventoryModalVisible(true)}
                 flavorTextWrapper={(children) => (
                   <CopilotStep
                     text="The Rumor Mill shows important information and hints! Keep an eye on these scrolling messages - they might reveal price trends, special events, or valuable tips from other students."
@@ -786,10 +891,10 @@ function Market(props) {
                           <Text style={styles.price}>
                             ${item.cost.toFixed(2)}
                           </Text>
-                          {item.cost > item.basePrice && (
+                          {item.cost > item.basePrice * 1.1 && (
                             <Text style={styles.priceChange}>📈</Text>
                           )}
-                          {item.cost < item.basePrice && (
+                          {item.cost < item.basePrice * 0.9 && (
                             <Text style={styles.priceChange}>📉</Text>
                           )}
                         </View>
@@ -869,7 +974,7 @@ function Market(props) {
       <DayStatsModal
         visible={dayStatsModalVisible}
         onClose={handleDayStatsClose}
-        stats={(() => {
+        stats={React.useMemo(() => {
           const stats = getTotalStats();
           console.log(
             '📊 DayStatsModal stats:',
@@ -879,8 +984,13 @@ function Market(props) {
             'day:',
             day
           );
-          return stats;
-        })()}
+          return stats || {
+            profit: 0,
+            spent: 0,
+            candiesSold: 0,
+            netGain: 0,
+          };
+        }, [getTotalStats, dayStatsModalVisible, day])}
         day={day}
       />
 
@@ -954,6 +1064,23 @@ function Market(props) {
         />
       )}
 
+      {/* Inventory Modal */}
+      <InventoryModal
+        visible={inventoryModalVisible}
+        onClose={() => {
+          console.log('🔴 Market onClose called, current state:', inventoryModalVisible);
+          setInventoryModalVisible(false);
+          console.log('🔴 Market onClose completed, should be false now');
+        }}
+        inventory={inventory}
+        totalCount={getTotalInventoryCount()}
+        capacity={getInventoryLimit()}
+      />
+      {/* Debug inventory data */}
+      {inventoryModalVisible && console.log('🔴 Market inventory data:', inventory)}
+      {inventoryModalVisible && console.log('🔴 Market totalCount:', getTotalInventoryCount())}
+      {inventoryModalVisible && console.log('🔴 Market capacity:', getInventoryLimit())}
+
       {/* EventModal for special events */}
       <EventModal />
     </View>
@@ -1003,6 +1130,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  candyPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   name: {
     fontWeight: '700',
     fontSize: 19,
@@ -1037,6 +1169,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ffb3b3',
+  },
+  priceChange: {
+    fontSize: 16,
+    marginLeft: 4,
   },
   jokerIndicators: {
     flexDirection: 'row',

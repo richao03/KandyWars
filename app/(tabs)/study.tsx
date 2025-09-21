@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { useGame } from '../../src/context/GameContext';
+import { useGame } from '../../src/hooks/useGame';
 import GameHUD from '../components/GameHUD';
 
 const subjects = [

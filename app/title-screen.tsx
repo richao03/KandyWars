@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
+import StudioTitleScreen from './components/StudioTitleScreen';
 import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
-import { useWallet } from '../src/context/WalletContext';
-import { useGame } from '../src/context/GameContext';
-import { useInventory } from '../src/context/InventoryContext';
-import { useJokers } from '../src/context/JokerContext';
+import { useWallet } from '../src/hooks/useWallet';
+import { useGame } from '../src/hooks/useGame';
+import { useInventory } from '../src/hooks/useInventory';
+import { useJokers } from '../src/hooks/useJokers';
 import { useFlavorText } from '../src/context/FlavorTextContext';
-import { useSeed } from '../src/context/SeedContext';
+import { useSeed } from '../src/hooks/useSeed';
 import { nameValidationService } from '../src/services/nameValidationService';
 import { loadPlayerId } from '../src/utils/persistence';
 
 export default function TitleScreenPage() {
+  console.log('🔍 DEBUG: TitleScreenPage rendering/re-rendering');
   const searchParams = useLocalSearchParams();
   const walletContext = useWallet();
   const { resetGame, lastActiveView } = useGame();
@@ -20,71 +22,25 @@ export default function TitleScreenPage() {
   const { resetFlavorText } = useFlavorText();
   const { setSeed } = useSeed();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
-  const [firebaseCheckComplete, setFirebaseCheckComplete] = useState(false);
+  const [showStudioScreen, setShowStudioScreen] = useState(true);
   const initializeWallet = walletContext?.initializeWallet || (() => {});
 
-  // Load player data from Firebase before showing title screen
-  useEffect(() => {
-    const loadPlayerDataFromFirebase = async () => {
-      try {
-        console.log('🔍 TitleScreen: Starting Firebase user data lookup...');
-        setIsLoadingUserData(true);
-        
-        // Try to get persistent player ID
-        const persistentPlayerId = await loadPlayerId();
-        console.log('🔍 TitleScreen: Persistent player ID from storage:', persistentPlayerId);
-        
-        if (persistentPlayerId) {
-          // Check Firebase for existing name using this ID
-          console.log('🔍 TitleScreen: Checking Firebase for existing name with player ID:', persistentPlayerId);
-          
-          try {
-            const existingName = await nameValidationService.getPlayerName(persistentPlayerId);
-            console.log('🔍 TitleScreen: Firebase lookup result - existing name:', existingName);
-            
-            if (existingName) {
-              console.log('✅ TitleScreen: Found existing player name in Firebase:', existingName);
-              // The name will be loaded by WalletContext, we just log here for visibility
-            } else {
-              console.log('❌ TitleScreen: No existing name found in Firebase for player ID:', persistentPlayerId);
-            }
-          } catch (firebaseError) {
-            console.error('❌ TitleScreen: Firebase query failed:', firebaseError);
-          }
-        } else {
-          console.log('❌ TitleScreen: No persistent player ID found in storage');
-        }
-        
-        setFirebaseCheckComplete(true);
-      } catch (error) {
-        console.error('❌ TitleScreen: Error during Firebase user data lookup:', error);
-        setFirebaseCheckComplete(true);
-      } finally {
-        setIsLoadingUserData(false);
-        console.log('✅ TitleScreen: Firebase user data lookup complete');
-      }
-    };
-
-    loadPlayerDataFromFirebase();
-  }, []);
+  console.log('🔍 DEBUG: TitleScreenPage state - showStudioScreen:', showStudioScreen, 'refreshKey:', refreshKey);
 
   // Force component refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      console.log('📱 Title screen focused, refreshing component');
-      setRefreshKey(prev => prev + 1);
-    }, [])
+      console.log('📱 DEBUG: Title screen focused');
+      // Only refresh if we're showing CandyWars screen, not during studio screen
+      if (!showStudioScreen) {
+        setRefreshKey(prev => prev + 1);
+      }
+    }, [showStudioScreen])
   );
 
   const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
     try {
-      // Note: Game reset is now handled in CandyWarsTitleScreen.handleStoryContinue()
-      // after difficulty selection to ensure proper timing
       console.log('📱 TitleScreen: handleNewGame called - game reset will happen after difficulty selection');
-
-      // Navigate to market - but this won't actually be reached since
-      // CandyWarsTitleScreen handles the flow directly to story screen
       router.replace('/(tabs)/market');
     } catch (error) {
       console.error('Error starting new game:', error);
@@ -104,42 +60,31 @@ export default function TitleScreenPage() {
     router.push('/title-settings');
   };
 
-  // Show loading screen while checking Firebase
-  if (isLoadingUserData || !firebaseCheckComplete) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading player data...</Text>
-        <Text style={styles.loadingSubtext}>Checking Firebase for existing profile</Text>
-      </View>
-    );
-  }
+  const handleStudioComplete = () => {
+    console.log('🎬 DEBUG: Studio completed, showing CandyWars title screen');
+    setShowStudioScreen(false);
+  };
 
   return (
-    <CandyWarsTitleScreen
-      key={refreshKey} // Force remount when screen comes into focus
-      onNewGame={handleNewGame}
-      onContinue={handleContinue}
-      onSettings={handleSettings}
-    />
+    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      {/* Always render both screens, control visibility */}
+      {showStudioScreen && (
+        <StudioTitleScreen
+          key="studio-screen"
+          onComplete={handleStudioComplete}
+        />
+      )}
+
+      {!showStudioScreen && (
+        <CandyWarsTitleScreen
+          key={refreshKey}
+          onNewGame={handleNewGame}
+          onContinue={handleContinue}
+          onSettings={handleSettings}
+        />
+      )}
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000000',
-  },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  loadingSubtext: {
-    color: '#CCCCCC',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-});
+// No styles needed - components handle their own styling

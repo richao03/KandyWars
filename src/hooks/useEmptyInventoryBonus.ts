@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { useGame } from '../context/GameContext';
-import { useInventory } from '../context/InventoryContext';
-import { useJokers } from '../context/JokerContext';
-import { useWallet } from '../context/WalletContext';
+import { useGame } from './useGame';
+import { useInventory } from './useInventory';
+import { useJokers } from './useJokers';
+import { useWallet } from './useWallet';
 import { JokerService } from '../utils/jokerService';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 

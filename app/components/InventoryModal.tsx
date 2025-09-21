@@ -2,22 +2,26 @@ import React from 'react';
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TouchableHighlight,
+  TouchableWithoutFeedback,
   View,
   ScrollView,
+  Alert,
+  Modal,
 } from 'react-native';
-import Modal from './ReanimatedModal';
+// import ReanimatedModal from './ReanimatedModal';
 
-type InventoryItem = {
+type CandyType = {
+  id: string;
   name: string;
-  quantity: number;
-  averagePrice: number;
+  price: number;
+  quantity?: number;
 };
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  inventory: { [key: string]: InventoryItem };
+  inventory: CandyType[];
   totalCount: number;
   capacity: number;
 };
@@ -29,115 +33,138 @@ export default function InventoryModal({
   totalCount,
   capacity,
 }: Props) {
-  const inventoryItems = Object.entries(inventory).filter(([_, item]) => item.quantity > 0);
-  const totalValue = inventoryItems.reduce((sum, [_, item]) => {
-    return sum + (item.quantity * item.averagePrice);
+  console.log('🔴 InventoryModal render - visible:', visible);
+  console.log('🔴 InventoryModal inventory data:', inventory);
+  console.log('🔴 InventoryModal totalCount:', totalCount, 'capacity:', capacity);
+
+  const inventoryItems = inventory.filter(item => (item.quantity || 0) > 0);
+  console.log('🔴 InventoryModal filtered inventoryItems:', inventoryItems);
+
+  const totalValue = inventoryItems.reduce((sum, item) => {
+    return sum + ((item.quantity || 0) * item.price);
   }, 0);
 
   return (
     <Modal
-      isVisible={visible}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modal}
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>🍬 Candy Stash 🍬</Text>
-          <Text style={styles.capacityText}>
-            {totalCount} / {capacity} items
-          </Text>
-        </View>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View style={styles.modal}>
+        <Text style={styles.title}>🍬 Candy Stash</Text>
+        <Text style={styles.subtitle}>
+          {totalCount} / {capacity} items in your stash
+        </Text>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {inventoryItems.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>Your stash is empty!</Text>
               <Text style={styles.emptySubtext}>Buy some candy from the market</Text>
             </View>
           ) : (
-            inventoryItems.map(([name, item]) => (
-              <View key={name} style={styles.itemRow}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{name}</Text>
-                  <Text style={styles.itemQuantity}>x{item.quantity}</Text>
+            <View style={styles.itemsContainer}>
+              {inventoryItems.map((item) => (
+                <View key={item.id} style={styles.itemRow}>
+                  <View style={styles.itemInfo}>
+                    <Text style={styles.itemName}>{item.name}</Text>
+                    <View style={styles.quantityBadge}>
+                      <Text style={styles.itemQuantity}>x{item.quantity || 0}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.itemValue}>
+                    <Text style={styles.avgPrice}>
+                      Price: ${item.price.toFixed(2)}
+                    </Text>
+                    <Text style={styles.totalPrice}>
+                      Total: ${((item.quantity || 0) * item.price).toFixed(2)}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.itemValue}>
-                  <Text style={styles.avgPrice}>
-                    Avg: ${item.averagePrice.toFixed(2)}
-                  </Text>
-                  <Text style={styles.totalPrice}>
-                    Total: ${(item.quantity * item.averagePrice).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-            ))
+              ))}
+            </View>
           )}
         </ScrollView>
 
         {inventoryItems.length > 0 && (
-          <View style={styles.footer}>
-            <Text style={styles.totalValueLabel}>Total Stash Value:</Text>
-            <Text style={styles.totalValueAmount}>${totalValue.toFixed(2)}</Text>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>📈 Total Stash Value:</Text>
+            <Text style={styles.totalValue}>${totalValue.toFixed(2)}</Text>
           </View>
         )}
 
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>Close</Text>
-        </TouchableOpacity>
-      </View>
+        <TouchableHighlight
+          style={styles.closeButton}
+          onPress={onClose}
+          underlayColor="rgba(53,122,189,1)"
+        >
+          <Text style={styles.closeButtonText}>🌟 Close</Text>
+        </TouchableHighlight>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  modal: {
+  modalContainer: {
     justifyContent: 'center',
     margin: 20,
   },
-  container: {
-    backgroundColor: '#fefaf5',
-    borderRadius: 20,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    maxHeight: '80%',
+  },
+  modal: {
+    backgroundColor: '#fefaf5',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
     borderWidth: 3,
     borderColor: '#4a90e2',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowColor: '#4a90e2',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 8,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 2,
-    borderBottomColor: '#4a90e2',
-    paddingBottom: 10,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
     color: '#4a90e2',
     fontFamily: 'CrayonPastel',
-    textAlign: 'center',
+    textShadow: '1px 1px 0px #e6d4b7',
   },
-  capacityText: {
+  subtitle: {
     fontSize: 16,
-    color: '#6b4423',
-    marginTop: 5,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 24,
+    lineHeight: 20,
     fontFamily: 'CrayonPastel',
   },
   scrollView: {
     maxHeight: 300,
+  },
+  itemsContainer: {
+    marginBottom: 16,
   },
   emptyContainer: {
     padding: 40,
@@ -148,43 +175,51 @@ const styles = StyleSheet.create({
     color: '#8b4513',
     fontFamily: 'CrayonPastel',
     fontWeight: '600',
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: '#a0826d',
-    marginTop: 5,
+    marginTop: 8,
     fontFamily: 'CrayonPastel',
+    textAlign: 'center',
   },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff9e6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 15,
-    marginBottom: 10,
     borderWidth: 2,
-    borderColor: '#f4d03f',
+    borderColor: '#e6d4b7',
   },
   itemInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   itemName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
     color: '#6b4423',
     fontFamily: 'CrayonPastel',
+    fontWeight: '600',
   },
-  itemQuantity: {
-    fontSize: 16,
-    color: '#fff',
+  quantityBadge: {
     backgroundColor: '#4ade80',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
-    fontWeight: 'bold',
+    borderWidth: 1,
+    borderColor: '#22c55e',
+  },
+  itemQuantity: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
     fontFamily: 'CrayonPastel',
   },
   itemValue: {
@@ -201,42 +236,49 @@ const styles = StyleSheet.create({
     color: '#22c55e',
     fontFamily: 'CrayonPastel',
   },
-  footer: {
+  totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#e6f4ff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    padding: 15,
-    marginTop: 15,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#4a90e2',
   },
-  totalValueLabel: {
+  totalLabel: {
     fontSize: 18,
-    fontWeight: '600',
     color: '#4a90e2',
     fontFamily: 'CrayonPastel',
+    fontWeight: '700',
+    flex: 1,
   },
-  totalValueAmount: {
-    fontSize: 22,
-    fontWeight: 'bold',
+  totalValue: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#4a90e2',
     fontFamily: 'CrayonPastel',
   },
   closeButton: {
-    backgroundColor: '#4a90e2',
-    borderRadius: 12,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 15,
-    borderWidth: 2,
-    borderColor: '#357abd',
+    backgroundColor: 'rgba(74,144,226,1)',
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: 'rgba(53,122,189,1)',
+    shadowColor: '#4a90e2',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    marginTop: 16,
   },
   closeButtonText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
     fontFamily: 'CrayonPastel',
   },
 });

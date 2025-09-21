@@ -1,7 +1,7 @@
 import React from 'react';
 import RecessGame from './minigames/RecessGame';
 import { useRouter } from 'expo-router';
-import { useGame } from '../src/context/GameContext';
+import { useGame } from '../src/hooks/useGame';
 
 export default function RecessGameScreen() {
   const router = useRouter();

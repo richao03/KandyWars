@@ -12,12 +12,12 @@ import { router } from 'expo-router';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import DifficultySelectionModal from './DifficultySelectionModal';
 import StoryModal from './StoryModal';
-import { useWallet } from '../../src/context/WalletContext';
-import { useGame } from '../../src/context/GameContext';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useJokers } from '../../src/context/JokerContext';
+import { useWallet } from '../../src/hooks/useWallet';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useSeed } from '../../src/context/SeedContext';
+import { useSeed } from '../../src/hooks/useSeed';
 
 const { width, height } = Dimensions.get('window');
 
@@ -45,6 +45,7 @@ export default function CandyWarsTitleScreen({
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const backgroundOpacity = useRef(new Animated.Value(1)).current;
+  const screenOpacity = useRef(new Animated.Value(0)).current; // For fade-in effect
   const buttonsShown = useRef(false);
 
   // Reset component state when it mounts/re-mounts
@@ -58,6 +59,10 @@ export default function CandyWarsTitleScreen({
     buttonsShown.current = false;
     buttonOpacity.setValue(0);
     backgroundOpacity.setValue(1);
+    // Start fully visible to avoid white screen flash
+    screenOpacity.setValue(1);
+
+    console.log('🎬 CandyWarsTitleScreen: Starting fully visible to avoid white screen');
   }, []);
 
 
@@ -150,7 +155,7 @@ export default function CandyWarsTitleScreen({
   console.log('🎬 CandyWarsTitleScreen: Rendering - showButtons:', showButtons, 'animationComplete:', animationComplete);
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
       <Animated.View style={[styles.backgroundWrapper, { opacity: backgroundOpacity }]}>
         <ImageBackground
           source={require('../../assets/images/titleScreen.png')}
@@ -213,7 +218,7 @@ export default function CandyWarsTitleScreen({
         onContinue={handleStoryContinue}
       />
 
-    </View>
+    </Animated.View>
   );
 }
 

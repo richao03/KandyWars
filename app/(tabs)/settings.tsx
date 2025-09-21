@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/context/GameContext';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useSeed } from '../../src/context/SeedContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import ConfirmationModal from '../components/ConfirmationModal';

@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useWallet } from '../src/context/WalletContext';
+import { useWallet } from '../src/hooks/useWallet';
 import ConfirmationModal from './components/ConfirmationModal';
 
 export default function TitleSettings() {

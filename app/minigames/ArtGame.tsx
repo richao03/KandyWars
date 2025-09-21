@@ -16,9 +16,9 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useGame } from '../../src/context/GameContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { ResponsiveSpacing } from '../../src/utils/responsive';

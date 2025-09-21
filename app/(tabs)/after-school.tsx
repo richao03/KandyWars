@@ -14,12 +14,12 @@ import {
   useCopilot,
   walkthroughable,
 } from 'react-native-copilot';
-import { useDailyStats } from '../../src/context/DailyStatsContext';
+import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/context/GameContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useWallet } from '../../src/hooks/useWallet';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';

@@ -13,7 +13,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';

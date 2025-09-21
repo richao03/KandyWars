@@ -1,6 +1,6 @@
 import React from 'react';
 import { router } from 'expo-router';
-import { useGame } from '../src/context/GameContext';
+import { useGame } from '../src/hooks/useGame';
 import GymGame from './minigames/GymGame';
 
 export default function GymGameScreen() {

@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useTabBar } from '../../src/context/TabBarContext';
+import { useTabBar } from '../../src/hooks/useTabBar';
 
 interface SchoolsOutModalProps {
   visible: boolean;

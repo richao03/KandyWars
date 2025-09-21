@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Image, StyleSheet, Text, View, Dimensions } from 'react-native';
-import { useTabBar } from '../../src/context/TabBarContext';
+import { useTabBar } from '../../src/hooks/useTabBar';
 
 interface GoingToSchoolModalProps {
   visible: boolean;

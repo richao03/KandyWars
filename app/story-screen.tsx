@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useWallet } from '../src/context/WalletContext';
+import { useWallet } from '../src/hooks/useWallet';
 import NamePromptModal from './components/NamePromptModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');

@@ -1,11 +1,10 @@
 import { Marquee } from '@animatereactnative/marquee';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/context/GameContext';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useWallet } from '../../src/context/WalletContext';
-import InventoryModal from './InventoryModal';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useWallet } from '../../src/hooks/useWallet';
 
 const locationNames = {
   gym: 'Gymnasium',
@@ -25,6 +24,7 @@ interface GameHUDProps {
   customLocationText?: string;
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
   inventoryWrapper?: (children: React.ReactNode) => React.ReactNode;
+  onInventoryPress?: () => void;
 }
 
 export default function GameHUD({
@@ -35,13 +35,12 @@ export default function GameHUD({
   customLocationText,
   flavorTextWrapper,
   inventoryWrapper,
+  onInventoryPress,
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
-  const { getTotalInventoryCount, getInventoryLimit, inventory } =
-    useInventory();
+  const { getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { text, isHint, eventType } = useFlavorText();
-  const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
 
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
@@ -127,7 +126,7 @@ export default function GameHUD({
             inventoryWrapper(
               <TouchableOpacity
                 style={[styles.statBox, styles.inventoryBox]}
-                onPress={() => setInventoryModalVisible(true)}
+                onPress={onInventoryPress}
               >
                 <Text style={statTitleStyle}>Inventory</Text>
                 <Text style={styles.inventoryAmount}>
@@ -138,7 +137,7 @@ export default function GameHUD({
           ) : (
             <TouchableOpacity
               style={[styles.statBox, styles.inventoryBox]}
-              onPress={() => setInventoryModalVisible(true)}
+              onPress={onInventoryPress}
             >
               <Text style={statTitleStyle}>Inventory</Text>
               <Text style={styles.inventoryAmount}>
@@ -172,14 +171,6 @@ export default function GameHUD({
           return flavorTextWrapper ? flavorTextWrapper(marquee) : marquee;
         })()}
 
-        {/* Inventory Modal */}
-        <InventoryModal
-          visible={inventoryModalVisible}
-          onClose={() => setInventoryModalVisible(false)}
-          inventory={inventory}
-          totalCount={totalInventory}
-          capacity={inventoryCapacity}
-        />
     </View>
   );
 }

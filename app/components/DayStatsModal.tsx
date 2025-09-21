@@ -28,6 +28,11 @@ export default function DayStatsModal({
     return null;
   }
 
+  if (!stats) {
+    console.log('📊 DayStatsModal stats is undefined, returning null');
+    return null;
+  }
+
   console.log('📊 DayStatsModal is visible, rendering modal');
 
   return (

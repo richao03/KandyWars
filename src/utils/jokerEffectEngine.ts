@@ -173,7 +173,8 @@ export class JokerEffectEngine {
       );
     }
 
-    // Apply operations in order: set -> multiply -> add
+    // Apply operations in order: set -> add -> multiply
+    // This ensures multiplicative effects apply to the total (base + additions)
     const setEffects = effects.filter((e) => e.operation === 'set');
     const multiplyEffects = effects.filter((e) => e.operation === 'multiply');
     const addEffects = effects.filter((e) => e.operation === 'add');
@@ -183,14 +184,14 @@ export class JokerEffectEngine {
       result = setEffects[setEffects.length - 1].amount; // Last set wins
     }
 
-    // MULTIPLY operations
-    for (const effect of multiplyEffects) {
-      result *= effect.amount;
-    }
-
-    // ADD operations
+    // ADD operations first (build up the total)
     for (const effect of addEffects) {
       result += effect.amount;
+    }
+
+    // MULTIPLY operations last (apply to the final total)
+    for (const effect of multiplyEffects) {
+      result *= effect.amount;
     }
 
     return result;

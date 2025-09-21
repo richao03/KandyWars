@@ -7,11 +7,11 @@ import {
   View,
 } from 'react-native';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
-import { useGame } from '../../src/context/GameContext';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useSeed } from '../../src/context/SeedContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
 import Modal from './ReanimatedModal';
@@ -436,8 +436,8 @@ function JokerCard({
   const handleTargetCandySelection = async (targetCandyType: string) => {
     if (!selectedSourceCandy) return;
 
-    const sourceInventoryItem = inventory[selectedSourceCandy];
-    if (!sourceInventoryItem || sourceInventoryItem.quantity === 0) {
+    const sourceInventoryItem = inventory.find(item => item.name === selectedSourceCandy);
+    if (!sourceInventoryItem || (sourceInventoryItem.quantity || 0) === 0) {
       showAlert('Error', 'No source candy available for conversion!', '⚠️');
       return;
     }
@@ -490,9 +490,9 @@ function JokerCard({
   };
 
   // Get available inventory candies for conversion
-  const availableCandiesForConversion = Object.keys(inventory).filter(
-    (candyType) => inventory[candyType].quantity > 0
-  );
+  const availableCandiesForConversion = inventory
+    .filter(item => (item.quantity || 0) > 0)
+    .map(item => item.name);
 
   // Get target candies (exclude the selected source)
   const availableTargetCandies = CANDY_TYPES.filter(
@@ -948,11 +948,11 @@ function JokerCard({
                         {candyType}
                       </Text>
                       <Text style={styles.candyQuantity}>
-                        ×{inventory[candyType].quantity}
+                        ×{inventory.find(item => item.name === candyType)?.quantity || 0}
                       </Text>
                     </View>
                     <Text style={styles.candyAvgPrice}>
-                      Avg: ${inventory[candyType].averagePrice.toFixed(2)}
+                      Avg: ${(inventory.find(item => item.name === candyType)?.price || 0).toFixed(2)}
                     </Text>
                   </TouchableOpacity>
                 ))
@@ -988,7 +988,7 @@ function JokerCard({
 
             {selectedSourceCandy && (
               <Text style={styles.conversionSummary}>
-                Converting: {inventory[selectedSourceCandy].quantity}{' '}
+                Converting: {inventory.find(item => item.name === selectedSourceCandy)?.quantity || 0}{' '}
                 {selectedSourceCandy}
               </Text>
             )}

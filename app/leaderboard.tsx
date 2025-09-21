@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useScoreboard } from '../src/context/ScoreboardContext';
+import { useScoreboard } from '../src/hooks/useScoreboard';
 import { scoreboardService } from '../src/services/firebase';
 
 const { width: screenWidth } = Dimensions.get('window');

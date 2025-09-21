@@ -11,9 +11,9 @@ import {
 import * as Haptics from 'expo-haptics';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/context/GameContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useWallet } from '../../src/hooks/useWallet';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 

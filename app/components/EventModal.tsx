@@ -16,8 +16,8 @@ import ReAnimated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
-import { useEventHandler } from '../../src/context/EventHandlerContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useEventHandler } from '../../src/hooks/useEventHandler';
+import { useWallet } from '../../src/hooks/useWallet';
 
 const AnimatedTextInput = ReAnimated.createAnimatedComponent(TextInput);
 

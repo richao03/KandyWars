@@ -12,7 +12,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';

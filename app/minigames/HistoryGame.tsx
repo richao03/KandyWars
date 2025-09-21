@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HISTORY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';

@@ -17,7 +17,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { RECESS_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';

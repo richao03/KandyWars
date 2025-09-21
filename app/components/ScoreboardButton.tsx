@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { ScoreboardModal } from './ScoreboardModal';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 
 interface ScoreboardButtonProps {
   style?: any;

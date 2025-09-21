@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { useGame } from '../src/context/GameContext';
+import { useGame } from '../src/hooks/useGame';
 import HomeEcGame from './minigames/HomeEcGame';
 
 export default function HomeEcGameScreen() {

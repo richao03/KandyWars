@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useGame } from '../context/GameContext';
-import { useJokers } from '../context/JokerContext';
-import { useSeed } from '../context/SeedContext';
+import { useGame } from './useGame';
+import { useJokers } from './useJokers';
+import { useSeed } from './useSeed';
 
 export const usePriceDoubling = () => {
   const { periodCount } = useGame();

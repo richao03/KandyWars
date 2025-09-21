@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useSeed } from '../../src/context/SeedContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
+import { Candy } from '../types';
 import Modal from './ReanimatedModal';
 import TransactionModal from './TransactionModal';
 
@@ -42,9 +43,10 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
-      const prices = gameData.candyPrices[candy.name];
-      const averageCost =
-        prices.reduce((sum, price) => sum + price, 0) / prices.length;
+      const prices = gameData.candyPrices?.[candy.name] || [];
+      const averageCost = prices.length > 0
+        ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+        : (candy.baseMin + candy.baseMax) / 2;
 
       return {
         ...candy,

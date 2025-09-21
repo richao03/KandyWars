@@ -19,7 +19,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Modal from './ReanimatedModal';
-import { useScoreboard } from '../../src/context/ScoreboardContext';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { ScoreboardEntry, scoreboardService } from '../../src/services/firebase';
 
 interface ScoreboardModalProps {

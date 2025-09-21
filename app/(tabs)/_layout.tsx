@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
-import { useGame } from '../../src/context/GameContext';
-import { useTabBar } from '../../src/context/TabBarContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useTabBar } from '../../src/hooks/useTabBar';
 import FadeInWrapper from '../components/FadeInWrapper';
 
 export default function TabLayout() {

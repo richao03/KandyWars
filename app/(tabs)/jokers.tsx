@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useGame } from '../../src/context/GameContext';
-import { useJokers } from '../../src/context/JokerContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useJokers } from '../../src/hooks/useJokers';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';

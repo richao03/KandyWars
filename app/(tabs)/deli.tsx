@@ -10,11 +10,11 @@ import {
   View,
 } from 'react-native';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
-import { useGame } from '../../src/context/GameContext';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useJokers } from '../../src/context/JokerContext';
-import { useSeed } from '../../src/context/SeedContext';
-import { useWallet } from '../../src/context/WalletContext';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
 import GameHUD from '../components/GameHUD';
 import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';

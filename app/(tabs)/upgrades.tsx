@@ -1,7 +1,7 @@
 // app/(tabs)/upgrades.tsx
 import { StyleSheet, Text, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
-import { useGame } from '../../src/context/GameContext';
+import { useGame } from '../../src/hooks/useGame';
 
 export default function Upgrades() {
   const { isAfterSchool, day } = useGame();

@@ -4,8 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Modal from './ReanimatedModal';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
-import { useInventory } from '../../src/context/InventoryContext';
-import { useJokers } from '../../src/context/JokerContext';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
 
 type PriceBreakdown = {
