@@ -18,7 +18,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 
 export default function PiggyBankPage() {
-  const { balance, stashedAmount, stashMoney, withdrawFromStash } = useWallet();
+  const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } = useWallet();
   const { day, period } = useGame();
   const { setEvent } = useFlavorText();
   const { jokers } = useJokers();

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   setFlavorEvent,
@@ -11,7 +11,7 @@ import {
 // Re-export FlavorEvent type for convenience
 export type { FlavorEvent } from '../store/slices/flavorTextSlice';
 
-// Centralized flavor text library
+// Centralized flavor text library (memoized for performance)
 const flavorLibrary: Record<FlavorEvent, string[]> = {
   STASH_LOCKED: ['Someone ratted you out, your stash was confiscated'],
   FOUND_MONEY: ['He who finds it keeps it - Confucious'],
@@ -107,7 +107,8 @@ export const useFlavorText = () => {
     dispatch(resetFlavorText());
   }, [dispatch]);
 
-  return {
+  // Memoize the return object to prevent unnecessary re-renders
+  return useMemo(() => ({
     text: flavorTextState.text,
     isHint: flavorTextState.isHint,
     eventType: flavorTextState.eventType,
@@ -116,5 +117,14 @@ export const useFlavorText = () => {
     setFlavorText,
     setHint: setHintAction,
     resetFlavorText: resetFlavorTextAction,
-  };
+  }), [
+    flavorTextState.text,
+    flavorTextState.isHint,
+    flavorTextState.eventType,
+    setEvent,
+    setManual,
+    setFlavorText,
+    setHintAction,
+    resetFlavorTextAction,
+  ]);
 };

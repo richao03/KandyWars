@@ -1,6 +1,6 @@
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-// import Modal from './ReanimatedModal';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import FastModal from './FastModal';
 
 export type Location = 
   | 'gym' 
@@ -49,42 +49,39 @@ export default function LocationModal({ visible, onClose, onSelectLocation }: Lo
   };
 
   return (
-    <Modal
+    <FastModal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={undefined}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.5}
+      modalStyle={styles.modal}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modal}>
-        <Text style={styles.title}>Where do you want to go?</Text>
-        
-        <View style={styles.locationGrid}>
-          {locations.map((location) => (
-            <TouchableOpacity
-              key={location}
-              style={[
-                styles.locationButton, 
-                {
-                  backgroundColor: locationColors[location].bg,
-                  borderColor: locationColors[location].border
-                }
-              ]}
-              onPress={() => handleLocationSelect(location)}
-            >
-              <Text style={styles.locationText}>
-                {location.charAt(0).toUpperCase() + location.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        
-        <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-        </View>
+      <Text style={styles.title}>Where do you want to go?</Text>
+
+      <View style={styles.locationGrid}>
+        {locations.map((location) => (
+          <TouchableOpacity
+            key={location}
+            style={[
+              styles.locationButton,
+              {
+                backgroundColor: locationColors[location].bg,
+                borderColor: locationColors[location].border
+              }
+            ]}
+            onPress={() => handleLocationSelect(location)}
+          >
+            <Text style={styles.locationText}>
+              {location.charAt(0).toUpperCase() + location.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
-    </Modal>
+
+      <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+        <Text style={styles.cancelText}>Cancel</Text>
+      </TouchableOpacity>
+    </FastModal>
   );
 }
 

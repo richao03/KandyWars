@@ -69,7 +69,7 @@ const allJokers = [
   'Sneak',
 ];
 
-export function generateSeededGameData(seed: string, totalPeriods = 40) {
+export function generateSeededGameData(seed: string, totalPeriods = 80) {
   const rng = seedrandom(seed);
   // Price table
   const candyPrices: CandyPriceTable = {};

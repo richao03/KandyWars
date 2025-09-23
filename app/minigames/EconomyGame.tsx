@@ -26,6 +26,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -419,6 +420,7 @@ const LEVEL_CONFIG = [
 export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
 
   // No seed needed - using Math.random() directly for true randomness
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection', 'gameover'
@@ -497,6 +499,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('economy');
+    trackMinigameProgress('economy');
 
     // Generate a fresh puzzle for level 1
     resetLevel(0);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from './ReanimatedModal';
+import FastModal from './FastModal';
 
 interface SleepConfirmModalProps {
   visible: boolean;
@@ -16,21 +16,14 @@ export default function SleepConfirmModal({
   currentDay
 }: SleepConfirmModalProps) {
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="bounceIn"
-      animationOut="fadeOut"
-      animationInTiming={400}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onCancel}
-      onBackButtonPress={onCancel}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modalContainer}
+    <FastModal
+      visible={visible}
+      onClose={onCancel}
+      animationType="spring"
+      backdropOpacity={0.7}
+      modalStyle={styles.modal}
     >
-      <View style={styles.modal}>
+      <>
         <Text style={styles.moonEmoji}>🌙</Text>
         <Text style={styles.title}>Ready for Bed?</Text>
         <Text style={styles.subtitle}>
@@ -57,16 +50,12 @@ export default function SleepConfirmModal({
             <Text style={styles.cancelButtonText}>🔙 Not Yet</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    justifyContent: 'center',
-    margin: 20,
-  },
   modal: {
     backgroundColor: '#1a1f36', // Night-time dark blue
     borderRadius: 24,

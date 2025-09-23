@@ -23,7 +23,19 @@
       "Bash(node:*)",
       "Bash(timeout 10 npx expo export:*)",
       "Bash(timeout 5 npx expo export --platform ios --dev --clear)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(for file in /Users/Richao/KandyWarz/candyWarz/src/context/*.tsx)",
+      "Bash(head:*)",
+      "Bash(for file in /Users/Richao/KandyWarz/candyWarz/app/components/*Modal.tsx)",
+      "Bash(do if [ \"$file\" != \"/Users/Richao/KandyWarz/candyWarz/app/components/FastModal.tsx\" ])",
+      "Bash(ReanimatedModal)",
+      "Bash(fi)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

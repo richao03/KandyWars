@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -63,6 +64,7 @@ const CANDY_TYPES_LEVEL_3 = [
 export default function LogicGame({ onComplete }: LogicGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Screen dimensions - responsive sizing
@@ -83,6 +85,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('logic');
+    trackMinigameProgress('logic');
 
     setGameState('playing');
     generateSecretCode();

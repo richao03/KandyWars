@@ -1,12 +1,12 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from './ReanimatedModal';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
+import FastModal from './FastModal';
 
 type PriceBreakdown = {
   basePrice: number;
@@ -54,14 +54,14 @@ export default function TransactionModal({
   const { getInventoryLimit } = useInventory();
 
   const maxQuantity = mode === 'buy' ? maxBuyQuantity : maxSellQuantity;
-  const inventoryLimit = getInventoryLimit();
-  
+  const inventoryLimit = useMemo(() => getInventoryLimit(), [getInventoryLimit]);
+
   // Check for Bulk Discount joker
   const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_DISCOUNT);
   const qualifiesForBulkDiscount = useMemo(() => {
     return mode === 'buy' && bulkDiscountJoker && quantity > inventoryLimit / 2;
   }, [mode, bulkDiscountJoker, quantity, inventoryLimit]);
-  
+
   // Calculate final price with bulk discount
   const finalUnitPrice = useMemo(() => {
     if (qualifiesForBulkDiscount) {
@@ -88,21 +88,14 @@ export default function TransactionModal({
   };
 
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={undefined}
-      onBackButtonPress={undefined}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modal}
+    <FastModal
+      visible={visible}
+      onClose={undefined}
+      animationType="spring"
+      backdropOpacity={0.6}
+      modalStyle={styles.container}
     >
-      <View style={styles.container}>
+      <>
         <Text style={styles.title}>{candy.name}</Text>
 
         <View style={styles.priceInfoContainer}>
@@ -154,14 +147,19 @@ export default function TransactionModal({
             <View style={styles.divider} />
 
             {priceBreakdown.jokerEffects.map((effect, index) => (
-              <View key={index} style={[
-                styles.breakdownRow,
-                !effect.isActive && styles.inactiveEffectRow
-              ]}>
-                <Text style={[
-                  styles.jokerEffectLabel,
-                  !effect.isActive && styles.inactiveEffectText
-                ]}>
+              <View
+                key={index}
+                style={[
+                  styles.breakdownRow,
+                  !effect.isActive && styles.inactiveEffectRow,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.jokerEffectLabel,
+                    !effect.isActive && styles.inactiveEffectText,
+                  ]}
+                >
                   {effect.jokerEmoji} {effect.jokerName}
                   {effect.effectType === 'sell' ? ' (Sell)' : ''}
                   {!effect.isActive ? ' (Inactive)' : ''}:
@@ -169,12 +167,14 @@ export default function TransactionModal({
                 <Text
                   style={[
                     styles.jokerEffectValue,
-                    { 
-                      color: effect.isActive 
-                        ? (effect.amount >= 0 ? '#22c55e' : '#ef4444')
-                        : '#999'
+                    {
+                      color: effect.isActive
+                        ? effect.amount >= 0
+                          ? '#22c55e'
+                          : '#ef4444'
+                        : '#999',
                     },
-                    !effect.isActive && styles.inactiveEffectText
+                    !effect.isActive && styles.inactiveEffectText,
                   ]}
                 >
                   {effect.effect}
@@ -240,21 +240,22 @@ export default function TransactionModal({
           {qualifiesForBulkDiscount && mode === 'buy' && (
             <View style={styles.bulkDiscountContainer}>
               <Text style={styles.bulkDiscountLabel}>
-                🎯 Bulk Discount Applied! You Save: ${((quantity * candy.cost) - (quantity * finalUnitPrice)).toFixed(2)}
+                🎯 Bulk Discount Applied! You Save: $
+                {(quantity * candy.cost - quantity * finalUnitPrice).toFixed(2)}
               </Text>
             </View>
           )}
 
           {mode === 'buy' && maxBuyQuantity === 0 && (
             <Text style={styles.warningText}>
-              {playerBalance !== undefined && availableInventorySpace !== undefined
+              {playerBalance !== undefined &&
+              availableInventorySpace !== undefined
                 ? playerBalance < candy.cost
-                  ? '⚠️ You don\'t have enough money!'
+                  ? "⚠️ You don't have enough money!"
                   : availableInventorySpace <= 0
-                  ? '⚠️ Your stash is full!'
-                  : '⚠️ You can\'t buy this item!'
-                : '⚠️ Your stash is full!'
-              }
+                    ? '⚠️ Your stash is full!'
+                    : "⚠️ You can't buy this item!"
+                : '⚠️ Your stash is full!'}
             </Text>
           )}
 
@@ -282,17 +283,12 @@ export default function TransactionModal({
           <Button title="Cancel" onPress={onClose} />
           <Button title={`Confirm ${mode}`} onPress={handleConfirm} />
         </View>
-      </View>
-    </Modal>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modal: {
-    justifyContent: 'center',
-    margin: 10,
-    marginHorizontal: 15,
-  },
   container: {
     backgroundColor: '#fefaf5', // Warm paper background
     borderRadius: 20,

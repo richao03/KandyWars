@@ -43,7 +43,7 @@ export default function GameHUD({
   const { text, isHint, eventType } = useFlavorText();
 
   const totalInventory = getTotalInventoryCount();
-  const inventoryCapacity = getInventoryLimit();
+  const inventoryCapacity = useMemo(() => getInventoryLimit(), [getInventoryLimit]);
   const containerStyle =
     theme === 'evening' ? styles.eveningContainer : styles.container;
   const headerStyle =

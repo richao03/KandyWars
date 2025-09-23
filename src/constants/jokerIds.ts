@@ -124,15 +124,15 @@ export const JOKER_NAMES: Record<number, string> = {
 
 // Helper function to check if a joker has a specific ID
 export function hasJokerById(
-  jokers: Array<{ id: number }>,
-  jokerId: number
+  jokers: Array<{ id: string | number }>,
+  jokerId: string | number
 ): boolean {
-  return jokers.some((j) => j.id === jokerId);
+  return jokers.some((j) => j.id == jokerId); // Use == for loose equality to handle string/number conversion
 }
 
 // Helper function to find a joker by ID
-export function findJokerById(jokers: Array<{ id: number }>, jokerId: number) {
-  return jokers.find((j) => j.id === jokerId);
+export function findJokerById(jokers: Array<{ id: string | number }>, jokerId: string | number) {
+  return jokers.find((j) => j.id == jokerId); // Use == for loose equality to handle string/number conversion
 }
 
 // Type for joker ID values

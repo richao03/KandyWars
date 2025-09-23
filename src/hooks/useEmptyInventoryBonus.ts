@@ -3,7 +3,8 @@ import { useGame } from './useGame';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
-import { JokerService } from '../utils/jokerService';
+import { useAppSelector } from '../store/hooks';
+import { selectComputedEmptyInventoryBonus } from '../store/slices/jokerSlice';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useEmptyInventoryBonus = () => {
@@ -11,6 +12,7 @@ export const useEmptyInventoryBonus = () => {
   const { getTotalInventoryCount } = useInventory();
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
+  const emptyInventoryBonus = useAppSelector(selectComputedEmptyInventoryBonus);
 
   useEffect(() => {
     // Skip the first period (period 0)
@@ -23,10 +25,9 @@ export const useEmptyInventoryBonus = () => {
     // Check if inventory is empty
     const totalInventory = getTotalInventoryCount();
     if (totalInventory === 0) {
-      // Get the bonus amount from joker service
-      const jokerService = JokerService.getInstance();
-      const bonusAmount = jokerService.applyJokerEffects(0, 'empty_inventory_bonus', jokers, periodCount);
-      
+      // Get the bonus amount from computed effects
+      const bonusAmount = emptyInventoryBonus;
+
       if (bonusAmount > 0) {
         addMoney(bonusAmount);
         console.log(`💪 Embrace the Grind: +$${bonusAmount} for ending period with empty inventory!`);

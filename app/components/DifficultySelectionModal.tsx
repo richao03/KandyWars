@@ -1,13 +1,13 @@
 import React from 'react';
 import {
   Image,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import FastModal from './FastModal';
 
 interface DifficultySelectionModalProps {
   visible: boolean;
@@ -24,7 +24,7 @@ export default function DifficultySelectionModal({
     {
       level: 1,
       title: 'Level 1',
-      piggyBank: -5000,
+      piggyBank: 5000,
       image: require('../../assets/images/doggs/pug.png'),
       color: '#e8f5e8',
       borderColor: '#4a7c4a',
@@ -33,7 +33,7 @@ export default function DifficultySelectionModal({
     {
       level: 2,
       title: 'Level 2',
-      piggyBank: -10000,
+      piggyBank: 10000,
       image: require('../../assets/images/doggs/brussleGriffon.png'),
       color: '#f0e8f5',
       borderColor: '#7c4a7c',
@@ -42,7 +42,7 @@ export default function DifficultySelectionModal({
     {
       level: 3,
       title: 'Level 3',
-      piggyBank: -15000,
+      piggyBank: 15000,
       image: require('../../assets/images/doggs/evee.png'),
       color: '#e8f0f5',
       borderColor: '#4a7c8a',
@@ -51,7 +51,7 @@ export default function DifficultySelectionModal({
     {
       level: 4,
       title: 'Level 4',
-      piggyBank: -20000,
+      piggyBank: 20000,
       image: require('../../assets/images/doggs/byul.png'),
       color: '#f5f0e8',
       borderColor: '#8a7c4a',
@@ -60,7 +60,7 @@ export default function DifficultySelectionModal({
     {
       level: 5,
       title: 'Level 5',
-      piggyBank: -25000,
+      piggyBank: 25000,
       image: require('../../assets/images/doggs/caneCorso.png'),
       color: '#f5e8e8',
       borderColor: '#8a4a4a',
@@ -69,7 +69,7 @@ export default function DifficultySelectionModal({
     {
       level: 6,
       title: 'Level 6',
-      piggyBank: -30000,
+      piggyBank: 30000,
       image: require('../../assets/images/doggs/pitbull.png'),
       color: '#f0f5e8',
       borderColor: '#7c8a4a',
@@ -78,7 +78,7 @@ export default function DifficultySelectionModal({
     {
       level: 7,
       title: 'Level 7',
-      piggyBank: -35000,
+      piggyBank: 35000,
       image: require('../../assets/images/doggs/afghan.png'),
       color: '#e8e8f5',
       borderColor: '#4a4a8a',
@@ -87,7 +87,7 @@ export default function DifficultySelectionModal({
     {
       level: 8,
       title: 'Level 8',
-      piggyBank: -40000,
+      piggyBank: 40000,
       image: require('../../assets/images/doggs/germanShepard.png'),
       color: '#f5f5f0',
       borderColor: '#8a8a7c',
@@ -96,76 +96,64 @@ export default function DifficultySelectionModal({
   ];
 
   return (
-    <Modal
+    <FastModal
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.7}
+      modalStyle={styles.modalContainer}
     >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.title}>Choose your pet!</Text>
-          <Text style={styles.subtitle}>Select your challenge level</Text>
+      <Text style={styles.title}>Choose your pet!</Text>
+      <Text style={styles.subtitle}>Select your challenge level</Text>
 
-          <ScrollView
-            style={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.optionsContainer}>
-              {levelOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.level}
-                  style={[
-                    styles.difficultyButton,
-                    {
-                      backgroundColor: option.color,
-                      borderColor: option.borderColor,
-                    },
-                  ]}
-                  onPress={() => onSelectDifficulty(option.level)}
-                >
-                  <View style={styles.buttonContent}>
-                    <Image source={option.image} style={styles.dogImage} />
-                    <View style={styles.textContent}>
-                      <Text
-                        style={[
-                          styles.difficultyTitle,
-                          { color: option.textColor },
-                        ]}
-                      >
-                        {option.title}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.piggyBankText,
-                          { color: option.textColor },
-                        ]}
-                      >
-                        Piggy Bank: ${option.piggyBank.toLocaleString()}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.optionsContainer}>
+          {levelOptions.map((option) => (
+            <TouchableOpacity
+              key={option.level}
+              style={[
+                styles.difficultyButton,
+                {
+                  backgroundColor: option.color,
+                  borderColor: option.borderColor,
+                },
+              ]}
+              onPress={() => onSelectDifficulty(option.level)}
+            >
+              <View style={styles.buttonContent}>
+                <Image source={option.image} style={styles.dogImage} />
+                <View style={styles.textContent}>
+                  <Text
+                    style={[
+                      styles.difficultyTitle,
+                      { color: option.textColor },
+                    ]}
+                  >
+                    {option.title}
+                  </Text>
+                  <Text
+                    style={[styles.piggyBankText, { color: option.textColor }]}
+                  >
+                    Adaoption Fee: ${option.piggyBank.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
-      </View>
-    </Modal>
+      </ScrollView>
+
+      <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+        <Text style={styles.cancelText}>Cancel</Text>
+      </TouchableOpacity>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalContainer: {
     backgroundColor: '#ffffff',
     borderRadius: 20,

@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { selectComputedInventoryLimit, migrateJokerState } from '../store/slices/jokerSlice';
 import {
   addCandy,
   removeCandy,
@@ -9,17 +10,16 @@ import {
   selectInventoryCount,
   selectIsInventoryFull,
 } from '../store/slices/inventorySlice';
-import { JokerService } from '../utils/jokerService';
+import { selectSelectedHallPassEffects } from '../store/slices/hallPassSlice';
+import { HallPassUtils } from '../utils/hallPassUtils';
 
 export const useInventory = () => {
   const dispatch = useAppDispatch();
-  const inventoryState = useAppSelector(state => state.inventory);
+  // Subscribe to specific values instead of entire state slice
+  const inventory = useAppSelector(state => state.inventory.inventory);
+  const maxInventory = useAppSelector(state => state.inventory.maxInventory);
   const inventoryCount = useAppSelector(selectInventoryCount);
   const isInventoryFull = useAppSelector(selectIsInventoryFull);
-  const jokers = useAppSelector(state => state.joker.jokers);
-  const activeEffects = useAppSelector(state => state.joker.activeEffects);
-  const gameState = useAppSelector(state => state.game);
-  const jokerService = JokerService.getInstance();
 
   // Legacy method names for backward compatibility
   const addToInventory = useCallback((name: string, quantity: number, price: number): boolean => {
@@ -49,7 +49,7 @@ export const useInventory = () => {
 
   const confiscateHalfInventory = useCallback((): number => {
     let totalConfiscated = 0;
-    inventoryState.inventory.forEach(item => {
+    inventory.forEach(item => {
       const confiscateAmount = Math.floor((item.quantity || 1) / 2);
       totalConfiscated += confiscateAmount;
       if (confiscateAmount > 0) {
@@ -57,31 +57,30 @@ export const useInventory = () => {
       }
     });
     return totalConfiscated;
-  }, [dispatch, inventoryState.inventory]);
+  }, [dispatch, inventory]);
 
   const getTotalInventoryCount = useCallback((): number => {
     return inventoryCount;
   }, [inventoryCount]);
 
+  // Use pre-computed inventory limit from Redux instead of calculating every time
+  const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
+  const jokerState = useAppSelector(state => state.joker);
+  const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
+
+  // Ensure joker state is properly migrated on first use
+  useEffect(() => {
+    if (!jokerState.computedEffects) {
+      console.log('🔧 Initializing joker computedEffects in useInventory');
+      dispatch(migrateJokerState());
+    }
+  }, [dispatch, jokerState.computedEffects]);
+
   const getInventoryLimit = useCallback((): number => {
-    const baseLimit = inventoryState.maxInventory;
-    const periodCount = gameState.periodCount;
-
-    // Apply joker effects to inventory limit
-    const effectiveLimit = jokerService.applyJokerEffects(
-      baseLimit,
-      'inventory_limit',
-      jokers,
-      periodCount,
-      baseLimit,
-      undefined,
-      activeEffects
-    );
-
-    console.log(`📦 Inventory limit calculation - Base: ${baseLimit}, With jokers: ${effectiveLimit}`);
-
-    return effectiveLimit;
-  }, [inventoryState.maxInventory, gameState.periodCount, jokers, activeEffects, jokerService]);
+    // Apply Hall Pass inventory bonus
+    const finalLimit = HallPassUtils.applyInventoryBonus(computedInventoryLimit, hallPassEffects);
+    return finalLimit;
+  }, [computedInventoryLimit, hallPassEffects]);
 
   // New Redux-style methods
   const addCandyAction = useCallback((candy: any) => {
@@ -106,8 +105,8 @@ export const useInventory = () => {
 
   return {
     // Original data
-    inventory: inventoryState.inventory,
-    maxInventory: inventoryState.maxInventory,
+    inventory,
+    maxInventory,
     inventoryCount,
     isInventoryFull,
 

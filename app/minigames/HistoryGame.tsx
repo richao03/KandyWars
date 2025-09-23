@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { HISTORY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -106,6 +107,7 @@ const CAESAR_PUZZLES: CaesarPuzzle[] = [
 export default function HistoryGame({ onComplete }: HistoryGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
 
   // Screen dimensions - responsive sizing
   const { height: screenHeight } = Dimensions.get('window');
@@ -141,6 +143,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('history');
+    trackMinigameProgress('history');
 
     setGameState('playing');
   };

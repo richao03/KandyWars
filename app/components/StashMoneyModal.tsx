@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
-import Modal from './ReanimatedModal';
+import FastModal from './FastModal';
 import { useWallet } from '../../src/hooks/useWallet';
 
 interface StashMoneyModalProps {
@@ -42,21 +42,14 @@ export default function StashMoneyModal({ visible, onClose, onConfirm }: StashMo
   };
 
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="fadeIn"
-      animationOut="fadeOut"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modalContainer}
+    <FastModal
+      visible={visible}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.6}
+      modalStyle={styles.modal}
     >
-      <View style={styles.modal}>
+      <>
           <Text style={styles.title}>💰 Stashing Your Money</Text>
           
           <View style={styles.storyContainer}>
@@ -92,16 +85,12 @@ export default function StashMoneyModal({ visible, onClose, onConfirm }: StashMo
               <Text style={styles.cancelText}>Wait, I changed my mind</Text>
             </TouchableOpacity>
           </View>
-        </View>
-    </Modal>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    justifyContent: 'center',
-    margin: 20,
-  },
   modal: {
     backgroundColor: 'white',
     borderRadius: 20,

@@ -1,29 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { View } from 'react-native';
 import StudioTitleScreen from './components/StudioTitleScreen';
 import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
-import { useWallet } from '../src/hooks/useWallet';
 import { useGame } from '../src/hooks/useGame';
-import { useInventory } from '../src/hooks/useInventory';
-import { useJokers } from '../src/hooks/useJokers';
-import { useFlavorText } from '../src/context/FlavorTextContext';
-import { useSeed } from '../src/hooks/useSeed';
-import { nameValidationService } from '../src/services/nameValidationService';
-import { loadPlayerId } from '../src/utils/persistence';
 
 export default function TitleScreenPage() {
   console.log('🔍 DEBUG: TitleScreenPage rendering/re-rendering');
-  const searchParams = useLocalSearchParams();
-  const walletContext = useWallet();
-  const { resetGame, lastActiveView } = useGame();
-  const { resetInventory } = useInventory();
-  const { resetJokers } = useJokers();
-  const { resetFlavorText } = useFlavorText();
-  const { setSeed } = useSeed();
+  const { lastActiveView, periodCount, isInitialized } = useGame();
   const [refreshKey, setRefreshKey] = useState(0);
   const [showStudioScreen, setShowStudioScreen] = useState(true);
-  const initializeWallet = walletContext?.initializeWallet || (() => {});
 
   console.log('🔍 DEBUG: TitleScreenPage state - showStudioScreen:', showStudioScreen, 'refreshKey:', refreshKey);
 
@@ -40,18 +26,31 @@ export default function TitleScreenPage() {
 
   const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
     try {
-      console.log('📱 TitleScreen: handleNewGame called - game reset will happen after difficulty selection');
+      console.log('📱 TitleScreen: handleNewGame called with difficulty:', difficulty);
+      console.log('📱 TitleScreen: Navigating to market...');
       router.replace('/(tabs)/market');
+      console.log('📱 TitleScreen: Navigation command sent');
     } catch (error) {
-      console.error('Error starting new game:', error);
+      console.error('❌ TitleScreen: Error in handleNewGame:', error);
     }
   };
 
   const handleContinue = () => {
-    // Navigate to the last active view (after-school or market)
+    console.log('🎮 Continue pressed - periodCount:', periodCount, 'isInitialized:', isInitialized);
+
+    // If this is a newly created game (difficulty selected but not started)
+    if (isInitialized && periodCount === 0) {
+      console.log('🎮 Continuing newly created game - going to story screen');
+      router.replace('/story-screen');
+      return;
+    }
+
+    // Navigate to the last active view for games in progress
     if (lastActiveView === 'after-school') {
+      console.log('🎮 Continuing game in progress - going to after-school');
       router.replace('/(tabs)/after-school');
     } else {
+      console.log('🎮 Continuing game in progress - going to market');
       router.replace('/(tabs)/market');
     }
   };

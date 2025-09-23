@@ -78,10 +78,6 @@ export default function TabLayout() {
         <Tabs.Screen name="market" options={{
           href: null // Hide from tab bar but keep accessible
         }} />
-        <Tabs.Screen name="study" options={{
-          title: "Study",
-          href: null // Hide from tab bar
-        }} />
         <Tabs.Screen name="after-school" options={{
           title: "After School",
           href: null // Hide from tab bar

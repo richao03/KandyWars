@@ -14,7 +14,7 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
-import Modal from './ReanimatedModal';
+import FastModal from './FastModal';
 
 interface JokerCardProps {
   joker: {
@@ -33,6 +33,16 @@ interface JokerCardProps {
   isCompact?: boolean;
   showOwned?: boolean;
   disableActivation?: boolean;
+  onShowConfirmation?: (
+    title: string,
+    message: string,
+    emoji: string,
+    onConfirm: () => void,
+    confirmText?: string,
+    cancelText?: string,
+    onCancel?: () => void
+  ) => void;
+  onShowCandySelector?: (joker: any) => void;
 }
 
 const CANDY_TYPES = [
@@ -53,8 +63,10 @@ function JokerCard({
   isCompact,
   showOwned,
   disableActivation = false,
+  onShowConfirmation,
+  onShowCandySelector,
 }: JokerCardProps) {
-  const { jokers, activateJoker, addJoker } = useJokers();
+  const { jokers, activateJoker, addJoker, removeJoker } = useJokers();
   const { periodCount, revertToPreviousPeriod, incrementPeriod, jumpToPeriod } =
     useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
@@ -67,7 +79,12 @@ function JokerCard({
     getInventoryLimit,
   } = useInventory();
   const { add: addMoney } = useWallet();
-  const [showCandySelector, setShowCandySelector] = useState(false);
+
+  // Memoize inventory limit to prevent excessive JokerService calls
+  const memoizedInventoryLimit = useMemo(
+    () => getInventoryLimit(),
+    [getInventoryLimit]
+  );
   const [showJokerSelector, setShowJokerSelector] = useState(false);
   const [showPeriodSelector, setShowPeriodSelector] = useState(false); // Select period for time travel
   const [showConversionStep1, setShowConversionStep1] = useState(false); // Select source candy
@@ -101,24 +118,29 @@ function JokerCard({
     cancelText = 'Cancel',
     onCancel?: () => void
   ) => {
-    setConfirmModal({
-      visible: true,
-      title,
-      message,
-      emoji,
-      onConfirm: () => {
-        setConfirmModal((prev) => ({ ...prev, visible: false }));
-        onConfirm();
-      },
-      onCancel: onCancel
-        ? () => {
-            setConfirmModal((prev) => ({ ...prev, visible: false }));
-            onCancel();
-          }
-        : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
-      confirmText,
-      cancelText: onCancel ? cancelText : undefined,
-    });
+    // Use the page-level confirmation modal if available, otherwise fall back to internal modal
+    if (onShowConfirmation) {
+      onShowConfirmation(title, message, emoji, onConfirm, confirmText, cancelText, onCancel);
+    } else {
+      setConfirmModal({
+        visible: true,
+        title,
+        message,
+        emoji,
+        onConfirm: () => {
+          setConfirmModal((prev) => ({ ...prev, visible: false }));
+          onConfirm();
+        },
+        onCancel: onCancel
+          ? () => {
+              setConfirmModal((prev) => ({ ...prev, visible: false }));
+              onCancel();
+            }
+          : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
+        confirmText,
+        cancelText: onCancel ? cancelText : undefined,
+      });
+    }
   };
 
   const showAlert = (title: string, message: string, emoji = '✨') => {
@@ -128,7 +150,7 @@ function JokerCard({
   const handleActivate = () => {
     if (joker.effect === 'double_candy_price') {
       // Show candy selector modal
-      setShowCandySelector(true);
+      onShowCandySelector?.(joker);
     } else if (joker.effect === 'revert_period') {
       // Show confirmation for time revert
       showConfirm(
@@ -170,13 +192,16 @@ function JokerCard({
       );
     } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
       // Show candy selector modal for market manipulation
-      setShowCandySelector(true);
+      onShowCandySelector?.(joker);
     } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
       // Show candy selector modal for big short
-      setShowCandySelector(true);
+      onShowCandySelector?.(joker);
+    } else if (joker.id === JOKER_IDS.PROPACANDIES) {
+      // Show candy selector modal for Propacandies
+      onShowCandySelector?.(joker);
     } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
       // Show candy selector modal for inventory filling
-      setShowCandySelector(true);
+      onShowCandySelector?.(joker);
     } else if (joker.id === JOKER_IDS.TACHYONIC_SPRINT) {
       // Show period selector modal for time travel
       setShowPeriodSelector(true);
@@ -224,129 +249,44 @@ function JokerCard({
         'Cancel',
         () => {}
       );
+    } else if (joker.id === JOKER_IDS.BAKE_SALE) {
+      // Show confirmation for Bake Sale
+      showConfirm(
+        'Bake Sale',
+        'Cash rules everything around me! Instantly gain $1000?',
+        '🧁',
+        () => handleBakeSale(),
+        'Collect Money!',
+        'Cancel',
+        () => {}
+      );
     }
   };
 
-  const handleCandySelection = async (candyType: string) => {
-    if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
-      // Handle Market Manipulation: set chosen candy to highest price
-      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
-
-      // Get all current candy prices for this period
-      const allPrices: Record<string, number> = {};
-      const CANDY_TYPES = [
-        'Bubble Gum',
-        'M&Ms',
-        'Skittles',
-        'Snickers',
-        'Sour Patch Kids',
-        'Warheads',
-        'Jaw Breaker',
-      ];
-      CANDY_TYPES.forEach((candy) => {
-        allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
-      });
-
-      // Find the highest price
-      const highestPrice = Math.max(...Object.values(allPrices));
-
-      // Set the chosen candy to the highest price
-      modifyCandyPrice(candyType, periodCount, highestPrice);
-
-      // Activate the joker (this will remove it from inventory)
-      const success = await activateJoker(joker.id, candyType, periodCount);
-
-      if (success) {
-        showAlert(
-          'Market Manipulation Activated!',
-          `${candyType} price has been set to the highest market price!\n\nPrice: $${originalPrice.toFixed(2)} → $${highestPrice.toFixed(2)}`,
-          '📈'
-        );
-      }
-    } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
-      // Handle The Big Short: set chosen candy to lowest price
-      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
-
-      // Get all current candy prices for this period
-      const allPrices: Record<string, number> = {};
-      const CANDY_TYPES = [
-        'Bubble Gum',
-        'M&Ms',
-        'Skittles',
-        'Snickers',
-        'Sour Patch Kids',
-        'Warheads',
-        'Jaw Breaker',
-      ];
-      CANDY_TYPES.forEach((candy) => {
-        allPrices[candy] = gameData.candyPrices[candy]?.[periodCount] || 0;
-      });
-
-      // Find the lowest price
-      const lowestPrice = Math.min(...Object.values(allPrices));
-
-      // Set the chosen candy to the lowest price
-      modifyCandyPrice(candyType, periodCount, lowestPrice);
-
-      // Activate the joker (this will remove it from inventory)
-      const success = await activateJoker(joker.id, candyType, periodCount);
-
-      if (success) {
-        showAlert(
-          'The Big Short Activated!',
-          `${candyType} price has been set to the lowest market price!\n\nPrice: $${originalPrice.toFixed(2)} → $${lowestPrice.toFixed(2)}`,
-          '📉'
-        );
-      }
-    } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
-      // Handle Bet You I'm Faster: fill inventory with chosen candy
-      await handleBetYouImFaster(candyType);
-    } else {
-      // Handle other price-doubling effects
-      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
-      const doubledPrice = originalPrice * 2;
-
-      // Modify the actual game data for this period
-      modifyCandyPrice(candyType, periodCount, doubledPrice);
-
-      // Activate the joker (this will remove it from inventory)
-      const success = await activateJoker(joker.id, candyType, periodCount);
-
-      if (success) {
-        showAlert(
-          'Joker Activated!',
-          `${joker.name} has been used to double the price of ${candyType} for this period.\n\nPrice: $${originalPrice.toFixed(2)} → $${doubledPrice.toFixed(2)}`,
-          '✨'
-        );
-      }
-    }
-    setShowCandySelector(false);
-  };
 
   const handleTimeRevert = async () => {
-    const jokerActivated = await activateJoker(joker.id);
-    if (jokerActivated) {
-      const timeReverted = revertToPreviousPeriod();
-      if (timeReverted) {
-        showAlert(
-          'Time Reversed!',
-          'You have successfully reverted to the previous period. Use this knowledge wisely!',
-          '⏰'
-        );
-      } else {
-        showAlert(
-          'Time Revert Failed',
-          'Cannot revert time from the first period.',
-          '⏰'
-        );
-      }
+    const timeReverted = revertToPreviousPeriod();
+    if (timeReverted) {
+      // Remove the joker (it's one-time use)
+      removeJoker(joker.id);
+
+      showAlert(
+        'Time Reversed!',
+        'You have successfully reverted to the previous period. Use this knowledge wisely!',
+        '⏰'
+      );
+    } else {
+      showAlert(
+        'Time Revert Failed',
+        'Cannot revert time from the first period.',
+        '⏰'
+      );
     }
   };
 
   const handleBetYouImFaster = async (candyType: string) => {
-    const inventoryLimit = getInventoryLimit();
     const currentInventoryCount = getTotalInventoryCount();
-    const availableSpace = inventoryLimit - currentInventoryCount;
+    const availableSpace = memoizedInventoryLimit - currentInventoryCount;
 
     if (availableSpace <= 0) {
       showAlert(
@@ -354,7 +294,6 @@ function JokerCard({
         'Your inventory is full! Clear some space first.',
         '📦'
       );
-      setShowCandySelector(false);
       return;
     }
 
@@ -363,7 +302,7 @@ function JokerCard({
 
     if (success) {
       // Remove the joker (it's one-time use)
-      await activateJoker(joker.id);
+      removeJoker(joker.id);
 
       showAlert(
         'Speed Demon Victory!',
@@ -373,14 +312,12 @@ function JokerCard({
     } else {
       showAlert('Fill Failed!', 'Unable to fill inventory. Try again!', '❌');
     }
-
-    setShowCandySelector(false);
   };
 
   const handlePeriodSelection = async (targetPeriod: number) => {
     if (jumpToPeriod && jumpToPeriod(targetPeriod)) {
       // Remove the joker (it's one-time use)
-      await activateJoker(joker.id);
+      removeJoker(joker.id);
 
       showAlert(
         'Tachyonic Sprint Activated!',
@@ -409,15 +346,13 @@ function JokerCard({
     addJoker(duplicatedJoker);
 
     // Remove the Glitch in the Matrix joker (it's one-time use)
-    const success = await activateJoker(joker.id);
+    removeJoker(joker.id);
 
-    if (success) {
-      showAlert(
-        'Glitch Activated!',
-        `Successfully created a copy of "${selectedJoker.name}". The glitch has been consumed.`,
-        '🔄'
-      );
-    }
+    showAlert(
+      'Glitch Activated!',
+      `Successfully created a copy of "${selectedJoker.name}". The glitch has been consumed.`,
+      '🔄'
+    );
 
     setShowJokerSelector(false);
   };
@@ -436,16 +371,17 @@ function JokerCard({
   const handleTargetCandySelection = async (targetCandyType: string) => {
     if (!selectedSourceCandy) return;
 
-    const sourceInventoryItem = inventory.find(item => item.name === selectedSourceCandy);
+    const sourceInventoryItem = inventory.find(
+      (item) => item.name === selectedSourceCandy
+    );
     if (!sourceInventoryItem || (sourceInventoryItem.quantity || 0) === 0) {
       showAlert('Error', 'No source candy available for conversion!', '⚠️');
       return;
     }
 
     const currentTotal = getTotalInventoryCount();
-    const inventoryLimit = getInventoryLimit();
     console.log(
-      `Master of Trade: Current inventory: ${currentTotal}/${inventoryLimit}`
+      `Master of Trade: Current inventory: ${currentTotal}/${memoizedInventoryLimit}`
     );
     console.log(
       `Master of Trade: Converting ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`
@@ -476,7 +412,7 @@ function JokerCard({
     );
 
     // Remove the Master of Trade joker (it's one-time use)
-    await activateJoker(joker.id);
+    removeJoker(joker.id);
 
     showAlert(
       'Trade Completed!',
@@ -491,8 +427,8 @@ function JokerCard({
 
   // Get available inventory candies for conversion
   const availableCandiesForConversion = inventory
-    .filter(item => (item.quantity || 0) > 0)
-    .map(item => item.name);
+    .filter((item) => (item.quantity || 0) > 0)
+    .map((item) => item.name);
 
   // Get target candies (exclude the selected source)
   const availableTargetCandies = CANDY_TYPES.filter(
@@ -523,7 +459,7 @@ function JokerCard({
     incrementPeriod('market'); // Second advance: period 6 -> period 7 (skip period 6)
 
     // Remove the joker (it's one-time use)
-    await activateJoker(joker.id);
+    removeJoker(joker.id);
 
     showAlert(
       "Emperor's Decree Executed!",
@@ -533,12 +469,26 @@ function JokerCard({
   };
 
   const handleMarketCrash = async () => {
+    const priceChanges = [];
+
+    // Reduce all candy prices by 50% for the current period
+    for (const candyType of CANDY_TYPES) {
+      const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
+      const crashedPrice = Math.max(originalPrice * 0.5, 0.01); // 50% reduction, minimum $0.01
+
+      console.log(`🔧 Market Crash: ${candyType} - Original: $${originalPrice.toFixed(2)}, Crashed: $${crashedPrice.toFixed(2)}`);
+      modifyCandyPrice(candyType, crashedPrice, periodCount);
+      priceChanges.push(`${candyType}: $${originalPrice.toFixed(2)} → $${crashedPrice.toFixed(2)}`);
+    }
+
     // Remove the joker (it's one-time use)
-    await activateJoker(joker.id);
+    console.log('🔧 Market Crash: Attempting to remove joker with ID:', joker.id, 'Type:', typeof joker.id);
+    removeJoker(joker.id);
+    console.log('🔧 Market Crash: removeJoker called');
 
     showAlert(
       'Market Crash Executed!',
-      'All candy prices have been reduced by 50% for this period. Time to stock up!',
+      `All candy prices have been reduced by 50% for this period!\n\n${priceChanges.join('\n')}\n\nTime to stock up!`,
       '📉'
     );
   };
@@ -552,21 +502,15 @@ function JokerCard({
       addMoney(200);
 
       // Remove the joker (it's one-time use)
-      console.log('🪙 Roman Coin: Activating joker with ID:', joker.id);
-      const success = await activateJoker(joker.id);
-      console.log('🪙 Roman Coin: Activation result:', success);
+      console.log('🪙 Roman Coin: Removing joker with ID:', joker.id);
+      removeJoker(joker.id);
 
-      if (success) {
-        console.log('🪙 Roman Coin: Showing success alert');
-        showAlert(
-          'Roman Coin Sold!',
-          'You sold the ancient Roman coin and received $200!',
-          '🪙'
-        );
-      } else {
-        console.log('🪙 Roman Coin: Activation failed, showing error');
-        showAlert('Error', 'Failed to activate Roman Coin joker', '❌');
-      }
+      console.log('🪙 Roman Coin: Showing success alert');
+      showAlert(
+        'Roman Coin Sold!',
+        'You sold the ancient Roman coin and received $200!',
+        '🪙'
+      );
     } catch (error) {
       console.error('🪙 Roman Coin: Error during activation:', error);
       showAlert(
@@ -587,21 +531,15 @@ function JokerCard({
       addMoney(maxAmount);
 
       // Remove the joker (it's one-time use)
-      console.log('🎒 Lost and Found: Activating joker with ID:', joker.id);
-      const success = await activateJoker(joker.id);
-      console.log('🎒 Lost and Found: Activation result:', success);
+      console.log('🎒 Lost and Found: Removing joker with ID:', joker.id);
+      removeJoker(joker.id);
 
-      if (success) {
-        console.log('🎒 Lost and Found: Showing success alert');
-        showAlert(
-          'Lost and Found!',
-          `You found someone\'s lost lunch money and received $${maxAmount}!`,
-          '🎒'
-        );
-      } else {
-        console.log('🎒 Lost and Found: Activation failed, showing error');
-        showAlert('Error', 'Failed to activate Lost and Found joker', '❌');
-      }
+      console.log('🎒 Lost and Found: Showing success alert');
+      showAlert(
+        'Lost and Found!',
+        `You found someone\'s lost lunch money and received $${maxAmount}!`,
+        '🎒'
+      );
     } catch (error) {
       console.error('🎒 Lost and Found: Error during activation:', error);
       showAlert(
@@ -621,18 +559,14 @@ function JokerCard({
       console.log('⚡ Dodgeball Dash: Setting up next sale multiplier');
 
       // Remove the joker (it's one-time use)
-      const success = await activateJoker(joker.id);
-      console.log('⚡ Dodgeball Dash: Activation result:', success);
+      removeJoker(joker.id);
+      console.log('⚡ Dodgeball Dash: Joker removed from inventory');
 
-      if (success) {
-        showAlert(
-          'Dodgeball Dash Activated!',
-          'Your next candy sale will earn double profit!',
-          '⚡'
-        );
-      } else {
-        showAlert('Error', 'Failed to activate Dodgeball Dash joker', '❌');
-      }
+      showAlert(
+        'Dodgeball Dash Activated!',
+        'Your next candy sale will earn double profit!',
+        '⚡'
+      );
     } catch (error) {
       console.error('⚡ Dodgeball Dash: Error during activation:', error);
       showAlert(
@@ -647,22 +581,41 @@ function JokerCard({
     console.log('🗣️ Pursuasion: Starting activation');
 
     try {
-      // Activate the joker to track the effect for this period
-      const success = await activateJoker(joker.id, undefined, periodCount);
-      console.log('🗣️ Pursuasion: Activation result:', success);
+      // Remove the joker (it's one-time use)
+      removeJoker(joker.id);
+      console.log('🗣️ Pursuasion: Joker removed from inventory');
 
-      if (success) {
-        showAlert(
-          'Pursuasion Activated!',
-          'Your next candy sale will earn 2x profit!',
-          '🗣️'
-        );
-      } else {
-        showAlert('Error', 'Failed to activate Pursuasion joker', '❌');
-      }
+      showAlert(
+        'Pursuasion Activated!',
+        'Your next candy sale will earn 2x profit!',
+        '🗣️'
+      );
     } catch (error) {
       console.error('🗣️ Pursuasion: Error during activation:', error);
       showAlert('Error', 'An error occurred while activating Pursuasion', '❌');
+    }
+  };
+
+  const handleBakeSale = async () => {
+    console.log('🧁 Bake Sale: Starting activation');
+
+    try {
+      // Add $1000 to wallet
+      addMoney(1000);
+      console.log('🧁 Bake Sale: Added $1000 to wallet');
+
+      // Remove the joker (it's one-time use)
+      removeJoker(joker.id);
+      console.log('🧁 Bake Sale: Joker removed from inventory');
+
+      showAlert(
+        'Bake Sale Success!',
+        'You collected $1000 from your bake sale! Cash rules everything around me!',
+        '🧁'
+      );
+    } catch (error) {
+      console.error('🧁 Bake Sale: Error during activation:', error);
+      showAlert('Error', 'An error occurred while activating Bake Sale', '❌');
     }
   };
 
@@ -755,288 +708,257 @@ function JokerCard({
         </View>
       </View>
 
-      {/* Candy Selector Modal */}
-      <Modal
-        visible={showCandySelector}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {joker.id === JOKER_IDS.MARKET_MANIPULATION
-                ? '📈 Choose Candy to Manipulate'
-                : joker.id === JOKER_IDS.THE_BIG_SHORT
-                  ? '📉 Choose Candy to Short'
-                  : '🍭 Choose Candy to Double'}
-            </Text>
-
-            {CANDY_TYPES.map((candyType) => (
-              <TouchableOpacity
-                key={candyType}
-                style={styles.candyOption}
-                onPress={() => handleCandySelection(candyType)}
-              >
-                <Text style={styles.candyOptionText}>{candyType}</Text>
-              </TouchableOpacity>
-            ))}
-
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowCandySelector(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       {/* Period Selector Modal */}
-      <Modal
+      <FastModal
         visible={showPeriodSelector}
-        transparent={true}
-        animationType="slide"
+        onClose={() => setShowPeriodSelector(false)}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={styles.modalContent}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>⚡ Choose Period to Travel To</Text>
+        <>
+          <Text style={styles.modalTitle}>⚡ Choose Period to Travel To</Text>
 
-            <Text style={styles.modalSubtitle}>
-              Current Period: {periodCount}
-            </Text>
+          <Text style={styles.modalSubtitle}>
+            Current Period: {periodCount}
+          </Text>
 
-            {Array.from({ length: periodCount + 1 }, (_, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.periodOption,
-                  i === periodCount && styles.currentPeriodOption,
-                ]}
-                onPress={() => handlePeriodSelection(i)}
-                disabled={i === periodCount}
-              >
-                <Text
-                  style={[
-                    styles.periodOptionText,
-                    i === periodCount && styles.currentPeriodText,
-                  ]}
-                >
-                  Period {i} {i === periodCount ? '(Current)' : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
+          {Array.from({ length: periodCount + 1 }, (_, i) => (
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowPeriodSelector(false)}
+              key={i}
+              style={[
+                styles.periodOption,
+                i === periodCount && styles.currentPeriodOption,
+              ]}
+              onPress={() => handlePeriodSelection(i)}
+              disabled={i === periodCount}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text
+                style={[
+                  styles.periodOptionText,
+                  i === periodCount && styles.currentPeriodText,
+                ]}
+              >
+                Period {i} {i === periodCount ? '(Current)' : ''}
+              </Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          ))}
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => setShowPeriodSelector(false)}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
 
       {/* Joker Selector Modal */}
-      <Modal
+      <FastModal
         visible={showJokerSelector}
-        transparent={true}
-        animationType="slide"
+        onClose={() => setShowJokerSelector(false)}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={[
+          styles.modalContent,
+          styles.jokerModalContent,
+          isAfterSchool && styles.modalContentAfterSchool,
+        ]}
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              styles.jokerModalContent,
-              isAfterSchool && styles.modalContentAfterSchool,
-            ]}
+        <>
+          <Text style={styles.modalTitle}>🔄 Choose Joker to Copy</Text>
+
+          <ScrollView
+            style={styles.jokerScrollView}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.modalTitle}>🔄 Choose Joker to Copy</Text>
-
-            <ScrollView
-              style={styles.jokerScrollView}
-              showsVerticalScrollIndicator={false}
-            >
-              {availableJokersForDuplication.length > 0 ? (
-                availableJokersForDuplication.map((availableJoker) => (
-                  <TouchableOpacity
-                    key={availableJoker.id}
-                    style={styles.jokerOption}
-                    onPress={() => handleJokerSelection(availableJoker)}
-                  >
-                    <View style={styles.jokerOptionHeader}>
-                      <Text style={styles.jokerOptionName}>
-                        {availableJoker.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.jokerOptionType,
-                          {
-                            color:
-                              availableJoker.type === 'persistent'
-                                ? '#4ade80'
-                                : '#fb7185',
-                          },
-                        ]}
-                      >
-                        {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
-                      </Text>
-                    </View>
-                    <Text style={styles.jokerOptionDescription}>
-                      {availableJoker.description}
+            {availableJokersForDuplication.length > 0 ? (
+              availableJokersForDuplication.map((availableJoker) => (
+                <TouchableOpacity
+                  key={availableJoker.id}
+                  style={styles.jokerOption}
+                  onPress={() => handleJokerSelection(availableJoker)}
+                >
+                  <View style={styles.jokerOptionHeader}>
+                    <Text style={styles.jokerOptionName}>
+                      {availableJoker.name}
                     </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.noJokersContainer}>
-                  <Text style={styles.noJokersText}>
-                    No other jokers to copy!
+                    <Text
+                      style={[
+                        styles.jokerOptionType,
+                        {
+                          color:
+                            availableJoker.type === 'persistent'
+                              ? '#4ade80'
+                              : '#fb7185',
+                        },
+                      ]}
+                    >
+                      {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
+                    </Text>
+                  </View>
+                  <Text style={styles.jokerOptionDescription}>
+                    {availableJoker.description}
                   </Text>
-                  <Text style={styles.noJokersSubtext}>
-                    Study to earn more jokers first
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.noJokersContainer}>
+                <Text style={styles.noJokersText}>
+                  No other jokers to copy!
+                </Text>
+                <Text style={styles.noJokersSubtext}>
+                  Study to earn more jokers first
+                </Text>
+              </View>
+            )}
+          </ScrollView>
 
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowJokerSelector(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => setShowJokerSelector(false)}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
 
       {/* Candy Conversion Step 1: Select Source Modal */}
-      <Modal
+      <FastModal
         visible={showConversionStep1}
-        transparent={true}
-        animationType="slide"
+        onClose={() => setShowConversionStep1(false)}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={[
+          styles.modalContent,
+          styles.jokerModalContent,
+          isAfterSchool && styles.modalContentAfterSchool,
+        ]}
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              styles.jokerModalContent,
-              isAfterSchool && styles.modalContentAfterSchool,
-            ]}
+        <>
+          <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
+
+          <ScrollView
+            style={styles.jokerScrollView}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
-
-            <ScrollView
-              style={styles.jokerScrollView}
-              showsVerticalScrollIndicator={false}
-            >
-              {availableCandiesForConversion.length > 0 ? (
-                availableCandiesForConversion.map((candyType) => (
-                  <TouchableOpacity
-                    key={candyType}
-                    style={[
-                      styles.candyOption,
-                      isAfterSchool && styles.candyOptionAfterSchool,
-                    ]}
-                    onPress={() => handleSourceCandySelection(candyType)}
-                  >
-                    <View style={styles.candyOptionHeader}>
-                      <Text
-                        style={[
-                          styles.candyOptionText,
-                          isAfterSchool && styles.candyOptionTextAfterSchool,
-                        ]}
-                      >
-                        {candyType}
-                      </Text>
-                      <Text style={styles.candyQuantity}>
-                        ×{inventory.find(item => item.name === candyType)?.quantity || 0}
-                      </Text>
-                    </View>
-                    <Text style={styles.candyAvgPrice}>
-                      Avg: ${(inventory.find(item => item.name === candyType)?.price || 0).toFixed(2)}
+            {availableCandiesForConversion.length > 0 ? (
+              availableCandiesForConversion.map((candyType) => (
+                <TouchableOpacity
+                  key={candyType}
+                  style={[
+                    styles.candyOption,
+                    isAfterSchool && styles.candyOptionAfterSchool,
+                  ]}
+                  onPress={() => handleSourceCandySelection(candyType)}
+                >
+                  <View style={styles.candyOptionHeader}>
+                    <Text
+                      style={[
+                        styles.candyOptionText,
+                        isAfterSchool && styles.candyOptionTextAfterSchool,
+                      ]}
+                    >
+                      {candyType}
                     </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.noJokersContainer}>
-                  <Text style={styles.noJokersText}>No candy to convert!</Text>
-                  <Text style={styles.noJokersSubtext}>
-                    Buy some candy first
+                    <Text style={styles.candyQuantity}>
+                      ×
+                      {inventory.find((item) => item.name === candyType)
+                        ?.quantity || 0}
+                    </Text>
+                  </View>
+                  <Text style={styles.candyAvgPrice}>
+                    Avg: $
+                    {(
+                      inventory.find((item) => item.name === candyType)
+                        ?.price || 0
+                    ).toFixed(2)}
                   </Text>
-                </View>
-              )}
-            </ScrollView>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.noJokersContainer}>
+                <Text style={styles.noJokersText}>No candy to convert!</Text>
+                <Text style={styles.noJokersSubtext}>Buy some candy first</Text>
+              </View>
+            )}
+          </ScrollView>
 
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowConversionStep1(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => setShowConversionStep1(false)}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
 
       {/* Candy Conversion Step 2: Select Target Modal */}
-      <Modal
+      <FastModal
         visible={showConversionStep2}
-        transparent={true}
-        animationType="slide"
+        onClose={() => setShowConversionStep2(false)}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={styles.modalContent}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>🔄 Convert to Which Candy?</Text>
+        <>
+          <Text style={styles.modalTitle}>🔄 Convert to Which Candy?</Text>
 
-            {selectedSourceCandy && (
-              <Text style={styles.conversionSummary}>
-                Converting: {inventory.find(item => item.name === selectedSourceCandy)?.quantity || 0}{' '}
-                {selectedSourceCandy}
-              </Text>
-            )}
+          {selectedSourceCandy && (
+            <Text style={styles.conversionSummary}>
+              Converting:{' '}
+              {inventory.find((item) => item.name === selectedSourceCandy)
+                ?.quantity || 0}{' '}
+              {selectedSourceCandy}
+            </Text>
+          )}
 
-            {availableTargetCandies.map((candyType) => (
-              <TouchableOpacity
-                key={candyType}
-                style={styles.candyOption}
-                onPress={() => handleTargetCandySelection(candyType)}
-              >
-                <Text style={styles.candyOptionText}>{candyType}</Text>
-                <Text style={styles.targetPrice}>
-                  Current Price: $
-                  {(
-                    gameData.candyPrices[candyType]?.[periodCount] || 0
-                  ).toFixed(2)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-
+          {availableTargetCandies.map((candyType) => (
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => {
-                setShowConversionStep2(false);
-                setSelectedSourceCandy(null);
-              }}
+              key={candyType}
+              style={styles.candyOption}
+              onPress={() => handleTargetCandySelection(candyType)}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.candyOptionText}>{candyType}</Text>
+              <Text style={styles.targetPrice}>
+                Current Price: $
+                {(gameData.candyPrices[candyType]?.[periodCount] || 0).toFixed(
+                  2
+                )}
+              </Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          ))}
 
-      {/* Confirmation Modal */}
-      <ConfirmationModal
-        visible={confirmModal.visible}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        emoji={confirmModal.emoji}
-        confirmText={confirmModal.confirmText}
-        cancelText={confirmModal.cancelText}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={
-          confirmModal.onCancel ||
-          (() => setConfirmModal((prev) => ({ ...prev, visible: false })))
-        }
-        theme="market"
-      />
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => {
+              setShowConversionStep2(false);
+              setSelectedSourceCandy(null);
+            }}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
+
+      {/* Confirmation Modal - only render if not using page-level modal */}
+      {!onShowConfirmation && (
+        <ConfirmationModal
+          visible={confirmModal.visible}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          emoji={confirmModal.emoji}
+          confirmText={confirmModal.confirmText}
+          cancelText={confirmModal.cancelText}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={
+            confirmModal.onCancel ||
+            (() => setConfirmModal((prev) => ({ ...prev, visible: false })))
+          }
+          theme="market"
+        />
+      )}
     </>
   );
 }
@@ -1204,18 +1126,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'CrayonPastel',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalContent: {
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
     margin: 20,
-    maxWidth: 300,
+    width: 300,
     width: '80%',
   },
   modalTitle: {

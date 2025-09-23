@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
+import { useHallPass } from '../../src/hooks/useHallPass';
 
 interface Joker {
   id: number;
@@ -38,6 +39,7 @@ export default function JokerSelection({
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
   const [rerollsUsed, setRerollsUsed] = useState(0);
   const { addJoker, getJokersBySubject: getUserJokersBySubject } = useJokers();
+  const { getJokerBonus } = useHallPass();
 
   // Get user's jokers for this subject (for reference, not used for selection anymore)
   const userJokers = getUserJokersBySubject(subject);
@@ -47,7 +49,9 @@ export default function JokerSelection({
 
   const selectRandomJokers = () => {
     const shuffled = [...availableJokers].sort(() => Math.random() - 0.5);
-    const jokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
+    const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
+    const jokerBonus = getJokerBonus(); // +1 from valedictorian_vendor Hall Pass
+    const jokerCount = baseJokerCount + jokerBonus;
     const selected = shuffled.slice(0, jokerCount);
     setSelectedJokers(selected);
   };
@@ -58,12 +62,15 @@ export default function JokerSelection({
     const shuffled = [...allSubjectJokers].sort(() => Math.random() - 0.5);
 
     // Reroll gives fewer jokers based on tier
-    let rerollJokerCount;
+    let baseRerollJokerCount;
     if (rewardTier === 2)
-      rerollJokerCount = 1; // Level 2: reroll for 1 joker
+      baseRerollJokerCount = 1; // Level 2: reroll for 1 joker
     else if (rewardTier === 3)
-      rerollJokerCount = 2; // Level 3: reroll for 2 jokers
-    else rerollJokerCount = 0; // Level 1: no reroll
+      baseRerollJokerCount = 2; // Level 3: reroll for 2 jokers
+    else baseRerollJokerCount = 0; // Level 1: no reroll
+
+    const jokerBonus = getJokerBonus(); // +1 from valedictorian_vendor Hall Pass
+    const rerollJokerCount = baseRerollJokerCount + jokerBonus;
 
     setSelectedJokers(shuffled.slice(0, rerollJokerCount));
     setRerollsUsed((prev) => prev + 1);

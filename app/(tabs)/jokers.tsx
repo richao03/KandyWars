@@ -1,6 +1,7 @@
 import React, { memo, useMemo, useState } from 'react';
 import {
   FlatList,
+  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -9,20 +10,195 @@ import {
 } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useSeed } from '../../src/hooks/useSeed';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { JOKER_IDS } from '../../src/constants/jokerIds';
+import ConfirmationModal from '../components/ConfirmationModal';
+import FastModal from '../components/FastModal';
 import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
+
+const CANDY_TYPES = [
+  'Bubble Gum',
+  'M&Ms',
+  'Sour Straws',
+  'Chocolate Bar',
+  'Lollipop',
+  'Gummy Bears',
+  'Jaw Breaker',
+];
 
 function JokersPage() {
   const gameContext = useGame();
   const jokerContext = useJokers();
+  const inventoryContext = useInventory();
+  const seedContext = useSeed();
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    emoji: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    emoji: '',
+    onConfirm: () => {},
+  });
+
+  // Candy Selector Modal state
+  const [candySelectorModal, setCandySelectorModal] = useState<{
+    visible: boolean;
+    joker: any | null;
+  }>({
+    visible: false,
+    joker: null,
+  });
+
+  // Confirmation modal handler for JokerCard components
+  const handleShowConfirmation = (
+    title: string,
+    message: string,
+    emoji: string,
+    onConfirmCallback: () => void,
+    confirmText = 'OK',
+    cancelText = 'Cancel',
+    onCancelCallback?: () => void
+  ) => {
+    setConfirmModal({
+      visible: true,
+      title,
+      message,
+      emoji,
+      onConfirm: () => {
+        setConfirmModal((prev) => ({ ...prev, visible: false }));
+        onConfirmCallback();
+      },
+      onCancel: onCancelCallback
+        ? () => {
+            setConfirmModal((prev) => ({ ...prev, visible: false }));
+            onCancelCallback();
+          }
+        : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
+      confirmText,
+      cancelText: onCancelCallback ? cancelText : undefined,
+    });
+  };
+
+  // Candy selector modal handler for JokerCard components
+  const handleShowCandySelector = (joker: any) => {
+    setCandySelectorModal({
+      visible: true,
+      joker,
+    });
+  };
+
+  // Handle candy selection for various jokers
+  const handleCandySelection = (selectedCandy: string) => {
+    const { joker } = candySelectorModal;
+    if (!joker || !gameContext || !jokerContext || !inventoryContext || !seedContext) return;
+
+    const { periodCount } = gameContext;
+    const { removeJoker } = jokerContext;
+    const { getInventoryLimit } = inventoryContext;
+    const { gameData, modifyCandyPrice } = seedContext;
+
+    if (joker.id === JOKER_IDS.PROPACANDIES) {
+      // Drop the selected candy's price by 90%
+      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const newPrice = Math.max(originalPrice * 0.1, 0.01); // 90% reduction, minimum $0.01
+
+      modifyCandyPrice(selectedCandy, newPrice, periodCount);
+      removeJoker(joker.id);
+
+      handleShowConfirmation(
+        'Propacandies Activated!',
+        `${selectedCandy} price dropped by 90%! New price: $${newPrice.toFixed(2)}`,
+        '📰'
+      );
+    } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
+      // Double the selected candy's price for this period
+      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const newPrice = originalPrice * 2;
+
+      modifyCandyPrice(selectedCandy, newPrice, periodCount);
+      removeJoker(joker.id);
+
+      handleShowConfirmation(
+        'Market Manipulation Activated!',
+        `${selectedCandy} price doubled! New price: $${newPrice.toFixed(2)}`,
+        '📈'
+      );
+    } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
+      // Crash the selected candy's price by 50%
+      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const newPrice = Math.max(originalPrice * 0.5, 0.01); // 50% reduction, minimum $0.01
+
+      modifyCandyPrice(selectedCandy, newPrice, periodCount);
+      removeJoker(joker.id);
+
+      handleShowConfirmation(
+        'The Big Short Activated!',
+        `${selectedCandy} price crashed by 50%! New price: $${newPrice.toFixed(2)}`,
+        '📉'
+      );
+    } else if (joker.effect === 'double_candy_price') {
+      // Legacy double candy price jokers
+      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const newPrice = originalPrice * 2;
+
+      modifyCandyPrice(selectedCandy, newPrice, periodCount);
+      removeJoker(joker.id);
+
+      handleShowConfirmation(
+        'Price Doubled!',
+        `${selectedCandy} price doubled! New price: $${newPrice.toFixed(2)}`,
+        '💰'
+      );
+    } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
+      // Fill inventory with the selected candy type
+      const currentInventoryCount = inventoryContext.getTotalInventoryCount();
+      const inventoryLimit = getInventoryLimit();
+      const spaceAvailable = inventoryLimit - currentInventoryCount;
+
+      if (spaceAvailable <= 0) {
+        handleShowConfirmation(
+          'Inventory Full',
+          'Your inventory is already full!',
+          '📦'
+        );
+        setCandySelectorModal({ visible: false, joker: null });
+        return;
+      }
+
+      const candyPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const quantityToAdd = Math.min(spaceAvailable, 10); // Add up to 10 or until full
+
+      inventoryContext.addToInventory(selectedCandy, quantityToAdd, candyPrice);
+      removeJoker(joker.id);
+
+      handleShowConfirmation(
+        'Inventory Filled!',
+        `Added ${quantityToAdd} ${selectedCandy} to your inventory!`,
+        '🏃‍♂️'
+      );
+    }
+
+    setCandySelectorModal({ visible: false, joker: null });
+  };
+
   // Remove selectedSubject state - we'll show all subjects as sections
 
   // If contexts are not available, show loading or initialization message
-  if (!gameContext || !jokerContext) {
+  if (!gameContext || !jokerContext || !seedContext) {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
@@ -108,6 +284,8 @@ function JokersPage() {
             isCompact={true}
             showOwned={false}
             disableActivation={false}
+            onShowConfirmation={handleShowConfirmation}
+            onShowCandySelector={handleShowCandySelector}
           />
         </View>
       ))}
@@ -121,6 +299,8 @@ function JokersPage() {
         isAfterSchool={isAfterSchool}
         isCompact={true}
         showOwned={jokers.some((ownedJoker) => ownedJoker.id === item.id)}
+        onShowConfirmation={handleShowConfirmation}
+        onShowCandySelector={handleShowCandySelector}
       />
     </View>
   );
@@ -135,6 +315,8 @@ function JokersPage() {
             isCompact={true}
             showOwned={jokers.some((ownedJoker) => ownedJoker.id === joker.id)}
             disableActivation={true}
+            onShowConfirmation={handleShowConfirmation}
+            onShowCandySelector={handleShowCandySelector}
           />
         </View>
       ))}
@@ -222,6 +404,60 @@ function JokersPage() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Confirmation Modal - rendered at page level for full screen overlay */}
+      <ConfirmationModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        emoji={confirmModal.emoji}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={
+          confirmModal.onCancel ||
+          (() => setConfirmModal((prev) => ({ ...prev, visible: false })))
+        }
+        theme="market"
+      />
+
+      {/* Candy Selector Modal */}
+      <FastModal
+        visible={candySelectorModal.visible}
+        onClose={() => setCandySelectorModal({ visible: false, joker: null })}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={styles.modalContent}
+      >
+        <>
+          <Text style={styles.modalTitle}>
+            {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
+              ? '📈 Choose Candy to Manipulate'
+              : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
+                ? '📉 Choose Candy to Short'
+                : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
+                ? '📰 Choose Candy to Drop Price'
+                : '🍭 Choose Candy Type'}
+          </Text>
+
+          {CANDY_TYPES.map((candyType) => (
+            <TouchableOpacity
+              key={candyType}
+              style={styles.candyButton}
+              onPress={() => handleCandySelection(candyType)}
+            >
+              <Text style={styles.candyButtonText}>{candyType}</Text>
+            </TouchableOpacity>
+          ))}
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => setCandySelectorModal({ visible: false, joker: null })}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
     </View>
   );
 }
@@ -407,6 +643,49 @@ const styles = StyleSheet.create({
   },
   sectionTitleAfterSchool: {
     color: '#f7e98e',
+  },
+  // Candy Selector Modal styles
+  modalContent: {
+    backgroundColor: '#fefaf5',
+    borderRadius: 16,
+    padding: 20,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#6b4423',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'CrayonPastel',
+  },
+  candyButton: {
+    backgroundColor: '#6b4423',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    alignItems: 'center',
+  },
+  candyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
+  },
+  cancelButton: {
+    backgroundColor: '#8b4513',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'CrayonPastel',
   },
 });
 

@@ -19,6 +19,7 @@ import Animated, {
 import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
@@ -82,6 +83,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   const { jokers } = useJokers();
   const { periodCount } = useGame();
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
   const studyTimeMultiplier = useStudyTimeMultiplier(jokers, periodCount);
 
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
@@ -470,6 +472,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     if (gameState === 'playing') {
       // Track minigame play for analytics
       trackMinigamePlayed('art');
+      trackMinigameProgress('art');
 
       setStage(1);
       initializeStage(1);

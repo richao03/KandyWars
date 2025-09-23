@@ -1,13 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
-import {
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import FastModal from './FastModal';
 
 interface GameEndModalProps {
   visible: boolean;
@@ -15,7 +9,9 @@ interface GameEndModalProps {
   finalScore: number;
   balance: number;
   stashedAmount: number;
+  adoptionFee: number;
   difficultyLevel: number;
+  unlockedHallPasses?: string[];
   onRestart: () => void;
   onClose?: () => void;
 }
@@ -26,7 +22,9 @@ export default function GameEndModal({
   finalScore,
   balance,
   stashedAmount,
+  adoptionFee,
   difficultyLevel,
+  unlockedHallPasses = [],
   onRestart,
   onClose,
 }: GameEndModalProps) {
@@ -92,83 +90,86 @@ export default function GameEndModal({
   const dogImage = getDogImage(difficultyLevel);
   const dogMessage =
     gameResult === 'won'
-      ? `🎉 Congratulations! You successfully paid off your debt and can now adopt ${dogBreed}! 🎉`
+      ? `Congratulations! You successfully paid off your debt and can now adopt ${dogBreed}! `
       : `💔 You weren't able to pay off your debt in time. ${dogBreed} has gone with another loving family. 💔`;
 
   return (
-    <Modal visible={visible} animationType="fade" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.container}>
-            <Text style={styles.title}>
+    <FastModal
+      visible={visible}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.8}
+      modalStyle={styles.modalContent}
+    >
+      <View style={styles.container}>
+        <Text style={styles.title}>
+          {gameResult === 'won' ? '🎉 CONGRATULATIONS! 🎉' : '💸 GAME OVER 💸'}
+        </Text>
+
+        <Image source={dogImage} style={styles.dogImage} />
+
+        <Text style={styles.subtitle}>
+          {gameResult === 'won'
+            ? `You paid off all your debt and adapted ${dogBreed}`
+            : `${dogBreed} has gone with another loving family`}
+        </Text>
+
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreTitle}>NET FINAL SCORE</Text>
+          <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
+
+          <View style={styles.breakdown}>
+            <Text style={styles.breakdownText}>
+              💰 Balance: ${balance.toFixed(2)}
+            </Text>
+            <Text style={styles.breakdownText}>
+              🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
+              {Math.abs(stashedAmount).toFixed(2)}
+            </Text>
+            <Text style={styles.breakdownText}>
               {gameResult === 'won'
-                ? '🎉 CONGRATULATIONS! 🎉'
-                : '💸 GAME OVER 💸'}
+                ? '✅ All debt paid off!'
+                : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
             </Text>
-
-            <Image source={dogImage} style={styles.dogImage} />
-
-            <Text style={styles.dogMessage}>{dogMessage}</Text>
-
-            <Text style={styles.subtitle}>
-              {gameResult === 'won'
-                ? 'You paid off all your debt and won!'
-                : 'You ran out of time with remaining debt.'}
-            </Text>
-
-            <View style={styles.scoreContainer}>
-              <Text style={styles.scoreTitle}>NET FINAL SCORE</Text>
-              <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
-
-              <View style={styles.breakdown}>
-                <Text style={styles.breakdownText}>
-                  💰 Balance: ${balance.toFixed(2)}
-                </Text>
-                <Text style={styles.breakdownText}>
-                  🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
-                  {Math.abs(stashedAmount).toFixed(2)}
-                </Text>
-                <Text style={styles.breakdownText}>
-                  {gameResult === 'won'
-                    ? '✅ All debt paid off!'
-                    : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.scoreboardText}>
-              🏆 Your score has been submitted to the leaderboard!
-            </Text>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleViewScoreboard}
-              >
-                <Text style={styles.buttonText}>View Leaderboard</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.restartButton]}
-                onPress={onRestart}
-              >
-                <Text style={styles.buttonText}>Play Again</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
+
+        <Text style={styles.scoreboardText}>
+          🏆 Your score has been submitted to the leaderboard!
+        </Text>
+
+        {unlockedHallPasses.length > 0 && (
+          <View style={styles.hallPassContainer}>
+            <Text style={styles.hallPassTitle}>🎖️ Hall Passes Unlocked!</Text>
+            {unlockedHallPasses.map((passId, index) => (
+              <Text key={index} style={styles.hallPassText}>
+                ✨ {passId}
+              </Text>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleViewScoreboard}
+          >
+            <Text style={styles.buttonText}>View Leaderboard</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.restartButton]}
+            onPress={onRestart}
+          >
+            <Text style={styles.buttonText}>Play Again</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </Modal>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalContent: {
     width: '90%',
     maxWidth: 400,
@@ -248,6 +249,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     fontStyle: 'italic',
+  },
+  hallPassContainer: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  hallPassTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  hallPassText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 5,
   },
   buttonContainer: {
     flexDirection: 'row',

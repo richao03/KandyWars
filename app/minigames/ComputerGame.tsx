@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -43,6 +44,7 @@ const TECH_EMOJIS = [
 export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
 
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [level, setLevel] = useState(1);
@@ -196,6 +198,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('computer');
+    trackMinigameProgress('computer');
 
     setGameState('playing');
     setLevel(1);

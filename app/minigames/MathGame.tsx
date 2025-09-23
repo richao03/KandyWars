@@ -13,6 +13,7 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -26,6 +27,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { width: screenWidth } = Dimensions.get('window');
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
 
   // Game states
   const [gameState, setGameState] = useState<
@@ -392,6 +394,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('math');
+    trackMinigameProgress('math');
 
     setGameState('playing');
     setScore(0);

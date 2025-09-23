@@ -7,6 +7,9 @@ import {
   unlockJoker,
   setJokers,
   resetJokers,
+  addActiveEffect,
+  removeActiveEffect,
+  clearAllActiveEffects,
 } from '../store/slices/jokerSlice';
 
 interface ActiveJokerEffect {
@@ -18,7 +21,7 @@ interface ActiveJokerEffect {
 export const useJokers = () => {
   const dispatch = useAppDispatch();
   const jokerState = useAppSelector(state => state.joker);
-  const [activeEffects, setActiveEffects] = useState<ActiveJokerEffect[]>([]);
+  const activeEffects = useAppSelector(state => state.joker.activeEffects);
   const [onFirstJokerCallbacks] = useState<(() => void)[]>([]);
 
   const addJokerAction = useCallback((joker: any, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
@@ -45,13 +48,13 @@ export const useJokers = () => {
     period?: number
   ): Promise<boolean> => {
     const effect = { jokerId, candyType, period };
-    setActiveEffects(prev => [...prev, effect]);
+    dispatch(addActiveEffect(effect));
     return true;
-  }, []);
+  }, [dispatch]);
 
   const clearActiveEffect = useCallback((jokerId: number) => {
-    setActiveEffects(prev => prev.filter(effect => effect.jokerId !== jokerId));
-  }, []);
+    dispatch(removeActiveEffect(jokerId));
+  }, [dispatch]);
 
   const reorderJokers = useCallback((newOrder: any[]) => {
     dispatch(setJokers(newOrder));
@@ -78,7 +81,6 @@ export const useJokers = () => {
 
   const resetJokersAction = useCallback(() => {
     dispatch(resetJokers());
-    setActiveEffects([]);
   }, [dispatch]);
 
   return {

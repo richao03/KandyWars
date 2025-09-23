@@ -13,6 +13,9 @@ import candySalesReducer from './slices/candySalesSlice';
 import seedReducer from './slices/seedSlice';
 import tabBarReducer from './slices/tabBarSlice';
 import dailyStatsReducer from './slices/dailyStatsSlice';
+import priceDoublingReducer from './slices/priceDoublingSlice';
+import hallPassReducer from './slices/hallPassSlice';
+import minigameTrackingReducer from './slices/minigameTrackingSlice';
 
 // Combine reducers
 const rootReducer = combineReducers({
@@ -27,6 +30,9 @@ const rootReducer = combineReducers({
   seed: seedReducer,
   tabBar: tabBarReducer,
   dailyStats: dailyStatsReducer,
+  priceDoubling: priceDoublingReducer,
+  hallPass: hallPassReducer,
+  minigameTracking: minigameTrackingReducer,
 });
 
 // Persist configuration
@@ -34,8 +40,13 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats'], // Only persist these slices
+  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'minigameTracking'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'scoreboard', 'candySales', 'tabBar'], // Don't persist these
+  // Performance optimizations
+  timeout: 10000, // 10 second timeout for persistence operations
+  writeFailHandler: (err: Error) => {
+    console.error('Redux persist write failed:', err);
+  },
   migrate: (state: any) => {
     // Handle migrations if needed
     if (state && !state._persist?.version) {
@@ -54,15 +65,30 @@ export const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      // Optimize for production
+      immutableCheck: { warnAfter: 32 },
       serializableCheck: {
+        warnAfter: 32,
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         ignoredActionPaths: ['payload.timestamp'],
         ignoredPaths: ['seed.gameData'],
       },
     }),
+  // Enable devTools only in development
+  devTools: process.env.NODE_ENV !== 'production',
 });
 
 export const persistor = persistStore(store);
+
+// Manual save function for critical game state changes
+export const forceSave = () => {
+  try {
+    persistor.flush();
+    console.log('💾 Manual save triggered successfully');
+  } catch (error) {
+    console.error('❌ Manual save failed:', error);
+  }
+};
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Button,
   FlatList,
@@ -11,7 +11,7 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { Candy } from '../types';
-import Modal from './ReanimatedModal';
+import FastModal from './FastModal';
 import TransactionModal from './TransactionModal';
 
 type CandyForDeli = Candy & {
@@ -44,9 +44,10 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
       const prices = gameData.candyPrices?.[candy.name] || [];
-      const averageCost = prices.length > 0
-        ? prices.reduce((sum, price) => sum + price, 0) / prices.length
-        : (candy.baseMin + candy.baseMax) / 2;
+      const averageCost =
+        prices.length > 0
+          ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+          : (candy.baseMin + candy.baseMax) / 2;
 
       return {
         ...candy,
@@ -130,7 +131,7 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
     (sum, item) => sum + item.quantity,
     0
   );
-  const inventoryLimit = getInventoryLimit();
+  const inventoryLimit = useMemo(() => getInventoryLimit(), [getInventoryLimit]);
   const availableInventorySpace = inventoryLimit - totalInventory;
 
   const maxBuyQty =
@@ -144,21 +145,14 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={250}
-      animationOutTiming={200}
-      backdropTransitionInTiming={250}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modalContainer}
+    <FastModal
+      visible={visible}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.5}
+      modalStyle={styles.container}
     >
-      <View style={styles.container}>
+      <>
         <View style={styles.header}>
           <Text style={styles.title}>🏪 DELI</Text>
           <Text style={styles.subtitle}>
@@ -195,16 +189,12 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
             candy={selectedCandy}
           />
         )}
-      </View>
-    </Modal>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    margin: 0,
-    justifyContent: 'flex-end',
-  },
   container: {
     flex: 1,
     backgroundColor: 'white',

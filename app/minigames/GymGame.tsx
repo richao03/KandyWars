@@ -14,6 +14,7 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -219,6 +220,7 @@ const DIRECTIONS = {
 export default function GymGame({ onComplete }: GymGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
+  const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
 
   const [gameState, setGameState] = useState<
     'instructions' | 'playing' | 'jokerSelection'
@@ -391,6 +393,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const startGame = () => {
     // Track minigame play for analytics
     trackMinigamePlayed('gym');
+    trackMinigameProgress('gym');
 
     setGameState('playing');
     setLevel(1);

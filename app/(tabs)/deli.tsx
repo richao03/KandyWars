@@ -42,8 +42,8 @@ export default function Deli() {
   const { day } = useGame();
   const { jokers } = useJokers();
 
-  // Check for Vendor Kickback joker
-  const vendorKickbackJoker = findJokerById(jokers, JOKER_IDS.VENDOR_KICKBACK);
+  // Check for The Good Old Days joker (provides deli discount)
+  const vendorKickbackJoker = findJokerById(jokers, JOKER_IDS.THE_GOOD_OLD_DAYS);
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
@@ -75,7 +75,7 @@ export default function Deli() {
   useEffect(() => {
     const currentVendorKickbackJoker = findJokerById(
       jokers,
-      JOKER_IDS.VENDOR_KICKBACK
+      JOKER_IDS.THE_GOOD_OLD_DAYS
     );
 
     setCandies(

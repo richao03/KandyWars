@@ -12,54 +12,68 @@ import {
 } from '../store/slices/walletSlice';
 import { resetGame } from '../store/slices/gameSlice';
 import { resetInventory } from '../store/slices/inventorySlice';
-import { resetJoker } from '../store/slices/jokerSlice';
+import { resetJokers } from '../store/slices/jokerSlice';
 import { resetDailyStats } from '../store/slices/dailyStatsSlice';
+import { selectSelectedHallPassEffects } from '../store/slices/hallPassSlice';
+import { HallPassUtils } from '../utils/hallPassUtils';
 
 export const useWallet = () => {
   const dispatch = useAppDispatch();
-  const walletState = useAppSelector(state => state.wallet);
+  // Subscribe to specific values instead of entire state slice
+  const balance = useAppSelector(state => state.wallet.balance);
+  const stashedAmount = useAppSelector(state => state.wallet.stashedAmount);
+  const adoptionFee = useAppSelector(state => state.wallet.adoptionFee);
+  const difficultyLevel = useAppSelector(state => state.wallet.difficultyLevel);
+  const playerName = useAppSelector(state => state.wallet.playerName);
+  const playerId = useAppSelector(state => state.wallet.playerId);
+  const isFirstTimeDifficultySelection = useAppSelector(state => state.wallet.isFirstTimeDifficultySelection);
+  const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
 
   const spend = useCallback((amount: number): boolean => {
-    if (walletState.balance >= amount) {
+    if (balance >= amount) {
       dispatch(spendBalance(amount));
       return true;
     }
     return false;
-  }, [dispatch, walletState.balance]);
+  }, [dispatch, balance]);
 
   const add = useCallback((amount: number) => {
     dispatch(addBalance(amount));
   }, [dispatch]);
 
   const addAllowance = useCallback((jokers?: any[], periodCount?: number): number => {
-    // This logic would need to be implemented based on your joker system
-    const allowanceAmount = 10; // Base allowance
-    dispatch(addBalance(allowanceAmount));
-    return allowanceAmount;
-  }, [dispatch]);
+    // Base allowance
+    const baseAllowance = 10;
+
+    // Apply Hall Pass allowance bonus
+    const finalAllowance = HallPassUtils.applyAllowanceBonus(baseAllowance, hallPassEffects);
+
+    dispatch(addBalance(finalAllowance));
+    return finalAllowance;
+  }, [dispatch, hallPassEffects]);
 
   const stashMoneyAction = useCallback((amount: number, jokers?: any[]): boolean => {
-    if (walletState.balance >= amount) {
+    if (balance >= amount) {
       dispatch(stashMoney(amount));
       return true;
     }
     return false;
-  }, [dispatch, walletState.balance]);
+  }, [dispatch, balance]);
 
   const withdrawFromStashAction = useCallback((amount: number): boolean => {
-    if (walletState.stashedAmount >= amount) {
+    if (stashedAmount >= amount) {
       dispatch(withdrawFromStash(amount));
       return true;
     }
     return false;
-  }, [dispatch, walletState.stashedAmount]);
+  }, [dispatch, stashedAmount]);
 
   const stealMoney = useCallback((amount: number, jokers?: any[], periodCount?: number): number => {
     // This logic would need to be implemented based on your joker system
-    const stolenAmount = Math.min(amount, walletState.balance);
+    const stolenAmount = Math.min(amount, balance);
     dispatch(spendBalance(stolenAmount));
     return stolenAmount;
-  }, [dispatch, walletState.balance]);
+  }, [dispatch, balance]);
 
   const resetWalletAction = useCallback(() => {
     dispatch(resetWallet());
@@ -72,7 +86,7 @@ export const useWallet = () => {
   const initializeWalletAction = useCallback((level?: number, playerName?: string) => {
     dispatch(resetGame());
     dispatch(resetInventory());
-    dispatch(resetJoker());
+    dispatch(resetJokers());
     dispatch(resetDailyStats());
     dispatch(initializeWallet({ level, playerName }));
   }, [dispatch]);
@@ -82,16 +96,17 @@ export const useWallet = () => {
   }, [dispatch]);
 
   const hasExistingName = useCallback(async (): Promise<boolean> => {
-    return walletState.playerName !== null;
-  }, [walletState.playerName]);
+    return playerName !== null;
+  }, [playerName]);
 
   return {
-    balance: walletState.balance,
-    stashedAmount: walletState.stashedAmount,
-    difficultyLevel: walletState.difficultyLevel,
-    playerName: walletState.playerName,
-    playerId: walletState.playerId,
-    isFirstTimeDifficultySelection: walletState.isFirstTimeDifficultySelection,
+    balance,
+    stashedAmount,
+    adoptionFee,
+    difficultyLevel,
+    playerName,
+    playerId,
+    isFirstTimeDifficultySelection,
     spend,
     add,
     addAllowance,

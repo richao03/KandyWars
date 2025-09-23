@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { useGame } from './useGame';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
-import { JokerService } from '../utils/jokerService';
+import { useAppSelector } from '../store/hooks';
+import { selectComputedDroughtReliefBonus } from '../store/slices/jokerSlice';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useDroughtRelief = () => {
   const { periodCount } = useGame();
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
-  
+  const droughtReliefBonus = useAppSelector(selectComputedDroughtReliefBonus);
+
   // Track sales history for the last 3 periods
   const [salesHistory, setSalesHistory] = useState<boolean[]>([]);
   const [lastPeriod, setLastPeriod] = useState(periodCount);
@@ -29,8 +31,8 @@ export const useDroughtRelief = () => {
     // Skip the first few periods (need at least 3 periods of history)
     if (lastPeriod < 3) return;
 
-    // Check if player has Drought Relief joker
-    const droughtReliefJoker = findJokerById(jokers, JOKER_IDS.DROUGHT_RELIEF);
+    // Check if player has The Bounceback joker (provides drought relief)
+    const droughtReliefJoker = findJokerById(jokers, JOKER_IDS.THE_BOUNCEBACK);
     if (!droughtReliefJoker) return;
 
     // Check if the last 3 periods had no sales
@@ -39,10 +41,9 @@ export const useDroughtRelief = () => {
       const hadNoSalesForThreePeriods = lastThreePeriods.every(hadSales => !hadSales);
       
       if (hadNoSalesForThreePeriods) {
-        // Get the bonus amount from joker service
-        const jokerService = JokerService.getInstance();
-        const bonusAmount = jokerService.applyJokerEffects(0, 'drought_relief_bonus', jokers, periodCount);
-        
+        // Get the bonus amount from computed effects
+        const bonusAmount = droughtReliefBonus;
+
         if (bonusAmount > 0) {
           addMoney(bonusAmount);
           console.log(`🌧️ Drought Relief: +$${bonusAmount} for making no sales for 3 consecutive periods!`);

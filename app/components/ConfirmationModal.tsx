@@ -1,6 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from './ReanimatedModal';
+import {
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import FastModal from './FastModal';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface ConfirmationModalProps {
   visible: boolean;
@@ -72,28 +81,25 @@ export default function ConfirmationModal({
   const themeStyles = getThemeStyles();
 
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="bounceIn"
-      animationOut="fadeOut"
-      animationInTiming={400}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={dismissible ? onCancel : undefined}
-      onBackButtonPress={dismissible ? onCancel : undefined}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modalContainer}
+    <FastModal
+      visible={visible}
+      onClose={dismissible ? onCancel : undefined}
+      animationType="spring"
+      backdropOpacity={0.6}
+      modalStyle={[
+        styles.modal,
+        {
+          backgroundColor: themeStyles.background,
+          borderColor: themeStyles.border,
+          zIndex: 1000000,
+          elevation: 1000000,
+        },
+      ]}
     >
-      <View
-        style={[
-          styles.modal,
-          {
-            backgroundColor: themeStyles.background,
-            borderColor: themeStyles.border,
-          },
-        ]}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
         <Text style={styles.emoji}>{emoji}</Text>
         <Text style={[styles.title, { color: themeStyles.titleColor }]}>
@@ -141,17 +147,12 @@ export default function ConfirmationModal({
             </TouchableOpacity>
           )}
         </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    justifyContent: 'center',
-    margin: 20,
-    zIndex: 2,
-  },
   modal: {
     borderRadius: 24,
     padding: 24,
@@ -164,6 +165,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
+  },
+  scrollView: {
+    maxHeight: SCREEN_HEIGHT * 0.8 - 48, // Account for modal padding and borders
+  },
+  scrollContent: {
+    padding: 24,
+    alignItems: 'center',
   },
   emoji: {
     fontSize: 48,

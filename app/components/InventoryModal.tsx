@@ -3,13 +3,11 @@ import {
   StyleSheet,
   Text,
   TouchableHighlight,
-  TouchableWithoutFeedback,
   View,
   ScrollView,
   Alert,
-  Modal,
 } from 'react-native';
-// import ReanimatedModal from './ReanimatedModal';
+import FastModal from './FastModal';
 
 type CandyType = {
   id: string;
@@ -45,20 +43,17 @@ export default function InventoryModal({
   }, 0);
 
   return (
-    <Modal
+    <FastModal
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.6}
+      modalStyle={styles.modal}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={styles.modal}>
-        <Text style={styles.title}>🍬 Candy Stash</Text>
-        <Text style={styles.subtitle}>
-          {totalCount} / {capacity} items in your stash
-        </Text>
+      <Text style={styles.title}>🍬 Candy Stash</Text>
+      <Text style={styles.subtitle}>
+        {totalCount} / {capacity} items in your stash
+      </Text>
 
         <ScrollView
           style={styles.scrollView}
@@ -108,11 +103,7 @@ export default function InventoryModal({
         >
           <Text style={styles.closeButtonText}>🌟 Close</Text>
         </TouchableHighlight>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+    </FastModal>
   );
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from './ReanimatedModal';
+import FastModal from './FastModal';
 
 interface StudyModalProps {
   visible: boolean;
@@ -46,22 +46,14 @@ export default function StudyModal({
     onSelectSubject(subject);
   };
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      avoidKeyboard={true}
-      style={styles.modalContainer}
+    <FastModal
+      visible={visible}
+      onClose={onClose}
+      animationType="spring"
+      backdropOpacity={0.5}
+      modalStyle={styles.modal}
     >
-      <View style={styles.modal}>
+      <>
         <Text style={styles.title}>Choose Subject to Study</Text>
         <Text style={styles.subtitle}>
           Pick a subject to improve your knowledge
@@ -88,16 +80,12 @@ export default function StudyModal({
         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
           <Text style={styles.cancelText}>Never mind, maybe later</Text>
         </TouchableOpacity>
-      </View>
-    </Modal>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    justifyContent: 'center',
-    margin: 20,
-  },
   modal: {
     backgroundColor: 'white',
     borderRadius: 20,

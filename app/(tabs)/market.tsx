@@ -1,6 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from 'react';
 import {
   FlatList,
   ImageBackground,
@@ -10,26 +17,27 @@ import {
   View,
 } from 'react-native';
 import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
+import { useFocusEffect } from '@react-navigation/native';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
-import { useCandySales } from '../../src/hooks/useCandySales';
-import { useDailyStats } from '../../src/hooks/useDailyStats';
-import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/hooks/useGame';
-import { useInventory } from '../../src/hooks/useInventory';
-import { useJokers } from '../../src/hooks/useJokers';
-import { useSeed } from '../../src/hooks/useSeed';
-import { useWallet } from '../../src/hooks/useWallet';
+import { useCandySales } from '../../src/hooks/useCandySales';
+import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects';
+import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useDiamondHand } from '../../src/hooks/useDiamondHand';
 import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
+import { useEventHandler } from '../../src/hooks/useEventHandler';
+import { useGame } from '../../src/hooks/useGame';
+import { useHallPass } from '../../src/hooks/useHallPass';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
+import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
 import { JokerService } from '../../src/utils/jokerService';
-import { Candy } from '../types';
 import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
-import EndOfDayModal from '../components/EndOfDayModal';
 import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
 import InventoryModal from '../components/InventoryModal';
@@ -38,6 +46,7 @@ import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import TransactionModal from '../components/TransactionModal';
+import { Candy } from '../types';
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -73,6 +82,25 @@ const baseCandies = [
 ];
 
 function Market(props) {
+  // Track focus state to prevent unnecessary work when tab is not active
+  const [isTabFocused, setIsTabFocused] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📊 MARKET: Tab focused - enabling expensive operations');
+      setIsTabFocused(true);
+      return () => {
+        console.log('📊 MARKET: Tab unfocused - disabling expensive operations');
+        setIsTabFocused(false);
+      };
+    }, [])
+  );
+
+  // Only log when focused to reduce console noise
+  if (isTabFocused) {
+    console.log('📊 MARKET: Component rendering (tab is focused)');
+  }
+
   const {
     rng,
     seed,
@@ -138,15 +166,31 @@ function Market(props) {
     currentLocation,
     startAfterSchool,
     setLastActiveView,
+    pricesUpdating,
+    setPricesUpdating,
   } = useGame();
-  const { hasActiveEvent: hasActiveEventFn } = useEventHandler();
+  const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
   const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
   const { setEvent, setFlavorText, setHint } = useFlavorText();
   const { addSale, resetSales, consecutivePeriodSales } = useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
+  const [localPricesUpdating, setLocalPricesUpdating] = useState(false);
+
   const { activeEffects, jokers, removeJoker } = useJokers();
-  const jokerService = JokerService.getInstance();
+  const { applySalePriceBonus, getSalePriceBonus } = useHallPass();
+
+  // Initialize computed joker effects system only when tab is focused
+  useEffect(() => {
+    if (isTabFocused) {
+      console.log('📊 MARKET: Initializing computed joker effects...');
+    }
+  }, [isTabFocused]);
+
+  useComputedJokerEffects();
+
+  const jokerService = useMemo(() => JokerService.getInstance(), []);
+
   usePriceDoubling(); // This hook handles price restoration on period change
   useEmptyInventoryBonus(); // This hook handles Embrace the Grind joker bonus
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
@@ -205,17 +249,19 @@ function Market(props) {
     }
   }, [currentLocation, periodCount]);
 
-  // Update flavor text when period changes
+  // Update flavor text when period changes - only when tab is focused
   useEffect(() => {
-
+    if (!isTabFocused) {
+      return; // Skip flavor text updates when tab is not active
+    }
     // Check for current event at current location
     const currentEvent = gameData.periodEvents.find(
-      e => e.period === periodCount && e.location === currentLocation
+      (e) => e.period === periodCount && e.location === currentLocation
     );
 
     // Check if there's an upcoming event at current location
     const nextPeriodEvent = gameData.periodEvents.find(
-      e => e.period === periodCount + 1 && e.location === currentLocation
+      (e) => e.period === periodCount + 1 && e.location === currentLocation
     );
 
     if (periodCount === 0) {
@@ -233,6 +279,11 @@ function Market(props) {
       } else if (currentEvent.effect === 'STASH_LOCKED') {
         setEvent('STASH_LOCKED');
       }
+
+      // Trigger the event modal for interactive events
+      console.log('🎯 EVENT: Triggering event modal for period', periodCount, ':', currentEvent.title);
+      handleEvent(currentEvent);
+
       // Also show the event's specific description
       setTimeout(() => setFlavorText(currentEvent.description || ''), 100);
     } else if (nextPeriodEvent && nextPeriodEvent.hint) {
@@ -286,7 +337,18 @@ function Market(props) {
         setEvent('PERIOD_CHANGE');
       }
     }
-  }, [periodCount, currentLocation, gameData.periodEvents, setEvent, setFlavorText, setHint, jokers, activeEffects, jokerService]);
+  }, [
+    isTabFocused,
+    periodCount,
+    currentLocation,
+    gameData.periodEvents,
+    setEvent,
+    setFlavorText,
+    setHint,
+    jokers,
+    activeEffects,
+    handleEvent,
+  ]);
 
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
     baseCandies.map((candy) => ({
@@ -298,7 +360,12 @@ function Market(props) {
     }))
   );
 
+  // Only update candies when tab is focused to prevent excessive re-renders
   useEffect(() => {
+    if (!isTabFocused) {
+      return; // Skip expensive computation when tab is not active
+    }
+
     const currentInventoryLimit = getInventoryLimit();
 
     setCandies((prev) =>
@@ -343,7 +410,9 @@ function Market(props) {
         // Note: Price storage moved to separate useEffect to avoid setState during render
 
         // Get inventory information for this candy
-        const inventoryItem = inventory.find(item => item.name === candy.name);
+        const inventoryItem = inventory.find(
+          (item) => item.name === candy.name
+        );
 
         return {
           ...candy,
@@ -359,6 +428,7 @@ function Market(props) {
       })
     );
   }, [
+    isTabFocused,
     periodCount,
     gameData,
     currentLocation,
@@ -376,7 +446,8 @@ function Market(props) {
         const seed = candy.name.charCodeAt(0) + periodCount;
         const random = Math.sin(seed) * 10000;
         const normalizedRandom = random - Math.floor(random);
-        const trueBasePrice = candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
+        const trueBasePrice =
+          candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
 
         // Check for current location-specific events with price overrides
         const currentEvent = gameData.periodEvents.find(
@@ -387,14 +458,21 @@ function Market(props) {
             e.priceOverride !== undefined
         );
 
-        const finalCost = currentEvent?.priceOverride !== undefined
-          ? currentEvent.priceOverride
-          : (gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice);
+        const finalCost =
+          currentEvent?.priceOverride !== undefined
+            ? currentEvent.priceOverride
+            : gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice;
 
         modifyCandyPrice(candy.name, finalCost, periodCount);
       }
     });
-  }, [periodCount, currentLocation, gameData.periodEvents, gameData.candyPrices, modifyCandyPrice]);
+  }, [
+    periodCount,
+    currentLocation,
+    gameData.periodEvents,
+    gameData.candyPrices,
+    modifyCandyPrice,
+  ]);
 
   const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
     null
@@ -405,13 +483,7 @@ function Market(props) {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [dayStatsModalVisible, setDayStatsModalVisible] = useState(false);
   const [schoolsOutModalVisible, setSchoolsOutModalVisible] = useState(false);
-  const [endOfDayModalVisible, setEndOfDayModalVisible] = useState(false);
   const [stashMoneyModalVisible, setStashMoneyModalVisible] = useState(false);
-  const [completedActivities, setCompletedActivities] = useState({
-    studiedHome: false,
-    stashedMoney: false,
-    visitedDeli: false,
-  });
   const [deliModalVisible, setDeliModalVisible] = useState(false);
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
@@ -491,93 +563,119 @@ function Market(props) {
             averagePrice: newAvg,
           };
         } else {
-          // Record sale for Diamond Hand tracking
-          recordSale();
+          // === SELLING LOGIC ===
 
-          // Record sale for Drought Relief tracking
-          recordDroughtSale();
+          // Record sales for tracking systems
+          recordSale(); // Diamond Hand tracking
+          recordDroughtSale(); // Drought Relief tracking
+          addSale(candy.name); // General sales tracking
 
-          // Record the sale
-          addSale(candy.name);
+          // === CALCULATE ALL BONUSES FROM REDUX STATE ===
           let multiplier = 1;
+          const bonusDetails: string[] = [];
 
-          // Check for one-time sell multiplier jokers (like Pursuasion)
+          // 1. Check for one-time sell multiplier jokers (Persuasion, etc) from Redux state
           const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(
-            jokers,
+            jokers, // From Redux via useJokers()
             periodCount,
-            activeEffects
+            activeEffects // From Redux via useJokers()
           );
           if (sellMultiplierInfo.hasEffect && sellMultiplierInfo.multiplier) {
             multiplier *= sellMultiplierInfo.multiplier;
-
-            // Note: One-time sell multiplier jokers are automatically handled by the joker system
+            bonusDetails.push(
+              `🗣️ ${sellMultiplierInfo.jokerName}: ${sellMultiplierInfo.multiplier}x multiplier`
+            );
             console.log(
               `🗣️ ${sellMultiplierInfo.jokerName} activated! ${sellMultiplierInfo.multiplier}x multiplier applied`
             );
           }
 
-          // Check for Even Stevens and Odd Todd jokers
-          const inventoryLimit = getInventoryLimit();
-          const evenStevensJoker = findJokerById(
-            jokers,
-            JOKER_IDS.EVEN_STEVENS
-          );
-          const oddToddJoker = findJokerById(jokers, JOKER_IDS.ODD_TODD);
+          // 2. Check Redux jokers for Even Stevens / Odd Todd
+          const candyInventoryLimit = getInventoryLimit();
+          const hasEvenStevens = jokers.some(j => j.id === JOKER_IDS.EVEN_STEVENS.toString());
+          const hasOddTodd = jokers.some(j => j.id === JOKER_IDS.ODD_TODD.toString());
 
-          if (evenStevensJoker && inventoryLimit % 2 === 0) {
-            multiplier *= 1.1; // 10% bonus for even inventory limit
+          if (hasEvenStevens && candyInventoryLimit % 2 === 0) {
+            multiplier *= 1.1;
+            bonusDetails.push(`⚖️ Even Stevens: 10% bonus (even inventory)`);
             console.log(
-              `⚖️ Even Stevens: +10% sales bonus applied (inventory limit: ${inventoryLimit})`
+              `⚖️ Even Stevens: +10% sales bonus applied (inventory limit: ${candyInventoryLimit})`
             );
-          } else if (oddToddJoker && inventoryLimit % 2 === 1) {
-            multiplier *= 1.1; // 10% bonus for odd inventory limit
+          } else if (hasOddTodd && candyInventoryLimit % 2 === 1) {
+            multiplier *= 1.1;
+            bonusDetails.push(`🎭 Odd Todd: 10% bonus (odd inventory)`);
             console.log(
-              `🎭 Odd Todd: +10% sales bonus applied (inventory limit: ${inventoryLimit})`
+              `🎭 Odd Todd: +10% sales bonus applied (inventory limit: ${candyInventoryLimit})`
             );
           }
 
-          // Check for Recess jokers
-          const hopscotchJoker = findJokerById(
-            jokers,
-            JOKER_IDS.HOPSCOTCH_BONUS
-          );
-          const swingsetJoker = findJokerById(
-            jokers,
-            JOKER_IDS.SWINGSET_MOMENTUM
-          );
+          // 3. Check Redux jokers for Recess bonuses
+          const hasHopscotch = jokers.some(j => j.id === JOKER_IDS.HOPSCOTCH_BONUS.toString());
+          const hasSwingset = jokers.some(j => j.id === JOKER_IDS.SWINGSET_MOMENTUM.toString());
 
-          // Hopscotch Bonus: Every even period sales get +20%
-          if (hopscotchJoker && period % 2 === 0) {
-            multiplier *= 1.2; // 20% bonus for even periods
+          if (hasHopscotch && period % 2 === 0) {
+            multiplier *= 1.2;
+            bonusDetails.push(`🏃 Hopscotch: 20% bonus (even period)`);
             console.log(
               `🏃 Hopscotch Bonus: +20% sales bonus applied (period ${period} is even)`
             );
           }
 
-          // Swingset Momentum: Each consecutive period with a sale gets +10% sale price
-          if (swingsetJoker && consecutivePeriodSales > 1) {
-            const swingsetMultiplier = 1 + (consecutivePeriodSales - 1) * 0.1; // +10% per consecutive period
+          if (hasSwingset && consecutivePeriodSales > 1) {
+            const swingsetMultiplier = 1 + (consecutivePeriodSales - 1) * 0.1;
             multiplier *= swingsetMultiplier;
+            bonusDetails.push(
+              `⛹️ Swingset: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% bonus (${consecutivePeriodSales} consecutive periods)`
+            );
             console.log(
-              `⛹️ Swingset Momentum: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (${consecutivePeriodSales} consecutive periods)`
+              `⛹️ Swingset Momentum: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% sales bonus applied`
             );
           }
 
-          const baseGain = candy.cost * quantity;
-          const totalGain = baseGain * multiplier;
+          // 4. Calculate profit-based hall pass bonus from Redux state
+          const inventoryItem = inventory.find(item => item.name === candy.name);
+          const purchasePrice = inventoryItem?.price || candy.cost;
+          const profitPerUnit = Math.max(0, candy.cost - purchasePrice);
+          const totalProfit = profitPerUnit * quantity;
+
+          // Get hall pass bonus from Redux via useHallPass()
+          const hallPassSaleBonusPercent = getSalePriceBonus();
+          const hallPassProfitBonus = hallPassSaleBonusPercent > 0
+            ? totalProfit * (hallPassSaleBonusPercent * 5 / 100) // 5x multiplier on profit
+            : 0;
+
+          if (hallPassProfitBonus > 0) {
+            bonusDetails.push(
+              `🎖️ Hall Pass: +$${hallPassProfitBonus.toFixed(2)} profit bonus (${hallPassSaleBonusPercent}% × 5x)`
+            );
+          }
+
+          // === CALCULATE FINAL GAIN ===
+          const baseGain = candy.cost * quantity; // Revenue from sale
+          const totalGain = (baseGain + hallPassProfitBonus) * multiplier; // Hall pass added to base, then joker multipliers
 
           console.log(
             '🛒 Market: Selling candy:',
             candy.name,
             'quantity:',
             quantity,
-            'price:',
+            'sale price:',
             candy.cost,
-            'baseGain:',
+            'purchase price:',
+            purchasePrice,
+            'profit per unit:',
+            profitPerUnit,
+            'total profit:',
+            totalProfit,
+            'hall pass bonus %:',
+            hallPassSaleBonusPercent,
+            'hall pass profit bonus:',
+            hallPassProfitBonus,
+            'base revenue:',
             baseGain,
-            'multiplier:',
+            'joker multiplier:',
             multiplier,
-            'totalGain:',
+            'final total:',
             totalGain
           );
           add(totalGain);
@@ -585,41 +683,12 @@ function Market(props) {
           addCandySold(quantity); // Track daily candy sales
           removeFromInventory(candy.name, quantity);
 
-          // Show bonus notifications if applied
-          const hasAnyBonus =
-            sellMultiplierInfo.hasEffect ||
-            (hopscotchJoker && period % 2 === 0) ||
-            (swingsetJoker && consecutivePeriodSales > 1);
-
-          if (hasAnyBonus) {
+          // === SHOW BONUS NOTIFICATIONS ===
+          if (bonusDetails.length > 0) {
             setTimeout(() => {
-              let title = 'Sale Bonus!';
-              let message = '';
-              let emoji = '💰';
-              let bonusDetails: string[] = [];
-
-              if (sellMultiplierInfo.hasEffect) {
-                bonusDetails.push(
-                  `🗣️ ${sellMultiplierInfo.jokerName}: ${sellMultiplierInfo.multiplier}x multiplier`
-                );
-              }
-              if (hopscotchJoker && period % 2 === 0) {
-                bonusDetails.push(
-                  `🏃 Hopscotch Bonus: 20% bonus (even period)`
-                );
-              }
-              if (swingsetJoker && consecutivePeriodSales > 1) {
-                bonusDetails.push(
-                  `⛹️ Swingset Momentum: ${((1 + (consecutivePeriodSales - 1) * 0.1 - 1) * 100).toFixed(0)}% bonus (${consecutivePeriodSales} consecutive periods)`
-                );
-              }
-
-              if (bonusDetails.length > 1) {
-                title = 'Multiple Bonuses!';
-                emoji = '🎉';
-              }
-
-              message =
+              const title = bonusDetails.length > 1 ? 'Multiple Bonuses!' : 'Sale Bonus!';
+              const emoji = bonusDetails.length > 1 ? '🎉' : '💰';
+              const message =
                 bonusDetails.join('\n') +
                 `\n\nBase gain: $${baseGain.toFixed(2)}\nTotal gain: $${totalGain.toFixed(2)}`;
 
@@ -688,12 +757,19 @@ function Market(props) {
   };
 
   const handleLocationSelect = (location: Location) => {
-    console.log('Market - Location selected:', location);
-    setLocationModalVisible(false); // Ensure modal closes
-    incrementPeriod(location);
+    setLocationModalVisible(false);
 
-    // Update flavor text for new location
+    // Show loading prices immediately
+    setLocalPricesUpdating(true);
+
+    // Call incrementPeriod and update flavor text
+    incrementPeriod(location);
     setEvent('PERIOD_CHANGE');
+
+    // Reset loading state after 1.5 seconds
+    setTimeout(() => {
+      setLocalPricesUpdating(false);
+    }, 625);
   };
 
   const handleEndDay = () => {
@@ -716,7 +792,6 @@ function Market(props) {
       console.log('🏠 Resetting all modal states');
       setLocationModalVisible(false);
       setSchoolsOutModalVisible(false);
-      setEndOfDayModalVisible(false);
       setStashMoneyModalVisible(false);
       setDeliModalVisible(false);
       setSleepConfirmModalVisible(false);
@@ -738,14 +813,20 @@ function Market(props) {
     setEndDayConfirmVisible(false);
   };
 
-  // Day stats modal handler
+  // Day stats modal handlers
   const handleDayStatsClose = () => {
-    console.log('📊 Day stats modal closing');
+    console.log('📊 Day stats modal closing - continuing to after school');
     setDayStatsModalVisible(false);
 
     // Show schools out modal first
     console.log('📊 Showing schools out modal');
     setSchoolsOutModalVisible(true);
+  };
+
+  const handleDayStatsCancel = () => {
+    console.log('📊 Day stats modal cancelled - staying at school');
+    setDayStatsModalVisible(false);
+    // Don't show any other modals, just return to market
   };
 
   // Schools out modal handler
@@ -759,54 +840,33 @@ function Market(props) {
     router.push('/(tabs)/after-school');
   };
 
-  // End of day handlers
-  const handleGoHome = () => {
-    console.log('Going home to study...');
-    setEndOfDayModalVisible(false);
-    // Navigate to the study page
-    router.push('/study');
-  };
-
-  const handleStashMoney = () => {
-    setEndOfDayModalVisible(false);
-    setStashMoneyModalVisible(true);
-  };
-
-  const handleGoDeli = () => {
-    setEndOfDayModalVisible(false);
-    setDeliModalVisible(true);
-  };
-
-  const handleGoToSleep = () => {
-    // Show confirmation modal instead of immediately ending the day
-    setEndOfDayModalVisible(false);
-    setSleepConfirmModalVisible(true);
-  };
 
   const handleSleepConfirm = () => {
-    // End the day and start new day
     setSleepConfirmModalVisible(false);
+
+    // Show loading prices immediately
+    setLocalPricesUpdating(true);
+
     incrementPeriod('home room'); // Start next day at home room
+
+    // Reset loading state after 1.5 seconds
+    setTimeout(() => {
+      setLocalPricesUpdating(false);
+    }, 1500);
   };
 
   const handleSleepCancel = () => {
-    // Return to end of day modal
+    // Cancel sleep confirmation
     setSleepConfirmModalVisible(false);
-    setEndOfDayModalVisible(true);
   };
 
   const handleMoneyStashed = () => {
     setStashMoneyModalVisible(false);
-    // Mark stashing as completed and return to end-of-day modal
-    setCompletedActivities((prev) => ({ ...prev, stashedMoney: true }));
-    setEndOfDayModalVisible(true);
   };
 
   // Handle returning from deli
   const handleDeliReturn = () => {
     setDeliModalVisible(false);
-    setCompletedActivities((prev) => ({ ...prev, visitedDeli: true }));
-    setEndOfDayModalVisible(true);
   };
 
   const selectedCandy =
@@ -889,7 +949,9 @@ function Market(props) {
                         </View>
                         <View style={styles.candyPriceRow}>
                           <Text style={styles.price}>
-                            ${item.cost.toFixed(2)}
+                            {localPricesUpdating
+                              ? '$-.--'
+                              : `$${item.cost.toFixed(2)}`}
                           </Text>
                           {item.cost > item.basePrice * 1.1 && (
                             <Text style={styles.priceChange}>📈</Text>
@@ -901,7 +963,7 @@ function Market(props) {
                       </View>
                     </TouchableOpacity>
                   ),
-                  [openModal]
+                  [openModal, localPricesUpdating]
                 )}
               />
             </CopilotView>
@@ -922,7 +984,7 @@ function Market(props) {
                     activeOpacity={0.8}
                   >
                     <Text style={styles.nextPeriodButtonText}>
-                      🏠 Leave School for the Day
+                      Leave School for the Day
                     </Text>
                     <Text style={styles.nextPeriodSubtext}>
                       Time to head home!
@@ -974,6 +1036,7 @@ function Market(props) {
       <DayStatsModal
         visible={dayStatsModalVisible}
         onClose={handleDayStatsClose}
+        onCancel={handleDayStatsCancel}
         stats={React.useMemo(() => {
           const stats = getTotalStats();
           console.log(
@@ -984,12 +1047,14 @@ function Market(props) {
             'day:',
             day
           );
-          return stats || {
-            profit: 0,
-            spent: 0,
-            candiesSold: 0,
-            netGain: 0,
-          };
+          return (
+            stats || {
+              profit: 0,
+              spent: 0,
+              candiesSold: 0,
+              netGain: 0,
+            }
+          );
         }, [getTotalStats, dayStatsModalVisible, day])}
         day={day}
       />
@@ -999,15 +1064,6 @@ function Market(props) {
         onComplete={handleSchoolsOutComplete}
       />
 
-      <EndOfDayModal
-        visible={endOfDayModalVisible}
-        onClose={() => setEndOfDayModalVisible(false)}
-        onGoHome={handleGoHome}
-        onStashMoney={handleStashMoney}
-        onGoDeli={handleGoDeli}
-        onGoToSleep={handleGoToSleep}
-        completedActivities={completedActivities}
-      />
 
       <StashMoneyModal
         visible={stashMoneyModalVisible}
@@ -1068,7 +1124,10 @@ function Market(props) {
       <InventoryModal
         visible={inventoryModalVisible}
         onClose={() => {
-          console.log('🔴 Market onClose called, current state:', inventoryModalVisible);
+          console.log(
+            '🔴 Market onClose called, current state:',
+            inventoryModalVisible
+          );
           setInventoryModalVisible(false);
           console.log('🔴 Market onClose completed, should be false now');
         }}
@@ -1077,9 +1136,12 @@ function Market(props) {
         capacity={getInventoryLimit()}
       />
       {/* Debug inventory data */}
-      {inventoryModalVisible && console.log('🔴 Market inventory data:', inventory)}
-      {inventoryModalVisible && console.log('🔴 Market totalCount:', getTotalInventoryCount())}
-      {inventoryModalVisible && console.log('🔴 Market capacity:', getInventoryLimit())}
+      {inventoryModalVisible &&
+        console.log('🔴 Market inventory data:', inventory)}
+      {inventoryModalVisible &&
+        console.log('🔴 Market totalCount:', getTotalInventoryCount())}
+      {inventoryModalVisible &&
+        console.log('🔴 Market capacity:', getInventoryLimit())}
 
       {/* EventModal for special events */}
       <EventModal />
@@ -1289,4 +1351,4 @@ const styles = StyleSheet.create({
 });
 
 // Export Market directly without wrapper
-export default Market;
+export default memo(Market);

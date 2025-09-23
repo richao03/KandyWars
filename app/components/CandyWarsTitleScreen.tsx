@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -8,16 +9,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
-import ExactFontHandwriting from './ExactFontHandwriting';
-import DifficultySelectionModal from './DifficultySelectionModal';
-import StoryModal from './StoryModal';
-import { useWallet } from '../../src/hooks/useWallet';
+import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/hooks/useGame';
+import { useHallPass } from '../../src/hooks/useHallPass';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
-import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useSeed } from '../../src/hooks/useSeed';
+import { useWallet } from '../../src/hooks/useWallet';
+import DifficultySelectionModal from './DifficultySelectionModal';
+import ExactFontHandwriting from './ExactFontHandwriting';
+import HallPassModal from './HallPassModal';
+import StoryModal from './StoryModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,15 +35,17 @@ export default function CandyWarsTitleScreen({
   onSettings,
 }: CandyWarsTitleScreenProps) {
   const wallet = useWallet();
-  const { resetGame } = useGame();
+  const { resetGame, periodCount, isInitialized, setIsInitialized } = useGame();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
   const { setSeed } = useSeed();
+  const { selectPass } = useHallPass();
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
+  const [showHallPassModal, setShowHallPassModal] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const backgroundOpacity = useRef(new Animated.Value(1)).current;
@@ -62,9 +66,10 @@ export default function CandyWarsTitleScreen({
     // Start fully visible to avoid white screen flash
     screenOpacity.setValue(1);
 
-    console.log('🎬 CandyWarsTitleScreen: Starting fully visible to avoid white screen');
+    console.log(
+      '🎬 CandyWarsTitleScreen: Starting fully visible to avoid white screen'
+    );
   }, []);
-
 
   const handleAnimationComplete = () => {
     setAnimationComplete(true);
@@ -87,29 +92,73 @@ export default function CandyWarsTitleScreen({
   };
 
   const handleNewGamePress = async () => {
-    // Reset wallet first before showing difficulty selection
-    if (wallet?.resetWallet) {
-      console.log('🎬 Resetting wallet before difficulty selection');
-      await wallet.resetWallet();
+    try {
+      console.log('🎬 NEW GAME: Starting new game process');
+      // Go straight to difficulty selection
+      console.log('🎬 NEW GAME: Showing difficulty selection');
+      setShowDifficultyModal(true);
+    } catch (error) {
+      console.error('❌ NEW GAME: Error in handleNewGamePress:', error);
     }
-    setShowDifficultyModal(true);
   };
 
-  const handleDifficultySelect = (level: number) => {
-    setShowDifficultyModal(false);
-    setSelectedLevel(level);
+  // Hall Passes button shows selection mode for toggling active Hall Pass
+  const handleHallPassesPress = () => {
+    console.log('🎬 HALL PASSES: Opening Hall Pass selection');
+    setShowHallPassModal(true);
+  };
 
-    // Start fade to black, then show story modal
-    console.log('🎬 Starting fade to black for level:', level);
-    Animated.timing(backgroundOpacity, {
-      toValue: 0,
-      duration: 800,
-      useNativeDriver: true,
-    }).start(() => {
-      // Show story modal after fade to black completes
-      console.log('🎬 Showing story modal for level:', level);
-      setShowStoryModal(true);
-    });
+  // Hall Pass selection handler for toggling active pass
+  const handleHallPassToggle = (passId: string | null) => {
+    console.log('🎬 HALL PASSES: Hall Pass toggled:', passId);
+    selectPass(passId);
+    setShowHallPassModal(false);
+  };
+
+  const handleDifficultySelect = async (level: number) => {
+    try {
+      setShowDifficultyModal(false);
+      setSelectedLevel(level);
+
+      // Immediately save game state when difficulty is selected
+      console.log('💾 Auto-saving game with difficulty level:', level);
+
+      // Generate new seed for fresh game data
+      const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setSeed(newSeed);
+      console.log('🔄 New seed set:', newSeed);
+
+      // Reset all game state before initializing new game
+      console.log('🔄 Resetting all game state for new game');
+      resetGame();
+      resetInventory();
+      resetJokers();
+      resetFlavorText();
+
+      // Initialize wallet with the selected difficulty level
+      // This will trigger auto-save via redux-persist and handle all other resets
+      const existingPlayerName = wallet?.playerName;
+      console.log('💾 Initializing wallet for auto-save with level:', level);
+      wallet?.initializeWallet(level, existingPlayerName);
+
+      // Mark game as initialized so continue button works
+      setIsInitialized(true);
+      console.log('💾 Auto-save complete - game can now be continued');
+
+      // Start fade to black, then show story modal
+      console.log('🎬 Starting fade to black for level:', level);
+      Animated.timing(backgroundOpacity, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }).start(() => {
+        // Show story modal after fade to black completes
+        console.log('🎬 Showing story modal for level:', level);
+        setShowStoryModal(true);
+      });
+    } catch (error) {
+      console.error('❌ Error in handleDifficultySelect:', error);
+    }
   };
 
   const handleCloseDifficultyModal = () => {
@@ -117,52 +166,52 @@ export default function CandyWarsTitleScreen({
   };
 
   const handleStoryContinue = async () => {
-    setShowStoryModal(false);
-
-    if (!selectedLevel) return;
-
-    // Reset all game data for a fresh start
-    console.log('🔄 CandyWarsTitleScreen: Starting game reset...');
     try {
-      await resetGame();
-      // Reset all contexts
-      resetInventory();
-      resetJokers();
-      resetFlavorText();
+      console.log(
+        '🎬 NEW GAME: Story continue pressed, selectedLevel:',
+        selectedLevel
+      );
+      setShowStoryModal(false);
 
-      // Generate new seed for fresh game data and candy prices
-      const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      setSeed(newSeed);
-      console.log('🔄 CandyWarsTitleScreen: Game reset complete');
+      if (!selectedLevel) {
+        console.error('❌ NEW GAME: No selected level!');
+        return;
+      }
+
+      // Game is already initialized from difficulty selection, just navigate to story screen
+      console.log(
+        '🎬 NEW GAME: Game already initialized, navigating to story screen'
+      );
+      router.push('/story-screen');
+      console.log('🎬 NEW GAME: Navigation command sent');
     } catch (error) {
-      console.error('🔄 CandyWarsTitleScreen: Game reset failed:', error);
+      console.error(
+        '❌ NEW GAME: Critical error in handleStoryContinue:',
+        error
+      );
     }
-
-    // Preserve existing player name - don't clear it unnecessarily
-    // The story screen will handle name prompting if needed
-    const existingPlayerName = wallet?.playerName;
-    console.log('🎬 Preserving existing player name:', existingPlayerName);
-
-    // Initialize wallet with the selected level and existing player name
-    wallet?.initializeWallet(selectedLevel, existingPlayerName);
-
-    // Always go to story screen first, username check happens there
-    console.log('🎬 Going to story screen after story modal');
-    router.push('/story-screen');
   };
 
-
-  console.log('🎬 CandyWarsTitleScreen: Rendering - showButtons:', showButtons, 'animationComplete:', animationComplete);
+  console.log(
+    '🎬 CandyWarsTitleScreen: Rendering - showButtons:',
+    showButtons,
+    'animationComplete:',
+    animationComplete
+  );
 
   return (
     <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
-      <Animated.View style={[styles.backgroundWrapper, { opacity: backgroundOpacity }]}>
+      <Animated.View
+        style={[styles.backgroundWrapper, { opacity: backgroundOpacity }]}
+      >
         <ImageBackground
           source={require('../../assets/images/titleScreen.png')}
           style={styles.backgroundContainer}
           resizeMode="cover"
           onLoad={() => console.log('🖼️ Background image loaded successfully')}
-          onError={(error) => console.error('❌ Background image failed to load:', error)}
+          onError={(error) =>
+            console.error('❌ Background image failed to load:', error)
+          }
         >
           <View style={styles.titleWrapper}>
             <ExactFontHandwriting
@@ -185,11 +234,31 @@ export default function CandyWarsTitleScreen({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.button, styles.continueButton]}
-                onPress={onContinue}
+                style={[
+                  styles.button,
+                  styles.continueButton,
+                  !isInitialized && styles.disabledButton,
+                ]}
+                onPress={!isInitialized ? undefined : onContinue}
+                disabled={!isInitialized}
               >
-                <Text style={[styles.buttonText, styles.continueText]}>
-                  Continue
+                <Text
+                  style={[
+                    styles.buttonText,
+                    styles.continueText,
+                    !isInitialized && styles.disabledText,
+                  ]}
+                >
+                  {'Continue'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, styles.hallPassButton]}
+                onPress={handleHallPassesPress}
+              >
+                <Text style={[styles.buttonText, styles.hallPassText]}>
+                  Hall Passes
                 </Text>
               </TouchableOpacity>
 
@@ -218,6 +287,12 @@ export default function CandyWarsTitleScreen({
         onContinue={handleStoryContinue}
       />
 
+      <HallPassModal
+        visible={showHallPassModal}
+        onClose={() => setShowHallPassModal(false)}
+        onSelectPass={handleHallPassToggle}
+        viewMode="selection"
+      />
     </Animated.View>
   );
 }
@@ -267,6 +342,11 @@ const styles = StyleSheet.create({
     borderColor: '#b85c8a',
     fontFamily: 'CrayonPastel',
   },
+  hallPassButton: {
+    backgroundColor: '#fff2d6', // Light gold
+    borderColor: '#b8a05c',
+    fontFamily: 'CrayonPastel',
+  },
   settingsButton: {
     backgroundColor: '#d6e8ff', // Light blue
     borderColor: '#5c7cb8',
@@ -287,7 +367,18 @@ const styles = StyleSheet.create({
   continueText: {
     color: '#8a4a6b', // Dark pink
   },
+  hallPassText: {
+    color: '#8a7a4a', // Dark gold
+  },
   settingsText: {
     color: '#4a5a8a', // Dark blue
+  },
+  disabledButton: {
+    backgroundColor: '#e0e0e0',
+    borderColor: '#ccc',
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: '#999',
   },
 });

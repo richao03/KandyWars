@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { nameValidationService } from '../../src/services/nameValidationService';
+import FastModal from './FastModal';
 
 interface NamePromptModalProps {
   visible: boolean;
@@ -86,68 +86,63 @@ export default function NamePromptModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.subtitle}>What's your name?</Text>
+    <FastModal
+      visible={visible}
+      onClose={undefined}
+      animationType="spring"
+      backdropOpacity={0.7}
+      modalStyle={styles.modalContainer}
+    >
+      <>
+        <Text style={styles.subtitle}>What's your name?</Text>
 
-          <TextInput
-            style={[styles.textInput, validationError && styles.textInputError]}
-            value={name}
-            onChangeText={(text) => {
-              setName(text);
-              setValidationError(null); // Clear error when user types
-            }}
-            placeholder="Enter your name"
-            placeholderTextColor="#999"
-            maxLength={20}
-            autoCapitalize="words"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            editable={!isValidating}
-          />
+        <TextInput
+          style={[styles.textInput, validationError && styles.textInputError]}
+          value={name}
+          onChangeText={(text) => {
+            setName(text);
+            setValidationError(null); // Clear error when user types
+          }}
+          placeholder="Enter your name"
+          placeholderTextColor="#999"
+          maxLength={20}
+          autoCapitalize="words"
+          autoCorrect={false}
+          returnKeyType="done"
+          onSubmitEditing={handleSubmit}
+          editable={!isValidating}
+        />
 
-          {validationError && (
-            <Text style={styles.errorText}>{validationError}</Text>
-          )}
+        {validationError && (
+          <Text style={styles.errorText}>{validationError}</Text>
+        )}
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                isValidating && styles.disabledButton,
-              ]}
-              onPress={handleSubmit}
-              disabled={isValidating}
-            >
-              {isValidating ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#2d5a2d" />
-                  <Text style={styles.submitButtonText}>Checking...</Text>
-                </View>
-              ) : (
-                <Text style={styles.submitButtonText}>Start Playing!</Text>
-              )}
-            </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.submitButton, isValidating && styles.disabledButton]}
+            onPress={handleSubmit}
+            disabled={isValidating}
+          >
+            {isValidating ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#2d5a2d" />
+                <Text style={styles.submitButtonText}>Checking...</Text>
+              </View>
+            ) : (
+              <Text style={styles.submitButtonText}>Start Playing!</Text>
+            )}
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-              <Text style={styles.skipButtonText}>Skip (use default)</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipButtonText}>Skip (use default)</Text>
+          </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalContainer: {
     backgroundColor: '#ffffff',
     borderRadius: 20,

@@ -199,9 +199,9 @@ export default function StoryScreen() {
   const wallet = useWallet();
   const currentLevel = wallet?.difficultyLevel || 1;
   const dogBreed = getDogBreed(currentLevel);
-  const debtAmount = Math.abs(wallet?.stashedAmount || 0);
+  const adoptionFee = wallet?.adoptionFee || 5000;
 
-  const storyLines = getStoryLines(dogBreed, debtAmount.toLocaleString());
+  const storyLines = getStoryLines(dogBreed, adoptionFee.toLocaleString());
 
   // Early return if story data is invalid
   if (!storyLines || storyLines.length === 0) {

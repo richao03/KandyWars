@@ -20,7 +20,7 @@ export const useDiamondHand = () => {
       checkDiamondHandBonus();
       setLastPeriod(periodCount);
     }
-  }, [periodCount, checkDiamondHandBonus]); // Trigger when period or dependencies change
+  }, [periodCount]); // Only trigger when period changes
 
   const checkDiamondHandBonus = useCallback(() => {
     // Check if player has Diamond Hand joker

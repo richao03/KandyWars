@@ -1,11 +1,12 @@
+import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Modal from './ReanimatedModal';
-import * as Haptics from 'expo-haptics';
+import FastModal from './FastModal';
 
 interface DayStatsModalProps {
   visible: boolean;
   onClose: () => void;
+  onCancel: () => void;
   stats: {
     profit: number;
     spent: number;
@@ -18,15 +19,18 @@ interface DayStatsModalProps {
 export default function DayStatsModal({
   visible,
   onClose,
+  onCancel,
   stats,
   day,
 }: DayStatsModalProps) {
-  console.log('📊 DayStatsModal rendering - visible:', visible, 'day:', day, 'stats:', stats);
-
-  if (!visible) {
-    console.log('📊 DayStatsModal not visible, returning null');
-    return null;
-  }
+  console.log(
+    '📊 DayStatsModal rendering - visible:',
+    visible,
+    'day:',
+    day,
+    'stats:',
+    stats
+  );
 
   if (!stats) {
     console.log('📊 DayStatsModal stats is undefined, returning null');
@@ -36,50 +40,40 @@ export default function DayStatsModal({
   console.log('📊 DayStatsModal is visible, rendering modal');
 
   return (
-    <Modal
-      isVisible={visible}
-      animationIn="fadeIn"
-      animationOut="fadeOut"
-      animationInTiming={300}
-      animationOutTiming={200}
-      backdropTransitionInTiming={300}
-      backdropTransitionOutTiming={200}
-      onBackdropPress={onClose}
-      onBackButtonPress={onClose}
-      useNativeDriver={true}
-      hideModalContentWhileAnimating={true}
-      style={styles.modalContainer}
+    <FastModal
+      visible={visible}
+      onClose={undefined}
+      animationType="spring"
+      backdropOpacity={0.6}
+      modalStyle={styles.modal}
     >
-      <View style={styles.modal}>
-        <Text style={styles.title}>📊 Day {day} Summary</Text>
-        <Text style={styles.subtitle}>
-          Here's how your candy business performed today!
-        </Text>
+      <>
+        <Text style={styles.title}> Day {day} Summary</Text>
 
         <View style={styles.statsContainer}>
           <View style={styles.statRow}>
-            <Text style={styles.statLabel}>💰 Total Profit Made:</Text>
+            <Text style={styles.statLabel}>Total Profit Made:</Text>
             <Text style={[styles.statValue, styles.profitValue]}>
               ${stats.profit.toFixed(2)}
             </Text>
           </View>
 
           <View style={styles.statRow}>
-            <Text style={styles.statLabel}>🛒 Total Spent Buying:</Text>
+            <Text style={styles.statLabel}> Total Spent Buying:</Text>
             <Text style={[styles.statValue, styles.spentValue]}>
               ${stats.spent.toFixed(2)}
             </Text>
           </View>
 
           <View style={styles.statRow}>
-            <Text style={styles.statLabel}>🍬 Candies Sold:</Text>
+            <Text style={styles.statLabel}> Candies Sold:</Text>
             <Text style={[styles.statValue, styles.soldValue]}>
               {stats.candiesSold} pieces
             </Text>
           </View>
 
           <View style={[styles.statRow, styles.netGainRow]}>
-            <Text style={styles.netGainLabel}>📈 Net Gain:</Text>
+            <Text style={styles.netGainLabel}> Net Gain:</Text>
             <Text
               style={[
                 styles.netGainValue,
@@ -91,8 +85,8 @@ export default function DayStatsModal({
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.continueButton} 
+        <TouchableOpacity
+          style={styles.continueButton}
           onPress={() => {
             // Trigger success haptic feedback when going to after school
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -100,19 +94,26 @@ export default function DayStatsModal({
           }}
         >
           <Text style={styles.continueButtonText}>
-            🌟 Continue to After School
+            Continue to After School
           </Text>
         </TouchableOpacity>
-      </View>
-    </Modal>
+
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => {
+            // Trigger light haptic feedback for cancel action
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onCancel();
+          }}
+        >
+          <Text style={styles.cancelButtonText}> Stay at School</Text>
+        </TouchableOpacity>
+      </>
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modalContainer: {
-    justifyContent: 'center',
-    margin: 20,
-  },
   modal: {
     backgroundColor: '#fefaf5',
     borderRadius: 24,
@@ -216,8 +217,30 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
+  cancelButton: {
+    backgroundColor: '#f8d7da',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#dc3545',
+    marginTop: 12,
+    alignSelf: 'center',
+    shadowColor: '#dc3545',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#721c24',
+    textAlign: 'center',
+    fontFamily: 'CrayonPastel',
+  },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',

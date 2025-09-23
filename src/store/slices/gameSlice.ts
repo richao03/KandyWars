@@ -24,6 +24,7 @@ interface GameState {
   trojanHorseCounter: number;
   isLoaded: boolean;
   isInitialized: boolean;
+  pricesUpdating: boolean;
 }
 
 const initialState: GameState = {
@@ -36,6 +37,7 @@ const initialState: GameState = {
   trojanHorseCounter: 0,
   isLoaded: false,
   isInitialized: false,
+  pricesUpdating: false,
 };
 
 const gameSlice = createSlice({
@@ -75,6 +77,9 @@ const gameSlice = createSlice({
     setIsInitialized: (state, action: PayloadAction<boolean>) => {
       state.isInitialized = action.payload;
     },
+    setPricesUpdating: (state, action: PayloadAction<boolean>) => {
+      state.pricesUpdating = action.payload;
+    },
     incrementPeriod: (state, action: PayloadAction<Location>) => {
       state.periodCount++;
       state.currentLocation = action.payload;
@@ -82,6 +87,8 @@ const gameSlice = createSlice({
         period: state.periodCount,
         location: action.payload,
       });
+      state.pricesUpdating = true;
+      console.log('💾 Period incremented to:', state.periodCount, '- Auto-save triggered');
     },
     startAfterSchool: (state) => {
       state.isAfterSchool = true;
@@ -96,6 +103,7 @@ const gameSlice = createSlice({
         period: newPeriodCount,
         location: 'home room',
       });
+      console.log('💾 New day started, period:', newPeriodCount, '- Auto-save triggered');
     },
     resetGame: (state) => {
       return initialState;
@@ -138,6 +146,7 @@ export const {
   setTrojanHorseCounter,
   setIsLoaded,
   setIsInitialized,
+  setPricesUpdating,
   incrementPeriod,
   startAfterSchool,
   startNewDay,

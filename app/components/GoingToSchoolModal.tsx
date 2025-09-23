@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
-import { Image, StyleSheet, Text, View, Dimensions } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text } from 'react-native';
 import { useTabBar } from '../../src/hooks/useTabBar';
+import FastModal from './FastModal';
 
 interface GoingToSchoolModalProps {
   visible: boolean;
@@ -10,7 +11,11 @@ interface GoingToSchoolModalProps {
 
 const { width, height } = Dimensions.get('window');
 
-export default function GoingToSchoolModal({ visible, allowanceAmount, onComplete }: GoingToSchoolModalProps) {
+export default function GoingToSchoolModal({
+  visible,
+  allowanceAmount,
+  onComplete,
+}: GoingToSchoolModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
 
   // NEW_DAY flavor text array
@@ -39,43 +44,34 @@ export default function GoingToSchoolModal({ visible, allowanceAmount, onComplet
         showTabBar();
       };
     }
-  }, [visible, onComplete, hideTabBar, showTabBar]);
-
-  if (!visible) return null;
+  }, [visible]); // Only depend on visible to prevent infinite loops
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.container}>
-        <Image
-          source={require('../../assets/images/goingToSchool.png')}
-          style={styles.image}
-          resizeMode="contain"
-        />
-        <Text style={styles.text}>{randomNewDayText}</Text>
-        {allowanceAmount && (
-          <Text style={styles.allowanceText}>
-            Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!
-          </Text>
-        )}
-      </View>
-    </View>
+    <FastModal
+      visible={visible}
+      onClose={undefined}
+      animationType="spring"
+      backdropOpacity={1}
+      modalStyle={styles.container}
+    >
+      <Image
+        source={require('../../assets/images/goingToSchool.png')}
+        style={styles.image}
+        resizeMode="contain"
+      />
+      <Text style={styles.text}>{randomNewDayText}</Text>
+      {allowanceAmount && (
+        <Text style={styles.allowanceText}>
+          Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!
+        </Text>
+      )}
+    </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#FFE4B5', // Warm morning/sunrise background
-    zIndex: 1000,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 1000, // Android elevation
-  },
   container: {
+    backgroundColor: '#FFE4B5', // Warm morning/sunrise background
     justifyContent: 'center',
     alignItems: 'center',
     width: width,
@@ -97,6 +93,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   allowanceText: {
+    paddingHorizontal: 12,
     fontSize: 18,
     fontWeight: '600',
     color: '#2E8B57', // Sea green for money/positive message
