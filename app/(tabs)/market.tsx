@@ -932,7 +932,6 @@ function Market(props) {
                 onInventoryPress={() => setInventoryModalVisible(true)}
                 flavorTextWrapper={(children) => (
                   <CopilotStep
-                    style={{ fontFamily: 'CrayonPastel' }}
                     text="The Rumor Mill shows important information and hints! Keep an eye on these scrolling messages - they might reveal price trends, special events, or valuable tips from other students."
                     order={2}
                     name="market_rumor_mill"

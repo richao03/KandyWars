@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 
 interface PixelBorderProps {
   children: React.ReactNode;
@@ -33,6 +33,7 @@ const PixelBorder: React.FC<PixelBorderProps> = ({
         style={[
           styles.content,
           {
+            borderRadius: 15,
             backgroundColor,
             margin: pixelSize,
             padding: innerPadding,

@@ -111,7 +111,7 @@ export default function GameHUD({
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
         <View style={[styles.statBox, styles.cashBox]}>
-          <Text style={statTitleStyle}>Wallet!</Text>
+          <Text style={statTitleStyle}>Wallet</Text>
           <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
         </View>
 

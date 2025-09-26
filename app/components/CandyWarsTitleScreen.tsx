@@ -19,6 +19,7 @@ import { useWallet } from '../../src/hooks/useWallet';
 import DifficultySelectionModal from './DifficultySelectionModal';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import HallPassModal from './HallPassModal';
+import PixelBorder from './PixelBorder';
 import StoryModal from './StoryModal';
 
 const { width, height } = Dimensions.get('window');
@@ -224,52 +225,80 @@ export default function CandyWarsTitleScreen({
             <Animated.View
               style={[styles.buttonContainer, { opacity: buttonOpacity }]}
             >
-              <TouchableOpacity
-                style={[styles.button, styles.newGameButton]}
-                onPress={handleNewGamePress}
+              <PixelBorder
+                borderColor="#4a7c4a"
+                borderWidth={3}
+                backgroundColor="#d4f6d4"
+                style={{ width: '80%' }}
+                innerPadding={0}
               >
-                <Text style={[styles.buttonText, styles.newGameText]}>
-                  New Game
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  styles.continueButton,
-                  !isInitialized && styles.disabledButton,
-                ]}
-                onPress={!isInitialized ? undefined : onContinue}
-                disabled={!isInitialized}
-              >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    styles.continueText,
-                    !isInitialized && styles.disabledText,
-                  ]}
+                <TouchableOpacity
+                  style={[styles.button, styles.newGameButton]}
+                  onPress={handleNewGamePress}
                 >
-                  {'Continue'}
-                </Text>
-              </TouchableOpacity>
+                  <Text style={[styles.buttonText, styles.newGameText]}>
+                    New Game
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
 
-              <TouchableOpacity
-                style={[styles.button, styles.hallPassButton]}
-                onPress={handleHallPassesPress}
+              <PixelBorder
+                borderColor={!isInitialized ? '#ccc' : '#b85c8a'}
+                borderWidth={3}
+                backgroundColor={!isInitialized ? '#e0e0e0' : '#ffd6e8'}
+                style={{ width: '80%', opacity: !isInitialized ? 0.6 : 1 }}
+                innerPadding={0}
               >
-                <Text style={[styles.buttonText, styles.hallPassText]}>
-                  Hall Passes
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.continueButton]}
+                  onPress={!isInitialized ? undefined : onContinue}
+                  disabled={!isInitialized}
+                >
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      styles.continueText,
+                      !isInitialized && styles.disabledText,
+                    ]}
+                  >
+                    {'Continue'}
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
 
-              <TouchableOpacity
-                style={[styles.button, styles.settingsButton]}
-                onPress={onSettings}
+              <PixelBorder
+                borderColor="#b8a05c"
+                borderWidth={3}
+                backgroundColor="#fff2d6"
+                style={{ width: '80%' }}
+                innerPadding={0}
               >
-                <Text style={[styles.buttonText, styles.settingsText]}>
-                  Settings
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.hallPassButton]}
+                  onPress={handleHallPassesPress}
+                >
+                  <Text style={[styles.buttonText, styles.hallPassText]}>
+                    Hall Passes
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+
+              <PixelBorder
+                borderColor="#5c7cb8"
+                borderWidth={3}
+                backgroundColor="#d6e8ff"
+                style={{ width: '80%' }}
+                innerPadding={0}
+              >
+                <TouchableOpacity
+                  style={[styles.button, styles.settingsButton]}
+                  onPress={onSettings}
+                >
+                  <Text style={[styles.buttonText, styles.settingsText]}>
+                    Settings
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
             </Animated.View>
           )}
         </ImageBackground>
@@ -321,11 +350,9 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   button: {
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 25,
-    width: '80%',
-    borderWidth: 3,
+    paddingVertical: 4,
+    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -333,27 +360,19 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   newGameButton: {
-    backgroundColor: '#d4f6d4', // Light green
-    borderColor: '#4a7c4a',
     fontFamily: 'PixeloidMono',
   },
   continueButton: {
-    backgroundColor: '#ffd6e8', // Light pink
-    borderColor: '#b85c8a',
     fontFamily: 'PixeloidMono',
   },
   hallPassButton: {
-    backgroundColor: '#fff2d6', // Light gold
-    borderColor: '#b8a05c',
     fontFamily: 'PixeloidMono',
   },
   settingsButton: {
-    backgroundColor: '#d6e8ff', // Light blue
-    borderColor: '#5c7cb8',
     fontFamily: 'PixeloidMono',
   },
   buttonText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
@@ -372,11 +391,6 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     color: '#4a5a8a', // Dark blue
-  },
-  disabledButton: {
-    backgroundColor: '#e0e0e0',
-    borderColor: '#ccc',
-    opacity: 0.6,
   },
   disabledText: {
     color: '#999',
