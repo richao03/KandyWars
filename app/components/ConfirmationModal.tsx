@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(0,0,0,0.1)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
     gap: 12,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     paddingVertical: 14,
@@ -225,6 +225,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

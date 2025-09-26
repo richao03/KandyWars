@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: 'bold',
     color: '#8B4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 2, height: 2 },

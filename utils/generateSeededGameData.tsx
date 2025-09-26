@@ -1,5 +1,20 @@
 import seedrandom from 'seedrandom';
 
+// Image mapping to resolve references at runtime
+const getBackgroundImage = (imageType: string) => {
+  const imageMap = {
+    pricedrop: require('../assets/images/pricedrop.png'),
+    bully: require('../assets/images/bully.png'),
+    foundmoney: require('../assets/images/foundmoney.png'),
+    pricehike: require('../assets/images/pricehike.png'),
+    confiscate: require('../assets/images/confiscate.png'),
+  };
+  return (
+    imageMap[imageType as keyof typeof imageMap] ||
+    require('../assets/images/react-logo.png')
+  );
+};
+
 export type CandyPriceTable = Record<string, number[]>;
 export type JokerDraft = { day: number; subject: string; jokers: string[] };
 
@@ -120,7 +135,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       title: 'Snickers flood the market!',
       subtitle: 'How did the new kid have so many snickers?',
       hint: '👀 Theres rumbling that the vending machine in cafeteria is giving out cheap snickers...👀',
-      backgroundImage: require('../assets/images/pricedrop.png'),
+      backgroundImage: 'pricedrop',
     }),
     () => ({
       description: 'Bullying is an epidemic',
@@ -130,7 +145,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       title: 'A bully took half your money',
       subtitle: 'Better hit the weights to get your weight up!',
       hint: '👀 Rumor is someone is out looking for you....👀',
-      backgroundImage: require('../assets/images/bully.png'),
+      backgroundImage: 'bully',
     }),
     () => ({
       description: 'Found some money!',
@@ -142,7 +157,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       subtitle: 'Street rules: Finders Keepers',
       dollarAmount: 50,
       hint: '👀 Someone said they left some money in the homeroom... 👀',
-      backgroundImage: require('../assets/images/foundmoney.png'),
+      backgroundImage: 'foundmoney',
     }),
     () => ({
       description: 'Skittles are popular in the school yard!',
@@ -155,7 +170,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       title: 'Skittles prices rockets!',
       subtitle:
         'The football player wants to eat Skittles like their fravorite NFL running back',
-      backgroundImage: require('../assets/images/pricehike.png'),
+      backgroundImage: 'pricehike',
       hint: '👀 psst, come to the school yard next period... make sure you bring skittles... lots of them... 👀',
     }),
     () => ({
@@ -165,7 +180,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: '🚨 BUSTED!',
       title: 'Your candy inventory has been confiscated!',
       subtitle: 'Sometimes it be your own teachers...',
-      backgroundImage: require('../assets/images/confiscate.png'),
+      backgroundImage: 'confiscate',
       dismissText: '😤 Dang it!',
       hint: '👀 The dean is making rounds confiscating any and all candies, better avoid the home room next period... 👀',
     }),
@@ -180,7 +195,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       title: 'The jolt they need',
       subtitle:
         'Our lab friends are falling asleep, this spike of sour sugar is just what they need',
-      backgroundImage: require('../assets/images/pricehike.png'),
+      backgroundImage: 'pricehike',
       hint: "👀 The lab folks can use some Warhead wake-me-ups next period, and they're willing to pay... 👀",
     }),
     () => ({
@@ -193,8 +208,8 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: 'Pop Off!',
       title: 'Bubble Gum demand explodes!',
       subtitle: 'Who can blow the biggest bubble? Everyone’s buying in!',
-      backgroundImage: require('../assets/images/pricehike.png'),
-      hint: '👀 Heard the library is hosting a “silent” bubble blowing contest next period... bring gum! 👀',
+      backgroundImage: 'pricehike',
+      hint: '👀 Heard the library is hosting a "silent" bubble blowing contest next period... bring gum! 👀',
     }),
     () => ({
       description: 'Teacher gives out free M&Ms in class!',
@@ -206,8 +221,8 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: 'Too Many M&Ms!',
       title: 'Candy rains from above!',
       subtitle: 'The teacher brought a giant bag... now the price is tanking!',
-      backgroundImage: require('../assets/images/pricedrop.png'),
-      hint: '👀 M&Ms are falling into everyone’s hands in homeroom... 👀',
+      backgroundImage: 'pricedrop',
+      hint: "👀 M&Ms are falling into everyone's hands in homeroom... 👀",
     }),
     () => ({
       description: 'Someone drops their lunch money in the hallway!',
@@ -217,8 +232,8 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       title: 'Cash on the floor!',
       subtitle: 'Quick pocket move, nobody saw a thing.',
       dollarAmount: 40,
-      backgroundImage: require('../assets/images/foundmoney.png'),
-      hint: '👀 There’s a commotion in the hallway... someone’s missing cash. 👀',
+      backgroundImage: 'foundmoney',
+      hint: "👀 There's a commotion in the hallway... someone's missing cash. 👀",
     }),
 
     () => ({
@@ -231,7 +246,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: 'Coach Says No!',
       title: 'Candy ban after sticky shoes incident!',
       subtitle: 'The floor’s still sticky... prices plummet!',
-      backgroundImage: require('../assets/images/pricedrop.png'),
+      backgroundImage: 'pricedrop',
       hint: '👀 Coach is confiscating Sour Patch at the gym doors... 👀',
     }),
 
@@ -245,8 +260,8 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: 'Sweet Colors!',
       title: 'Artists paying top dollar!',
       subtitle: 'Skittles aren’t just for eating — they’re for painting!',
-      backgroundImage: require('../assets/images/pricehike.png'),
-      hint: '👀 Bathroom is buying Skittles for some “non-edible” art next period... 👀',
+      backgroundImage: 'pricehike',
+      hint: '👀 Bathroom is buying Skittles for some "non-edible" art next period... 👀',
     }),
 
     () => ({
@@ -259,8 +274,8 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: 'Snack for a Cause!',
       title: 'Buy candy, fund the trip!',
       subtitle: 'Suddenly, Snickers are selling like crazy.',
-      backgroundImage: require('../assets/images/pricehike.png'),
-      hint: '👀 The student council’s hoarding Snickers for the bake sale next period... 👀',
+      backgroundImage: 'pricehike',
+      hint: "👀 The student council's hoarding Snickers for the bake sale next period... 👀",
     }),
     () => ({
       description: 'Principal checks lockers during lunch!',
@@ -269,7 +284,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       heading: '🔒 Locker Check!',
       title: 'Your stash is confiscated',
       subtitle: 'Your stash was in the wrong place at the wrong time.',
-      backgroundImage: require('../assets/images/confiscate.png'),
+      backgroundImage: 'confiscate',
       dismissText: '😩 Busted again!',
       hint: '👀 Principal’s patrolling lockers this lunch period... 👀',
     }),
@@ -284,7 +299,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
       title: '"The Finer Things Club"',
       subtitle:
         '"M&Ms goes perfectly with out afternoon juice" - a club member',
-      backgroundImage: require('../assets/images/pricehike.png'),
+      backgroundImage: 'pricehike',
       hint: '👀 Theres a secret club M&Meeting in the library next period... 👀',
     }),
 
@@ -301,7 +316,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
         heading: `Price Hike!!`,
         title: `${randomCandy} is like so hot right now!`,
         subtitle: `People cant get enough of it`,
-        backgroundImage: require('../assets/images/pricehike.png'),
+        backgroundImage: 'pricehike',
         hint: `👀 Psst, I cannot tell you what, or where, but you'll need some ${randomCandy}... 👀`,
       };
     },
@@ -319,7 +334,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
     title: 'A bully took all your money',
     subtitle: 'Better hit the weights to get your weight up!',
     hint: '👀 Rumor is someone is out looking for you....👀',
-    backgroundImage: require('../assets/images/bully.png'),
+    backgroundImage: 'bully',
   });
 
   // periodEvents.push({
@@ -346,7 +361,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
     title: 'Skittles price rockets!',
     subtitle:
       'The football team wants to eat Skittles like their fravorite NFL running back',
-    backgroundImage: require('../assets/images/pricehike.png'),
+    backgroundImage: 'pricehike',
     hint: '👀 psst, come to the school yard next period... make sure you bring skittles... lots of them... 👀',
   });
 

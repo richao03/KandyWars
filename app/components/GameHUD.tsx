@@ -43,7 +43,10 @@ export default function GameHUD({
   const { text, isHint, eventType } = useFlavorText();
 
   const totalInventory = getTotalInventoryCount();
-  const inventoryCapacity = useMemo(() => getInventoryLimit(), [getInventoryLimit]);
+  const inventoryCapacity = useMemo(
+    () => getInventoryLimit(),
+    [getInventoryLimit]
+  );
   const containerStyle =
     theme === 'evening' ? styles.eveningContainer : styles.container;
   const headerStyle =
@@ -71,17 +74,18 @@ export default function GameHUD({
     if (!isHint && !eventType) return {};
 
     const glowColors = {
-      'HINT': '#FFD700', // Gold for hints
-      'FOUND_MONEY': '#32CD32', // Lime green for found money
-      'LOSE_MONEY': '#FF4444', // Red for losing money
-      'PRICE_SPIKE': '#FF6B35', // Orange for price increases
-      'PRICE_DROP': '#4CAF50', // Green for price drops
-      'JOKER_UNLOCKED': '#9C27B0', // Purple for jokers
-      'NEW_DAY': '#2196F3', // Blue for new day
-      'DEFAULT': 'transparent'
+      HINT: '#FFD700', // Gold for hints
+      FOUND_MONEY: '#32CD32', // Lime green for found money
+      LOSE_MONEY: '#FF4444', // Red for losing money
+      PRICE_SPIKE: '#FF6B35', // Orange for price increases
+      PRICE_DROP: '#4CAF50', // Green for price drops
+      JOKER_UNLOCKED: '#9C27B0', // Purple for jokers
+      NEW_DAY: '#2196F3', // Blue for new day
+      DEFAULT: 'transparent',
     };
 
-    const color = glowColors[eventType as keyof typeof glowColors] || glowColors['DEFAULT'];
+    const color =
+      glowColors[eventType as keyof typeof glowColors] || glowColors['DEFAULT'];
 
     if (color === 'transparent') return {};
 
@@ -104,58 +108,63 @@ export default function GameHUD({
         <Text style={headerStyle}>{headerText}</Text>
       </View>
 
-        {/* Stats in crayon boxes */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statBox, styles.cashBox]}>
-            <Text style={statTitleStyle}>Wallet</Text>
-            <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
-          </View>
+      {/* Stats in crayon boxes */}
+      <View style={styles.statsRow}>
+        <View style={[styles.statBox, styles.cashBox]}>
+          <Text style={statTitleStyle}>Wallet!</Text>
+          <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
+        </View>
 
-          <View style={[styles.statBox, styles.piggyBox]}>
-            <Text style={statTitleStyle}>Piggy Bank</Text>
-            <Text
-              style={[styles.piggyAmount, { fontSize: piggyFontSize }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {piggyAmountText}
-            </Text>
-          </View>
+        <View style={[styles.statBox, styles.piggyBox]}>
+          <Text style={statTitleStyle}>Piggy Bank</Text>
+          <Text
+            style={[styles.piggyAmount, { fontSize: piggyFontSize }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {piggyAmountText}
+          </Text>
+        </View>
 
-          {inventoryWrapper ? (
-            inventoryWrapper(
-              <TouchableOpacity
-                style={[styles.statBox, styles.inventoryBox]}
-                onPress={onInventoryPress}
-              >
-                <Text style={statTitleStyle}>Inventory</Text>
-                <Text style={styles.inventoryAmount}>
-                  {totalInventory || 0}/{inventoryCapacity || 30}
-                </Text>
-              </TouchableOpacity>
-            )
-          ) : (
+        {inventoryWrapper ? (
+          inventoryWrapper(
             <TouchableOpacity
               style={[styles.statBox, styles.inventoryBox]}
               onPress={onInventoryPress}
             >
               <Text style={statTitleStyle}>Inventory</Text>
-              <Text style={styles.inventoryAmount}>
+              <Text
+                style={[styles.inventoryAmount, { fontFamily: 'PixeloidMono' }]}
+              >
                 {totalInventory || 0}/{inventoryCapacity || 30}
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
+          )
+        ) : (
+          <TouchableOpacity
+            style={[styles.statBox, styles.inventoryBox]}
+            onPress={onInventoryPress}
+          >
+            <Text style={statTitleStyle}>Inventory</Text>
+            <Text
+              style={[styles.inventoryAmount, { fontFamily: 'PixeloidMono' }]}
+            >
+              {totalInventory || 0}/{inventoryCapacity || 30}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-        {/* Location badge */}
-        <View style={styles.locationRow}>
-          <View style={styles.locationBadge}>
-            <Text style={styles.locationText}>@ {locationText}</Text>
-          </View>
+      {/* Location badge */}
+      <View style={styles.locationRow}>
+        <View style={styles.locationBadge}>
+          <Text style={styles.locationText}>@ {locationText}</Text>
         </View>
+      </View>
 
-        {/* Flavor text scroll */}
-        {text && (() => {
+      {/* Flavor text scroll */}
+      {text &&
+        (() => {
           const marquee = (
             <View style={[styles.flavorContainer, getGlowStyle]}>
               <Marquee
@@ -164,13 +173,14 @@ export default function GameHUD({
                 style={styles.marquee}
                 delay={2000}
               >
-                <Text style={[styles.flavor, isHint && styles.hintText]}>{text}</Text>
+                <Text style={[styles.flavor, isHint && styles.hintText]}>
+                  {text}
+                </Text>
               </Marquee>
             </View>
           );
           return flavorTextWrapper ? flavorTextWrapper(marquee) : marquee;
         })()}
-
     </View>
   );
 }
@@ -182,6 +192,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
+    fontFamily: 'PixeloidMono',
   },
   eveningContainer: {
     backgroundColor: 'rgba(25,25,25, 0.3)', // Evening theme background
@@ -199,7 +210,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#8b4513', // Saddle brown
     textShadow: '1px 1px 0px #e6d4b7',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   eveningHeaderText: {
     fontSize: 20,
@@ -208,7 +219,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(247,233,142,0.4)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   statsRow: {
     flexDirection: 'row',
@@ -232,14 +243,17 @@ const styles = StyleSheet.create({
   cashBox: {
     backgroundColor: '#d4f6d4', // Light green crayon
     borderColor: '#4a7c4a',
+    fontFamily: 'PixeloidMono',
   },
   piggyBox: {
     backgroundColor: '#ffd6e8', // Light pink crayon
     borderColor: '#b85c8a',
+    fontFamily: 'PixeloidMono',
   },
   inventoryBox: {
     backgroundColor: '#d6e8ff', // Light blue crayon
     borderColor: '#5c7cb8',
+    fontFamily: 'PixeloidMono',
   },
   statTitle: {
     fontSize: 11,
@@ -248,7 +262,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   eveningStatTitle: {
     fontSize: 11,
@@ -257,22 +271,25 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cashAmount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#2d5a2d',
+    fontFamily: 'PixeloidMono',
   },
   piggyAmount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#8a4a6b',
+    fontFamily: 'PixeloidMono',
   },
   inventoryAmount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#4a5a8a',
+    fontFamily: 'PixeloidMono',
   },
   locationRow: {
     alignItems: 'center',
@@ -290,7 +307,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   flavorContainer: {
     height: 28,
@@ -311,7 +328,7 @@ const styles = StyleSheet.create({
     color: '#7d6608', // Dark yellow-brown
     fontWeight: '500',
     lineHeight: 20,
-    fontFamily: 'System', // Could be replaced with a more handwritten font
+    fontFamily: 'PixeloidMono',
   },
   hintText: {
     fontWeight: '700',

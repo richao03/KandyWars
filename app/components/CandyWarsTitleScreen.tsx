@@ -335,28 +335,28 @@ const styles = StyleSheet.create({
   newGameButton: {
     backgroundColor: '#d4f6d4', // Light green
     borderColor: '#4a7c4a',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   continueButton: {
     backgroundColor: '#ffd6e8', // Light pink
     borderColor: '#b85c8a',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   hallPassButton: {
     backgroundColor: '#fff2d6', // Light gold
     borderColor: '#b8a05c',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   settingsButton: {
     backgroundColor: '#d6e8ff', // Light blue
     borderColor: '#5c7cb8',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   buttonText: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(255, 255, 255, 0.7)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,

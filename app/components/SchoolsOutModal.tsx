@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF', // White text for good contrast on orange
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 2, height: 2 },
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   tapText: {
     fontSize: 16,
     color: '#FFFFFF',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     opacity: 0.8,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',

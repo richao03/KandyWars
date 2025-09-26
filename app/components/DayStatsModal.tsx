@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadow: '1px 1px 0px #e6d4b7',
   },
   subtitle: {
@@ -163,14 +163,14 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 16,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '600',
     flex: 1,
   },
   statValue: {
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   profitValue: {
     color: '#22c55e',
@@ -190,14 +190,14 @@ const styles = StyleSheet.create({
   netGainLabel: {
     fontSize: 18,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '700',
     flex: 1,
   },
   netGainValue: {
     fontSize: 20,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   positiveGain: {
     color: '#22c55e',
@@ -237,13 +237,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#721c24',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   continueButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

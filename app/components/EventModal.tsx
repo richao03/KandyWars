@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   ImageBackground,
@@ -10,21 +10,70 @@ import {
   View,
 } from 'react-native';
 import ReAnimated, {
+  Easing,
+  runOnJS,
   useAnimatedProps,
   useSharedValue,
   withTiming,
-  Easing,
-  runOnJS,
 } from 'react-native-reanimated';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useWallet } from '../../src/hooks/useWallet';
 
+// Image resolver to handle cached image IDs and string references
+const getResolvedImage = (backgroundImage: any, eventEffect?: string) => {
+  // Handle string references (new format)
+  if (typeof backgroundImage === 'string') {
+    switch (backgroundImage) {
+      case 'pricedrop':
+        return require('../../assets/images/pricedrop.png');
+      case 'bully':
+        return require('../../assets/images/bully.png');
+      case 'foundmoney':
+        return require('../../assets/images/foundmoney.png');
+      case 'pricehike':
+        return require('../../assets/images/pricehike.png');
+      case 'confiscate':
+        return require('../../assets/images/confiscate.png');
+      default:
+        return require('../../assets/images/pricedrop.png');
+    }
+  }
+
+  // Handle cached module IDs (numbers) - map based on event effect
+  if (typeof backgroundImage === 'number') {
+    switch (eventEffect) {
+      case 'LOSE_MONEY':
+        return require('../../assets/images/bully.png');
+      case 'FOUND_MONEY':
+        return require('../../assets/images/foundmoney.png');
+      case 'PRICE_SPIKE':
+        return require('../../assets/images/pricehike.png');
+      case 'PRICE_DROP':
+        return require('../../assets/images/pricedrop.png');
+      case 'STASH_LOCKED':
+        return require('../../assets/images/confiscate.png');
+      default:
+        return require('../../assets/images/pricedrop.png');
+    }
+  }
+
+  // Fallback for any other format
+  return require('../../assets/images/pricedrop.png');
+};
+
 const AnimatedTextInput = ReAnimated.createAnimatedComponent(TextInput);
 
 // Custom component for animated money display
-const AnimatedMoneyCounter = ({ startValue, endValue, duration = 2000, isActive, prefix = '$' }) => {
+const AnimatedMoneyCounter = ({
+  startValue,
+  endValue,
+  duration = 2000,
+  isActive,
+  moneyLoss,
+  prefix = '$',
+}) => {
   const animatedValue = useSharedValue(startValue);
-  
+
   useEffect(() => {
     if (isActive) {
       animatedValue.value = withTiming(endValue, {
@@ -35,14 +84,14 @@ const AnimatedMoneyCounter = ({ startValue, endValue, duration = 2000, isActive,
       animatedValue.value = startValue;
     }
   }, [isActive, startValue, endValue, duration]);
-  
+
   const animatedProps = useAnimatedProps(() => {
     return {
       text: `${prefix}${animatedValue.value.toFixed(2)}`,
       defaultValue: `${prefix}${animatedValue.value.toFixed(2)}`,
     };
   });
-  
+
   return (
     <AnimatedTextInput
       animatedProps={animatedProps}
@@ -53,7 +102,7 @@ const AnimatedMoneyCounter = ({ startValue, endValue, duration = 2000, isActive,
         color: '#ffffff',
         textAlign: 'center',
         fontFamily: 'CrayonPastel',
-        textShadowColor: isActive && endValue < startValue ? 'red' : '#00ff00',
+        textShadowColor: moneyLoss ? 'red' : '#00ff00',
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: isActive && endValue < startValue ? 3 : 4,
       }}
@@ -72,7 +121,7 @@ const EventModal = React.memo(function EventModal() {
   const [showMoneyGain, setShowMoneyGain] = useState(false);
   const [startAmount, setStartAmount] = useState(0);
   const [finalAmount, setFinalAmount] = useState(0);
-  
+
   // Reanimated shared values for smooth UI thread animations
   const moneyValue = useSharedValue(0);
   const animationTimeouts = useRef<NodeJS.Timeout[]>([]);
@@ -84,27 +133,27 @@ const EventModal = React.memo(function EventModal() {
 
       // Check if this is a money-stealing event (bully or similar)
       const isMoneyStealingEvent =
-        (currentEvent.effect === 'LOSE_MONEY') ||  // Direct check for LOSE_MONEY effect
+        currentEvent.effect === 'LOSE_MONEY' || // Direct check for LOSE_MONEY effect
         (currentEvent.category === 'bad' &&
           (currentEvent.title?.toLowerCase().includes('bully') ||
-           currentEvent.subtitle
-             ?.toLowerCase()
-             .includes('took all your money') ||
-           currentEvent.subtitle?.toLowerCase().includes('took') ||
-           currentEvent.subtitle?.toLowerCase().includes('stole')));
+            currentEvent.subtitle
+              ?.toLowerCase()
+              .includes('took all your money') ||
+            currentEvent.subtitle?.toLowerCase().includes('took') ||
+            currentEvent.subtitle?.toLowerCase().includes('stole')));
 
       // Check if this is a money-gaining event (found money or similar)
       const isMoneyGainingEvent =
-        (currentEvent.effect === 'FOUND_MONEY') ||  // Direct check for FOUND_MONEY effect
+        currentEvent.effect === 'FOUND_MONEY' || // Direct check for FOUND_MONEY effect
         (currentEvent.category === 'good' &&
           (currentEvent.title?.toLowerCase().includes('found') ||
-           currentEvent.title?.toLowerCase().includes('money') ||
-           currentEvent.title?.toLowerCase().includes('cash') ||
-           currentEvent.title?.toLowerCase().includes('jackpot') ||
-           currentEvent.heading?.toLowerCase().includes('jackpot') ||
-           currentEvent.heading?.toLowerCase().includes('lucky') ||
-           currentEvent.subtitle?.toLowerCase().includes('found') ||
-           currentEvent.subtitle?.toLowerCase().includes('picked up')));
+            currentEvent.title?.toLowerCase().includes('money') ||
+            currentEvent.title?.toLowerCase().includes('cash') ||
+            currentEvent.title?.toLowerCase().includes('jackpot') ||
+            currentEvent.heading?.toLowerCase().includes('jackpot') ||
+            currentEvent.heading?.toLowerCase().includes('lucky') ||
+            currentEvent.subtitle?.toLowerCase().includes('found') ||
+            currentEvent.subtitle?.toLowerCase().includes('picked up')));
 
       // For LOSE_MONEY events, calculate the amount that will be stolen
       let endAmount = balance;
@@ -126,7 +175,7 @@ const EventModal = React.memo(function EventModal() {
       if (currentEvent.category === 'bad') {
         // Trigger warning haptic feedback for negative events
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        
+
         // For BAD events: Immediate appearance with shake
         fadeAnim.setValue(1);
         scaleAnim.setValue(1);
@@ -138,16 +187,20 @@ const EventModal = React.memo(function EventModal() {
           setStartAmount(balance);
           setFinalAmount(endAmount);
           moneyValue.value = balance;
-          
+
           // Animate on UI thread with Reanimated
-          moneyValue.value = withTiming(endAmount, {
-            duration: 2000,
-            easing: Easing.out(Easing.cubic),
-          }, (finished) => {
-            if (finished) {
-              runOnJS(setCanDismiss)(true);
+          moneyValue.value = withTiming(
+            endAmount,
+            {
+              duration: 2000,
+              easing: Easing.out(Easing.cubic),
+            },
+            (finished) => {
+              if (finished) {
+                runOnJS(setCanDismiss)(true);
+              }
             }
-          });
+          );
         } else {
           // For other bad events, enforce 1 second minimum display time
           setCanDismiss(false);
@@ -219,7 +272,7 @@ const EventModal = React.memo(function EventModal() {
             useNativeDriver: true,
           }),
         ]).start();
-        
+
         // If it's a money-gaining event, start count-up animation
         if (isMoneyGainingEvent) {
           // Get the actual amount from the event data
@@ -228,22 +281,26 @@ const EventModal = React.memo(function EventModal() {
           // So we need to calculate what the balance was before
           const startingAmount = balance - moneyGained;
           const endingAmount = balance;
-          
+
           setCanDismiss(false);
           setShowMoneyGain(true);
           setStartAmount(startingAmount);
           setFinalAmount(endingAmount);
           moneyValue.value = startingAmount;
-          
+
           // Animate on UI thread with Reanimated
-          moneyValue.value = withTiming(endingAmount, {
-            duration: 1500,
-            easing: Easing.out(Easing.cubic),
-          }, (finished) => {
-            if (finished) {
-              runOnJS(setCanDismiss)(true);
+          moneyValue.value = withTiming(
+            endingAmount,
+            {
+              duration: 1500,
+              easing: Easing.out(Easing.cubic),
+            },
+            (finished) => {
+              if (finished) {
+                runOnJS(setCanDismiss)(true);
+              }
             }
-          });
+          );
         } else {
           // For other good/neutral events
           setCanDismiss(true);
@@ -256,10 +313,10 @@ const EventModal = React.memo(function EventModal() {
     // Cleanup animation on unmount or event change
     return () => {
       // Clear any running animation timeouts
-      animationTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
       animationTimeouts.current = [];
     };
-  }, [currentEvent, fadeAnim, scaleAnim, shakeAnim, balance]);
+  }, [currentEvent, fadeAnim, scaleAnim, shakeAnim]);
 
   const handleDismiss = useCallback(() => {
     // Only allow dismissal if canDismiss is true
@@ -287,7 +344,7 @@ const EventModal = React.memo(function EventModal() {
       setFinalAmount(0);
       moneyValue.value = 0;
       // Clear any running animation timeouts
-      animationTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
       animationTimeouts.current = [];
       // Callback will be executed in dismissEvent
       dismissEvent();
@@ -298,6 +355,7 @@ const EventModal = React.memo(function EventModal() {
     return null;
   }
 
+  console.log(';what is currentEvent', currentEvent);
   const theme = getTheme(currentEvent.category!);
 
   // Use absolute positioning for proper visibility
@@ -322,13 +380,43 @@ const EventModal = React.memo(function EventModal() {
       >
         {currentEvent.backgroundImage ? (
           <View style={styles.modalWithBackground}>
+            {console.log('🖼️ EventModal - Event Title:', currentEvent.title)}
+            {console.log('🖼️ EventModal - Event Effect:', currentEvent.effect)}
+            {console.log(
+              '🖼️ EventModal - Background Image ID:',
+              currentEvent.backgroundImage,
+              typeof currentEvent.backgroundImage
+            )}
             <ImageBackground
-              source={currentEvent.backgroundImage}
+              source={getResolvedImage(
+                currentEvent.backgroundImage,
+                currentEvent.effect
+              )}
               style={{ flex: 1 }}
-              imageStyle={styles.backgroundImage}
               resizeMode="cover"
-              onError={(error) => console.log('ImageBackground error:', error)}
-              onLoad={() => console.log('ImageBackground loaded successfully')}
+              onError={(error) =>
+                console.log(
+                  '❌ ImageBackground error:',
+                  error,
+                  'for image:',
+                  currentEvent.backgroundImage,
+                  'effect:',
+                  currentEvent.effect,
+                  'resolved to:',
+                  getResolvedImage(
+                    currentEvent.backgroundImage,
+                    currentEvent.effect
+                  )
+                )
+              }
+              onLoad={() =>
+                console.log(
+                  '✅ ImageBackground loaded successfully:',
+                  currentEvent.backgroundImage,
+                  'effect:',
+                  currentEvent.effect
+                )
+              }
             >
               <View style={[styles.overlayContent]}>
                 <Text style={[styles.heading, { color: theme.titleColor }]}>
@@ -350,12 +438,13 @@ const EventModal = React.memo(function EventModal() {
                   {showMoneyLoss && (
                     <View style={styles.moneyCountdownContainer}>
                       <Text style={styles.moneyLabel}>
-                        ${startAmount.toFixed(2)} → 
+                        ${startAmount.toFixed(2)} →
                       </Text>
-                      <AnimatedMoneyCounter 
+                      <AnimatedMoneyCounter
                         startValue={startAmount}
                         endValue={finalAmount}
                         duration={2000}
+                        moneyLoss={true}
                         isActive={showMoneyLoss}
                       />
                     </View>
@@ -363,12 +452,13 @@ const EventModal = React.memo(function EventModal() {
                   {showMoneyGain && (
                     <View style={styles.moneyGainContainer}>
                       <Text style={styles.moneyLabel}>
-                        ${startAmount.toFixed(2)} → 
+                        ${startAmount.toFixed(2)} →
                       </Text>
-                      <AnimatedMoneyCounter 
+                      <AnimatedMoneyCounter
                         startValue={startAmount}
                         endValue={finalAmount}
                         duration={1500}
+                        moneyLoss={false}
                         isActive={showMoneyGain}
                       />
                     </View>
@@ -390,8 +480,8 @@ const EventModal = React.memo(function EventModal() {
                 >
                   <Text style={styles.dismissText}>
                     {!canDismiss
-                      ? '⏳ Please wait...'
-                      : currentEvent.dismissText || '👍 Got it!'}
+                      ? 'Please wait...'
+                      : currentEvent.dismissText || 'Got it!'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -422,9 +512,9 @@ const EventModal = React.memo(function EventModal() {
               {showMoneyLoss && (
                 <View style={styles.moneyCountdownContainer}>
                   <Text style={styles.moneyLabel}>
-                    ${startAmount.toFixed(2)} → 
+                    ${startAmount.toFixed(2)} →
                   </Text>
-                  <AnimatedMoneyCounter 
+                  <AnimatedMoneyCounter
                     startValue={startAmount}
                     endValue={finalAmount}
                     duration={2000}
@@ -435,9 +525,9 @@ const EventModal = React.memo(function EventModal() {
               {showMoneyGain && (
                 <View style={styles.moneyGainContainer}>
                   <Text style={styles.moneyLabel}>
-                    ${startAmount.toFixed(2)} → 
+                    ${startAmount.toFixed(2)} →
                   </Text>
-                  <AnimatedMoneyCounter 
+                  <AnimatedMoneyCounter
                     startValue={startAmount}
                     endValue={finalAmount}
                     duration={1500}
@@ -461,7 +551,7 @@ const EventModal = React.memo(function EventModal() {
               <Text style={styles.dismissText}>
                 {!canDismiss
                   ? '⏳ Please wait...'
-                  : currentEvent.dismissText || '👍 Got it!'}
+                  : currentEvent.dismissText || 'Got it!'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -524,7 +614,6 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     borderRadius: 20,
-    resizeMode: 'cover',
   },
   overlayContent: {
     flex: 1,
@@ -535,18 +624,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 12,
-    fontFamily: 'CrayonPastel',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -556,7 +645,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginVertical: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   subtitle: {
     fontSize: 16,
@@ -564,22 +653,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'CrayonPastel',
     fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   dismissButton: {
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   dismissText: {
     fontSize: 18,
     fontWeight: '600',
     color: 'white',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   moneyCountdownContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,

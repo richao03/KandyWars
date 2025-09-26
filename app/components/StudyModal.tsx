@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadow: '1px 1px 0px #e6d4b7',
   },
   subtitle: {
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     color: '#5d4e37',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     backgroundColor: '#e9ecef',

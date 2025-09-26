@@ -903,8 +903,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Economy',
     type: 'persistent',
     flavorText: 'Hodl the line! 🚀💎🙌',
-    description:
-      'Earn $50 for every candy in your inventory at the start of each period',
+    description: '+$50 per candy in your inventory at the start of each period',
     effects: [
       {
         target: 'period_start_inventory_bonus',
@@ -1087,7 +1086,10 @@ export const ALL_JOKERS = {
 };
 
 // Utility function to process effects by target from a list of jokers
-export function processEffectsByTarget(jokers: any[], targetType: EffectTarget): Array<{
+export function processEffectsByTarget(
+  jokers: any[],
+  targetType: EffectTarget
+): Array<{
   jokerName: string;
   amount: number;
   operation: EffectOperation;
@@ -1104,8 +1106,10 @@ export function processEffectsByTarget(jokers: any[], targetType: EffectTarget):
 
   for (const joker of jokers) {
     // Find the joker in our standardized list
-    const standardizedJoker = STANDARDIZED_JOKERS.find(sj => sj.id === joker.id);
-    
+    const standardizedJoker = STANDARDIZED_JOKERS.find(
+      (sj) => sj.id === joker.id
+    );
+
     if (standardizedJoker?.effects) {
       // Look for effects that match the target
       for (const effect of standardizedJoker.effects) {

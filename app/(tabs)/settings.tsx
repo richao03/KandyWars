@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#6b4423', // Dark brown
     marginBottom: 15,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   button: {
     padding: 16,
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: 'bold',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   // Player info styles
   playerInfoContainer: {
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6b4423',
     marginBottom: 10,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   nameDisplayContainer: {
     flexDirection: 'row',
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
   },
   editNameButton: {
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4a5a8a',
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   nameEditContainer: {
     gap: 10,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#6b4423',
   },
   nameButtonContainer: {
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2d5a2d',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     backgroundColor: '#fee2e2',
@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#dc2626',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   nameInputError: {
     borderColor: '#ef4444',
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   nameErrorText: {
     color: '#dc2626',
     fontSize: 12,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginTop: 5,
     marginBottom: 5,
   },

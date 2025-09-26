@@ -264,14 +264,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#333',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     textAlign: 'center',
     marginBottom: 16,
@@ -287,13 +287,13 @@ const styles = StyleSheet.create({
   },
   currentLabel: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     marginRight: 8,
   },
   currentPass: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
     color: '#333',
   },
@@ -311,13 +311,13 @@ const styles = StyleSheet.create({
   noneText: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#333',
     marginBottom: 4,
   },
   noneDescription: {
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
   },
   passCard: {
@@ -335,22 +335,22 @@ const styles = StyleSheet.create({
   passName: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
   },
   passRarity: {
     fontSize: 12,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   passDescription: {
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 8,
   },
   passRequirement: {
     fontSize: 12,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontStyle: 'italic',
     marginBottom: 8,
   },
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   effectText: {
     fontSize: 13,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 2,
   },
   selectedIndicator: {
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   lockedOverlay: {
     position: 'absolute',
@@ -413,20 +413,20 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     fontWeight: 'bold',
   },
   confirmText: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: 'white',
     fontWeight: 'bold',
   },
   unlockedCount: {
     textAlign: 'center',
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     marginTop: 8,
   },

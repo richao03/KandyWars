@@ -153,9 +153,10 @@ const styles = StyleSheet.create({
     borderColor: '#d4a574',
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#6b4423',
     textAlign: 'center',
+    fontFamily: 'PixeloidMono',
   },
 });

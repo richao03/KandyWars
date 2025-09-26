@@ -89,7 +89,7 @@ export default function CandyPriceChart({
     },
     propsForLabels: {
       fontSize: 10,
-      fontFamily: 'CrayonPastel',
+      fontFamily: 'PixeloidMono',
     },
   };
 
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#6b4423', // Dark brown
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
   },
   priceInfo: {
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   currentPrice: {
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   priceChange: {
     fontSize: 12,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   noDataText: {
     fontSize: 14,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
 });

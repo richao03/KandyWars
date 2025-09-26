@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 1, height: 1 },
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
     textAlign: 'center',
   },

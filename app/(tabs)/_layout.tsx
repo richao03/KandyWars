@@ -25,6 +25,7 @@ export default function TabLayout() {
     },
     tabBarLabelStyle: {
       color: isAfterSchool ? '#ffffff' : undefined,
+      fontFamily: 'PixeloidMono',
     },
     tabBarIconStyle: {
       tintColor: isAfterSchool ? '#ffffff' : undefined,

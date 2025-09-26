@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     color: '#ffffff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadowColor: '#4a90e2',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#a8b2d1',
     marginBottom: 20,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   warningText: {
     fontSize: 16,
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     color: '#ffd700',
     marginBottom: 16,
     fontStyle: 'italic',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   checklist: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#e6e6e6',
     marginBottom: 8,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
     gap: 12,
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -152,6 +152,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

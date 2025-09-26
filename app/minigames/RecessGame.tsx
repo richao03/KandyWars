@@ -1177,7 +1177,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 8,
   },
   gameInfo: {
@@ -1189,22 +1189,22 @@ const styles = StyleSheet.create({
   level: {
     fontSize: 16,
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   score: {
     fontSize: 16,
     color: '#FFD700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   timer: {
     fontSize: 16,
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   rounds: {
     fontSize: 14,
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   gameArea: {
     flex: 1,
@@ -1227,7 +1227,7 @@ const styles = StyleSheet.create({
     fontSize: 120,
     fontWeight: '900',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadowColor: '#000',
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 8,
@@ -1256,7 +1256,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 8,
   },
   gestureImage: {
@@ -1267,7 +1267,7 @@ const styles = StyleSheet.create({
   resultText: {
     fontSize: 48,
     fontWeight: '900',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadowColor: '#000',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -1323,7 +1323,7 @@ const styles = StyleSheet.create({
   previewHint: {
     fontSize: 16,
     color: '#E8F5E8',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -1342,7 +1342,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -1362,7 +1362,7 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 14,
     color: '#FFF3E0',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -1398,7 +1398,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#4A90C1',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   bottomButtons: {
     flexDirection: 'row',
@@ -1418,7 +1418,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   // Instructions styles
   instructionsContainer: {
@@ -1431,7 +1431,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
     textShadowColor: '#4A90C1',
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -1463,7 +1463,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFD700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
     lineHeight: 22,
@@ -1471,7 +1471,7 @@ const styles = StyleSheet.create({
   stepText: {
     fontSize: 16,
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
     lineHeight: 22,
   },
@@ -1489,7 +1489,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   // DEBUG STYLES
   debugContainer: {
@@ -1506,7 +1506,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -1522,7 +1522,7 @@ const styles = StyleSheet.create({
   debugLabel: {
     fontSize: 12,
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 10,
   },
   debugHand: {
@@ -1559,7 +1559,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   // Timer line styles
   timerContainer: {

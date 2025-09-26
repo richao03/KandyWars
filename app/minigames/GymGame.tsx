@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#e74c3c', // Gym red
     marginBottom: 20,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   instructionsCard: {
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     color: '#f39c12', // Gym orange/gold
     marginBottom: 15,
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   instructionStep: {
     flexDirection: 'row',
@@ -630,14 +630,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#e74c3c', // Gym red
     marginRight: 10,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     lineHeight: 22,
   },
   stepText: {
     fontSize: 16,
     color: '#ecf0f1', // Light gray for readability on dark background
     flex: 1,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     lineHeight: 22,
   },
   startButton: {
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#ffffff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   backButton: {
     paddingVertical: 10,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 18,
     color: '#e74c3c', // Gym red
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   contentContainer: {
     flex: 1,
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4169e1',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   patternInfo: {
     backgroundColor: '#34495e', // Dark gym background
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#f39c12', // Gym gold
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
     marginBottom: 8,
   },
@@ -803,6 +803,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

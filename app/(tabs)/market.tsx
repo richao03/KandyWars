@@ -1,12 +1,13 @@
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, {
+  memo,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  memo,
 } from 'react';
 import {
   FlatList,
@@ -17,8 +18,7 @@ import {
   View,
 } from 'react-native';
 import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
-import { useFocusEffect } from '@react-navigation/native';
-import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects';
@@ -90,7 +90,9 @@ function Market(props) {
       console.log('📊 MARKET: Tab focused - enabling expensive operations');
       setIsTabFocused(true);
       return () => {
-        console.log('📊 MARKET: Tab unfocused - disabling expensive operations');
+        console.log(
+          '📊 MARKET: Tab unfocused - disabling expensive operations'
+        );
         setIsTabFocused(false);
       };
     }, [])
@@ -281,7 +283,12 @@ function Market(props) {
       }
 
       // Trigger the event modal for interactive events
-      console.log('🎯 EVENT: Triggering event modal for period', periodCount, ':', currentEvent.title);
+      console.log(
+        '🎯 EVENT: Triggering event modal for period',
+        periodCount,
+        ':',
+        currentEvent.title
+      );
       handleEvent(currentEvent);
 
       // Also show the event's specific description
@@ -347,7 +354,6 @@ function Market(props) {
     setHint,
     jokers,
     activeEffects,
-    handleEvent,
   ]);
 
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
@@ -370,13 +376,13 @@ function Market(props) {
 
     setCandies((prev) =>
       prev.map((candy) => {
-        // Check for current location-specific events with price overrides
+        // Check for current location-specific events with price overrides or multipliers
         const currentEvent = gameData.periodEvents.find(
           (e) =>
             e.period === periodCount &&
             e.location === currentLocation &&
             e.candy === candy.name &&
-            e.priceOverride !== undefined
+            (e.priceOverride !== undefined || e.multiplier !== undefined)
         );
 
         // Get the TRUE base price (before any modifications) for accurate breakdown
@@ -402,10 +408,12 @@ function Market(props) {
           activeEffects
         );
 
-        const finalCost =
-          currentEvent?.priceOverride !== undefined
-            ? currentEvent.priceOverride
-            : currentPrice;
+        let finalCost = currentPrice;
+        if (currentEvent?.priceOverride !== undefined) {
+          finalCost = currentEvent.priceOverride;
+        } else if (currentEvent?.multiplier !== undefined) {
+          finalCost = currentPrice * currentEvent.multiplier;
+        }
 
         // Note: Price storage moved to separate useEffect to avoid setState during render
 
@@ -421,7 +429,8 @@ function Market(props) {
           quantityOwned: inventoryItem?.quantity || 0,
           averagePrice: inventoryItem?.price || null,
           priceBreakdown:
-            currentEvent?.priceOverride === undefined
+            currentEvent?.priceOverride === undefined &&
+            currentEvent?.multiplier === undefined
               ? priceBreakdown
               : undefined, // Only show breakdown if not overridden by events
         };
@@ -449,19 +458,24 @@ function Market(props) {
         const trueBasePrice =
           candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
 
-        // Check for current location-specific events with price overrides
+        // Check for current location-specific events with price overrides or multipliers
         const currentEvent = gameData.periodEvents.find(
           (e) =>
             e.period === periodCount &&
             e.location === currentLocation &&
             e.candy === candy.name &&
-            e.priceOverride !== undefined
+            (e.priceOverride !== undefined || e.multiplier !== undefined)
         );
 
-        const finalCost =
-          currentEvent?.priceOverride !== undefined
-            ? currentEvent.priceOverride
-            : gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice;
+        let finalCost =
+          gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice;
+        if (currentEvent?.priceOverride !== undefined) {
+          finalCost = currentEvent.priceOverride;
+        } else if (currentEvent?.multiplier !== undefined) {
+          finalCost =
+            (gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice) *
+            currentEvent.multiplier;
+        }
 
         modifyCandyPrice(candy.name, finalCost, periodCount);
       }
@@ -592,8 +606,12 @@ function Market(props) {
 
           // 2. Check Redux jokers for Even Stevens / Odd Todd
           const candyInventoryLimit = getInventoryLimit();
-          const hasEvenStevens = jokers.some(j => j.id === JOKER_IDS.EVEN_STEVENS.toString());
-          const hasOddTodd = jokers.some(j => j.id === JOKER_IDS.ODD_TODD.toString());
+          const hasEvenStevens = jokers.some(
+            (j) => j.id === JOKER_IDS.EVEN_STEVENS.toString()
+          );
+          const hasOddTodd = jokers.some(
+            (j) => j.id === JOKER_IDS.ODD_TODD.toString()
+          );
 
           if (hasEvenStevens && candyInventoryLimit % 2 === 0) {
             multiplier *= 1.1;
@@ -610,8 +628,12 @@ function Market(props) {
           }
 
           // 3. Check Redux jokers for Recess bonuses
-          const hasHopscotch = jokers.some(j => j.id === JOKER_IDS.HOPSCOTCH_BONUS.toString());
-          const hasSwingset = jokers.some(j => j.id === JOKER_IDS.SWINGSET_MOMENTUM.toString());
+          const hasHopscotch = jokers.some(
+            (j) => j.id === JOKER_IDS.HOPSCOTCH_BONUS.toString()
+          );
+          const hasSwingset = jokers.some(
+            (j) => j.id === JOKER_IDS.SWINGSET_MOMENTUM.toString()
+          );
 
           if (hasHopscotch && period % 2 === 0) {
             multiplier *= 1.2;
@@ -633,16 +655,19 @@ function Market(props) {
           }
 
           // 4. Calculate profit-based hall pass bonus from Redux state
-          const inventoryItem = inventory.find(item => item.name === candy.name);
+          const inventoryItem = inventory.find(
+            (item) => item.name === candy.name
+          );
           const purchasePrice = inventoryItem?.price || candy.cost;
           const profitPerUnit = Math.max(0, candy.cost - purchasePrice);
           const totalProfit = profitPerUnit * quantity;
 
           // Get hall pass bonus from Redux via useHallPass()
           const hallPassSaleBonusPercent = getSalePriceBonus();
-          const hallPassProfitBonus = hallPassSaleBonusPercent > 0
-            ? totalProfit * (hallPassSaleBonusPercent * 5 / 100) // 5x multiplier on profit
-            : 0;
+          const hallPassProfitBonus =
+            hallPassSaleBonusPercent > 0
+              ? totalProfit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
+              : 0;
 
           if (hallPassProfitBonus > 0) {
             bonusDetails.push(
@@ -686,7 +711,8 @@ function Market(props) {
           // === SHOW BONUS NOTIFICATIONS ===
           if (bonusDetails.length > 0) {
             setTimeout(() => {
-              const title = bonusDetails.length > 1 ? 'Multiple Bonuses!' : 'Sale Bonus!';
+              const title =
+                bonusDetails.length > 1 ? 'Multiple Bonuses!' : 'Sale Bonus!';
               const emoji = bonusDetails.length > 1 ? '🎉' : '💰';
               const message =
                 bonusDetails.join('\n') +
@@ -840,7 +866,6 @@ function Market(props) {
     router.push('/(tabs)/after-school');
   };
 
-
   const handleSleepConfirm = () => {
     setSleepConfirmModalVisible(false);
 
@@ -907,6 +932,7 @@ function Market(props) {
                 onInventoryPress={() => setInventoryModalVisible(true)}
                 flavorTextWrapper={(children) => (
                   <CopilotStep
+                    style={{ fontFamily: 'CrayonPastel' }}
                     text="The Rumor Mill shows important information and hints! Keep an eye on these scrolling messages - they might reveal price trends, special events, or valuable tips from other students."
                     order={2}
                     name="market_rumor_mill"
@@ -953,12 +979,6 @@ function Market(props) {
                               ? '$-.--'
                               : `$${item.cost.toFixed(2)}`}
                           </Text>
-                          {item.cost > item.basePrice * 1.1 && (
-                            <Text style={styles.priceChange}>📈</Text>
-                          )}
-                          {item.cost < item.basePrice * 0.9 && (
-                            <Text style={styles.priceChange}>📉</Text>
-                          )}
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -1063,7 +1083,6 @@ function Market(props) {
         visible={schoolsOutModalVisible}
         onComplete={handleSchoolsOutComplete}
       />
-
 
       <StashMoneyModal
         visible={stashMoneyModalVisible}
@@ -1202,7 +1221,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     color: '#6b4423', // Dark brown crayon
     textShadow: '0.5px 0.5px 0px #d4a574',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   ownedBadge: {
     backgroundColor: '#4ade80',
@@ -1216,7 +1235,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   priceSection: {
     alignItems: 'flex-end',
@@ -1231,6 +1250,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ffb3b3',
+    fontFamily: 'PixeloidMono',
   },
   priceChange: {
     fontSize: 16,
@@ -1258,7 +1278,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 6,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
     backgroundColor: '#fefaf5',
@@ -1300,7 +1320,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#ffffff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: '#166534',
     textShadowOffset: { width: 1, height: 1 },
@@ -1310,7 +1330,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#f0fdf4',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 1,
     opacity: 0.9,
@@ -1333,7 +1353,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#ffffff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: '#991b1b',
     textShadowOffset: { width: 1, height: 1 },

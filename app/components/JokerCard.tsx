@@ -120,7 +120,15 @@ function JokerCard({
   ) => {
     // Use the page-level confirmation modal if available, otherwise fall back to internal modal
     if (onShowConfirmation) {
-      onShowConfirmation(title, message, emoji, onConfirm, confirmText, cancelText, onCancel);
+      onShowConfirmation(
+        title,
+        message,
+        emoji,
+        onConfirm,
+        confirmText,
+        cancelText,
+        onCancel
+      );
     } else {
       setConfirmModal({
         visible: true,
@@ -262,7 +270,6 @@ function JokerCard({
       );
     }
   };
-
 
   const handleTimeRevert = async () => {
     const timeReverted = revertToPreviousPeriod();
@@ -476,13 +483,22 @@ function JokerCard({
       const originalPrice = gameData.candyPrices[candyType]?.[periodCount] || 0;
       const crashedPrice = Math.max(originalPrice * 0.5, 0.01); // 50% reduction, minimum $0.01
 
-      console.log(`🔧 Market Crash: ${candyType} - Original: $${originalPrice.toFixed(2)}, Crashed: $${crashedPrice.toFixed(2)}`);
+      console.log(
+        `🔧 Market Crash: ${candyType} - Original: $${originalPrice.toFixed(2)}, Crashed: $${crashedPrice.toFixed(2)}`
+      );
       modifyCandyPrice(candyType, crashedPrice, periodCount);
-      priceChanges.push(`${candyType}: $${originalPrice.toFixed(2)} → $${crashedPrice.toFixed(2)}`);
+      priceChanges.push(
+        `${candyType}: $${originalPrice.toFixed(2)} → $${crashedPrice.toFixed(2)}`
+      );
     }
 
     // Remove the joker (it's one-time use)
-    console.log('🔧 Market Crash: Attempting to remove joker with ID:', joker.id, 'Type:', typeof joker.id);
+    console.log(
+      '🔧 Market Crash: Attempting to remove joker with ID:',
+      joker.id,
+      'Type:',
+      typeof joker.id
+    );
     removeJoker(joker.id);
     console.log('🔧 Market Crash: removeJoker called');
 
@@ -707,7 +723,6 @@ function JokerCard({
           </CardWrapper>
         </View>
       </View>
-
 
       {/* Period Selector Modal */}
       <FastModal
@@ -966,7 +981,7 @@ function JokerCard({
 const styles = StyleSheet.create({
   jokerCard: {
     borderRadius: 15,
-    marginTop: 6,
+    marginTop: 8,
     borderColor: '#6b4423',
     borderWidth: 3,
     elevation: 13,
@@ -1011,7 +1026,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: 'white',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 2,
     lineHeight: 16,
   },
@@ -1021,7 +1036,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderWidth: 1,
     borderColor: 'rgba(107, 68, 35, 0.3)',
@@ -1052,10 +1067,10 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   jokerDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#5d4037',
-    lineHeight: 18,
-    fontFamily: 'CrayonPastel',
+    lineHeight: 14,
+    fontFamily: 'PixeloidMono',
     fontWeight: '600',
     marginTop: 4,
     maxHeight: 72,
@@ -1092,7 +1107,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 9,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
   },
   typeRow: {
@@ -1109,7 +1124,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontStyle: 'italic',
     marginTop: 4,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   persistentIndicator: {
     backgroundColor: '#f0fdf4',
@@ -1124,7 +1139,7 @@ const styles = StyleSheet.create({
     color: '#22c55e',
     fontSize: 11,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   modalContent: {
     backgroundColor: '#fff',
@@ -1138,7 +1153,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -1155,7 +1170,7 @@ const styles = StyleSheet.create({
     color: '#6b4423',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   cancelButton: {
@@ -1169,7 +1184,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   jokerModalContent: {
@@ -1198,7 +1213,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
   },
   jokerOptionType: {
@@ -1208,7 +1223,7 @@ const styles = StyleSheet.create({
   jokerOptionDescription: {
     fontSize: 14,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     lineHeight: 18,
   },
   noJokersContainer: {
@@ -1219,14 +1234,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
   },
   noJokersSubtext: {
     fontSize: 14,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   candyOptionHeader: {
@@ -1239,19 +1254,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   candyAvgPrice: {
     fontSize: 12,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     opacity: 0.8,
   },
   conversionSummary: {
     fontSize: 16,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 16,
     padding: 12,
@@ -1261,7 +1276,7 @@ const styles = StyleSheet.create({
   targetPrice: {
     fontSize: 12,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     opacity: 0.8,
     marginTop: 2,
   },
@@ -1269,7 +1284,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1290,7 +1305,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   currentPeriodText: {

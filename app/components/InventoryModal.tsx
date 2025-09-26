@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     color: '#4a90e2',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadow: '1px 1px 0px #e6d4b7',
   },
   subtitle: {
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 24,
     lineHeight: 20,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   scrollView: {
     maxHeight: 300,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#a0826d',
     marginTop: 8,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   itemRow: {
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '600',
   },
   quantityBadge: {
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   itemValue: {
     alignItems: 'flex-end',
@@ -219,13 +219,13 @@ const styles = StyleSheet.create({
   avgPrice: {
     fontSize: 12,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   totalPrice: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#22c55e',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   totalRow: {
     flexDirection: 'row',
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     color: '#4a90e2',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '700',
     flex: 1,
   },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#4a90e2',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   closeButton: {
     backgroundColor: 'rgba(74,144,226,1)',
@@ -270,6 +270,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

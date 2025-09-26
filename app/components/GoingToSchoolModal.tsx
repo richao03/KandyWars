@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#8B4513', // Saddle brown for good contrast on warm background
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#2E8B57', // Sea green for money/positive message
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 12,
     textShadowColor: 'rgba(255, 255, 255, 0.8)',

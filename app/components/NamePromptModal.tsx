@@ -155,14 +155,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 20,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#8b5a3c',
     marginBottom: 8,
     textAlign: 'center',
   },
   description: {
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     marginBottom: 25,
     textAlign: 'center',
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 18,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     backgroundColor: '#fef7e7',
     color: '#6b4423',
     marginBottom: 20,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#2d5a2d', // Dark green
   },
   skipButton: {
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
   },
   textInputError: {
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#dc2626',
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginTop: 5,
     marginBottom: 10,
     textAlign: 'center',

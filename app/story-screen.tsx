@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 20,
     lineHeight: 22,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'left',
     letterSpacing: 0.5,
   },
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   skipText: {
     color: '#ffffff',
     fontSize: 12,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   continueContainer: {
     position: 'absolute',
@@ -711,12 +711,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   tapHint: {
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginTop: 15,
     fontStyle: 'italic',
   },

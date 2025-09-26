@@ -290,14 +290,14 @@ const styles = StyleSheet.create({
   piggyBankLabel: {
     fontSize: 16,
     color: '#b8a9c9',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 5,
   },
   piggyBankAmount: {
     fontSize: 28,
     fontWeight: '700',
     color: '#f7e98e',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(247, 233, 142, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -314,14 +314,14 @@ const styles = StyleSheet.create({
   balanceLabel: {
     fontSize: 14,
     color: '#b8a9c9',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 5,
   },
   balanceAmount: {
     fontSize: 24,
     fontWeight: '700',
     color: '#fff',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#b8a9c9',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   tabTextActive: {
     color: '#f7e98e',
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   amountLabel: {
     fontSize: 16,
     color: '#f7e98e',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -373,12 +373,12 @@ const styles = StyleSheet.create({
   amountValue: {
     fontSize: 28,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   maxAmount: {
     fontSize: 14,
     color: '#b8a9c9',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   slider: {
     width: '100%',
@@ -421,12 +421,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   infoText: {
     fontSize: 14,
     color: '#b8a9c9',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -444,6 +444,6 @@ const styles = StyleSheet.create({
     color: '#f7e98e',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

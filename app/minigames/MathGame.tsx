@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#f5f5dc',
     marginBottom: 20,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   instructionsCard: {
     backgroundColor: '#0d2818',
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     color: '#f5f5dc',
     marginBottom: 15,
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   instructionStep: {
     flexDirection: 'row',
@@ -652,13 +652,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffd700',
     marginRight: 10,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   stepText: {
     fontSize: 16,
     color: '#f5f5dc',
     flex: 1,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   startButton: {
     backgroundColor: '#2d4a3e',
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   backButton: {
     paddingVertical: 10,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 18,
     color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   scrollContainer: {
     marginTop: 20,
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     color: '#f5f5dc',
     marginBottom: 12,
     textAlign: 'center',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   numbersContainer: {
     height: 80,
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   rightmostText: {
     color: '#ff6b35',
@@ -767,6 +767,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#f5f5dc',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });

@@ -351,13 +351,13 @@ const styles = StyleSheet.create({
   jokerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
   },
   jokerSubtitle: {
     fontSize: 16,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   generateButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   jokerCard: {
     padding: 16,
@@ -392,12 +392,12 @@ const styles = StyleSheet.create({
   jokerName: {
     fontSize: 18,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     flex: 1,
   },
   jokerDescription: {
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     lineHeight: 18,
   },
   typeIndicator: {
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   typeText: {
     fontSize: 10,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   instantText: {
     color: '#b8860b',
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   skipButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   rerollButton: {
     padding: 16,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   rerollButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 
   // Math Theme (Chalkboard)

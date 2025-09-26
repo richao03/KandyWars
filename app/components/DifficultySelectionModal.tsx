@@ -175,14 +175,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#333',
     marginBottom: 10,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 18,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     marginBottom: 30,
     textAlign: 'center',
@@ -222,18 +222,18 @@ const styles = StyleSheet.create({
   difficultyTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 5,
   },
   difficultyDescription: {
     fontSize: 14,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginBottom: 5,
   },
   piggyBankText: {
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     paddingVertical: 12,
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 18,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     color: '#666',
     fontWeight: 'bold',
   },

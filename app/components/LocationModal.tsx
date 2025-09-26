@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#6b4423', // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   locationGrid: {
     flexDirection: 'row',
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     color: '#5d4e37', // Dark brown
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     backgroundColor: '#f0f0f0',

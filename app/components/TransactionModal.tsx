@@ -1,7 +1,7 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useMemo, useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
@@ -54,7 +54,10 @@ export default function TransactionModal({
   const { getInventoryLimit } = useInventory();
 
   const maxQuantity = mode === 'buy' ? maxBuyQuantity : maxSellQuantity;
-  const inventoryLimit = useMemo(() => getInventoryLimit(), [getInventoryLimit]);
+  const inventoryLimit = useMemo(
+    () => getInventoryLimit(),
+    [getInventoryLimit]
+  );
 
   // Check for Bulk Discount joker
   const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_DISCOUNT);
@@ -77,8 +80,20 @@ export default function TransactionModal({
   };
 
   const changeMode = (newMode: 'buy' | 'sell') => {
-    setMode(newMode);
-    setQuantity(1);
+    if (mode === newMode) {
+      // If clicking the same mode, set to max quantity
+      if (newMode === 'buy' && maxBuyQuantity > 0) {
+        setQuantity(maxBuyQuantity);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } else if (newMode === 'sell' && maxSellQuantity > 0) {
+        setQuantity(maxSellQuantity);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    } else {
+      // If switching modes, change mode and reset quantity
+      setMode(newMode);
+      setQuantity(1);
+    }
   };
 
   const handleSliderChange = (value: number) => {
@@ -86,6 +101,7 @@ export default function TransactionModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setQuantity(value);
   };
+
 
   return (
     <FastModal
@@ -198,13 +214,13 @@ export default function TransactionModal({
             style={[styles.tab, mode === 'buy' && styles.activeTab]}
             onPress={() => changeMode('buy')}
           >
-            <Text style={styles.tabText}>Buy</Text>
+            <Text style={styles.tabText}>{mode === 'buy' ? 'Buy Max' : 'Buy'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, mode === 'sell' && styles.activeTab]}
             onPress={() => changeMode('sell')}
           >
-            <Text style={styles.tabText}>Sell</Text>
+            <Text style={styles.tabText}>{mode === 'sell' ? 'Sell Max' : 'Sell'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -280,8 +296,15 @@ export default function TransactionModal({
         </View>
 
         <View style={styles.buttonRow}>
-          <Button title="Cancel" onPress={onClose} />
-          <Button title={`Confirm ${mode}`} onPress={handleConfirm} />
+          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.confirmButton}
+            onPress={handleConfirm}
+          >
+            <Text style={styles.confirmButtonText}>Confirm {mode}</Text>
+          </TouchableOpacity>
         </View>
       </>
     </FastModal>
@@ -303,6 +326,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     minHeight: 450,
     minWidth: '90%',
+    fontFamily: 'PixeloidMono',
   },
   title: {
     fontSize: 28,
@@ -311,7 +335,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6b4423', // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   priceInfoContainer: {
     backgroundColor: '#fff9e6',
@@ -330,13 +354,13 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 16,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   priceValue: {
     fontSize: 16,
     fontWeight: '600',
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   sliderSection: {
     marginTop: 16,
@@ -354,6 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 2,
     borderColor: '#f4d03f',
+    fontFamily: 'PixeloidMono',
   },
   totalValueContainer: {
     flexDirection: 'row',
@@ -370,13 +395,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginRight: 10,
   },
   totalValueAmount: {
     fontSize: 20,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   profitContainer: {
     flexDirection: 'row',
@@ -393,13 +418,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     marginRight: 8,
   },
   profitAmount: {
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   buttonRow: {
     marginTop: 16,
@@ -430,6 +455,7 @@ const styles = StyleSheet.create({
     color: '#8b4513',
     fontWeight: '700',
     fontSize: 16,
+    fontFamily: 'PixeloidMono',
   },
   priceBreakdownContainer: {
     backgroundColor: '#f0f8ff',
@@ -445,7 +471,7 @@ const styles = StyleSheet.create({
     color: '#4a90e2',
     textAlign: 'center',
     marginBottom: 8,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   breakdownRow: {
     flexDirection: 'row',
@@ -456,38 +482,38 @@ const styles = StyleSheet.create({
   breakdownLabel: {
     fontSize: 14,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '600',
   },
   breakdownValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   jokerEffectLabel: {
     fontSize: 13,
     color: '#4a90e2',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '600',
     flex: 1,
   },
   jokerEffectValue: {
     fontSize: 13,
     fontWeight: '700',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   finalPriceLabel: {
     fontSize: 16,
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     fontWeight: '700',
   },
   finalPriceValue: {
     fontSize: 16,
     fontWeight: '700',
     color: '#22c55e',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   divider: {
     height: 1,
@@ -506,7 +532,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#92400e',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   bulkDiscountContainer: {
@@ -523,7 +549,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#15803d',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   inactiveEffectRow: {
@@ -532,5 +558,37 @@ const styles = StyleSheet.create({
   inactiveEffectText: {
     color: '#999',
     fontStyle: 'italic',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#ef4444',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#dc2626',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#22c55e',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#16a34a',
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
   },
 });

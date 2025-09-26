@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   textAfterSchool: {
     color: '#f7e98e',

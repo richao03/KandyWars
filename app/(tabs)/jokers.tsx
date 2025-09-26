@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   titleAfterSchool: {
     color: '#f7e98e',
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   countTextAfterSchool: {
     color: '#f7e98e',
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   tabTextAfterSchool: {
     color: '#b8a9c9',
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   dragHint: {
     fontSize: 11,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 4,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     color: '#8b4513',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   emptySubtextAfterSchool: {
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#6b4423',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   sectionTitleAfterSchool: {
     color: '#f7e98e',
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     color: '#6b4423',
     textAlign: 'center',
     marginBottom: 20,
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   candyButton: {
     backgroundColor: '#6b4423',
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
   cancelButton: {
     backgroundColor: '#8b4513',
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'CrayonPastel',
+    fontFamily: 'PixeloidMono',
   },
 });
 
