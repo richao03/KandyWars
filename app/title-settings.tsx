@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -10,9 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWallet } from '../src/hooks/useWallet';
 import ConfirmationModal from './components/ConfirmationModal';
+import PixelBorder from './components/PixelBorder';
 
 export default function TitleSettings() {
   const walletContext = useWallet();
@@ -30,7 +31,11 @@ export default function TitleSettings() {
     onConfirm: () => {},
   });
 
-  const showConfirmModal = (title: string, message: string, onConfirm: () => void) => {
+  const showConfirmModal = (
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
     setConfirmModal({
       visible: true,
       title,
@@ -67,7 +72,9 @@ export default function TitleSettings() {
           if (walletContext) {
             // Use the complete reset method to clear all wallet data including username
             await walletContext.completeReset();
-            console.log('🗑️ Wallet completely reset including username and player ID');
+            console.log(
+              '🗑️ Wallet completely reset including username and player ID'
+            );
           }
 
           console.log('✅ All data cleared and contexts reset successfully');
@@ -96,7 +103,6 @@ export default function TitleSettings() {
     );
   };
 
-
   return (
     <View style={styles.container}>
       <StatusBar
@@ -107,59 +113,88 @@ export default function TitleSettings() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
+        <PixelBorder
+          borderColor="#3b82f6"
+          borderWidth={3}
+          backgroundColor="#2a2a2a"
+          innerPadding={0}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+        </PixelBorder>
         <Text style={styles.title}>Settings</Text>
         <View style={{ width: 80 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-
         {/* Data Management */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🗂️ Data Management</Text>
+          <Text style={styles.sectionTitle}>Data Management</Text>
 
-          <TouchableOpacity
-            style={[styles.settingItem, styles.dangerItem]}
-            onPress={handleResetAllData}
-            disabled={isResetting}
+          <PixelBorder
+            borderColor="#ff4444"
+            borderWidth={3}
+            backgroundColor="#2a2a2a"
+            innerPadding={0}
           >
-            <View style={styles.settingLeft}>
-              <Text style={[styles.settingTitle, styles.dangerText]}>
-                Reset All Data
-              </Text>
-              <Text style={styles.settingDescription}>
-                Permanently delete all game data and settings
-              </Text>
-            </View>
-            {isResetting ? (
-              <ActivityIndicator size="small" color="#ff4444" />
-            ) : (
-              <Text style={[styles.actionText, styles.dangerText]}>Delete</Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={handleResetAllData}
+              disabled={isResetting}
+            >
+              <View style={styles.settingLeft}>
+                <Text style={[styles.settingTitle, styles.dangerText]}>
+                  Reset All Data
+                </Text>
+                <Text style={styles.settingDescription}>
+                  Permanently delete all game data and settings
+                </Text>
+              </View>
+              {isResetting ? (
+                <ActivityIndicator size="small" color="#ff4444" />
+              ) : (
+                <Text style={[styles.actionText, styles.dangerText]}>
+                  Delete
+                </Text>
+              )}
+            </TouchableOpacity>
+          </PixelBorder>
         </View>
 
         {/* Info Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ℹ️ About</Text>
+          <Text style={styles.sectionTitle}>About</Text>
 
-          <View style={styles.infoItem}>
-            <Text style={styles.infoTitle}>Candy Warz</Text>
-            <Text style={styles.infoDescription}>
-              A strategic candy trading game where you manage debt,
-              buy and sell candy, and collect powerful jokers to succeed.
-            </Text>
-          </View>
+          <PixelBorder
+            borderColor="#6b7280"
+            borderWidth={3}
+            backgroundColor="#2a2a2a"
+            innerPadding={0}
+          >
+            <View style={styles.infoItem}>
+              <Text style={styles.infoTitle}>Candy Warz</Text>
+              <Text style={styles.infoDescription}>
+                A strategic candy trading game where you manage debt, buy and
+                sell candy, and collect powerful jokers to succeed.
+              </Text>
+            </View>
+          </PixelBorder>
 
-          <View style={styles.infoItem}>
-            <Text style={styles.infoTitle}>Version</Text>
-            <Text style={styles.infoDescription}>1.0.0</Text>
-          </View>
+          <PixelBorder
+            borderColor="#6b7280"
+            borderWidth={3}
+            backgroundColor="#2a2a2a"
+            innerPadding={0}
+          >
+            <View style={styles.infoItem}>
+              <Text style={styles.infoTitle}>Version</Text>
+              <Text style={styles.infoDescription}>1.0.0</Text>
+            </View>
+          </PixelBorder>
         </View>
 
         {/* Bottom spacing */}
@@ -196,17 +231,20 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     width: 80,
+    backgroundColor: 'transparent',
   },
   backButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'PixeloidMono',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
+    fontFamily: 'PixeloidMono',
   },
   content: {
     flex: 1,
@@ -220,15 +258,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 15,
+    fontFamily: 'PixeloidMono',
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: 'transparent',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 10,
   },
   settingLeft: {
     flex: 1,
@@ -239,10 +276,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
     marginBottom: 4,
+    fontFamily: 'PixeloidMono',
   },
   settingDescription: {
     fontSize: 14,
     color: '#9ca3af',
+    fontFamily: 'PixeloidMono',
   },
   toggle: {
     paddingHorizontal: 12,
@@ -261,23 +300,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#ffffff',
+    fontFamily: 'PixeloidMono',
   },
   actionText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#3b82f6',
-  },
-  dangerItem: {
-    borderWidth: 1,
-    borderColor: '#ff4444',
+    fontFamily: 'PixeloidMono',
   },
   dangerText: {
     color: '#ff4444',
   },
   infoItem: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: 'transparent',
     padding: 16,
-    borderRadius: 12,
     marginBottom: 10,
   },
   infoTitle: {
@@ -285,10 +321,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
     marginBottom: 4,
+    fontFamily: 'PixeloidMono',
   },
   infoDescription: {
     fontSize: 14,
     color: '#9ca3af',
     lineHeight: 20,
+    fontFamily: 'PixeloidMono',
   },
 });

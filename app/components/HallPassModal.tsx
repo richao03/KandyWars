@@ -110,11 +110,6 @@ export default function HallPassModal({
           >
             {pass.name}
           </Text>
-          <Text
-            style={[styles.passRarity, { color: getRarityColor(pass.rarity) }]}
-          >
-            {pass.rarity.toUpperCase()}
-          </Text>
         </View>
 
         <Text
@@ -126,15 +121,6 @@ export default function HallPassModal({
           {pass.description}
         </Text>
 
-        <Text
-          style={[
-            styles.passRequirement,
-            { color: isUnlocked ? '#666' : '#999' },
-          ]}
-        >
-          {isUnlocked ? '✓ Unlocked' : `${pass.unlockRequirement}`}
-        </Text>
-
         <View style={styles.effectsContainer}>
           {pass.effects.map((effect, index) => (
             <Text
@@ -144,16 +130,13 @@ export default function HallPassModal({
                 { color: isUnlocked ? '#4a7c4a' : '#999' },
               ]}
             >
-              • {effect.description}
+              {effect.description}
             </Text>
           ))}
         </View>
-
         {(isSelected || isCurrentlySelected) && (
           <View style={styles.selectedIndicator}>
-            <Text style={styles.selectedText}>
-              {isSelectionMode ? 'SELECTED' : 'ACTIVE'}
-            </Text>
+            <Text style={styles.selectedText}>✓</Text>
           </View>
         )}
 
@@ -177,24 +160,6 @@ export default function HallPassModal({
           : 'Your collection of earned Hall Passes'}
       </Text>
 
-      {isSelectionMode && (
-        <View style={styles.currentSelection}>
-          <Text style={styles.currentLabel}>Current Selection:</Text>
-          <Text style={styles.currentPass}>
-            {localSelectedId
-              ? allPasses.find((p) => p.id === localSelectedId)?.name || 'None'
-              : 'None'}
-          </Text>
-        </View>
-      )}
-
-      {!isSelectionMode && selectedPass && (
-        <View style={styles.currentSelection}>
-          <Text style={styles.currentLabel}>Currently Active:</Text>
-          <Text style={styles.currentPass}>{selectedPass.name}</Text>
-        </View>
-      )}
-
       <ScrollView
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
@@ -215,7 +180,7 @@ export default function HallPassModal({
             <Text style={styles.noneDescription}>Play without any bonuses</Text>
             {localSelectedId === null && (
               <View style={styles.selectedIndicator}>
-                <Text style={styles.selectedText}>SELECTED</Text>
+                <Text style={styles.selectedText}>✓</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -333,7 +298,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   passName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     flex: 1,
@@ -359,21 +324,25 @@ const styles = StyleSheet.create({
   },
   effectText: {
     fontSize: 13,
-    fontFamily: 'PixeloidMono',
+    fontFamily: 'CrayonPastel',
     marginBottom: 2,
   },
   selectedIndicator: {
     position: 'absolute',
-    top: 8,
+    bottom: 8,
     right: 8,
     backgroundColor: '#2196F3',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   selectedText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
   },
