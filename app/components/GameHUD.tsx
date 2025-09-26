@@ -5,6 +5,7 @@ import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useWallet } from '../../src/hooks/useWallet';
+import PixelBorder from './PixelBorder';
 
 const locationNames = {
   gym: 'Gymnasium',
@@ -63,16 +64,14 @@ export default function GameHUD({
   const piggyAmountText = `$${(stashedAmount || 0).toFixed(2)}`;
   const piggyFontSize = useMemo(() => {
     const textLength = piggyAmountText.length;
-    if (textLength <= 8) return 14; // Normal size for amounts like $1000.00
-    if (textLength <= 10) return 12; // Slightly smaller for $10000.00
+    if (textLength <= 8) return 16; // Normal size for amounts like $1000.00
+    if (textLength <= 10) return 15; // Slightly smaller for $10000.00
     if (textLength <= 12) return 10; // Smaller for $-30000.00
     return 9; // Even smaller for very large negative amounts
   }, [piggyAmountText]);
 
-  // Get glow style based on event type
-  const getGlowStyle = useMemo(() => {
-    if (!isHint && !eventType) return {};
-
+  // Get glow style and border color based on event type
+  const getGlowStyleAndBorderColor = useMemo(() => {
     const glowColors = {
       HINT: '#FFD700', // Gold for hints
       FOUND_MONEY: '#32CD32', // Lime green for found money
@@ -81,24 +80,25 @@ export default function GameHUD({
       PRICE_DROP: '#4CAF50', // Green for price drops
       JOKER_UNLOCKED: '#9C27B0', // Purple for jokers
       NEW_DAY: '#2196F3', // Blue for new day
-      DEFAULT: 'transparent',
+      DEFAULT: '#f4d03f', // Default yellow
     };
 
     const color =
       glowColors[eventType as keyof typeof glowColors] || glowColors['DEFAULT'];
 
-    if (color === 'transparent') return {};
+    const glowStyle =
+      !isHint && !eventType
+        ? {}
+        : {
+            shadowColor: color,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1.0,
+            shadowRadius: 15,
+            elevation: 15,
+            backgroundColor: isHint ? `${color}15` : `${color}08`, // Light tint background
+          };
 
-    return {
-      shadowColor: color,
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 1.0,
-      shadowRadius: 15,
-      elevation: 15,
-      borderColor: color,
-      borderWidth: isHint ? 3 : 2,
-      backgroundColor: isHint ? `${color}15` : `${color}08`, // Light tint background
-    };
+    return { glowStyle, borderColor: color };
   }, [isHint, eventType]);
 
   return (
@@ -110,24 +110,59 @@ export default function GameHUD({
 
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
-        <View style={[styles.statBox, styles.cashBox]}>
-          <Text style={statTitleStyle}>Wallet</Text>
-          <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
-        </View>
+        <PixelBorder
+          borderColor="#4a7c4a"
+          borderWidth={2}
+          backgroundColor="#d4f6d4"
+          innerPadding={0}
+          style={{ flex: 1 }}
+        >
+          <View style={[styles.statBox, styles.cashBox]}>
+            <Text style={statTitleStyle}>Wallet</Text>
+            <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
+          </View>
+        </PixelBorder>
 
-        <View style={[styles.statBox, styles.piggyBox]}>
-          <Text style={statTitleStyle}>Piggy Bank</Text>
-          <Text
-            style={[styles.piggyAmount, { fontSize: piggyFontSize }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-          >
-            {piggyAmountText}
-          </Text>
-        </View>
+        <PixelBorder
+          borderColor="#b85c8a"
+          borderWidth={2}
+          backgroundColor="#ffd6e8"
+          innerPadding={0}
+          style={{ flex: 1 }}
+        >
+          <View style={[styles.statBox, styles.piggyBox]}>
+            <Text style={statTitleStyle}>Piggy Bank</Text>
+            <Text style={[styles.piggyAmount, { fontSize: piggyFontSize }]}>
+              {piggyAmountText}
+            </Text>
+          </View>
+        </PixelBorder>
 
-        {inventoryWrapper ? (
-          inventoryWrapper(
+        <PixelBorder
+          borderColor="#5c7cb8"
+          borderWidth={2}
+          backgroundColor="#d6e8ff"
+          innerPadding={0}
+          style={{ flex: 1 }}
+        >
+          {inventoryWrapper ? (
+            inventoryWrapper(
+              <TouchableOpacity
+                style={[styles.statBox, styles.inventoryBox]}
+                onPress={onInventoryPress}
+              >
+                <Text style={statTitleStyle}>Inventory</Text>
+                <Text
+                  style={[
+                    styles.inventoryAmount,
+                    { fontFamily: 'PixeloidMono' },
+                  ]}
+                >
+                  {totalInventory || 0}/{inventoryCapacity || 30}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : (
             <TouchableOpacity
               style={[styles.statBox, styles.inventoryBox]}
               onPress={onInventoryPress}
@@ -139,45 +174,52 @@ export default function GameHUD({
                 {totalInventory || 0}/{inventoryCapacity || 30}
               </Text>
             </TouchableOpacity>
-          )
-        ) : (
-          <TouchableOpacity
-            style={[styles.statBox, styles.inventoryBox]}
-            onPress={onInventoryPress}
-          >
-            <Text style={statTitleStyle}>Inventory</Text>
-            <Text
-              style={[styles.inventoryAmount, { fontFamily: 'PixeloidMono' }]}
-            >
-              {totalInventory || 0}/{inventoryCapacity || 30}
-            </Text>
-          </TouchableOpacity>
-        )}
+          )}
+        </PixelBorder>
       </View>
 
       {/* Location badge */}
       <View style={styles.locationRow}>
-        <View style={styles.locationBadge}>
-          <Text style={styles.locationText}>@ {locationText}</Text>
-        </View>
+        <PixelBorder
+          borderColor="#cc7a00"
+          borderWidth={2}
+          backgroundColor="#ffcc99"
+          innerPadding={0}
+        >
+          <View style={styles.locationBadge}>
+            <Text style={styles.locationText}>@ {locationText}</Text>
+          </View>
+        </PixelBorder>
       </View>
 
       {/* Flavor text scroll */}
       {text &&
         (() => {
           const marquee = (
-            <View style={[styles.flavorContainer, getGlowStyle]}>
-              <Marquee
-                spacing={250}
-                speed={0.75}
-                style={styles.marquee}
-                delay={2000}
+            <PixelBorder
+              borderColor={getGlowStyleAndBorderColor.borderColor}
+              borderWidth={2}
+              backgroundColor="#fff9e6"
+              innerPadding={0}
+            >
+              <View
+                style={[
+                  styles.flavorContainer,
+                  getGlowStyleAndBorderColor.glowStyle,
+                ]}
               >
-                <Text style={[styles.flavor, isHint && styles.hintText]}>
-                  {text}
-                </Text>
-              </Marquee>
-            </View>
+                <Marquee
+                  spacing={250}
+                  speed={0.75}
+                  style={styles.marquee}
+                  delay={2000}
+                >
+                  <Text style={[styles.flavor, isHint && styles.hintText]}>
+                    {text}
+                  </Text>
+                </Marquee>
+              </View>
+            </PixelBorder>
           );
           return flavorTextWrapper ? flavorTextWrapper(marquee) : marquee;
         })()}
@@ -228,12 +270,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statBox: {
-    flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    borderWidth: 2,
     alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 1, height: 2 },
     shadowOpacity: 0.1,
@@ -241,18 +281,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cashBox: {
-    backgroundColor: '#d4f6d4', // Light green crayon
-    borderColor: '#4a7c4a',
     fontFamily: 'PixeloidMono',
   },
   piggyBox: {
-    backgroundColor: '#ffd6e8', // Light pink crayon
-    borderColor: '#b85c8a',
     fontFamily: 'PixeloidMono',
   },
   inventoryBox: {
-    backgroundColor: '#d6e8ff', // Light blue crayon
-    borderColor: '#5c7cb8',
     fontFamily: 'PixeloidMono',
   },
   statTitle: {
@@ -278,30 +312,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2d5a2d',
     fontFamily: 'PixeloidMono',
+    lineHeight: 16,
   },
   piggyAmount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#8a4a6b',
     fontFamily: 'PixeloidMono',
+    lineHeight: 16,
   },
   inventoryAmount: {
     fontSize: 16,
     fontWeight: '700',
     color: '#4a5a8a',
     fontFamily: 'PixeloidMono',
+    lineHeight: 16,
   },
   locationRow: {
     alignItems: 'center',
     marginBottom: 10,
   },
   locationBadge: {
-    backgroundColor: '#ffcc99', // Orange crayon
+    backgroundColor: 'transparent',
     paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#cc7a00',
   },
   locationText: {
     fontSize: 13,
@@ -312,12 +346,9 @@ const styles = StyleSheet.create({
   flavorContainer: {
     height: 28,
     overflow: 'hidden',
-    backgroundColor: '#fff9e6', // Very light yellow
-    borderRadius: 12,
+    backgroundColor: 'transparent',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderWidth: 2,
-    borderColor: '#f4d03f', // Yellow crayon border
   },
   marquee: {
     flex: 1,

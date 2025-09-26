@@ -36,6 +36,7 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { JokerService } from '../../src/utils/jokerService';
 import ConfirmationModal from '../components/ConfirmationModal';
+import PixelBorder from '../components/PixelBorder';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EventModal from '../components/EventModal';
@@ -957,30 +958,39 @@ function Market(props) {
                 overScrollMode="never"
                 renderItem={useCallback(
                   ({ item, index }) => (
-                    <TouchableOpacity
-                      style={styles.item}
-                      onPress={() => openModal(index)}
-                    >
-                      <View style={styles.candyInfo}>
-                        <View style={styles.candyNameRow}>
-                          <Text style={styles.name}>{item.name}</Text>
-                          {item.quantityOwned > 0 && (
-                            <View style={styles.ownedBadge}>
-                              <Text style={styles.ownedText}>
-                                {item.quantityOwned}
+                    <View style={{ marginBottom: 6 }}>
+                      <PixelBorder
+                        borderColor="#d4a574"
+                        borderWidth={3}
+                        backgroundColor="rgba(255, 255, 255, 0.7)"
+                        innerPadding={8}
+                      >
+                        <TouchableOpacity
+                          onPress={() => openModal(index)}
+                          style={{ backgroundColor: 'transparent' }}
+                        >
+                          <View style={styles.candyInfo}>
+                            <View style={styles.candyNameRow}>
+                              <Text style={styles.name}>{item.name}</Text>
+                              {item.quantityOwned > 0 && (
+                                <View style={styles.ownedBadge}>
+                                  <Text style={styles.ownedText}>
+                                    {item.quantityOwned}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <View style={styles.candyPriceRow}>
+                              <Text style={styles.price}>
+                                {localPricesUpdating
+                                  ? '$-.--'
+                                  : `$${item.cost.toFixed(2)}`}
                               </Text>
                             </View>
-                          )}
-                        </View>
-                        <View style={styles.candyPriceRow}>
-                          <Text style={styles.price}>
-                            {localPricesUpdating
-                              ? '$-.--'
-                              : `$${item.cost.toFixed(2)}`}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
+                          </View>
+                        </TouchableOpacity>
+                      </PixelBorder>
+                    </View>
                   ),
                   [openModal, localPricesUpdating]
                 )}
