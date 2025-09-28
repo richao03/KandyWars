@@ -1,6 +1,7 @@
 import Slider from '@react-native-community/slider';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ImageBackground,
   StyleSheet,
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/hooks/useGame';
@@ -16,9 +16,11 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useWallet } from '../../src/hooks/useWallet';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 export default function PiggyBankPage() {
-  const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } = useWallet();
+  const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } =
+    useWallet();
   const { day, period } = useGame();
   const { setEvent } = useFlavorText();
   const { jokers } = useJokers();
@@ -81,9 +83,10 @@ export default function PiggyBankPage() {
     }
 
     // Handle the transaction - stashMoney will handle deposit bonus internally
-    const success = mode === 'deposit' 
-      ? stashMoney(amount, jokers) // Pass jokers to handle deposit bonus
-      : withdrawFromStash(amount);
+    const success =
+      mode === 'deposit'
+        ? stashMoney(amount, jokers) // Pass jokers to handle deposit bonus
+        : withdrawFromStash(amount);
 
     if (success) {
       const depositMessage = bonusApplied
@@ -126,139 +129,187 @@ export default function PiggyBankPage() {
 
   return (
     <>
-    <View style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/images/piggy-bank.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <GameHUD
-          theme="evening"
-          customHeaderText={`After School - Day ${day}`}
-          customLocationText="Piggy Bank"
-        />
+      <View style={styles.container}>
+        <ImageBackground
+          source={require('../../assets/images/piggy-bank.png')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        >
+          <GameHUD
+            theme="evening"
+            customHeaderText={`After School - Day ${day}`}
+            customLocationText="Piggy Bank"
+          />
 
-        <View style={styles.content}>
-          {/* Piggy Bank Visual */}
-          <View style={styles.piggyBankContainer}>
-            <View style={styles.piggyBankInfo}>
-              <Text style={styles.piggyBankLabel}>Stashed Away</Text>
-              <Text style={[styles.piggyBankAmount, { fontSize: stashedAmountFontSize }]} numberOfLines={1} adjustsFontSizeToFit>
-                {stashedAmountText}
-              </Text>
-            </View>
-          </View>
-
-          {/* Tab-style Mode Selector */}
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tab, mode === 'deposit' && styles.tabActive]}
-              onPress={() => {
-                setMode('deposit');
-                setAmount(0);
-              }}
+          <View style={styles.content}>
+            {/* Piggy Bank Visual */}
+            <PixelBorder
+              borderWidth={3}
+              borderColor="rgba(247, 233, 142, 0.8)"
+              style={{ marginBottom: 12 }}
+              innerPadding={0}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  mode === 'deposit' && styles.tabTextActive,
-                ]}
-              >
-                💰 Deposit
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.piggyBankContainer}>
+                <View style={styles.piggyBankInfo}>
+                  <Text style={styles.piggyBankLabel}>Stashed Away</Text>
+                  <Text
+                    style={[
+                      styles.piggyBankAmount,
+                      { fontSize: stashedAmountFontSize },
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {stashedAmountText}
+                  </Text>
+                </View>
+              </View>
+            </PixelBorder>
 
-            <TouchableOpacity
-              style={[styles.tab, mode === 'withdraw' && styles.tabActive]}
-              onPress={() => {
-                setMode('withdraw');
-                setAmount(0);
-              }}
+            {/* Tab-style Mode Selector */}
+            <PixelBorder
+              borderWidth={3}
+              borderColor="rgba(247, 233, 142, 0.8)"
+              style={{ marginBottom: 12 }}
+              innerPadding={0}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  mode === 'withdraw' && styles.tabTextActive,
-                ]}
-              >
-                💸 Withdraw
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[styles.tab, mode === 'deposit' && styles.tabActive]}
+                  onPress={() => {
+                    setMode('deposit');
+                    setAmount(0);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      mode === 'deposit' && styles.tabTextActive,
+                    ]}
+                  >
+                    💰 Deposit
+                  </Text>
+                </TouchableOpacity>
 
-          {/* Amount Selector */}
-          <View style={styles.amountSection}>
-            <Text style={styles.amountLabel}>
-              {mode === 'deposit' ? 'Amount to Deposit' : 'Amount to Withdraw'}
-            </Text>
+                <TouchableOpacity
+                  style={[styles.tab, mode === 'withdraw' && styles.tabActive]}
+                  onPress={() => {
+                    setMode('withdraw');
+                    setAmount(0);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      mode === 'withdraw' && styles.tabTextActive,
+                    ]}
+                  >
+                    💸 Withdraw
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </PixelBorder>
 
-            <View style={styles.amountDisplay}>
-              <Text
-                style={[
-                  styles.amountValue,
-                  { color: mode === 'deposit' ? '#4ade80' : '#22c55e' },
-                ]}
-              >
-                ${amount.toFixed(2)}
-              </Text>
-              <Text style={styles.maxAmount}>Max: ${maxAmount.toFixed(2)}</Text>
-            </View>
-
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={maxAmount}
-              step={0.01}
-              value={amount}
-              onValueChange={setAmount}
-              minimumTrackTintColor={mode === 'deposit' ? '#4ade80' : '#22c55e'}
-              maximumTrackTintColor="#ccc"
-            />
-
-            {/* Action Button inside container */}
-            <TouchableOpacity
-              style={[
-                styles.inlineActionButton,
-                { backgroundColor: mode === 'deposit' ? '#4ade80' : '#f87171' },
-                amount === 0 && styles.actionButtonDisabled,
-              ]}
-              onPress={handleTransaction}
-              disabled={amount === 0}
+            {/* Amount Selector */}
+            <PixelBorder
+              borderWidth={3}
+              borderColor="rgba(247, 233, 142, 0.8)"
+              style={{ marginBottom: 12 }}
+              innerPadding={0}
             >
-              <Text style={styles.actionButtonText}>
-                {mode === 'deposit' ? '💰 Deposit Money' : '💸 Withdraw Money'}
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.amountSection}>
+                <Text style={styles.amountLabel}>
+                  {mode === 'deposit'
+                    ? 'Amount to Deposit'
+                    : 'Amount to Withdraw'}
+                </Text>
+
+                <View style={styles.amountDisplay}>
+                  <Text
+                    style={[
+                      styles.amountValue,
+                      { color: mode === 'deposit' ? '#4ade80' : '#22c55e' },
+                    ]}
+                  >
+                    ${amount.toFixed(2)}
+                  </Text>
+                  <Text style={styles.maxAmount}>
+                    Max: ${maxAmount.toFixed(2)}
+                  </Text>
+                </View>
+
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={maxAmount}
+                  step={0.01}
+                  value={amount}
+                  onValueChange={setAmount}
+                  minimumTrackTintColor={
+                    mode === 'deposit' ? '#4ade80' : '#22c55e'
+                  }
+                  maximumTrackTintColor="#ccc"
+                />
+
+                {/* Action Button inside container */}
+                <TouchableOpacity
+                  style={[
+                    styles.inlineActionButton,
+                    {
+                      backgroundColor:
+                        mode === 'deposit' ? '#4ade80' : '#f87171',
+                    },
+                    amount === 0 && styles.actionButtonDisabled,
+                  ]}
+                  onPress={handleTransaction}
+                  disabled={amount === 0}
+                >
+                  <Text style={styles.actionButtonText}>
+                    {mode === 'deposit'
+                      ? '💰 Deposit Money'
+                      : '💸 Withdraw Money'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </PixelBorder>
+
+            {/* Back to After School Button */}
+            <PixelBorder
+              style={{ marginTop: 20 }}
+              borderWidth={3}
+              borderColor="rgba(247, 233, 142, 0.8)"
+              innerPadding={0}
+            >
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => {
+                  // Trigger success haptic feedback when going back to after school
+                  Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success
+                  );
+                  router.push('/after-school');
+                }}
+              >
+                <Text style={styles.backButtonText}>← Back</Text>
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
+        </ImageBackground>
+      </View>
 
-          {/* Back to After School Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              // Trigger success haptic feedback when going back to after school
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              router.push('/after-school');
-            }}
-          >
-            <Text style={styles.backButtonText}>← Back to After School</Text>
-          </TouchableOpacity>
-        </View>
-      </ImageBackground>
-    </View>
-
-    <ConfirmationModal
-      visible={confirmModal.visible}
-      title={confirmModal.title}
-      message={confirmModal.message}
-      emoji={confirmModal.emoji}
-      confirmText="OK"
-      onConfirm={confirmModal.onConfirm}
-      onCancel={() =>
-        setConfirmModal((prev) => ({ ...prev, visible: false }))
-      }
-      theme="evening"
-      dismissible={false}
-    />
+      <ConfirmationModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        emoji={confirmModal.emoji}
+        confirmText="OK"
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() =>
+          setConfirmModal((prev) => ({ ...prev, visible: false }))
+        }
+        theme="evening"
+        dismissible={false}
+      />
     </>
   );
 }
@@ -276,13 +327,10 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   piggyBankContainer: {
+    padding: 8,
+    borderRadius: 15,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 20,
-    padding: 16,
     alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(247, 233, 142, 0.8)',
   },
   piggyBankInfo: {
     alignItems: 'center',
@@ -326,9 +374,8 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0, 0, 0, .8)',
-    borderRadius: 8,
     padding: 2,
-    marginBottom: 12,
+    borderRadius: 15,
   },
   tab: {
     flex: 1,
@@ -350,12 +397,9 @@ const styles = StyleSheet.create({
     color: '#f7e98e',
   },
   amountSection: {
+    borderRadius: 15,
     backgroundColor: 'rgba(0,0,0, 0.8)',
-    borderRadius: 16,
-    padding: 8,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#5d4c70',
+    padding: 12,
   },
   amountLabel: {
     fontSize: 16,
@@ -432,12 +476,9 @@ const styles = StyleSheet.create({
   },
   backButton: {
     backgroundColor: 'rgba(0,0,0, 0.7)',
-    borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#f7e98e',
+    borderRadius: 15,
     alignItems: 'center',
   },
   backButtonText: {

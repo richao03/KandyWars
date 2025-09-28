@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import PixelBorder from './PixelBorder';
 
 interface MinigameHUDProps {
   title: string;
@@ -8,7 +9,15 @@ interface MinigameHUDProps {
   leftInfo?: string;
   rightInfo?: string;
   centerInfo?: string;
-  theme?: 'math' | 'computer' | 'logic' | 'history' | 'homeec' | 'gym' | 'economy' | 'recess';
+  theme?:
+    | 'math'
+    | 'computer'
+    | 'logic'
+    | 'history'
+    | 'homeec'
+    | 'gym'
+    | 'economy'
+    | 'recess';
 }
 
 const THEME_COLORS = {
@@ -65,7 +74,7 @@ const THEME_COLORS = {
     background: '#fff', // White background
     border: '#4A90C1', // Blue border matching game elements
     title: '#4A90C1', // Blue for title (from choice text/borders)
-    subtitle: '#4CAF50', // Green for subtitle (from win text)
+    subtitle: '#4CAF50', // Green for subtitle (from win text
     info: '#4A90C1', // Blue for info text
   },
 };
@@ -81,59 +90,63 @@ export default function MinigameHUD({
   const colors = THEME_COLORS[theme];
 
   return (
-    <View style={[styles.header, {
-      backgroundColor: colors.background,
-      borderColor: colors.border,
-      marginBottom: ResponsiveSpacing.headerMargin(),
-      padding: ResponsiveSpacing.headerPadding(),
-    }]}>
-      <Text style={[styles.title, {
-        color: colors.title,
-        fontSize: ResponsiveSpacing.titleSize(),
-        marginBottom: ResponsiveSpacing.inputMargin(),
-      }]}>
-        {title}
-      </Text>
-      
-      {subtitle && (
-        <Text style={[styles.subtitle, { color: colors.subtitle }]}>
-          {subtitle}
+    <PixelBorder
+      borderColor={colors.border}
+      borderWidth={3}
+      backgroundColor={colors.background}
+      innerPadding={ResponsiveSpacing.headerPadding()}
+      style={{
+        marginBottom: ResponsiveSpacing.headerMargin(),
+      }}
+    >
+      <View style={styles.headerContent}>
+        <Text
+          style={[
+            styles.title,
+            {
+              color: colors.title,
+              fontSize: ResponsiveSpacing.titleSize(),
+              marginBottom: ResponsiveSpacing.inputMargin(),
+            },
+          ]}
+        >
+          {title}
         </Text>
-      )}
-      
-      {(leftInfo || rightInfo || centerInfo) && (
-        <View style={styles.gameInfo}>
-          {leftInfo && (
-            <Text style={[styles.infoText, { color: colors.info }]}>
-              {leftInfo}
-            </Text>
-          )}
-          {centerInfo && (
-            <Text style={[styles.infoText, { color: colors.info }]}>
-              {centerInfo}
-            </Text>
-          )}
-          {rightInfo && (
-            <Text style={[styles.infoText, { color: colors.info }]}>
-              {rightInfo}
-            </Text>
-          )}
-        </View>
-      )}
-    </View>
+
+        {subtitle && (
+          <Text style={[styles.subtitle, { color: colors.subtitle }]}>
+            {subtitle}
+          </Text>
+        )}
+
+        {(leftInfo || rightInfo || centerInfo) && (
+          <View style={styles.gameInfo}>
+            {leftInfo && (
+              <Text style={[styles.infoText, { color: colors.info }]}>
+                {leftInfo}
+              </Text>
+            )}
+            {centerInfo && (
+              <Text style={[styles.infoText, { color: colors.info }]}>
+                {centerInfo}
+              </Text>
+            )}
+            {rightInfo && (
+              <Text style={[styles.infoText, { color: colors.info }]}>
+                {rightInfo}
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+    </PixelBorder>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
+  headerContent: {
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: 'transparent',
   },
   title: {
     fontWeight: '700',

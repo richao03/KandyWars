@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 import { useHallPass } from '../../src/hooks/useHallPass';
+import PixelBorder from './PixelBorder';
 
 interface Joker {
   id: number;
@@ -254,19 +255,27 @@ export default function JokerSelection({
         </Text>
 
         {selectedJokers.length === 0 && (
-          <TouchableOpacity
-            style={[styles.generateButton, themeStyles.generateButton]}
-            onPress={selectRandomJokers}
+          <PixelBorder
+            borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
+            borderWidth={3}
+            backgroundColor={themeStyles.generateButton?.backgroundColor || '#1a2f23'}
+            innerPadding={0}
+            style={{ marginBottom: 20 }}
           >
-            <Text
-              style={[
-                styles.generateButtonText,
-                themeStyles.generateButtonText,
-              ]}
+            <TouchableOpacity
+              style={{ padding: 16, alignItems: 'center', backgroundColor: 'transparent' }}
+              onPress={selectRandomJokers}
             >
-              {getButtonText()}
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.generateButtonText,
+                  themeStyles.generateButtonText,
+                ]}
+              >
+                {getButtonText()}
+              </Text>
+            </TouchableOpacity>
+          </PixelBorder>
         )}
 
         {selectedJokers.map((joker) => {
@@ -278,62 +287,86 @@ export default function JokerSelection({
           const typeEmoji = isOneTime ? '⚡' : '🔮';
 
           return (
-            <TouchableOpacity
+            <PixelBorder
               key={joker.id}
-              style={[styles.jokerCard, themeStyles.jokerCard]}
-              onPress={() => handleJokerChoice(joker.id)}
+              borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
+              borderWidth={3}
+              backgroundColor={themeStyles.jokerCard?.backgroundColor || '#1a2f23'}
+              innerPadding={16}
+              style={{ marginBottom: 12 }}
             >
-              <View style={styles.jokerHeader}>
-                <Text style={[styles.jokerName, themeStyles.jokerName]}>
-                  {joker.name}
-                </Text>
-                <View
-                  style={[
-                    styles.typeIndicator,
-                    isOneTime ? styles.instantIndicator : styles.auraIndicator,
-                  ]}
-                >
-                  <Text style={styles.typeEmoji}>{typeEmoji}</Text>
-                  <Text
+              <TouchableOpacity
+                onPress={() => handleJokerChoice(joker.id)}
+                style={{ backgroundColor: 'transparent' }}
+              >
+                <View style={styles.jokerHeader}>
+                  <Text style={[styles.jokerName, themeStyles.jokerName]}>
+                    {joker.name}
+                  </Text>
+                  <View
                     style={[
-                      styles.typeText,
-                      isOneTime ? styles.instantText : styles.auraText,
+                      styles.typeIndicator,
+                      isOneTime ? styles.instantIndicator : styles.auraIndicator,
                     ]}
                   >
-                    {jokerType.toUpperCase()}
-                  </Text>
+                    <Text style={styles.typeEmoji}>{typeEmoji}</Text>
+                    <Text
+                      style={[
+                        styles.typeText,
+                        isOneTime ? styles.instantText : styles.auraText,
+                      ]}
+                    >
+                      {jokerType.toUpperCase()}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Text
-                style={[styles.jokerDescription, themeStyles.jokerDescription]}
-              >
-                {joker.description}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[styles.jokerDescription, themeStyles.jokerDescription]}
+                >
+                  {joker.description}
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
           );
         })}
 
         {selectedJokers.length > 0 && canReroll() && (
-          <TouchableOpacity
-            style={[styles.rerollButton, themeStyles.generateButton]}
-            onPress={rerollJokers}
+          <PixelBorder
+            borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
+            borderWidth={3}
+            backgroundColor={themeStyles.generateButton?.backgroundColor || '#1a2f23'}
+            innerPadding={0}
+            style={{ marginBottom: 20 }}
           >
-            <Text
-              style={[styles.rerollButtonText, themeStyles.generateButtonText]}
+            <TouchableOpacity
+              style={{ padding: 16, alignItems: 'center', backgroundColor: 'transparent' }}
+              onPress={rerollJokers}
             >
-              🎲 Reroll ({getRerollDescription()})
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[styles.rerollButtonText, themeStyles.generateButtonText]}
+              >
+                🎲 Reroll ({getRerollDescription()})
+              </Text>
+            </TouchableOpacity>
+          </PixelBorder>
         )}
 
-        <TouchableOpacity
-          style={[styles.skipButton, themeStyles.skipButton]}
-          onPress={onComplete}
+        <PixelBorder
+          borderColor={themeStyles.skipButton?.borderColor || '#daa520'}
+          borderWidth={2}
+          backgroundColor={themeStyles.skipButton?.backgroundColor || '#8b4513'}
+          innerPadding={0}
+          style={{ marginTop: 16 }}
         >
-          <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
-            Skip Tool Selection
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={{ paddingVertical: 12, alignItems: 'center', backgroundColor: 'transparent' }}
+            onPress={onComplete}
+          >
+            <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
+              Skip Tool Selection
+            </Text>
+          </TouchableOpacity>
+        </PixelBorder>
       </View>
     </View>
   );

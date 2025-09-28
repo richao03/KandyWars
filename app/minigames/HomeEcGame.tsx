@@ -12,8 +12,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -373,44 +373,42 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   if (gameState === 'instructions') {
     return (
-      <GestureHandlerRootView style={styles.container}>
-        <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Candy Kitchen Study!</Text>
+      <View style={styles.instructionsContainer}>
+        <Text style={styles.instructionsTitle}>Candy Kitchen Study!</Text>
 
-          <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsHeader}>How to Cook:</Text>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>1. </Text>
-              <Text style={styles.stepText}>
-                Swipe ingredients to matching kitchen stations
-              </Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>2. </Text>
-              <Text style={styles.stepText}>
-                🍭 UP, 🍬 RIGHT, 🧁 DOWN, 🍫 LEFT
-              </Text>
-            </View>
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>3. </Text>
-              <Text style={styles.stepText}>
-                Wrong swipes lose points - be fast and accurate!
-              </Text>
-            </View>
+        <View style={styles.instructionsCard}>
+          <Text style={styles.instructionsHeader}>How to Cook:</Text>
+          <View style={styles.instructionStep}>
+            <Text style={styles.stepNumber}>1. </Text>
+            <Text style={styles.stepText}>
+              Swipe ingredients to matching kitchen stations
+            </Text>
           </View>
-
-          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
-            <Text style={styles.startGameButtonText}>Start Cooking!</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.startGameButton}
-            onPress={handleForfeit}
-          >
-            <Text style={styles.startGameButtonText}>Back</Text>
-          </TouchableOpacity>
+          <View style={styles.instructionStep}>
+            <Text style={styles.stepNumber}>2. </Text>
+            <Text style={styles.stepText}>
+              🍭 UP, 🍬 RIGHT, 🧁 DOWN, 🍫 LEFT
+            </Text>
+          </View>
+          <View style={styles.instructionStep}>
+            <Text style={styles.stepNumber}>3. </Text>
+            <Text style={styles.stepText}>
+              Wrong swipes lose points - be fast and accurate!
+            </Text>
+          </View>
         </View>
-      </GestureHandlerRootView>
+
+        <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
+          <Text style={styles.startGameButtonText}>Start Cooking!</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.startGameButton}
+          onPress={handleForfeit}
+        >
+          <Text style={styles.startGameButtonText}>Back</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 

@@ -26,6 +26,7 @@ import { useWallet } from '../../src/hooks/useWallet';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
+import PixelBorder from '../components/PixelBorder';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -33,11 +34,11 @@ const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
   { name: 'Gym', color: { bg: '#e6f2ff', border: '#4169e1' } },
-  { name: 'Home Ec', color: { bg: '#f6ffed', border: '#52c41a' } },
+  { name: 'Cooking', color: { bg: '#f6ffed', border: '#52c41a' } },
   { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' } },
   { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
   { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' } },
-  { name: 'Computer', color: { bg: '#f0f5ff', border: '#2f54eb' } },
+  { name: 'Comp Sci', color: { bg: '#f0f5ff', border: '#2f54eb' } },
   { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' } },
 ];
 
@@ -120,15 +121,9 @@ function AfterSchoolPage() {
   useEffect(() => {
     if (!copilotEvents) return;
 
-    const stopListener = copilotEvents.on('stop', () => {
+    copilotEvents.on('stop', () => {
       setTutorialStarted(true); // Prevent restart
     });
-
-    return () => {
-      if (stopListener && stopListener.remove) {
-        stopListener.remove();
-      }
-    };
   }, [copilotEvents]);
 
   const handleStudy = () => {
@@ -153,7 +148,7 @@ function AfterSchoolPage() {
       case 'Gym':
         router.push('/history-game');
         break;
-      case 'Home Ec':
+      case 'Cooking':
         router.push('/home-ec-game');
         break;
       case 'Economy':
@@ -165,7 +160,7 @@ function AfterSchoolPage() {
       case 'Recess':
         router.push('/recess-game');
         break;
-      case 'Computer':
+      case 'Comp Sci':
         router.push('/computer-game');
         break;
       case 'Art':
@@ -280,7 +275,11 @@ function AfterSchoolPage() {
           minigameTrackingData
         );
 
-        console.log('🎖️ Checking hall pass unlocks - found:', newUnlocks.length, 'unlocks');
+        console.log(
+          '🎖️ Checking hall pass unlocks - found:',
+          newUnlocks.length,
+          'unlocks'
+        );
         if (newUnlocks.length > 0) {
           console.log('🎖️ Hall Passes unlocked:', newUnlocks);
           setUnlockedHallPasses(newUnlocks);
@@ -297,13 +296,15 @@ function AfterSchoolPage() {
 
       // Clear game state so there's no continue option available after game ends
       setIsInitialized(false);
-      console.log('🎯 Game state cleared - no continue option will be available');
+      console.log(
+        '🎯 Game state cleared - no continue option will be available'
+      );
 
       return; // Don't start a new day, game is over
     }
 
     // Reset daily stats and start new day (only if game hasn't ended)
-    resetDailyStats(balance);
+    resetDailyStats();
     console.log('🌙 AfterSchool: Daily stats reset, calling startNewDay...');
     // Start new day (this will exit after-school mode and increment to next day)
     startNewDay();
@@ -378,7 +379,7 @@ function AfterSchoolPage() {
       {
         id: 'deli',
         title: 'Visit the Corner Deli',
-        desc: 'Take an evening stroll to the neighborhood store',
+        desc: 'Walk to the neighborhood store',
         onPress: () => handleGoDeli(),
       },
       {
@@ -423,30 +424,40 @@ function AfterSchoolPage() {
     return options.map((item, index) => {
       const stepConfig = stepConfigs[item.id];
 
-      // Create button component once
-      const ButtonComponent =
-        shouldShowTutorial && stepConfig
-          ? CopilotTouchableOpacity
-          : TouchableOpacity;
-
       const button = (
-        <ButtonComponent
+        <PixelBorder
           key={item.id}
-          style={[styles.gridButton, item.disabled && styles.disabledButton]}
-          onPress={item.disabled ? undefined : item.onPress}
-          disabled={item.disabled}
+          borderColor={item.disabled ? '#666' : '#f7e98e'}
+          borderWidth={3}
+          backgroundColor={
+            item.disabled ? 'rgba(60,60,60, 0.8)' : 'rgba(0,0,0, 0.3)'
+          }
+          innerPadding={0}
+          style={styles.gridButtonWrapper}
         >
-          <Text
-            style={[styles.buttonTitle, item.disabled && styles.disabledText]}
+          <TouchableOpacity
+            style={[
+              styles.gridButtonInner,
+              item.disabled && styles.disabledButton,
+            ]}
+            onPress={item.disabled ? undefined : item.onPress}
+            disabled={item.disabled}
           >
-            {item.title}
-          </Text>
-          <Text
-            style={[styles.buttonSubtext, item.disabled && styles.disabledText]}
-          >
-            {item.desc}
-          </Text>
-        </ButtonComponent>
+            <Text
+              style={[styles.buttonTitle, item.disabled && styles.disabledText]}
+            >
+              {item.title}
+            </Text>
+            <Text
+              style={[
+                styles.buttonSubtext,
+                item.disabled && styles.disabledText,
+              ]}
+            >
+              {item.desc}
+            </Text>
+          </TouchableOpacity>
+        </PixelBorder>
       );
 
       // Wrap with CopilotStep only if tutorial should show
@@ -487,7 +498,6 @@ function AfterSchoolPage() {
             // Study subjects view
             <View style={styles.studyContainer}>
               <View style={styles.studyHeader}>
-                <Text style={styles.studyTitle}>Study Time!</Text>
                 {hasStudiedTonight && (
                   <Text style={styles.alreadyStudiedText}>
                     📚 You&apos;ve already studied tonight! Rest up for
@@ -500,76 +510,90 @@ function AfterSchoolPage() {
                 {/* First Row - 4 subjects */}
                 <View style={styles.subjectsRow}>
                   {subjects.slice(0, 4).map((subject) => (
-                    <TouchableOpacity
+                    <PixelBorder
                       key={subject.name}
-                      style={[
-                        styles.subjectButton,
-                        {
-                          backgroundColor: hasStudiedTonight
-                            ? '#ccc'
-                            : subject.color.bg,
-                          borderColor: hasStudiedTonight
-                            ? '#999'
-                            : subject.color.border,
-                        },
-                        hasStudiedTonight && styles.disabledSubjectButton,
-                      ]}
-                      onPress={() => handleSubjectSelect(subject.name)}
-                      disabled={hasStudiedTonight}
+                      borderColor={
+                        hasStudiedTonight ? '#999' : subject.color.border
+                      }
+                      borderWidth={3}
+                      backgroundColor={
+                        hasStudiedTonight ? '#ccc' : subject.color.bg
+                      }
+                      innerPadding={0}
+                      style={styles.subjectButtonWrapper}
                     >
-                      <Text
+                      <TouchableOpacity
                         style={[
-                          styles.subjectText,
-                          hasStudiedTonight && styles.disabledText,
+                          styles.subjectButtonInner,
+                          hasStudiedTonight && styles.disabledSubjectButton,
                         ]}
+                        onPress={() => handleSubjectSelect(subject.name)}
+                        disabled={hasStudiedTonight}
                       >
-                        {subject.name}
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.subjectText,
+                            hasStudiedTonight && styles.disabledText,
+                          ]}
+                        >
+                          {subject.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
                   ))}
                 </View>
 
                 {/* Second Row - 4 subjects */}
                 <View style={styles.subjectsRow}>
                   {subjects.slice(4, 8).map((subject) => (
-                    <TouchableOpacity
+                    <PixelBorder
                       key={subject.name}
-                      style={[
-                        styles.subjectButton,
-                        {
-                          backgroundColor: hasStudiedTonight
-                            ? '#ccc'
-                            : subject.color.bg,
-                          borderColor: hasStudiedTonight
-                            ? '#999'
-                            : subject.color.border,
-                        },
-                        hasStudiedTonight && styles.disabledSubjectButton,
-                      ]}
-                      onPress={() => handleSubjectSelect(subject.name)}
-                      disabled={hasStudiedTonight}
+                      borderColor={
+                        hasStudiedTonight ? '#999' : subject.color.border
+                      }
+                      borderWidth={3}
+                      backgroundColor={
+                        hasStudiedTonight ? '#ccc' : subject.color.bg
+                      }
+                      innerPadding={0}
+                      style={styles.subjectButtonWrapper}
                     >
-                      <Text
+                      <TouchableOpacity
                         style={[
-                          styles.subjectText,
-                          hasStudiedTonight && styles.disabledText,
+                          styles.subjectButtonInner,
+                          hasStudiedTonight && styles.disabledSubjectButton,
                         ]}
+                        onPress={() => handleSubjectSelect(subject.name)}
+                        disabled={hasStudiedTonight}
                       >
-                        {subject.name}
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.subjectText,
+                            hasStudiedTonight && styles.disabledText,
+                          ]}
+                        >
+                          {subject.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
                   ))}
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleBackToOptions}
+              <PixelBorder
+                borderColor="#f7e98e"
+                borderWidth={3}
+                backgroundColor="rgba(90,99,127, 0.8)"
+                innerPadding={0}
+                style={{ marginBottom: 20 }}
               >
-                <Text style={styles.backButtonText}>
-                  ← Back to After School
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.backButtonInner}
+                  onPress={handleBackToOptions}
+                >
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+              </PixelBorder>
             </View>
           ) : (
             // Main options view
@@ -654,18 +678,18 @@ const styles = StyleSheet.create({
     color: '#f7e98e',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(125,125,125,0.3)',
+    textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-    marginBottom: 4,
+    marginBottom: 12,
   },
   buttonSubtext: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '400',
-    color: '#e0e0e0',
+    color: '#ffffff',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(125,125,125,0.2)',
+    textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
     lineHeight: 12,
@@ -750,6 +774,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  subjectButtonWrapper: {
+    height: 80,
+    width: 80,
+    margin: 5,
+  },
+  subjectButtonInner: {
+    height: '100%',
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
   disabledSubjectButton: {
     opacity: 0.5,
   },
@@ -774,6 +810,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  backButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: 'transparent',
+  },
   backButtonText: {
     color: '#f7e98e',
     fontSize: 16,
@@ -783,6 +824,18 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(125,125,125,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  gridButtonWrapper: {
+    width: 150,
+    height: 150,
+    marginBottom: 10,
+  },
+  gridButtonInner: {
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    padding: 8,
   },
 });
 

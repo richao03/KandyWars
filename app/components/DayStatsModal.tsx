@@ -23,21 +23,9 @@ export default function DayStatsModal({
   stats,
   day,
 }: DayStatsModalProps) {
-  console.log(
-    '📊 DayStatsModal rendering - visible:',
-    visible,
-    'day:',
-    day,
-    'stats:',
-    stats
-  );
-
   if (!stats) {
-    console.log('📊 DayStatsModal stats is undefined, returning null');
     return null;
   }
-
-  console.log('📊 DayStatsModal is visible, rendering modal');
 
   return (
     <FastModal

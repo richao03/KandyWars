@@ -15,6 +15,7 @@ import { useWallet } from '../../src/hooks/useWallet';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 
 interface JokerCardProps {
   joker: {
@@ -288,36 +289,6 @@ function JokerCard({
         'Cannot revert time from the first period.',
         '⏰'
       );
-    }
-  };
-
-  const handleBetYouImFaster = async (candyType: string) => {
-    const currentInventoryCount = getTotalInventoryCount();
-    const availableSpace = memoizedInventoryLimit - currentInventoryCount;
-
-    if (availableSpace <= 0) {
-      showAlert(
-        'Inventory Full!',
-        'Your inventory is full! Clear some space first.',
-        '📦'
-      );
-      return;
-    }
-
-    // Fill inventory with chosen candy (free candy at $0 cost)
-    const success = addToInventory(candyType, availableSpace, 0);
-
-    if (success) {
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-
-      showAlert(
-        'Speed Demon Victory!',
-        `Lightning fast! You filled your inventory with ${availableSpace} ${candyType} candies!`,
-        '⚡'
-      );
-    } else {
-      showAlert('Fill Failed!', 'Unable to fill inventory. Try again!', '❌');
     }
   };
 
@@ -638,9 +609,9 @@ function JokerCard({
   // Memoize computed values to prevent recreation on every render
   const typeColor = useMemo(() => {
     if (joker.type === 'persistent') {
-      return '#4ade80';
+      return '#0071E3'; // Gold for persistent (aura)
     }
-    return '#fb7185';
+    return '#dc2626'; // Red for one-time (instant)
   }, [joker.type]);
 
   const typeText = useMemo(() => {
@@ -666,63 +637,41 @@ function JokerCard({
 
   return (
     <>
-      <View style={styles.jokerCard}>
-        <View style={styles.cardContainer}>
-          <CardWrapper style={styles.cardContent} {...cardWrapperProps}>
-            <View style={styles.jokerHeader}>
-              <View style={styles.jokerTitleRow}>
-                <View style={styles.jokerTitleLeft}>
-                  <Text
-                    style={styles.jokerName}
-                    numberOfLines={2}
-                    ellipsizeMode="tail"
-                  >
-                    {joker.name}
-                  </Text>
-                </View>
-                <View style={styles.jokerTypeContainer}>
-                  {showOwned && <Text style={styles.ownedIndicator}>✓</Text>}
-                </View>
-              </View>
-            </View>
-            <View style={styles.typeRow}>
-              <Text style={[styles.typeIndicatorText, { color: typeColor }]}>
-                {typeText}
-              </Text>
-              {joker.type === 'one-time' &&
+      <PixelBorder borderColor="#d4af37" borderWidth={3} innerPadding={0}>
+        <CardWrapper style={styles.cardContainer} {...cardWrapperProps}>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <Text style={styles.jokerName}>{joker.name}</Text>
+            {showOwned && <View style={styles.ownedIndicator} />}
+          </View>
+
+          {/* Type Badge */}
+          <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
+            <Text style={styles.typeText}>{typeText}</Text>
+          </View>
+
+          {/* Main Content */}
+          <View style={styles.contentSection}>
+            <Text style={styles.jokerDescription}>{joker.description}</Text>
+          </View>
+
+          {/* Footer Section */}
+          <View style={styles.footerSection}>
+            <Text style={styles.jokerFlavorText}>{flavorText}</Text>
+
+            {joker.type === 'one-time' &&
               !disableActivation &&
-              !isAfterSchool ? (
+              !isAfterSchool && (
                 <TouchableOpacity
                   style={styles.activateButton}
                   onPress={handleActivate}
                 >
-                  <Text style={styles.activateButtonText}>ACTIVATE</Text>
+                  <Text style={styles.activateButtonText}>PLAY CARD</Text>
                 </TouchableOpacity>
-              ) : (
-                <View />
               )}
-            </View>
-            <View style={styles.descriptionContainer}>
-              <Text
-                style={styles.jokerDescription}
-                numberOfLines={4}
-                ellipsizeMode="tail"
-              >
-                {joker.description}{' '}
-              </Text>
-
-              <View style={styles.separator} />
-              <Text
-                style={styles.jokerFlavorText}
-                numberOfLines={3}
-                ellipsizeMode="tail"
-              >
-                {flavorText}
-              </Text>
-            </View>
-          </CardWrapper>
-        </View>
-      </View>
+          </View>
+        </CardWrapper>
+      </PixelBorder>
 
       {/* Period Selector Modal */}
       <FastModal
@@ -980,151 +929,113 @@ function JokerCard({
 
 const styles = StyleSheet.create({
   jokerCard: {
-    borderRadius: 15,
     marginTop: 8,
-    borderColor: '#6b4423',
-    borderWidth: 3,
-    elevation: 13,
     flex: 1,
     height: 180,
   },
   cardContainer: {
+    backgroundColor: '#f8f8f0',
+    padding: 8,
     borderRadius: 12,
-    backgroundColor: '#fefaf5',
-    flex: 1,
-  },
-  cardContent: {
-    paddingLeft: 8,
-    paddingRight: 8,
-    paddingBottom: 4,
-    flex: 1,
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-  },
-  jokerHeader: {
-    // marginBottom: 4,
-    paddingTop: 2,
-    paddingBottom: 2,
-    marginLeft: -8,
-    marginRight: -8,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    borderBottomWidth: 1,
-    backgroundColor: '#6b4423',
-    borderBottomColor: 'rgba(212, 165, 116, 0.2)',
-  },
-  jokerTitleRow: {
-    flexDirection: 'row',
+    minHeight: 160,
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  jokerTitleLeft: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  jokerName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: 'white',
-    fontFamily: 'PixeloidMono',
-    marginBottom: 2,
-    lineHeight: 16,
-  },
-  jokerType: {
-    fontSize: 9,
-    fontWeight: '700',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    fontFamily: 'PixeloidMono',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderWidth: 1,
-    borderColor: 'rgba(107, 68, 35, 0.3)',
-  },
-  jokerTypeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ownedIndicator: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#22c55e',
-    backgroundColor: '#f0fdf4',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    borderWidth: 1,
-    borderColor: '#22c55e',
-    marginRight: 2,
   },
 
-  descriptionContainer: {
+  bottomCorner: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+  },
+  headerSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 4,
+    marginTop: -12,
+    marginHorizontal: -8,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  jokerName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#d4af37',
+    fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     flex: 1,
-    justifyContent: 'flex-start',
-    minHeight: 120,
+    textAlign: 'left',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  ownedIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#d4af37',
+    shadowColor: '#d4af37',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+  },
+  typeBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  typeText: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#fff',
+    fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  contentSection: {
+    flex: 1,
+    justifyContent: 'center',
   },
   jokerDescription: {
-    fontSize: 12,
-    color: '#5d4037',
+    fontSize: 11,
+    color: '#2c3e50',
     lineHeight: 14,
     fontFamily: 'PixeloidMono',
-    fontWeight: '600',
-    marginTop: 4,
-    maxHeight: 72,
-    flex: 0,
+    fontWeight: '500',
+    textAlign: 'left',
   },
-  separator: {
-    height: 1,
-    backgroundColor: 'rgba(212, 165, 116, 0.3)',
-    marginVertical: 4,
+  footerSection: {
+    gap: 8,
   },
   jokerFlavorText: {
-    fontSize: 12,
-    color: '#8b4513',
-    lineHeight: 16,
+    fontSize: 9,
+    color: '#666',
+    lineHeight: 12,
     fontFamily: 'CrayonPastel',
     fontStyle: 'italic',
-    opacity: 0.9,
-    marginBottom: 0,
-    height: 48,
-    flex: 0,
-    textAlignVertical: 'top',
+    textAlign: 'center',
+    opacity: 0.7,
   },
   activateButton: {
-    backgroundColor: '#4ade80',
-    paddingVertical: 2,
-    paddingHorizontal: 2,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    backgroundColor: '#1a1a1a',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+    alignSelf: 'center',
     borderWidth: 1,
-    borderColor: '#22c55e',
-    marginTop: 4,
+    borderColor: '#333',
   },
   activateButtonText: {
-    color: '#fff',
+    color: '#d4af37',
     fontSize: 9,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
-  },
-  typeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 0,
-  },
-  typeIndicator: {
-    alignSelf: 'flex-end',
-  },
-  typeIndicatorText: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontStyle: 'italic',
-    marginTop: 4,
-    fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
   },
   persistentIndicator: {
     backgroundColor: '#f0fdf4',

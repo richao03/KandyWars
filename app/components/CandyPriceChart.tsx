@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+import PixelBorder from './PixelBorder';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -37,13 +38,23 @@ export default function CandyPriceChart({
   // If we don't have enough data, return placeholder
   if (relevantPrices.length < 2) {
     return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.candyTitle}>{candyName}</Text>
-        <View style={styles.placeholderChart}>
-          <Text style={styles.placeholderText}>📊</Text>
-          <Text style={styles.noDataText}>Need more periods for chart</Text>
+      <PixelBorder
+        borderColor="#00ff41"
+        borderWidth={2}
+        innerPadding={0}
+        style={styles.chartWrapper}
+      >
+        <View style={styles.placeholderContainer}>
+          <View style={styles.tickerHeader}>
+            <Text style={styles.tickerSymbol}>{candyName.toUpperCase()}</Text>
+            <Text style={styles.marketStatus}>INSUFFICIENT DATA</Text>
+          </View>
+          <View style={styles.placeholderChart}>
+            <Text style={styles.placeholderText}>📊</Text>
+            <Text style={styles.noDataText}>Need more periods for chart</Text>
+          </View>
         </View>
-      </View>
+      </PixelBorder>
     );
   }
 
@@ -58,33 +69,37 @@ export default function CandyPriceChart({
   const priceChangePercent =
     previousPrice > 0 ? (priceChange / previousPrice) * 100 : 0;
 
-  // Determine trend colors
+  // Stock market colors
   const getTrendColor = () => {
-    if (priceChange > 0) return '#22c55e'; // Green for up
-    if (priceChange < 0) return '#ef4444'; // Red for down
-    return '#64748b'; // Gray for stable
+    if (priceChange > 0) return '#00ff41'; // Matrix green for gains
+    if (priceChange < 0) return '#ff073a'; // Red for losses
+    return '#cccccc'; // Gray for neutral
   };
 
-  const getTrendIcon = () => {
-    if (priceChange > 0) return '📈';
-    if (priceChange < 0) return '📉';
-    return '➡️';
+  const getTrendSymbol = () => {
+    if (priceChange > 0) return '▲';
+    if (priceChange < 0) return '▼';
+    return '●';
   };
 
   const chartConfig = {
-    backgroundColor: '#fefaf5', // Warm paper background
-    backgroundGradientFrom: '#fefaf5',
-    backgroundGradientTo: '#fefaf5',
+    backgroundColor: '#0a0a0a',
+    backgroundGradientFrom: '#0a0a0a',
+    backgroundGradientTo: '#1a1a1a',
     decimalPlaces: 2,
-    color: (opacity = 1) => `rgba(212, 165, 116, ${opacity})`, // Brown crayon color
-    labelColor: (opacity = 1) => `rgba(107, 68, 35, ${opacity})`, // Dark brown
+    color: (opacity = 1) =>
+      getTrendColor() +
+      Math.floor(opacity * 255)
+        .toString(16)
+        .padStart(2, '0'),
+    labelColor: (opacity = 1) => `rgba(204, 204, 204, ${opacity})`,
     style: {
-      borderRadius: 16,
+      borderRadius: 0,
     },
     propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: '#d4a574', // Brown crayon border
+      r: '3',
+      strokeWidth: '1',
+      stroke: getTrendColor(),
       fill: getTrendColor(),
     },
     propsForLabels: {
@@ -102,131 +117,284 @@ export default function CandyPriceChart({
           Math.floor(opacity * 255)
             .toString(16)
             .padStart(2, '0'),
-        strokeWidth: 3,
+        strokeWidth: 2,
       },
     ],
   };
 
   return (
-    <View style={styles.chartContainer}>
-      <View style={styles.header}>
-        <Text style={styles.candyTitle}>{candyName}</Text>
-        <View style={styles.priceInfo}>
-          <Text style={[styles.currentPrice, { color: getTrendColor() }]}>
-            ${currentPrice.toFixed(2)}
-          </Text>
-          <Text style={[styles.priceChange, { color: getTrendColor() }]}>
-            {getTrendIcon()} {priceChange >= 0 ? '+' : ''}$
-            {priceChange.toFixed(2)} ({priceChangePercent.toFixed(1)}%)
+    <PixelBorder
+      borderColor={getTrendColor()}
+      borderWidth={3}
+      innerPadding={0}
+      style={[styles.chartWrapper, { shadowColor: getTrendColor() }]}
+    >
+      <View style={styles.chartContainer}>
+        {/* Terminal Header */}
+        <View style={styles.terminalHeader}>
+          <View style={styles.tickerInfo}>
+            <Text style={styles.tickerSymbol}>{candyName.toUpperCase()}</Text>
+          </View>
+          <Text style={styles.periodRange}>
+            Period {startPeriod}-{currentPeriod}
           </Text>
         </View>
-      </View>
 
-      <LineChart
-        data={data}
-        width={screenWidth - 60} // Padding for container
-        height={100}
-        chartConfig={chartConfig}
-        withVerticalLabels={false}
-        withHorizontalLabels={false}
-        bezier // Smooth curves
-        style={styles.chart}
-        withInnerLines={true}
-        withOuterLines={true}
-        withVerticalLines={true}
-        fromZero={false} // Auto-scale to data range
-        segments={4} // Number of horizontal grid lines
-      />
+        {/* Price Display */}
+        <View style={styles.priceDisplay}>
+          <View style={styles.currentPriceRow}>
+            <Text style={styles.currentPriceLabel}>CURRENT PRICE</Text>
+            <Text
+              style={[styles.currentPriceValue, { color: getTrendColor() }]}
+            >
+              ${currentPrice.toFixed(2)}
+            </Text>
+          </View>
+          <View style={styles.changeDisplay}>
+            <Text style={[styles.changeValue, { color: getTrendColor() }]}>
+              {getTrendSymbol()} {priceChange >= 0 ? '+' : ''}$
+              {Math.abs(priceChange).toFixed(2)}
+            </Text>
+            <Text style={[styles.changePercent, { color: getTrendColor() }]}>
+              ({priceChangePercent >= 0 ? '+' : ''}
+              {priceChangePercent.toFixed(2)}%)
+            </Text>
+          </View>
+        </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.rangeText}>
-          Range: ${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}
-        </Text>
-        <Text style={styles.periodText}>
-          Periods {startPeriod} - {currentPeriod}
-        </Text>
+        {/* Market Stats */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>HIGH</Text>
+            <Text style={styles.statValue}>${maxPrice.toFixed(2)}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>LOW</Text>
+            <Text style={styles.statValue}>${minPrice.toFixed(2)}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statLabel}>RANGE</Text>
+            <Text style={styles.statValue}>
+              ${(maxPrice - minPrice).toFixed(2)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Chart Terminal */}
+        <PixelBorder
+          borderColor="#333333"
+          borderWidth={1}
+          backgroundColor="#0a0a0a"
+          innerPadding={4}
+          style={styles.chartTerminal}
+        >
+          <LineChart
+            data={data}
+            width={screenWidth - 60}
+            height={100}
+            chartConfig={chartConfig}
+            withVerticalLabels={false}
+            // withHorizontalLabels={false}
+            // withInnerLines={false}
+            // withOuterLines={false}
+            // withVerticalLines={false}
+            style={styles.chart}
+            fromZero={false}
+            segments={0}
+          />
+        </PixelBorder>
       </View>
-    </View>
+    </PixelBorder>
   );
 }
 
 const styles = StyleSheet.create({
-  chartContainer: {
-    backgroundColor: '#fefaf5', // Warm paper background
-    borderRadius: 20,
-    padding: 16,
+  chartWrapper: {
     margin: 8,
-    borderWidth: 3,
-    borderColor: '#d4a574', // Brown crayon border
-    shadowColor: '#8b4513',
-    shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 8,
   },
-  header: {
+  chartContainer: {
+    backgroundColor: '#0f0f0f',
+    padding: 12,
+    borderRadius: 16,
+  },
+  placeholderContainer: {
+    backgroundColor: '#0f0f0f',
+    padding: 16,
+  },
+  terminalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
   },
-  candyTitle: {
-    fontSize: 18,
+  tickerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  tickerSymbol: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#6b4423', // Dark brown
+    color: '#00ff41',
     fontFamily: 'PixeloidMono',
-    flex: 1,
+    letterSpacing: 1,
   },
-  priceInfo: {
-    alignItems: 'flex-end',
-    flex: 1,
+  marketStatus: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#ff073a',
+    fontFamily: 'PixeloidMono',
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
   },
-  currentPrice: {
+  periodRange: {
+    fontSize: 12,
+    color: '#888888',
+    fontFamily: 'PixeloidMono',
+  },
+  priceDisplay: {
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  currentPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  currentPriceLabel: {
+    fontSize: 16,
+    color: '#888888',
+    fontFamily: 'PixeloidMono',
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+  currentPriceValue: {
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
+    marginBottom: 4,
   },
-  priceChange: {
-    fontSize: 12,
+  changeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  changeValue: {
+    fontSize: 16,
     fontWeight: '600',
-    marginTop: 2,
+    fontFamily: 'PixeloidMono',
   },
-  chart: {
-    borderRadius: 12,
+  changePercent: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'PixeloidMono',
   },
-  footer: {
+  statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 8,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 4,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#333333',
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#888888',
+    fontFamily: 'PixeloidMono',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#cccccc',
+    fontFamily: 'PixeloidMono',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#1a1a1a',
+    marginBottom: 8,
+  },
+  chartTitle: {
+    fontSize: 10,
+    color: '#00ff41',
+    fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
+  },
+  chartInterval: {
+    fontSize: 10,
+    color: '#888888',
+    fontFamily: 'PixeloidMono',
+  },
+  chart: {
+    borderWidth: 2,
+    alignSelf: 'center',
+  },
+  chartFooter: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#1a1a1a',
     marginTop: 8,
   },
-  rangeText: {
-    fontSize: 11,
-    color: '#8b5a3c',
-    fontWeight: '500',
-  },
-  periodText: {
-    fontSize: 11,
-    color: '#8b5a3c',
-    fontWeight: '500',
+  volumeText: {
+    fontSize: 9,
+    color: '#666666',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   placeholderChart: {
-    height: 160,
+    height: 120,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e5e5e5',
-    borderStyle: 'dashed',
+    backgroundColor: '#1a1a1a',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#333333',
+    marginTop: 12,
   },
   placeholderText: {
     fontSize: 32,
     marginBottom: 8,
   },
   noDataText: {
-    fontSize: 14,
-    color: '#6b4423',
+    fontSize: 12,
+    color: '#888888',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },

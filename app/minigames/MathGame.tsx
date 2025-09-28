@@ -12,12 +12,13 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 interface MathGameProps {
   onComplete: () => void;
@@ -446,7 +447,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Math Challenge!</Text>
 
-          <View style={styles.instructionsCard}>
+          <PixelBorder
+            borderColor="#f5f5dc"
+            borderWidth={3}
+            backgroundColor="#0d2818"
+            innerPadding={20}
+            style={{ marginBottom: 20, width: '90%' }}
+          >
             <Text style={styles.instructionsHeader}>How to Play:</Text>
 
             <View style={styles.instructionStep}>
@@ -463,11 +470,22 @@ export default function MathGame({ onComplete }: MathGameProps) {
                 Don't let numbers reach the edge!
               </Text>
             </View>
-          </View>
+          </PixelBorder>
 
-          <TouchableOpacity style={styles.startButton} onPress={startGame}>
-            <Text style={styles.startButtonText}>Start Game!</Text>
-          </TouchableOpacity>
+          <PixelBorder
+            borderColor="#f5f5dc"
+            borderWidth={3}
+            backgroundColor="#2d4a3e"
+            innerPadding={0}
+            style={{ marginBottom: 10 }}
+          >
+            <TouchableOpacity
+              style={styles.pixelButtonInner}
+              onPress={startGame}
+            >
+              <Text style={styles.startButtonText}>Start Game!</Text>
+            </TouchableOpacity>
+          </PixelBorder>
 
           <TouchableOpacity
             style={styles.backButton}
@@ -503,7 +521,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
   return (
     <View style={styles.container}>
       <MinigameHUD
-        title="📐 Math Challenge"
+        title="Math Challenge"
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
         centerInfo={`Matches: ${matchedIndices.length}/10`}
@@ -511,7 +529,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
       />
 
       {/* Scrolling numbers */}
-      <View style={styles.scrollContainer}>
+      <PixelBorder
+        borderColor="#f5f5dc"
+        borderWidth={3}
+        backgroundColor="#0d2818"
+        innerPadding={16}
+        style={{ marginTop: 20 }}
+      >
         <Text style={styles.rowLabel}>Scrolling Numbers:</Text>
         <View
           ref={containerRef}
@@ -550,50 +574,74 @@ export default function MathGame({ onComplete }: MathGameProps) {
             })}
           </Animated.View>
         </View>
-      </View>
+      </PixelBorder>
 
       {/* Bottom numbers */}
       <View style={styles.bottomContainer}>
         <View style={styles.bottomRow}>
           {[0, 1, 2, 3, 4].map((num) => (
-            <TouchableOpacity
+            <PixelBorder
               key={num}
-              style={styles.bottomNumberBox}
-              onPress={() => handleBottomNumberClick(num)}
-              disabled={!gameActive}
+              borderColor="#f5f5dc"
+              borderWidth={2}
+              backgroundColor="#000"
+              innerPadding={0}
+              style={{ flex: 1 }}
             >
-              <Text style={styles.numberText}>{num}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.pixelNumberBox}
+                onPress={() => handleBottomNumberClick(num)}
+                disabled={!gameActive}
+              >
+                <Text style={styles.numberText}>{num}</Text>
+              </TouchableOpacity>
+            </PixelBorder>
           ))}
         </View>
         <View style={styles.bottomRow}>
           {[5, 6, 7, 8, 9].map((num) => (
-            <TouchableOpacity
+            <PixelBorder
               key={num}
-              style={styles.bottomNumberBox}
-              onPress={() => handleBottomNumberClick(num)}
-              disabled={!gameActive}
+              borderColor="#f5f5dc"
+              borderWidth={2}
+              backgroundColor="#000"
+              innerPadding={0}
+              style={{ flex: 1 }}
             >
-              <Text style={styles.numberText}>{num}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.pixelNumberBox}
+                onPress={() => handleBottomNumberClick(num)}
+                disabled={!gameActive}
+              >
+                <Text style={styles.numberText}>{num}</Text>
+              </TouchableOpacity>
+            </PixelBorder>
           ))}
         </View>
       </View>
 
       {/* Leave button */}
-      <TouchableOpacity
-        style={styles.leaveButton}
-        onPress={() => {
-          showModal(
-            '📚 Leave Math Study?',
-            "You'll lose your progress!",
-            '📚',
-            () => router.back()
-          );
-        }}
+      <PixelBorder
+        borderColor="#f5f5dc"
+        borderWidth={3}
+        backgroundColor="#0d2818"
+        innerPadding={0}
+        style={{ marginTop: 20 }}
       >
-        <Text style={styles.leaveButtonText}>🚪 Leave</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.pixelButtonInner}
+          onPress={() => {
+            showModal(
+              '📚 Leave Math Study?',
+              "You'll lose your progress!",
+              '📚',
+              () => router.back()
+            );
+          }}
+        >
+          <Text style={styles.leaveButtonText}>🚪 Leave</Text>
+        </TouchableOpacity>
+      </PixelBorder>
 
       <GameModal
         visible={modal.visible}
@@ -735,8 +783,8 @@ const styles = StyleSheet.create({
     color: '#ff6b35',
   },
   bottomContainer: {
-    marginTop: 30,
-    padding: 16,
+    marginTop: 0,
+    paddingVertical: 32,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -768,5 +816,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#f5f5dc',
     fontFamily: 'PixeloidMono',
+  },
+  pixelButtonInner: {
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  pixelNumberBox: {
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
 });

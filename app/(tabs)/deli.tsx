@@ -43,7 +43,10 @@ export default function Deli() {
   const { jokers } = useJokers();
 
   // Check for The Good Old Days joker (provides deli discount)
-  const vendorKickbackJoker = findJokerById(jokers, JOKER_IDS.THE_GOOD_OLD_DAYS);
+  const vendorKickbackJoker = findJokerById(
+    jokers,
+    JOKER_IDS.THE_GOOD_OLD_DAYS
+  );
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
@@ -231,7 +234,7 @@ export default function Deli() {
           style={styles.backButton}
           onPress={handleReturnToAfterSchool}
         >
-          <Text style={styles.backButtonText}>← Back to After School</Text>
+          <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
       </View>
 

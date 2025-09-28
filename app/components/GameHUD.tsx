@@ -112,7 +112,7 @@ export default function GameHUD({
       <View style={styles.statsRow}>
         <PixelBorder
           borderColor="#4a7c4a"
-          borderWidth={2}
+          borderWidth={3}
           backgroundColor="#d4f6d4"
           innerPadding={0}
           style={{ flex: 1 }}
@@ -125,7 +125,7 @@ export default function GameHUD({
 
         <PixelBorder
           borderColor="#b85c8a"
-          borderWidth={2}
+          borderWidth={3}
           backgroundColor="#ffd6e8"
           innerPadding={0}
           style={{ flex: 1 }}
@@ -140,7 +140,7 @@ export default function GameHUD({
 
         <PixelBorder
           borderColor="#5c7cb8"
-          borderWidth={2}
+          borderWidth={3}
           backgroundColor="#d6e8ff"
           innerPadding={0}
           style={{ flex: 1 }}
@@ -182,7 +182,7 @@ export default function GameHUD({
       <View style={styles.locationRow}>
         <PixelBorder
           borderColor="#cc7a00"
-          borderWidth={2}
+          borderWidth={3}
           backgroundColor="#ffcc99"
           innerPadding={0}
         >
@@ -198,7 +198,7 @@ export default function GameHUD({
           const marquee = (
             <PixelBorder
               borderColor={getGlowStyleAndBorderColor.borderColor}
-              borderWidth={2}
+              borderWidth={3}
               backgroundColor="#fff9e6"
               innerPadding={0}
             >

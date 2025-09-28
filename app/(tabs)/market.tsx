@@ -36,13 +36,13 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { JokerService } from '../../src/utils/jokerService';
 import ConfirmationModal from '../components/ConfirmationModal';
-import PixelBorder from '../components/PixelBorder';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
 import InventoryModal from '../components/InventoryModal';
 import LocationModal, { Location } from '../components/LocationModal';
+import PixelBorder from '../components/PixelBorder';
 import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
@@ -1022,29 +1022,45 @@ function Market(props) {
                 ) : (
                   // Periods 1-7: Show both next period and end day buttons
                   <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                      style={[styles.nextPeriodButton, styles.bigButton]}
-                      onPress={handleNextDay}
-                      activeOpacity={0.8}
+                    <PixelBorder
+                      borderColor="rgba(123,169,101,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(154,193,118,1)"
+                      innerPadding={0}
+                      style={styles.bigButton}
                     >
-                      <Text style={styles.nextPeriodButtonText}>
-                        Next Period
-                      </Text>
-                      <Text style={styles.nextPeriodSubtext}>
-                        Going to period {period + 1}
-                      </Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.pixelButtonInner}
+                        onPress={handleNextDay}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.nextPeriodButtonText}>
+                          Next Period
+                        </Text>
+                        <Text style={styles.nextPeriodSubtext}>
+                          Going to period {period + 1}
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
 
-                    <TouchableOpacity
-                      style={[styles.endDayButton, styles.smallButton]}
-                      onPress={handleEndDay}
-                      activeOpacity={0.8}
+                    <PixelBorder
+                      borderColor="rgba(185,28,28,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(239,68,68,1)"
+                      innerPadding={0}
+                      style={styles.smallButton}
                     >
-                      <Text style={styles.endDayButtonText}>End Day</Text>
-                      <Text style={styles.endDaySubtext}>
-                        Skip to after school
-                      </Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.pixelButtonInner}
+                        onPress={handleEndDay}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.endDayButtonText}>End Day</Text>
+                        <Text style={styles.endDaySubtext}>
+                          Skip to after school
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
                   </View>
                 )}
               </View>
@@ -1069,12 +1085,10 @@ function Market(props) {
         stats={React.useMemo(() => {
           const stats = getTotalStats();
           console.log(
-            '📊 DayStatsModal stats:',
-            stats,
-            'visible:',
-            dayStatsModalVisible,
-            'day:',
-            day
+            '📊 DayStatsModal stats calculated for day:',
+            day,
+            'stats:',
+            stats
           );
           return (
             stats || {
@@ -1084,7 +1098,7 @@ function Market(props) {
               netGain: 0,
             }
           );
-        }, [getTotalStats, dayStatsModalVisible, day])}
+        }, [getTotalStats, day])}
         day={day}
       />
 
@@ -1376,6 +1390,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 1,
     opacity: 0.9,
+  },
+  pixelButtonInner: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 });
 

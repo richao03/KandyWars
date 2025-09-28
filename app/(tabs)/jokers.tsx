@@ -1,19 +1,18 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FlatList,
-  ScrollView,
   SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/hooks/useGame';
-import { useJokers } from '../../src/hooks/useJokers';
 import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
-import { JOKER_IDS } from '../../src/constants/jokerIds';
 import ConfirmationModal from '../components/ConfirmationModal';
 import FastModal from '../components/FastModal';
 import GameHUD from '../components/GameHUD';
@@ -104,7 +103,14 @@ function JokersPage() {
   // Handle candy selection for various jokers
   const handleCandySelection = (selectedCandy: string) => {
     const { joker } = candySelectorModal;
-    if (!joker || !gameContext || !jokerContext || !inventoryContext || !seedContext) return;
+    if (
+      !joker ||
+      !gameContext ||
+      !jokerContext ||
+      !inventoryContext ||
+      !seedContext
+    )
+      return;
 
     const { periodCount } = gameContext;
     const { removeJoker } = jokerContext;
@@ -113,7 +119,8 @@ function JokersPage() {
 
     if (joker.id === JOKER_IDS.PROPACANDIES) {
       // Drop the selected candy's price by 90%
-      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const originalPrice =
+        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = Math.max(originalPrice * 0.1, 0.01); // 90% reduction, minimum $0.01
 
       modifyCandyPrice(selectedCandy, newPrice, periodCount);
@@ -126,7 +133,8 @@ function JokersPage() {
       );
     } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
       // Double the selected candy's price for this period
-      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const originalPrice =
+        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = originalPrice * 2;
 
       modifyCandyPrice(selectedCandy, newPrice, periodCount);
@@ -139,7 +147,8 @@ function JokersPage() {
       );
     } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
       // Crash the selected candy's price by 50%
-      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const originalPrice =
+        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = Math.max(originalPrice * 0.5, 0.01); // 50% reduction, minimum $0.01
 
       modifyCandyPrice(selectedCandy, newPrice, periodCount);
@@ -152,7 +161,8 @@ function JokersPage() {
       );
     } else if (joker.effect === 'double_candy_price') {
       // Legacy double candy price jokers
-      const originalPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const originalPrice =
+        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = originalPrice * 2;
 
       modifyCandyPrice(selectedCandy, newPrice, periodCount);
@@ -179,7 +189,8 @@ function JokersPage() {
         return;
       }
 
-      const candyPrice = gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
+      const candyPrice =
+        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const quantityToAdd = Math.min(spaceAvailable, 10); // Add up to 10 or until full
 
       inventoryContext.addToInventory(selectedCandy, quantityToAdd, candyPrice);
@@ -292,19 +303,6 @@ function JokersPage() {
     </View>
   );
 
-  const renderSeeAllJoker = ({ item }: { item: any }) => (
-    <View style={styles.jokerCardContainer}>
-      <JokerCard
-        joker={item}
-        isAfterSchool={isAfterSchool}
-        isCompact={true}
-        showOwned={jokers.some((ownedJoker) => ownedJoker.id === item.id)}
-        onShowConfirmation={handleShowConfirmation}
-        onShowCandySelector={handleShowCandySelector}
-      />
-    </View>
-  );
-
   const renderJokerRow = ({ item }: { item: any[] }) => (
     <View style={styles.row}>
       {item.map((joker) => (
@@ -326,7 +324,7 @@ function JokersPage() {
   return (
     <View style={containerStyles}>
       <GameHUD
-        theme="school"
+        theme="evening"
         customHeaderText={`School - Day ${day}`}
         customLocationText="Jokers Collection"
       />
@@ -357,19 +355,24 @@ function JokersPage() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'see-all' && styles.activeTab]}
+            style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
             onPress={() => setActiveTab('see-all')}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === 'see-all' && styles.activeTabText,
+                activeTab !== 'inventory' && styles.activeTabText,
               ]}
             >
               📖 All ({allJokersCount})
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Debug info */}
+        <Text style={{ color: 'white', textAlign: 'center', fontSize: 12 }}>
+          Debug: activeTab = {activeTab}
+        </Text>
       </View>
 
       {activeTab === 'inventory' ? (
@@ -383,7 +386,6 @@ function JokersPage() {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🎒</Text>
             <Text style={styles.emptyText}>No jokers in inventory</Text>
             <Text style={styles.emptySubtext}>
               Study different subjects to earn jokers!
@@ -436,8 +438,8 @@ function JokersPage() {
               : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
                 ? '📉 Choose Candy to Short'
                 : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
-                ? '📰 Choose Candy to Drop Price'
-                : '🍭 Choose Candy Type'}
+                  ? '📰 Choose Candy to Drop Price'
+                  : '🍭 Choose Candy Type'}
           </Text>
 
           {CANDY_TYPES.map((candyType) => (
@@ -452,7 +454,9 @@ function JokersPage() {
 
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => setCandySelectorModal({ visible: false, joker: null })}
+            onPress={() =>
+              setCandySelectorModal({ visible: false, joker: null })
+            }
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
@@ -465,7 +469,7 @@ function JokersPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fefaf5',
+    backgroundColor: '#00512C',
   },
   containerAfterSchool: {
     backgroundColor: '#2a1845',
@@ -473,9 +477,9 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 6,
     paddingBottom: 4,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e6ccb3',
+    backgroundColor: '#00512C',
+    borderBottomWidth: 2,
+    borderBottomColor: '#d4af37',
   },
   headerAfterSchool: {
     backgroundColor: '#2a1845',
@@ -491,8 +495,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#6b4423',
+    color: '#d4af37',
     fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   titleAfterSchool: {
     color: '#f7e98e',
@@ -501,11 +510,13 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   countBadge: {
-    backgroundColor: '#6b4423',
+    backgroundColor: '#dc2626',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#991b1b',
   },
   countText: {
     color: '#fff',
@@ -528,12 +539,15 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 6,
     paddingHorizontal: 8,
-    borderRadius: 16,
-    backgroundColor: '#f5e6d3',
+    borderRadius: 8,
+    backgroundColor: '#2a2a2a',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3a3a3a',
   },
   activeTab: {
-    backgroundColor: '#6b4423',
+    backgroundColor: '#dc2626',
+    borderColor: '#991b1b',
   },
   activeTabAfterSchool: {
     backgroundColor: '#8a7ca8',
@@ -541,14 +555,19 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8b4513',
+    color: '#d4af37',
     fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   tabTextAfterSchool: {
     color: '#b8a9c9',
   },
   activeTabText: {
     color: '#fff',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   activeTabTextAfterSchool: {
     color: '#f7e98e',
@@ -603,7 +622,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#6b4423',
+    color: '#d4af37',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
@@ -616,7 +635,7 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#8b4513',
+    color: '#888',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
@@ -624,12 +643,13 @@ const styles = StyleSheet.create({
     color: '#b8a9c9',
   },
   sectionHeader: {
-    backgroundColor: '#f5e6d3',
+    backgroundColor: '#1a1a1a',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e6ccb3',
+    borderBottomColor: '#d4af37',
     marginTop: 0,
+    marginBottom: 8,
   },
   sectionHeaderAfterSchool: {
     backgroundColor: 'rgba(138, 124, 168, 1)',
@@ -638,48 +658,59 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6b4423',
+    color: '#d4af37',
     fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   sectionTitleAfterSchool: {
     color: '#f7e98e',
   },
   // Candy Selector Modal styles
   modalContent: {
-    backgroundColor: '#fefaf5',
-    borderRadius: 16,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
     padding: 20,
     width: '80%',
+    borderWidth: 2,
+    borderColor: '#d4af37',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#6b4423',
+    color: '#d4af37',
     textAlign: 'center',
     marginBottom: 20,
     fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   candyButton: {
-    backgroundColor: '#6b4423',
-    borderRadius: 12,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginVertical: 4,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3a3a3a',
   },
   candyButtonText: {
-    color: '#fff',
+    color: '#d4af37',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
+    letterSpacing: 0.5,
   },
   cancelButton: {
-    backgroundColor: '#8b4513',
-    borderRadius: 12,
+    backgroundColor: '#dc2626',
+    borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#991b1b',
   },
   cancelButtonText: {
     color: '#fff',
@@ -689,5 +720,5 @@ const styles = StyleSheet.create({
   },
 });
 
-// Memoize the component to prevent unnecessary rerenders
-export default memo(JokersPage);
+// Removed memo to fix tab styling issue
+export default JokersPage;
