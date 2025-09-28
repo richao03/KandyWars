@@ -25,13 +25,14 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 /** =========================
  *  Types
@@ -787,10 +788,16 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <View style={styles.container}>
           <View style={styles.instructionsContainer}>
             <Text style={styles.instructionsTitle}>
-              Economics Study Session!ho
+              Economics Study Session
             </Text>
 
-            <View style={styles.instructionsCard}>
+            <PixelBorder
+              borderColor="#42a5f5"
+              borderWidth={3}
+              backgroundColor="#1e3a8a"
+              innerPadding={20}
+              style={{ marginBottom: 20, width: '100%' }}
+            >
               <Text style={styles.instructionsHeader}>How to Trade:</Text>
               <View style={styles.instructionStep}>
                 <Text style={styles.stepNumber}>1. </Text>
@@ -817,17 +824,25 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
                   Drag tiles to slots in the correct order to execute your plan
                 </Text>
               </View>
-            </View>
+            </PixelBorder>
 
-            <TouchableOpacity
-              style={styles.startGameButton}
-              onPress={startGame}
+            <PixelBorder
+              borderColor="#42a5f5"
+              borderWidth={3}
+              backgroundColor="#2196f3"
+              innerPadding={0}
+              style={{ marginBottom: 16 }}
             >
-              <Text style={styles.startGameButtonText}>Start Trading!</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.pixelButtonInner}
+                onPress={startGame}
+              >
+                <Text style={styles.startGameButtonText}>Start Trading!</Text>
+              </TouchableOpacity>
+            </PixelBorder>
 
             <TouchableOpacity
-              style={styles.startGameButton}
+              style={styles.pixelButtonInner}
               onPress={handleForfeit}
             >
               <Text style={styles.startGameButtonText}>Back</Text>
@@ -1439,5 +1454,11 @@ const styles = StyleSheet.create({
     textShadowColor: '#1976d2',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  pixelButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 });

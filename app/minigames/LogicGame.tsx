@@ -9,13 +9,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 interface Attempt {
   candies: string[];
@@ -321,7 +322,13 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Logic Study Session!</Text>
 
-          <View style={styles.instructionsCard}>
+          <PixelBorder
+            borderColor="#666"
+            borderWidth={3}
+            backgroundColor="#404040"
+            innerPadding={20}
+            style={{ marginBottom: 20, width: '100%' }}
+          >
             <Text style={styles.instructionsHeader}>How to Solve:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1. </Text>
@@ -359,14 +366,25 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                 Gray = Candy not in sequence
               </Text>
             </View>
-          </View>
+          </PixelBorder>
 
-          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
-            <Text style={styles.startGameButtonText}>Start Challenge!</Text>
-          </TouchableOpacity>
+          <PixelBorder
+            borderColor="#666"
+            borderWidth={3}
+            backgroundColor="#ff6ec7"
+            innerPadding={0}
+            style={{ marginBottom: 16 }}
+          >
+            <TouchableOpacity
+              style={styles.pixelButtonInner}
+              onPress={startGame}
+            >
+              <Text style={styles.startGameButtonText}>Start Challenge!</Text>
+            </TouchableOpacity>
+          </PixelBorder>
 
           <TouchableOpacity
-            style={styles.startGameButton}
+            style={styles.pixelButtonInner}
             onPress={handleForfeit}
           >
             <Text style={styles.startGameButtonText}>Back</Text>
@@ -953,6 +971,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     fontFamily: 'PixeloidMono',
+  },
+  pixelButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   instructionsButton: {
     flex: 1,

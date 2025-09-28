@@ -18,14 +18,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 interface Tile {
   id: string;
@@ -657,9 +658,15 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Art Study Session! 🖌️</Text>
+          <Text style={styles.instructionsTitle}>Art Study Session!</Text>
 
-          <View style={styles.instructionsCard}>
+          <PixelBorder
+            borderColor="#ff6b35"
+            borderWidth={3}
+            backgroundColor="#2d4a3e"
+            innerPadding={20}
+            style={{ marginBottom: 20, width: '100%' }}
+          >
             <Text style={styles.instructionsHeader}>How to Create:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1. </Text>
@@ -679,17 +686,25 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
                 Wrong move = lose chance and restart (5 chances total)
               </Text>
             </View>
-          </View>
+          </PixelBorder>
 
-          <TouchableOpacity
-            style={styles.startGameButton}
-            onPress={() => setGameState('playing')}
+          <PixelBorder
+            borderColor="#d44c1f"
+            borderWidth={3}
+            backgroundColor="#ff6b35"
+            innerPadding={0}
+            style={{ marginBottom: 16 }}
           >
-            <Text style={styles.startGameButtonText}>Start Challenge!</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.pixelButtonInner}
+              onPress={() => setGameState('playing')}
+            >
+              <Text style={styles.startGameButtonText}>Start Challenge!</Text>
+            </TouchableOpacity>
+          </PixelBorder>
 
           <TouchableOpacity
-            style={styles.startGameButton}
+            style={styles.pixelButtonInner}
             onPress={handleForfeit}
           >
             <Text style={styles.startGameButtonText}>Back</Text>
@@ -1231,5 +1246,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     fontFamily: 'PixeloidMono',
+  },
+  pixelButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 });

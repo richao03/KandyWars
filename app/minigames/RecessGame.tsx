@@ -17,13 +17,14 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { RECESS_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 interface RecessGameProps {
   onComplete: () => void;
@@ -661,7 +662,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     width: `${timerLineWidth.value * 100}%`,
   }));
 
-
   // Handle gesture animations with useAnimatedReaction
   useAnimatedReaction(
     () => shouldAnimate.value,
@@ -852,7 +852,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             Rock Paper Scissors Battle!
           </Text>
 
-          <View style={styles.instructionsCard}>
+          <PixelBorder
+            borderColor="#4A90C1"
+            borderWidth={3}
+            backgroundColor="#6BB6E3"
+            innerPadding={20}
+            style={{ marginBottom: 20, width: '100%' }}
+          >
             <Text style={styles.instructionsHeader}>How to Play:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
@@ -872,14 +878,25 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
                 Need 4 wins in a row per stage, 3 losses = game over
               </Text>
             </View>
-          </View>
+          </PixelBorder>
 
-          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
-            <Text style={styles.startGameButtonText}>Start Battle!</Text>
-          </TouchableOpacity>
+          <PixelBorder
+            borderColor="#388E3C"
+            borderWidth={3}
+            backgroundColor="#4CAF50"
+            innerPadding={0}
+            style={{ marginBottom: 16 }}
+          >
+            <TouchableOpacity
+              style={styles.pixelButtonInner}
+              onPress={startGame}
+            >
+              <Text style={styles.startGameButtonText}>Start Battle!</Text>
+            </TouchableOpacity>
+          </PixelBorder>
 
           <TouchableOpacity
-            style={styles.startGameButton}
+            style={styles.pixelButtonInner}
             onPress={() => router.back()}
           >
             <Text style={styles.startGameButtonText}>Back</Text>
@@ -1490,6 +1507,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     fontFamily: 'PixeloidMono',
+  },
+  pixelButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   // DEBUG STYLES
   debugContainer: {

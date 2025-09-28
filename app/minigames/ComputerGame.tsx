@@ -2,13 +2,14 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
-import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 interface MemoryCard {
   id: string;
@@ -283,7 +284,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Computer Study Session!</Text>
 
-          <View style={styles.instructionsCard}>
+          <PixelBorder
+            borderColor="#00d4ff"
+            borderWidth={3}
+            backgroundColor="#16213e"
+            innerPadding={20}
+            style={{ marginBottom: 20, width: '100%' }}
+          >
             <Text style={styles.instructionsHeader}>How to Solve:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
@@ -303,14 +310,25 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                 Limited attempts - memorize positions carefully!
               </Text>
             </View>
-          </View>
+          </PixelBorder>
 
-          <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
-            <Text style={styles.startGameButtonText}>Start Challenge!</Text>
-          </TouchableOpacity>
+          <PixelBorder
+            borderColor="#00ff41"
+            borderWidth={3}
+            backgroundColor="#16213e"
+            innerPadding={0}
+            style={{ marginBottom: 16 }}
+          >
+            <TouchableOpacity
+              style={styles.pixelButtonInner}
+              onPress={startGame}
+            >
+              <Text style={styles.startGameButtonText}>Start Challenge!</Text>
+            </TouchableOpacity>
+          </PixelBorder>
 
           <TouchableOpacity
-            style={styles.startGameButton}
+            style={styles.pixelButtonInner}
             onPress={() => router.back()}
           >
             <Text style={styles.startGameButtonText}>Back</Text>
@@ -827,6 +845,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#00ff41',
     fontFamily: 'PixeloidMono',
+  },
+  pixelButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   instructionsButton: {
     flex: 1,

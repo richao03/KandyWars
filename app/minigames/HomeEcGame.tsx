@@ -19,6 +19,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
+import PixelBorder from '../components/PixelBorder';
 
 interface HomeEcGameProps {
   onComplete: () => void;
@@ -376,34 +377,46 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionsTitle}>Candy Kitchen Study!</Text>
 
-        <View style={styles.instructionsCard}>
+        <PixelBorder
+          borderColor="#6c757d"
+          borderWidth={3}
+          backgroundColor="#2c3139"
+          innerPadding={20}
+          style={{ marginBottom: 20, width: '100%' }}
+        >
           <Text style={styles.instructionsHeader}>How to Cook:</Text>
           <View style={styles.instructionStep}>
-            <Text style={styles.stepNumber}>1. </Text>
+            <Text style={styles.stepNumber}>1.</Text>
             <Text style={styles.stepText}>
               Swipe ingredients to matching kitchen stations
             </Text>
           </View>
           <View style={styles.instructionStep}>
-            <Text style={styles.stepNumber}>2. </Text>
+            <Text style={styles.stepNumber}>2.</Text>
             <Text style={styles.stepText}>
               🍭 UP, 🍬 RIGHT, 🧁 DOWN, 🍫 LEFT
             </Text>
           </View>
           <View style={styles.instructionStep}>
-            <Text style={styles.stepNumber}>3. </Text>
-            <Text style={styles.stepText}>
-              Wrong swipes lose points - be fast and accurate!
-            </Text>
+            <Text style={styles.stepNumber}>3.</Text>
+            <Text style={styles.stepText}>Wrong swipes lose points</Text>
           </View>
-        </View>
+        </PixelBorder>
 
-        <TouchableOpacity style={styles.startGameButton} onPress={startGame}>
-          <Text style={styles.startGameButtonText}>Start Cooking!</Text>
-        </TouchableOpacity>
+        <PixelBorder
+          borderColor="#6c757d"
+          borderWidth={3}
+          backgroundColor="#495057"
+          innerPadding={0}
+          style={{ marginBottom: 16 }}
+        >
+          <TouchableOpacity style={styles.pixelButtonInner} onPress={startGame}>
+            <Text style={styles.startGameButtonText}>Start Cooking!</Text>
+          </TouchableOpacity>
+        </PixelBorder>
 
         <TouchableOpacity
-          style={styles.startGameButton}
+          style={styles.pixelButtonInner}
           onPress={handleForfeit}
         >
           <Text style={styles.startGameButtonText}>Back</Text>
@@ -868,5 +881,11 @@ const styles = StyleSheet.create({
     textShadowColor: '#343a40',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  pixelButtonInner: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
 });
