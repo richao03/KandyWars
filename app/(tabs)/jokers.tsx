@@ -132,31 +132,50 @@ function JokersPage() {
         '📰'
       );
     } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
-      // Double the selected candy's price for this period
-      const originalPrice =
-        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
-      const newPrice = originalPrice * 2;
+      // Set the selected candy's price to the highest price of all candies this period
+      const allCandyTypes = Object.keys(gameData.candyPrices);
+      let highestPrice = 0;
 
-      modifyCandyPrice(selectedCandy, newPrice, periodCount);
+      // Find the highest price among all candies for this period
+      for (const candyType of allCandyTypes) {
+        const priceForThisPeriod = gameData.candyPrices[candyType]?.[periodCount] || 0;
+        if (priceForThisPeriod > highestPrice) {
+          highestPrice = priceForThisPeriod;
+        }
+      }
+
+      modifyCandyPrice(selectedCandy, highestPrice, periodCount);
       removeJoker(joker.id);
 
       handleShowConfirmation(
         'Market Manipulation Activated!',
-        `${selectedCandy} price doubled! New price: $${newPrice.toFixed(2)}`,
+        `${selectedCandy} price set to highest market price: $${highestPrice.toFixed(2)}`,
         '📈'
       );
     } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
-      // Crash the selected candy's price by 50%
-      const originalPrice =
-        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
-      const newPrice = Math.max(originalPrice * 0.5, 0.01); // 50% reduction, minimum $0.01
+      // Set the selected candy's price to the lowest price of all candies this period
+      const allCandyTypes = Object.keys(gameData.candyPrices);
+      let lowestPrice = Infinity;
 
-      modifyCandyPrice(selectedCandy, newPrice, periodCount);
+      // Find the lowest price among all candies for this period
+      for (const candyType of allCandyTypes) {
+        const priceForThisPeriod = gameData.candyPrices[candyType]?.[periodCount] || 0;
+        if (priceForThisPeriod > 0 && priceForThisPeriod < lowestPrice) {
+          lowestPrice = priceForThisPeriod;
+        }
+      }
+
+      // If no valid lowest price found, use minimum price
+      if (lowestPrice === Infinity) {
+        lowestPrice = 0.01;
+      }
+
+      modifyCandyPrice(selectedCandy, lowestPrice, periodCount);
       removeJoker(joker.id);
 
       handleShowConfirmation(
         'The Big Short Activated!',
-        `${selectedCandy} price crashed by 50%! New price: $${newPrice.toFixed(2)}`,
+        `${selectedCandy} price set to lowest market price: $${lowestPrice.toFixed(2)}`,
         '📉'
       );
     } else if (joker.effect === 'double_candy_price') {
@@ -368,11 +387,6 @@ function JokersPage() {
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Debug info */}
-        <Text style={{ color: 'white', textAlign: 'center', fontSize: 12 }}>
-          Debug: activeTab = {activeTab}
-        </Text>
       </View>
 
       {activeTab === 'inventory' ? (

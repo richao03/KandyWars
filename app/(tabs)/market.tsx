@@ -25,12 +25,16 @@ import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects
 import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useDiamondHand } from '../../src/hooks/useDiamondHand';
 import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
+import { useHomeMadeBonus } from '../../src/hooks/useHomeMadeBonus';
+import { useTrojanHorse } from '../../src/hooks/useTrojanHorse';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
+import { useAppDispatch } from '../../src/store/hooks';
+import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
@@ -196,6 +200,8 @@ function Market(props) {
 
   usePriceDoubling(); // This hook handles price restoration on period change
   useEmptyInventoryBonus(); // This hook handles Embrace the Grind joker bonus
+  useHomeMadeBonus(); // This hook handles Home Made joker bonus
+  useTrojanHorse(); // This hook handles Trojan Horse joker price increases
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
   const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
   // Tutorial using Copilot - check if we should show tutorial for day 1 period 1 (period starts at 0)
@@ -542,7 +548,18 @@ function Market(props) {
         if (i !== selectedCandyIndex) return candy;
 
         if (mode === 'buy') {
-          const totalCost = candy.cost * quantity;
+          // Check for Time Zone Arbitrage joker effect (morning purchase discount)
+          const periodWithinDay = periodCount % 8;
+          const isMorning = periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
+          const hasTimeZoneArbitrage = jokers.some((joker: any) => joker.id === 42);
+
+          let purchasePrice = candy.cost;
+          if (hasTimeZoneArbitrage && isMorning) {
+            purchasePrice = candy.cost * 0.9; // 10% discount
+            console.log(`🕘 Time Zone Arbitrage: Morning purchase discount applied! ${candy.cost} -> ${purchasePrice.toFixed(2)}`);
+          }
+
+          const totalCost = purchasePrice * quantity;
           if (balance < totalCost) {
             return candy;
           }
@@ -551,7 +568,7 @@ function Market(props) {
           const inventorySuccess = addToInventory(
             candy.name,
             quantity,
-            candy.cost
+            purchasePrice
           );
           if (!inventorySuccess) {
             // Inventory is full, transaction fails
@@ -567,9 +584,9 @@ function Market(props) {
           const newQty = candy.quantityOwned + quantity;
           const newAvg =
             candy.averagePrice === null
-              ? candy.cost
+              ? purchasePrice
               : (candy.averagePrice * candy.quantityOwned +
-                  candy.cost * quantity) /
+                  purchasePrice * quantity) /
                 newQty;
 
           return {
@@ -655,7 +672,33 @@ function Market(props) {
             );
           }
 
-          // 4. Calculate profit-based hall pass bonus from Redux state
+          // 4. Check for Sunset Surge afternoon bonus
+          const periodWithinDay = periodCount % 8;
+          const isAfternoon = periodWithinDay >= 3; // Periods 3, 4, 5, 6, 7 are "afternoon"
+          const hasSunsetSurge = jokers.some((joker: any) => joker.id === 38);
+
+          if (hasSunsetSurge && isAfternoon) {
+            multiplier *= 1.1; // 10% bonus
+            bonusDetails.push(`🌅 Sunset Surge: 10% bonus (afternoon sale)`);
+            console.log(
+              `🌅 Sunset Surge: +10% afternoon sales bonus applied (period ${periodWithinDay + 1} is afternoon)`
+            );
+          }
+
+          // 5. Check for Bulk Sale bonus (sell >50% of inventory space in one sale)
+          const hasBulkSale = jokers.some((joker: any) => joker.id === JOKER_IDS.BULK_SALE);
+          const inventoryLimit = getInventoryLimit();
+          const isBulkSale = quantity > (inventoryLimit * 0.5); // More than 50% of inventory space
+
+          if (hasBulkSale && isBulkSale) {
+            multiplier *= 1.2; // 20% bonus
+            bonusDetails.push(`📦 Bulk Sale: 20% bonus (selling ${quantity}/${inventoryLimit} slots)`);
+            console.log(
+              `📦 Bulk Sale: +20% sales bonus applied (selling ${quantity} > ${(inventoryLimit * 0.5).toFixed(1)} slots)`
+            );
+          }
+
+          // 6. Calculate profit-based hall pass bonus from Redux state
           const inventoryItem = inventory.find(
             (item) => item.name === candy.name
           );
@@ -783,11 +826,39 @@ function Market(props) {
     }
   };
 
+  const dispatch = useAppDispatch();
+
   const handleLocationSelect = (location: Location) => {
     setLocationModalVisible(false);
 
     // Show loading prices immediately
     setLocalPricesUpdating(true);
+
+    // Check for Trade Routes joker (id: 39) and increment inventory limit if present
+    const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
+    if (hasTradeRoutes) {
+      console.log('🗺️ Trade Routes active: +1 inventory limit on location change');
+      dispatch(incrementMaxInventory(1));
+    }
+
+    // Check for Something from Nothing joker (id: 46) and add candy generation
+    const hasSomethingFromNothing = jokers.some((joker: any) => joker.id === 46);
+    if (hasSomethingFromNothing) {
+      console.log('✨ Something from Nothing active: +1 of each candy type');
+      const candyTypes = ['Skittles', 'M&Ms', 'Sour Patch Kids', 'Twix', 'Snickers', 'Kit Kat'];
+      candyTypes.forEach(candyType => {
+        // Add 1 of each candy type to inventory at current market price
+        const currentCandy = candies.find(c => c.name === candyType);
+        if (currentCandy) {
+          const success = addToInventory(candyType, 1, currentCandy.cost);
+          if (success) {
+            console.log(`✨ Something from Nothing: Added 1 ${candyType} at $${currentCandy.cost}`);
+          } else {
+            console.log(`✨ Something from Nothing: Failed to add ${candyType} (inventory full)`);
+          }
+        }
+      });
+    }
 
     // Call incrementPeriod and update flavor text
     incrementPeriod(location);
@@ -1076,6 +1147,7 @@ function Market(props) {
           setLocationModalVisible(false);
         }}
         onSelectLocation={handleLocationSelect}
+        gameData={gameData}
       />
 
       <DayStatsModal

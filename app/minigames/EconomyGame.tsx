@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import {
   Gesture,
   GestureDetector,
@@ -469,6 +470,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const handleGameOver = (reason: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setGameState('gameover');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     // If player completed at least 1 level, they get a joker reward
     if (completedLevel > 0) {
@@ -498,6 +500,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   // Start game
   const startGame = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('economy');
     trackMinigameProgress('economy');
@@ -573,6 +576,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   /** ---------- placement helpers ---------- */
   const placeIntoSlot = (tile: TradeTile, idx: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const occupying = slots[idx];
     setSlots((prev) => {
       const copy = [...prev];
@@ -615,6 +619,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   // JS helpers shared by all draggables
   const onStartJS = useCallback((tile: TradeTile) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setHoveredSlotIndex(null);
     setDragLabelText(tile.label);
   }, []);
@@ -629,11 +634,13 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   /** ---------- Actions ---------- */
   const clearAll = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSlots(Array(puzzle.steps).fill(null));
     setAvailable(puzzle.tiles);
   };
 
   const executePlan = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     let inv: Inventory = { ...puzzle.startInventory };
     let tradesExecuted = 0;
 
@@ -642,6 +649,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       if (!tile) continue;
 
       if (!canAfford(inv, tile.give)) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         showModal(
           '❌ Plan Failed',
           `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`,
@@ -655,6 +663,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
     const success = (inv[puzzle.goal] || 0) >= 1;
     if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const isLast = levelIndex === LEVEL_CONFIG.length - 1;
 
       if (isLast) {
@@ -700,6 +709,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         );
       }
     } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       showModal(
         '📉 Not There Yet',
         `❌ Did not reach 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nEnd: ${fmtInv(inv) || 'Empty'}`,
@@ -749,12 +759,14 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   );
 
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
         '🏛️ Leave Trading Post?',
         "If you leave now, you'll forfeit your chance to study tonight and won't get a trade tool reward.",
         '🏛️',
         () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           router.back();
         }
       );
@@ -868,7 +880,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <MinigameHUD
           title="Barter Trading"
           subtitle="Trade your way to the goal candy!"
-          leftInfo={`Level ${levelIndex + 1}/3 • Time: ${timeLeft}s`}
+          leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
           centerInfo={`Start: ${Object.keys(puzzle.startInventory)
             .map((item) => CATALOG[item as Item])
             .join('')}`}
@@ -998,7 +1010,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             style={[styles.footerBtn, styles.footerPrimary]}
             onPress={executePlan}
           >
-            <Text style={styles.footerPrimaryText}>💼 Execute Trade Plan</Text>
+            <Text style={styles.footerPrimaryText}>Execute Trade</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.footerBtn, styles.footerSecondary]}

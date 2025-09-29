@@ -8,8 +8,10 @@ import {
   View,
 } from 'react-native';
 import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
+import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { Candy } from '../types';
 import FastModal from './FastModal';
 import TransactionModal from './TransactionModal';
@@ -40,6 +42,7 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
   const { balance, spend, add } = useWallet();
   const { addToInventory, removeFromInventory, inventory, getInventoryLimit } =
     useInventory();
+  const { jokers } = useJokers();
 
   const [candies, setCandies] = useState<CandyForDeli[]>(() =>
     baseCandies.map((candy) => {
@@ -49,9 +52,13 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
           ? prices.reduce((sum, price) => sum + price, 0) / prices.length
           : (candy.baseMin + candy.baseMax) / 2;
 
+      // Apply The Good Old Days discount (50% off deli prices)
+      const hasGoodOldDays = jokers.some((joker: any) => joker.id === JOKER_IDS.THE_GOOD_OLD_DAYS);
+      const finalCost = hasGoodOldDays ? averageCost * 0.5 : averageCost;
+
       return {
         ...candy,
-        cost: parseFloat(averageCost.toFixed(2)),
+        cost: parseFloat(finalCost.toFixed(2)),
         quantityOwned: 0,
         averagePrice: null,
       };

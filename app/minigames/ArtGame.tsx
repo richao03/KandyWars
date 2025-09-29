@@ -6,9 +6,9 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  Vibration,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -450,6 +450,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   // Handle when mistakes run out
   const handleMistakesUp = () => {
     setIsGameActive(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     if (completedLevel > 0) {
       // Player completed at least one stage, award jokers based on completion
@@ -538,8 +539,11 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
     if (row === currentPosition.row && col === currentPosition.col) return; // Same tile
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (isValidMove(currentPosition.row, currentPosition.col, row, col)) {
       // Valid move
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       flashValue.value = withSequence(
         withTiming(1, { duration: 100 }),
         withTiming(0, { duration: 100 })
@@ -592,7 +596,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         withSpring(0, { duration: 50 })
       );
 
-      Vibration.vibrate(100);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Decrease mistakes
       setMistakesLeft((prev) => {
@@ -617,12 +621,14 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   // No cleanup needed for mistake-based system
 
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
         '🎨 Leave Art Session?',
         "If you leave now, you'll forfeit your chance to study tonight and won't get an artistic reward.",
         '🎨',
         () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           router.back();
         }
       );
@@ -697,7 +703,10 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           >
             <TouchableOpacity
               style={styles.pixelButtonInner}
-              onPress={() => setGameState('playing')}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setGameState('playing');
+              }}
             >
               <Text style={styles.startGameButtonText}>Start Challenge!</Text>
             </TouchableOpacity>

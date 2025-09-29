@@ -40,6 +40,7 @@ const subjects = [
   { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' } },
   { name: 'Comp Sci', color: { bg: '#f0f5ff', border: '#2f54eb' } },
   { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' } },
+  { name: 'Geography', color: { bg: '#e6f3ff', border: '#3182ce' } },
 ];
 
 function AfterSchoolPage() {
@@ -165,6 +166,9 @@ function AfterSchoolPage() {
         break;
       case 'Art':
         router.push('/art-game');
+        break;
+      case 'Geography':
+        router.push('/geography-game');
         break;
       default:
         setShowStudySubjects(false);
@@ -507,9 +511,9 @@ function AfterSchoolPage() {
               </View>
 
               <View style={styles.subjectsContainer}>
-                {/* First Row - 4 subjects */}
+                {/* First Row - 3 subjects */}
                 <View style={styles.subjectsRow}>
-                  {subjects.slice(0, 4).map((subject) => (
+                  {subjects.slice(0, 3).map((subject) => (
                     <PixelBorder
                       key={subject.name}
                       borderColor={
@@ -543,9 +547,45 @@ function AfterSchoolPage() {
                   ))}
                 </View>
 
-                {/* Second Row - 4 subjects */}
+                {/* Second Row - 3 subjects */}
                 <View style={styles.subjectsRow}>
-                  {subjects.slice(4, 8).map((subject) => (
+                  {subjects.slice(3, 6).map((subject) => (
+                    <PixelBorder
+                      key={subject.name}
+                      borderColor={
+                        hasStudiedTonight ? '#999' : subject.color.border
+                      }
+                      borderWidth={3}
+                      backgroundColor={
+                        hasStudiedTonight ? '#ccc' : subject.color.bg
+                      }
+                      innerPadding={0}
+                      style={styles.subjectButtonWrapper}
+                    >
+                      <TouchableOpacity
+                        style={[
+                          styles.subjectButtonInner,
+                          hasStudiedTonight && styles.disabledSubjectButton,
+                        ]}
+                        onPress={() => handleSubjectSelect(subject.name)}
+                        disabled={hasStudiedTonight}
+                      >
+                        <Text
+                          style={[
+                            styles.subjectText,
+                            hasStudiedTonight && styles.disabledText,
+                          ]}
+                        >
+                          {subject.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+                  ))}
+                </View>
+
+                {/* Third Row - 3 subjects */}
+                <View style={styles.subjectsRow}>
+                  {subjects.slice(6, 9).map((subject) => (
                     <PixelBorder
                       key={subject.name}
                       borderColor={

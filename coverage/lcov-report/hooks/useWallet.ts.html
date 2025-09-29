@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/46</span>
+                <span class='fraction'>0/58</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/13</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/45</span>
+                <span class='fraction'>0/51</span>
             </div>
         
             
@@ -176,7 +176,15 @@
 <a name='L111'></a><a href='#L111'>111</a>
 <a name='L112'></a><a href='#L112'>112</a>
 <a name='L113'></a><a href='#L113'>113</a>
-<a name='L114'></a><a href='#L114'>114</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -197,6 +205,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -271,6 +286,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -310,16 +326,23 @@ import { HallPassUtils } from '../utils/hallPassUtils';
 &nbsp;
 export const useWallet = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
   const dispatch = <span class="cstat-no" title="statement not covered" >useAppDispatch();</span>
-  const walletState = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet)</span>;</span>
+  // Subscribe to specific values instead of entire state slice
+  const balance = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.balance)</span>;</span>
+  const stashedAmount = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.stashedAmount)</span>;</span>
+  const adoptionFee = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.adoptionFee)</span>;</span>
+  const difficultyLevel = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.difficultyLevel)</span>;</span>
+  const playerName = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.playerName)</span>;</span>
+  const playerId = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.playerId)</span>;</span>
+  const isFirstTimeDifficultySelection = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.wallet.isFirstTimeDifficultySelection)</span>;</span>
   const hallPassEffects = <span class="cstat-no" title="statement not covered" >useAppSelector(selectSelectedHallPassEffects);</span>
 &nbsp;
   const spend = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >(a</span>mount: number): boolean =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (walletState.balance &gt;= amount) {</span>
+<span class="cstat-no" title="statement not covered" >    if (balance &gt;= amount) {</span>
 <span class="cstat-no" title="statement not covered" >      dispatch(spendBalance(amount));</span>
 <span class="cstat-no" title="statement not covered" >      return true;</span>
     }
 <span class="cstat-no" title="statement not covered" >    return false;</span>
-  }, [dispatch, walletState.balance]);
+  }, [dispatch, balance]);
 &nbsp;
   const add = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >(a</span>mount: number) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    dispatch(addBalance(amount));</span>
@@ -337,27 +360,27 @@ export const useWallet = <span class="cstat-no" title="statement not covered" ><
   }, [dispatch, hallPassEffects]);
 &nbsp;
   const stashMoneyAction = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >(a</span>mount: number, jokers?: any[]): boolean =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (walletState.balance &gt;= amount) {</span>
+<span class="cstat-no" title="statement not covered" >    if (balance &gt;= amount) {</span>
 <span class="cstat-no" title="statement not covered" >      dispatch(stashMoney(amount));</span>
 <span class="cstat-no" title="statement not covered" >      return true;</span>
     }
 <span class="cstat-no" title="statement not covered" >    return false;</span>
-  }, [dispatch, walletState.balance]);
+  }, [dispatch, balance]);
 &nbsp;
   const withdrawFromStashAction = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >(a</span>mount: number): boolean =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    if (walletState.stashedAmount &gt;= amount) {</span>
+<span class="cstat-no" title="statement not covered" >    if (stashedAmount &gt;= amount) {</span>
 <span class="cstat-no" title="statement not covered" >      dispatch(withdrawFromStash(amount));</span>
 <span class="cstat-no" title="statement not covered" >      return true;</span>
     }
 <span class="cstat-no" title="statement not covered" >    return false;</span>
-  }, [dispatch, walletState.stashedAmount]);
+  }, [dispatch, stashedAmount]);
 &nbsp;
   const stealMoney = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >(a</span>mount: number, jokers?: any[], periodCount?: number): number =&gt; {</span>
     // This logic would need to be implemented based on your joker system
-    const stolenAmount = <span class="cstat-no" title="statement not covered" >Math.min(amount, walletState.balance);</span>
+    const stolenAmount = <span class="cstat-no" title="statement not covered" >Math.min(amount, balance);</span>
 <span class="cstat-no" title="statement not covered" >    dispatch(spendBalance(stolenAmount));</span>
 <span class="cstat-no" title="statement not covered" >    return stolenAmount;</span>
-  }, [dispatch, walletState.balance]);
+  }, [dispatch, balance]);
 &nbsp;
   const resetWalletAction = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    dispatch(resetWallet());</span>
@@ -380,16 +403,17 @@ export const useWallet = <span class="cstat-no" title="statement not covered" ><
   }, [dispatch]);
 &nbsp;
   const hasExistingName = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >as</span>ync (): Promise&lt;boolean&gt; =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >    return walletState.playerName !== null;</span>
-  }, [walletState.playerName]);
+<span class="cstat-no" title="statement not covered" >    return playerName !== null;</span>
+  }, [playerName]);
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return {</span>
-    balance: walletState.balance,
-    stashedAmount: walletState.stashedAmount,
-    difficultyLevel: walletState.difficultyLevel,
-    playerName: walletState.playerName,
-    playerId: walletState.playerId,
-    isFirstTimeDifficultySelection: walletState.isFirstTimeDifficultySelection,
+    balance,
+    stashedAmount,
+    adoptionFee,
+    difficultyLevel,
+    playerName,
+    playerId,
+    isFirstTimeDifficultySelection,
     spend,
     add,
     addAllowance,
@@ -409,7 +433,7 @@ export const useWallet = <span class="cstat-no" title="statement not covered" ><
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-22T15:11:27.095Z
+                at 2025-09-28T22:02:04.608Z
             </div>
         <script src="../prettify.js"></script>
         <script>

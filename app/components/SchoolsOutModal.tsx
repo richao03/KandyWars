@@ -1,12 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { useTabBar } from '../../src/hooks/useTabBar';
 
 interface SchoolsOutModalProps {
@@ -45,9 +38,7 @@ export default function SchoolsOutModal({
   if (!visible) return null;
 
   return (
-    <View
-      style={styles.overlay}
-    >
+    <View style={styles.overlay}>
       <View style={styles.container}>
         <Image
           source={require('../../assets/images/schoolsOut.png')}
@@ -86,7 +77,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   text: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF', // White text for good contrast on orange
     fontFamily: 'PixeloidMono',
@@ -97,7 +88,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tapText: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#FFFFFF',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',

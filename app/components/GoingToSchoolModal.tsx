@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   text: {
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: '700',
     color: '#8B4513', // Saddle brown for good contrast on warm background
     fontFamily: 'PixeloidMono',
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   allowanceText: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     fontSize: 18,
     fontWeight: '600',
     color: '#2E8B57', // Sea green for money/positive message

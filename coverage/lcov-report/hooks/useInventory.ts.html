@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/50</span>
+                <span class='fraction'>0/52</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/17</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/48</span>
+                <span class='fraction'>0/49</span>
             </div>
         
             
@@ -189,7 +189,9 @@
 <a name='L124'></a><a href='#L124'>124</a>
 <a name='L125'></a><a href='#L125'>125</a>
 <a name='L126'></a><a href='#L126'>126</a>
-<a name='L127'></a><a href='#L127'>127</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -205,6 +207,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -332,7 +336,9 @@ import { HallPassUtils } from '../utils/hallPassUtils';
 &nbsp;
 export const useInventory = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
   const dispatch = <span class="cstat-no" title="statement not covered" >useAppDispatch();</span>
-  const inventoryState = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.inventory)</span>;</span>
+  // Subscribe to specific values instead of entire state slice
+  const inventory = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.inventory.inventory)</span>;</span>
+  const maxInventory = <span class="cstat-no" title="statement not covered" >useAppSelector(<span class="fstat-no" title="function not covered" >st</span>ate =&gt; <span class="cstat-no" title="statement not covered" >state.inventory.maxInventory)</span>;</span>
   const inventoryCount = <span class="cstat-no" title="statement not covered" >useAppSelector(selectInventoryCount);</span>
   const isInventoryFull = <span class="cstat-no" title="statement not covered" >useAppSelector(selectIsInventoryFull);</span>
 &nbsp;
@@ -364,7 +370,7 @@ export const useInventory = <span class="cstat-no" title="statement not covered"
 &nbsp;
   const confiscateHalfInventory = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >()</span>: number =&gt; {</span>
     let totalConfiscated = <span class="cstat-no" title="statement not covered" >0;</span>
-<span class="cstat-no" title="statement not covered" >    inventoryState.inventory.forEach(<span class="fstat-no" title="function not covered" >it</span>em =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    inventory.forEach(<span class="fstat-no" title="function not covered" >it</span>em =&gt; {</span>
       const confiscateAmount = <span class="cstat-no" title="statement not covered" >Math.floor((item.quantity || 1) / 2);</span>
 <span class="cstat-no" title="statement not covered" >      totalConfiscated += confiscateAmount;</span>
 <span class="cstat-no" title="statement not covered" >      if (confiscateAmount &gt; 0) {</span>
@@ -372,7 +378,7 @@ export const useInventory = <span class="cstat-no" title="statement not covered"
       }
     });
 <span class="cstat-no" title="statement not covered" >    return totalConfiscated;</span>
-  }, [dispatch, inventoryState.inventory]);
+  }, [dispatch, inventory]);
 &nbsp;
   const getTotalInventoryCount = <span class="cstat-no" title="statement not covered" >useCallback(<span class="fstat-no" title="function not covered" >()</span>: number =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    return inventoryCount;</span>
@@ -420,8 +426,8 @@ export const useInventory = <span class="cstat-no" title="statement not covered"
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return {</span>
     // Original data
-    inventory: inventoryState.inventory,
-    maxInventory: inventoryState.maxInventory,
+    inventory,
+    maxInventory,
     inventoryCount,
     isInventoryFull,
 &nbsp;
@@ -448,7 +454,7 @@ export const useInventory = <span class="cstat-no" title="statement not covered"
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-22T15:11:27.095Z
+                at 2025-09-28T22:02:04.608Z
             </div>
         <script src="../prettify.js"></script>
         <script>

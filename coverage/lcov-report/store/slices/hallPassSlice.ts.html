@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">56.09% </span>
+                <span class="strong">59.52% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>23/41</span>
+                <span class='fraction'>25/42</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">28.57% </span>
+                <span class="strong">36.36% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/21</span>
+                <span class='fraction'>8/22</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">62.85% </span>
+                <span class="strong">63.88% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>22/35</span>
+                <span class='fraction'>23/36</span>
             </div>
         
             
@@ -347,7 +347,14 @@
 <a name='L282'></a><a href='#L282'>282</a>
 <a name='L283'></a><a href='#L283'>283</a>
 <a name='L284'></a><a href='#L284'>284</a>
-<a name='L285'></a><a href='#L285'>285</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -600,23 +607,30 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -673,7 +687,7 @@ const ALL_HALL_PASSES: Omit&lt;HallPass, 'isUnlocked' | 'unlockedAt'&gt;[] = [
       {
         type: 'sale_price_bonus',
         value: 10,
-        description: '+10% to all candy sale prices',
+        description: '+50% profit bonus on candy sales (10% × 5x multiplier)',
       },
     ],
     rarity: 'common',
@@ -715,7 +729,7 @@ const ALL_HALL_PASSES: Omit&lt;HallPass, 'isUnlocked' | 'unlockedAt'&gt;[] = [
       {
         type: 'sale_price_bonus',
         value: 15,
-        description: '+15% to all candy sale prices',
+        description: '+75% profit bonus on candy sales (15% × 5x multiplier)',
       },
       {
         type: 'inventory_bonus',
@@ -748,7 +762,7 @@ const ALL_HALL_PASSES: Omit&lt;HallPass, 'isUnlocked' | 'unlockedAt'&gt;[] = [
       {
         type: 'sale_price_bonus',
         value: 25,
-        description: '+25% to all candy sale prices',
+        description: '+125% profit bonus on candy sales (25% × 5x multiplier)',
       },
       {
         type: 'allowance_bonus',
@@ -781,7 +795,7 @@ const ALL_HALL_PASSES: Omit&lt;HallPass, 'isUnlocked' | 'unlockedAt'&gt;[] = [
       {
         type: 'sale_price_bonus',
         value: 20,
-        description: '+20% to all candy sale prices',
+        description: '+100% profit bonus on candy sales (20% × 5x multiplier)',
       },
     ],
     rarity: 'epic',
@@ -795,7 +809,7 @@ const ALL_HALL_PASSES: Omit&lt;HallPass, 'isUnlocked' | 'unlockedAt'&gt;[] = [
       {
         type: 'sale_price_bonus',
         value: 30,
-        description: '+30% to all candy sale prices',
+        description: '+150% profit bonus on candy sales (30% × 5x multiplier)',
       },
       {
         type: 'inventory_bonus',
@@ -883,24 +897,31 @@ export const {
 } = hallPassSlice.actions;
 &nbsp;
 // Selectors
-export const selectAllHallPasses = <span class="fstat-no" title="function not covered" >(s</span>tate: { hallPass: HallPassState }) =&gt;
-<span class="cstat-no" title="statement not covered" >  state.hallPass.availablePasses;</span>
+export const selectAllHallPasses = (state: { hallPass: HallPassState }) =&gt;
+  state.hallPass.availablePasses;
 &nbsp;
-export const selectUnlockedHallPasses = <span class="fstat-no" title="function not covered" >(s</span>tate: { hallPass: HallPassState }) =&gt;
-<span class="cstat-no" title="statement not covered" >  state.hallPass.availablePasses.filter(<span class="fstat-no" title="function not covered" >(p</span>ass) =&gt; <span class="cstat-no" title="statement not covered" >pass.isUnlocked)</span>;</span>
+// Memoized selector to prevent unnecessary re-renders
+export const selectUnlockedHallPasses = createSelector(
+  [selectAllHallPasses],
+<span class="fstat-no" title="function not covered" >  (p</span>asses) =&gt; <span class="cstat-no" title="statement not covered" >passes.filter(<span class="fstat-no" title="function not covered" >(p</span>ass) =&gt; <span class="cstat-no" title="statement not covered" >pass.isUnlocked)</span></span>
+);
 &nbsp;
-export const selectSelectedHallPass = (state: { hallPass: HallPassState }) =&gt; {
-  if (!state.hallPass.selectedPassId) return null;
-  return (
-    state.hallPass.availablePasses.find(
-      (pass) =&gt; pass.id === state.hallPass.selectedPassId
-    ) || <span class="branch-1 cbranch-no" title="branch not covered" >null</span>
+// Memoized selector for selected hall pass
+export const selectSelectedHallPass = createSelector(
+  [(state: { hallPass: HallPassState }) =&gt; state.hallPass.selectedPassId,
+   selectAllHallPasses],
+  (selectedPassId, passes) =&gt; {
+    if (!selectedPassId) return null;
+    return passes.find((pass) =&gt; pass.id === selectedPassId) || <span class="branch-1 cbranch-no" title="branch not covered" >null;</span>
+  }
+);
+&nbsp;
+// Memoized factory selector for finding hall pass by ID
+export const selectHallPassById = <span class="fstat-no" title="function not covered" >(p</span>assId: string) =&gt;
+<span class="cstat-no" title="statement not covered" >  createSelector(</span>
+    [selectAllHallPasses],
+<span class="fstat-no" title="function not covered" >    (p</span>asses) =&gt; <span class="cstat-no" title="statement not covered" >passes.find(<span class="fstat-no" title="function not covered" >(p</span>ass) =&gt; <span class="cstat-no" title="statement not covered" >pass.id === passId)</span></span>
   );
-};
-&nbsp;
-export const selectHallPassById =
-<span class="fstat-no" title="function not covered" >  (p</span>assId: string) =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(s</span>tate: { hallPass: HallPassState }) =&gt;</span>
-<span class="cstat-no" title="statement not covered" >    state.hallPass.availablePasses.find(<span class="fstat-no" title="function not covered" >(p</span>ass) =&gt; <span class="cstat-no" title="statement not covered" >pass.id === passId)</span>;</span>
 &nbsp;
 export const selectUnlockedPassIds = <span class="fstat-no" title="function not covered" >(s</span>tate: { hallPass: HallPassState }) =&gt;
 <span class="cstat-no" title="statement not covered" >  state.hallPass.unlockedPassIds;</span>
@@ -922,7 +943,7 @@ export default hallPassSlice.reducer;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-22T15:11:27.095Z
+                at 2025-09-28T22:02:04.608Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

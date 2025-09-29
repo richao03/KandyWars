@@ -39,28 +39,43 @@ export default function JokerSelection({
 }: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
   const [rerollsUsed, setRerollsUsed] = useState(0);
-  const { addJoker, getJokersBySubject: getUserJokersBySubject } = useJokers();
+  const { addJoker, getJokersBySubject: getUserJokersBySubject, jokers: ownedJokers } = useJokers();
   const { getJokerBonus } = useHallPass();
 
   // Get user's jokers for this subject (for reference, not used for selection anymore)
-  const userJokers = getUserJokersBySubject(subject);
-  // Always use the full joker pool for minigame rewards (provided jokers)
-  // Don't limit to user's existing jokers as that prevents proper rewards
-  const availableJokers = jokers;
+  // const userJokers = getUserJokersBySubject(subject); // Removed to fix linting warning
+  // Filter out jokers the player already owns to prevent duplicates
+  const ownedJokerIds = ownedJokers.map(joker => joker.id);
+  const availableJokers = jokers.filter(joker => !ownedJokerIds.includes(joker.id));
+
+  console.log(`🃏 JokerSelection: Owned joker IDs: [${ownedJokerIds.join(', ')}]`);
+  console.log(`🃏 JokerSelection: Available jokers after filtering: ${availableJokers.length}/${jokers.length}`);
 
   const selectRandomJokers = () => {
+    if (availableJokers.length === 0) {
+      console.log('🃏 JokerSelection: No available jokers (player owns all jokers for this subject)');
+      // If no jokers available, skip selection
+      onComplete();
+      return;
+    }
+
     const shuffled = [...availableJokers].sort(() => Math.random() - 0.5);
     const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
     const jokerBonus = getJokerBonus(); // +1 from valedictorian_vendor Hall Pass
-    const jokerCount = baseJokerCount + jokerBonus;
+    const requestedJokerCount = baseJokerCount + jokerBonus;
+    // Limit to available jokers if we don't have enough
+    const jokerCount = Math.min(requestedJokerCount, availableJokers.length);
     const selected = shuffled.slice(0, jokerCount);
     setSelectedJokers(selected);
+
+    console.log(`🃏 JokerSelection: Selected ${selected.length} jokers from ${availableJokers.length} available`);
   };
 
   const rerollJokers = () => {
-    // For reroll, get fresh random jokers from the full pool for this subject
+    // For reroll, get fresh random jokers from the full pool for this subject, excluding owned ones
     const allSubjectJokers = getJokersBySubject(subject);
-    const shuffled = [...allSubjectJokers].sort(() => Math.random() - 0.5);
+    const availableSubjectJokers = allSubjectJokers.filter(joker => !ownedJokerIds.includes(joker.id));
+    const shuffled = [...availableSubjectJokers].sort(() => Math.random() - 0.5);
 
     // Reroll gives fewer jokers based on tier
     let baseRerollJokerCount;
@@ -83,10 +98,11 @@ export default function JokerSelection({
     if (!selectedJoker) {
       selectedJoker = availableJokers.find((j) => j.id === jokerId);
     }
-    // If still not found (for rerolled jokers), look in the full subject pool
+    // If still not found (for rerolled jokers), look in the available subject pool (excluding owned)
     if (!selectedJoker) {
       const allSubjectJokers = getJokersBySubject(subject);
-      selectedJoker = allSubjectJokers.find((j) => j.id === jokerId);
+      const availableSubjectJokers = allSubjectJokers.filter(joker => !ownedJokerIds.includes(joker.id));
+      selectedJoker = availableSubjectJokers.find((j) => j.id === jokerId);
     }
 
     if (selectedJoker) {
@@ -251,10 +267,13 @@ export default function JokerSelection({
           Choose Your {subject} Joker!
         </Text>
         <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
-          {getRewardDescription()} {'\n'} Select one powerful ability:
+          {getRewardDescription()} {'\n'}
+          {availableJokers.length === 0
+            ? "You already have all available jokers for this subject!"
+            : "Select one powerful ability:"}
         </Text>
 
-        {selectedJokers.length === 0 && (
+        {selectedJokers.length === 0 && availableJokers.length > 0 && (
           <PixelBorder
             borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
             borderWidth={3}
@@ -363,7 +382,7 @@ export default function JokerSelection({
             onPress={onComplete}
           >
             <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
-              Skip Tool Selection
+              {availableJokers.length === 0 ? 'Continue' : 'Skip Tool Selection'}
             </Text>
           </TouchableOpacity>
         </PixelBorder>

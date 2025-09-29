@@ -69,6 +69,7 @@ const THEME_COLORS = {
     title: '#64b5f6', // Light blue for title
     subtitle: '#bbdefb', // Lighter blue for subtitle
     info: '#ffeb3b', // Yellow accent for info (matching level text)
+    fontSize: 12,
   },
   recess: {
     background: '#fff', // White background
@@ -76,6 +77,13 @@ const THEME_COLORS = {
     title: '#4A90C1', // Blue for title (from choice text/borders)
     subtitle: '#4CAF50', // Green for subtitle (from win text
     info: '#4A90C1', // Blue for info text
+  },
+  geography: {
+    background: '#1a202c', // Dark background matching game
+    border: '#3182ce', // Blue border
+    title: '#63b3ed', // Light blue for title
+    subtitle: '#e2e8f0', // Light gray for subtitle
+    info: '#63b3ed', // Light blue for info text
   },
 };
 
@@ -122,17 +130,23 @@ export default function MinigameHUD({
         {(leftInfo || rightInfo || centerInfo) && (
           <View style={styles.gameInfo}>
             {leftInfo && (
-              <Text style={[styles.infoText, { color: colors.info }]}>
+              <Text
+                style={[styles.infoText, { color: colors.info, fontSize: 14 }]}
+              >
                 {leftInfo}
               </Text>
             )}
             {centerInfo && (
-              <Text style={[styles.infoText, { color: colors.info }]}>
+              <Text
+                style={[styles.infoText, { color: colors.info, fontSize: 14 }]}
+              >
                 {centerInfo}
               </Text>
             )}
             {rightInfo && (
-              <Text style={[styles.infoText, { color: colors.info }]}>
+              <Text
+                style={[styles.infoText, { color: colors.info, fontSize: 14 }]}
+              >
                 {rightInfo}
               </Text>
             )}

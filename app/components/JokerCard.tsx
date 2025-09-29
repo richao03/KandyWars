@@ -174,7 +174,7 @@ function JokerCard({
     } else if (joker.id === JOKER_IDS.GLITCH_IN_THE_MATRIX) {
       // Show joker selector modal for duplication
       setShowJokerSelector(true);
-    } else if (joker.id === JOKER_IDS.MASTER_OF_TRADE) {
+    } else if (joker.id === JOKER_IDS.MASTER_NEGOTIATOR) {
       // Show candy conversion modal - step 1 (select source)
       setShowConversionStep1(true);
     } else if (joker.id === JOKER_IDS.TEMPORARY_EMPEROR) {
@@ -236,17 +236,17 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.DODGEBALL_DASH) {
-      // Show confirmation for Dodgeball Dash activation
-      showConfirm(
-        'Dodgeball Dash',
-        'Set up your next sale to earn double profit?',
-        '⚡',
-        () => handleDodgeballDash(),
-        'Activate',
-        'Cancel',
-        () => {}
-      );
+    // } else if (joker.id === JOKER_IDS.DODGEBALL_DASH) {
+    //   // Show confirmation for Dodgeball Dash activation
+    //   showConfirm(
+    //     'Dodgeball Dash',
+    //     'Set up your next sale to earn double profit?',
+    //     '⚡',
+    //     () => handleDodgeballDash(),
+    //     'Activate',
+    //     'Cancel',
+    //     () => {}
+    //   );
     } else if (joker.id === JOKER_IDS.PURSUASION) {
       // Show confirmation for Pursuasion activation
       showConfirm(
@@ -266,6 +266,28 @@ function JokerCard({
         '🧁',
         () => handleBakeSale(),
         'Collect Money!',
+        'Cancel',
+        () => {}
+      );
+    } else if (joker.id === JOKER_IDS.CONTINENTAL_DRIFT) {
+      // Show confirmation for Continental Drift
+      showConfirm(
+        'Continental Drift',
+        'Randomize all candy prices for this period?',
+        '🌍',
+        () => handleContinentalDrift(),
+        'Activate',
+        'Cancel',
+        () => {}
+      );
+    } else if (joker.id === JOKER_IDS.ATLAS_BONUS) {
+      // Show confirmation for Atlas Bonus
+      showConfirm(
+        'Atlas Bonus',
+        'Instantly gain $1500?',
+        '🏔️',
+        () => handleAtlasBonus(),
+        'Collect Money',
         'Cancel',
         () => {}
       );
@@ -631,6 +653,74 @@ function JokerCard({
   }, [joker.id, joker.flavorText]);
 
   const CardWrapper = onLongPress ? TouchableOpacity : View;
+  const handleContinentalDrift = async () => {
+    console.log('🌍 Continental Drift: Starting activation - randomizing all candy prices');
+
+    try {
+      // Define candy types (you may need to adjust these based on your game's candy types)
+      const candyTypes = ['Skittles', 'M&Ms', 'Sour Patch Kids', 'Twix', 'Snickers', 'Kit Kat'];
+
+      // Randomize prices for all candy types
+      const priceChanges: string[] = [];
+      candyTypes.forEach(candyType => {
+        // Generate a random price between $5-$25
+        const minPrice = 5;
+        const maxPrice = 25;
+        const newPrice = Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+
+        // Get the original price for comparison
+        const originalPrice = getOriginalCandyPrice(candyType);
+
+        // Apply the new randomized price
+        modifyCandyPrice(candyType, newPrice);
+
+        priceChanges.push(`${candyType}: $${originalPrice} → $${newPrice}`);
+        console.log(`🌍 Continental Drift: ${candyType} price changed from $${originalPrice} to $${newPrice}`);
+      });
+
+      // Remove the joker (it's one-time use)
+      removeJoker(joker.id);
+
+      showAlert(
+        'Continental Drift Activated!',
+        `The market landscape has shifted! All candy prices have been randomized for this period:\n\n${priceChanges.join('\n')}`,
+        '🌍'
+      );
+    } catch (error) {
+      console.error('🌍 Continental Drift: Error during activation:', error);
+      showAlert(
+        'Error',
+        'An error occurred while activating Continental Drift',
+        '❌'
+      );
+    }
+  };
+
+  const handleAtlasBonus = async () => {
+    console.log('🏔️ Atlas Bonus: Starting activation - adding $1500');
+
+    try {
+      // Add $1500 to wallet
+      addMoney(1500);
+
+      // Remove the joker (it's one-time use)
+      removeJoker(joker.id);
+
+      showAlert(
+        'Atlas Bonus Activated!',
+        'The weight of the world brings heavy profits! You gained $1500.',
+        '🏔️'
+      );
+    } catch (error) {
+      console.error('🏔️ Atlas Bonus: Error during activation:', error);
+      showAlert(
+        'Error',
+        'An error occurred while activating Atlas Bonus',
+        '❌'
+      );
+    }
+  };
+
   const cardWrapperProps = onLongPress
     ? { onLongPress, activeOpacity: 0.8 }
     : {};
@@ -1057,7 +1147,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     margin: 20,
-    width: 300,
     width: '80%',
   },
   modalTitle: {

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import {
   Gesture,
   GestureDetector,
@@ -65,8 +66,6 @@ const containerPadding = 40; // 20px margin on each side
 const gridBorder = 4; // 2px border on each side
 const availableWidth = screenWidth - containerPadding - gridBorder;
 const CELL_SIZE = Math.floor(availableWidth / GRID_SIZE);
-
-
 
 // Initialize multiple hall monitors based on level
 const initializeHallMonitors = (
@@ -186,9 +185,10 @@ export default function GymGame({ onComplete }: GymGameProps) {
     setGameActive(true);
   };
 
-
   const handleMove = (direction: string) => {
     if (!gameActive) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     // Calculate new player position
     const delta = DIRECTIONS[direction as keyof typeof DIRECTIONS];
@@ -208,6 +208,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     );
 
     if (caughtByMonitor) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setGameActive(false);
       if (completedLevel > 0) {
         // Player completed at least one level, award jokers based on completion
@@ -240,6 +241,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     ) {
       setGameActive(false);
       setCompletedLevel(level); // Mark this level as completed
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (level < 3) {
         showModal(
@@ -286,6 +288,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   });
 
   const startGame = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('gym');
     trackMinigameProgress('gym');
@@ -296,11 +299,13 @@ export default function GymGame({ onComplete }: GymGameProps) {
   };
 
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
       '🚪 Leave Gym Class?',
       "If you leave now, you'll miss your chance to practice stealth!",
       '🚪',
       () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         router.back();
       }
     );
@@ -382,14 +387,16 @@ export default function GymGame({ onComplete }: GymGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
-                Hall monitors 🚨 move randomly each turn and will catch you if they land on your position!
+                Hall monitors 🚨 move randomly each turn and will catch you if
+                they land on your position!
               </Text>
             </View>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
-                More monitors each level - Level 1: 3 monitors, Level 2: 6 monitors, Level 3: 9 monitors!
+                More monitors each level - Level 1: 3 monitors, Level 2: 6
+                monitors, Level 3: 9 monitors!
               </Text>
             </View>
 
@@ -403,7 +410,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
               <Text style={styles.stepText}>
-                Get from start (🚪) to goal (🎯) without being caught by any monitor
+                Get from start (🚪) to goal (🎯) without being caught by any
+                monitor
               </Text>
             </View>
           </PixelBorder>
@@ -425,7 +433,10 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
           >
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
@@ -448,7 +459,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
       >
         <MinigameHUD
           title="Gym Class Stealth"
-          subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨 | Avoid all!`}
+          subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
           leftInfo={`Level ${level}/3`}
           rightInfo={`Moves: ${moves}`}
           theme="gym"

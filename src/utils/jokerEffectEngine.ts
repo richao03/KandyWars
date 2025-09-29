@@ -38,7 +38,12 @@ export type EffectTarget =
   | 'even_period_sale_bonus' // gives bonus on sales during even periods
   | 'consecutive_sale_bonus' // gives escalating bonus for consecutive period sales
   | 'trigger_find_money_event' // triggers a find money event with max amount
-  | 'bulk_purchase_with_sale_lock'; // applies discount but prevents same-period selling
+  | 'bulk_sale_bonus' // gives bonus when selling more than half inventory space
+  | 'afternoon_sale_bonus' // gives bonus during afternoon periods
+  | 'morning_purchase_discount' // gives discount during morning periods
+  | 'location_highlights' // highlights locations with good events
+  | 'randomize_prices' // randomizes all candy prices
+  | 'price_prediction'; // enables price prediction features
 
 export type EffectOperation =
   | 'add' // + operation: current + amount
@@ -599,7 +604,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 40,
+    id: 67,
     name: 'Medieval Shield',
     subject: 'History',
     type: 'one-time',
@@ -732,7 +737,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 66,
+    id: 54,
     name: 'Bulk Up',
     subject: 'Gym',
     type: 'persistent',
@@ -748,7 +753,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 67,
+    id: 55,
     name: 'Embrace the Grind',
     subject: 'Gym',
     type: 'persistent',
@@ -815,7 +820,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 21,
-    name: 'Swing Trade',
+    name: 'The Big Short',
     subject: 'Economy',
     type: 'one-time',
     flavorText: 'Crash the price then buy it back for cheap',
@@ -847,17 +852,16 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 23,
-    name: 'Bulk Discount',
+    name: 'Bulk Sale',
     subject: 'Economy',
     type: 'persistent',
-    flavorText:
-      'Buy in bulk, but commit to holding, must hold till next period',
-    description: '-20% price when buying >50% of inventory space',
+    flavorText: 'Sell in bulk, profit big',
+    description: 'Sell >50% of your inventory space in one sale and get +20% sale profit',
     effects: [
       {
-        target: 'bulk_purchase_with_sale_lock',
+        target: 'bulk_sale_bonus',
         operation: 'multiply',
-        amount: 0.8, // 20% discount (multiply by 0.8)
+        amount: 1.2, // 20% bonus (multiply by 1.2)
         duration: 'persistent',
       },
     ],
@@ -898,7 +902,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 15,
+    id: 50,
     name: 'Diamond Hand',
     subject: 'Economy',
     type: 'persistent',
@@ -996,7 +1000,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 35,
+    id: 51,
     name: 'Hide and Seek',
     subject: 'Recess',
     type: 'persistent',
@@ -1028,7 +1032,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 37,
+    id: 52,
     name: 'Lost and Found',
     subject: 'Recess',
     type: 'one-time',
@@ -1039,6 +1043,104 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
         target: 'trigger_find_money_event',
         operation: 'activate',
         amount: 1,
+        duration: 'one-time',
+      },
+    ],
+  },
+
+  // GEOGRAPHY JOKERS
+  {
+    id: 38,
+    name: 'Sunset Surge',
+    subject: 'Geography',
+    type: 'persistent',
+    flavorText: 'The last 10% is 90% of the work',
+    description: '+10% profit to all afternoon candy sale ',
+    effects: [
+      {
+        target: 'afternoon_sale_bonus',
+        operation: 'multiply',
+        amount: 1.1,
+        duration: 'persistent',
+      },
+    ],
+  },
+  {
+    id: 39,
+    name: 'Trade Routes',
+    subject: 'Geography',
+    type: 'persistent',
+    flavorText: 'Ancient paths lead to modern profits',
+    description: '+1 inventory limit every period',
+    effects: [
+      {
+        target: 'inventory_limit',
+        operation: 'add',
+        amount: 1,
+        duration: 'persistent',
+      },
+    ],
+  },
+  {
+    id: 40,
+    name: 'Continental Drift',
+    subject: 'Geography',
+    type: 'one-time',
+    flavorText: 'Shift the market landscape',
+    description: 'Randomize all candy prices for this period',
+    effects: [
+      {
+        target: 'randomize_prices',
+        operation: 'activate',
+        amount: 1,
+        duration: 'one-time',
+      },
+    ],
+  },
+  {
+    id: 53,
+    name: 'Map Maker',
+    subject: 'Geography',
+    type: 'persistent',
+    flavorText: 'Chart your own course to success',
+    description: 'See locations that will lead to good events',
+    effects: [
+      {
+        target: 'location_highlights',
+        operation: 'enable',
+        amount: 1,
+        duration: 'persistent',
+      },
+    ],
+  },
+  {
+    id: 42,
+    name: 'Time Zone Arbitrage',
+    subject: 'Geography',
+    type: 'persistent',
+    flavorText: 'Buy low in the morning, sell high in the afternoon',
+    description: 'Morning purchases cost 10% less',
+    effects: [
+      {
+        target: 'morning_purchase_discount',
+        operation: 'multiply',
+        amount: 0.9,
+        duration: 'persistent',
+      },
+    ],
+  },
+  {
+    id: 43,
+    name: 'Atlas Bonus',
+    subject: 'Geography',
+    type: 'one-time',
+    flavorText: 'The weight of the world brings heavy profits',
+    description: 'Instantly gain $1500',
+    effects: [
+      {
+        target: 'money',
+        operation: 'add',
+        amount: 1500,
         duration: 'one-time',
       },
     ],
@@ -1073,6 +1175,7 @@ export const HISTORY_JOKERS = getJokersBySubject('History');
 export const LOGIC_JOKERS = getJokersBySubject('Logic');
 export const GYM_JOKERS = getJokersBySubject('Gym');
 export const RECESS_JOKERS = getJokersBySubject('Recess');
+export const GEOGRAPHY_JOKERS = getJokersBySubject('Geography');
 
 export const ALL_JOKERS = {
   Math: MATH_JOKERS,
@@ -1083,6 +1186,7 @@ export const ALL_JOKERS = {
   Logic: LOGIC_JOKERS,
   Gym: GYM_JOKERS,
   Recess: RECESS_JOKERS,
+  Geography: GEOGRAPHY_JOKERS,
 };
 
 // Utility function to process effects by target from a list of jokers

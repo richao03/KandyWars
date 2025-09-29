@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
@@ -141,6 +142,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
 
   // Start game
   const startGame = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('history');
     trackMinigameProgress('history');
@@ -168,11 +170,13 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   }, [currentPuzzle]);
 
   const handleSubmit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const normalizedAnswer = userAnswer.trim().toUpperCase();
     const normalizedCorrect = puzzle.decrypted.toUpperCase();
 
     if (normalizedAnswer === normalizedCorrect) {
       // Correct answer!
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const newCompleted = completedPuzzles + 1;
       setCompletedPuzzles(newCompleted);
 
@@ -202,6 +206,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
       }
     } else {
       // Wrong answer - no immediate game over, but track if any progress was made
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (completedPuzzles === 0) {
         // No progress yet, show retry
         showModal(
@@ -231,6 +236,7 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   };
 
   const handleShowHint = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const decoded = caesarDecode(puzzle.encrypted, puzzle.shift);
     showModal(
       '💡 Cipher Helper',
@@ -246,12 +252,14 @@ export default function HistoryGame({ onComplete }: HistoryGameProps) {
   };
 
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
         '🚪 Leave History Study?',
         "If you leave now, you'll miss your chance to study history!",
         '🚪',
         () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           router.back();
         }
       );

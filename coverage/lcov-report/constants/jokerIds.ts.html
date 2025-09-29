@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">33.33% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/6</span>
+                <span class='fraction'>2/6</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>2/4</span>
             </div>
         
             
@@ -202,11 +202,20 @@
 <a name='L137'></a><a href='#L137'>137</a>
 <a name='L138'></a><a href='#L138'>138</a>
 <a name='L139'></a><a href='#L139'>139</a>
-<a name='L140'></a><a href='#L140'>140</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -275,7 +284,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -345,7 +363,7 @@
 // This file contains all joker identifiers in one place
 // To rename a joker, simply update its entry here
 &nbsp;
-export const JOKER_IDS = <span class="cstat-no" title="statement not covered" >{</span>
+export const JOKER_IDS = {
   // Math Jokers
   DOUBLE_UP: 1,
   TIME_EQUATION: 2,
@@ -364,57 +382,61 @@ export const JOKER_IDS = <span class="cstat-no" title="statement not covered" >{
 &nbsp;
   // Home Economics Jokers
   VACUUM_SEALER: 12,
+  COACHING: 13,
   FRIDGE_ORGANIZER: 14,
   DEEP_STORAGE: 15,
   BAKE_SALE: 16,
   HOME_MADE: 17,
   DECOY_CAKE: 18,
 &nbsp;
-  // History Jokers
-  TREASURE_CHEST: 66,
-  TEMPORARY_EMPEROR: 35,
-  ROMAN_COIN: 37,
-  MEDIEVAL_SHIELD: 40,
-  CANDY_VAULT: 74,
-  THE_GOOD_OLD_DAYS: 24,
-&nbsp;
-  // Logic Jokers
-  MASTER_NEGOTIATOR: 27,
-  INDUCTIVE_REASONING: 43,
-  LOOPHOLE: 45,
-  PURSUASION: 48,
-  SOMETHING_FROM_NOTHING: 46,
-&nbsp;
-  // Gym Jokers
-  COACHING: 13,
-  BULK_UP: 66, // Note: Same ID as Treasure Chest in standardized list
-  EMBRACE_THE_GRIND: 67,
-  THE_BOUNCEBACK: 41,
-  BET_YOU_IM_FASTER: 25,
-  TACHYONIC_SPRINT: 26,
-&nbsp;
   // Economy Jokers
   MARKET_CRASH: 19,
   MARKET_MANIPULATION: 20,
-  SWING_TRADE: 21,
+  THE_BIG_SHORT: 21,
   DEPOSIT_BONUS: 22,
-  BULK_DISCOUNT: 23,
-  DIAMOND_HAND: 15, // Note: Same ID as Deep Storage
+  BULK_SALE: 23,
 &nbsp;
-  // Logic (continued)
+  // History Jokers
+  THE_GOOD_OLD_DAYS: 24,
+  TEMPORARY_EMPEROR: 35,
+  ROMAN_COIN: 37,
+  MEDIEVAL_SHIELD: 67,
+  TREASURE_CHEST: 66,
+  CANDY_VAULT: 74,
+&nbsp;
+  // Gym Jokers
+  BET_YOU_IM_FASTER: 25,
+  TACHYONIC_SPRINT: 26,
+  THE_BOUNCEBACK: 41,
+  BULK_UP: 54,
+  EMBRACE_THE_GRIND: 55,
+&nbsp;
+  // Logic Jokers
+  MASTER_NEGOTIATOR: 27,
   THEREFORE: 28,
+  LOOPHOLE: 45,
+  SOMETHING_FROM_NOTHING: 46,
+  PURSUASION: 48,
 &nbsp;
   // Recess Jokers
   JUMP_ROPE_RHYTHM: 32,
   FEED_THE_BEAST: 33,
   HOPSCOTCH_BONUS: 34,
-  HIDE_AND_SEEK: 35, // Note: Same ID as Temporary Emperor
   SWINGSET_MOMENTUM: 36,
-  LOST_AND_FOUND: 37, // Note: Same ID as Roman Coin
+  HIDE_AND_SEEK: 51,
+  LOST_AND_FOUND: 52,
+&nbsp;
+  // Geography Jokers
+  CONTINENTAL_DRIFT: 40,
+  MAP_MAKER: 53,
+  ATLAS_BONUS: 43,
+&nbsp;
+  // Economy (Additional)
+  DIAMOND_HAND: 50,
 } as const;
 &nbsp;
 // Reverse mapping for getting ID from name
-export const JOKER_NAMES: Record&lt;number, string&gt; = <span class="cstat-no" title="statement not covered" >{</span>
+export const JOKER_NAMES: Record&lt;number, string&gt; = {
   [JOKER_IDS.DOUBLE_UP]: 'Double Up',
   [JOKER_IDS.TIME_EQUATION]: 'Time Equation',
   [JOKER_IDS.GEOMETRIC_EXPANSION]: 'Geometric Expansion',
@@ -428,41 +450,46 @@ export const JOKER_NAMES: Record&lt;number, string&gt; = <span class="cstat-no" 
   [JOKER_IDS.GLITCH_IN_THE_MATRIX]: 'Glitch in the Matrix',
   [JOKER_IDS.TROJAN_HORSE]: 'Trojan Horse',
   [JOKER_IDS.VACUUM_SEALER]: 'Vacuum Sealer',
+  [JOKER_IDS.COACHING]: 'Coaching',
   [JOKER_IDS.FRIDGE_ORGANIZER]: 'Fridge Organizer',
   [JOKER_IDS.DEEP_STORAGE]: 'Deep Storage',
   [JOKER_IDS.BAKE_SALE]: 'Bake Sale',
   [JOKER_IDS.HOME_MADE]: 'Home Made',
   [JOKER_IDS.DECOY_CAKE]: 'Decoy Cake',
-  [JOKER_IDS.TREASURE_CHEST]: 'Treasure Chest',
-  [JOKER_IDS.TEMPORARY_EMPEROR]: 'Temporary Emperor',
-  [JOKER_IDS.ROMAN_COIN]: 'Roman Coin',
-  [JOKER_IDS.MEDIEVAL_SHIELD]: 'Medieval Shield',
-  [JOKER_IDS.CANDY_VAULT]: 'Candy Vault',
-  [JOKER_IDS.THE_GOOD_OLD_DAYS]: 'The Good Old Days',
-  [JOKER_IDS.MASTER_NEGOTIATOR]: 'Master Negotiator',
-  [JOKER_IDS.INDUCTIVE_REASONING]: 'Inductive Reasoning',
-  [JOKER_IDS.LOOPHOLE]: 'Loophole',
-  [JOKER_IDS.PURSUASION]: 'Pursuasion',
-  [JOKER_IDS.SOMETHING_FROM_NOTHING]: 'Something from Nothing',
-  [JOKER_IDS.COACHING]: 'Coaching',
-  [JOKER_IDS.BULK_UP]: 'Bulk Up',
-  [JOKER_IDS.EMBRACE_THE_GRIND]: 'Embrace the Grind',
-  [JOKER_IDS.THE_BOUNCEBACK]: 'The Bounceback',
-  [JOKER_IDS.BET_YOU_IM_FASTER]: 'Bet You I\'m Faster',
-  [JOKER_IDS.TACHYONIC_SPRINT]: 'Tachyonic Sprint',
   [JOKER_IDS.MARKET_CRASH]: 'Market Crash',
   [JOKER_IDS.MARKET_MANIPULATION]: 'Market Manipulation',
-  [JOKER_IDS.SWING_TRADE]: 'Swing Trade',
+  [JOKER_IDS.THE_BIG_SHORT]: 'The Big Short',
   [JOKER_IDS.DEPOSIT_BONUS]: 'Deposit Bonus',
-  [JOKER_IDS.BULK_DISCOUNT]: 'Bulk Discount',
-  [JOKER_IDS.DIAMOND_HAND]: 'Diamond Hand',
+  [JOKER_IDS.BULK_SALE]: 'Bulk Sale',
+  [JOKER_IDS.THE_GOOD_OLD_DAYS]: 'The Good Old Days',
+  [JOKER_IDS.BET_YOU_IM_FASTER]: 'Bet You I\'m Faster',
+  [JOKER_IDS.TACHYONIC_SPRINT]: 'Tachyonic Sprint',
+  [JOKER_IDS.MASTER_NEGOTIATOR]: 'Master Negotiator',
   [JOKER_IDS.THEREFORE]: 'Therefore...',
+  [JOKER_IDS.EVEN_STEVENS]: 'Even Stevens',
+  [JOKER_IDS.ODD_TODD]: 'Odd Todd',
+  [JOKER_IDS.ACE_THE_TEST]: 'Ace the Test',
   [JOKER_IDS.JUMP_ROPE_RHYTHM]: 'Jump Rope Rhythm',
   [JOKER_IDS.FEED_THE_BEAST]: 'Feed the Beast',
   [JOKER_IDS.HOPSCOTCH_BONUS]: 'Hopscotch Bonus',
-  [JOKER_IDS.HIDE_AND_SEEK]: 'Hide and Seek',
+  [JOKER_IDS.TEMPORARY_EMPEROR]: 'Temporary Emperor',
   [JOKER_IDS.SWINGSET_MOMENTUM]: 'Swingset Momentum',
+  [JOKER_IDS.ROMAN_COIN]: 'Roman Coin',
+  [JOKER_IDS.CONTINENTAL_DRIFT]: 'Continental Drift',
+  [JOKER_IDS.THE_BOUNCEBACK]: 'The Bounceback',
+  [JOKER_IDS.ATLAS_BONUS]: 'Atlas Bonus',
+  [JOKER_IDS.LOOPHOLE]: 'Loophole',
+  [JOKER_IDS.SOMETHING_FROM_NOTHING]: 'Something from Nothing',
+  [JOKER_IDS.PURSUASION]: 'Pursuasion',
+  [JOKER_IDS.DIAMOND_HAND]: 'Diamond Hand',
+  [JOKER_IDS.HIDE_AND_SEEK]: 'Hide and Seek',
   [JOKER_IDS.LOST_AND_FOUND]: 'Lost and Found',
+  [JOKER_IDS.MAP_MAKER]: 'Map Maker',
+  [JOKER_IDS.BULK_UP]: 'Bulk Up',
+  [JOKER_IDS.EMBRACE_THE_GRIND]: 'Embrace the Grind',
+  [JOKER_IDS.TREASURE_CHEST]: 'Treasure Chest',
+  [JOKER_IDS.MEDIEVAL_SHIELD]: 'Medieval Shield',
+  [JOKER_IDS.CANDY_VAULT]: 'Candy Vault',
 };
 &nbsp;
 // Helper function to check if a joker has a specific ID
@@ -487,7 +514,7 @@ export type JokerId = (typeof JOKER_IDS)[keyof typeof JOKER_IDS];
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-09-22T15:11:27.095Z
+                at 2025-09-28T22:02:04.608Z
             </div>
         <script src="../prettify.js"></script>
         <script>

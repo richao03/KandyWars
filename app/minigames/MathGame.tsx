@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -179,6 +180,8 @@ export default function MathGame({ onComplete }: MathGameProps) {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
+    // Warning haptic for game over
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     console.log(
       `💥 MathGame handleGameOver: completedLevel = ${completedLevel}, completedLevelRef = ${completedLevelRef.current}, level = ${level}`
@@ -247,6 +250,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
 
     if (sum === 10) {
       // Correct match!
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const newMatchedIndices = [...matchedIndices, rightmost.index];
       setMatchedIndices(newMatchedIndices);
       matchedIndicesRef.current = newMatchedIndices; // Update ref
@@ -289,6 +293,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       setScore((prev) => prev + 10);
     } else {
       // Wrong answer
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setScore((prev) => Math.max(0, prev - 5));
     }
   };

@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useGame } from '../../src/hooks/useGame';
 
 export type Location = 
   | 'gym' 
@@ -15,6 +17,7 @@ interface LocationModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectLocation: (location: Location) => void;
+  gameData?: any; // Optional game data to check for upcoming events
 }
 
 const locations: Location[] = [
@@ -37,10 +40,31 @@ const locationColors: Record<Location, {bg: string, border: string}> = {
   'bathroom': {bg: '#ffcc99', border: '#ff9933'}, // Light orange
 };
 
-export default function LocationModal({ visible, onClose, onSelectLocation }: LocationModalProps) {
+export default function LocationModal({ visible, onClose, onSelectLocation, gameData }: LocationModalProps) {
+  const { jokers } = useJokers();
+  const { periodCount } = useGame();
+
   React.useEffect(() => {
     console.log('🟡 LocationModal - visible prop changed to:', visible);
   }, [visible]);
+
+  // Check if Map Maker joker is active (id: 41)
+  const hasMapMaker = jokers.some((joker: any) => joker.id === 41);
+
+  // Find locations with good events in next period
+  const goodEventLocations = React.useMemo(() => {
+    if (!hasMapMaker || !gameData?.periodEvents) return [];
+
+    const goodEffects = ['FOUND_MONEY', 'PRICE_SPIKE'];
+    const nextPeriod = periodCount + 1;
+
+    return gameData.periodEvents
+      .filter((event: any) =>
+        event.period === nextPeriod &&
+        goodEffects.includes(event.effect)
+      )
+      .map((event: any) => event.location);
+  }, [hasMapMaker, gameData, periodCount]);
 
   const handleLocationSelect = (location: Location) => {
     console.log('🟡 Location selected:', location);
@@ -59,23 +83,31 @@ export default function LocationModal({ visible, onClose, onSelectLocation }: Lo
       <Text style={styles.title}>Where do you want to go?</Text>
 
       <View style={styles.locationGrid}>
-        {locations.map((location) => (
-          <TouchableOpacity
-            key={location}
-            style={[
-              styles.locationButton,
-              {
-                backgroundColor: locationColors[location].bg,
-                borderColor: locationColors[location].border
-              }
-            ]}
-            onPress={() => handleLocationSelect(location)}
-          >
-            <Text style={styles.locationText}>
-              {location.charAt(0).toUpperCase() + location.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {locations.map((location) => {
+          const hasGoodEvent = goodEventLocations.includes(location);
+          return (
+            <TouchableOpacity
+              key={location}
+              style={[
+                styles.locationButton,
+                {
+                  backgroundColor: locationColors[location].bg,
+                  borderColor: hasGoodEvent ? '#FFD700' : locationColors[location].border,
+                  borderWidth: hasGoodEvent ? 4 : 3,
+                },
+                hasGoodEvent && styles.highlightedLocation
+              ]}
+              onPress={() => handleLocationSelect(location)}
+            >
+              <Text style={styles.locationText}>
+                {location.charAt(0).toUpperCase() + location.slice(1)}
+              </Text>
+              {hasGoodEvent && (
+                <Text style={styles.highlightText}>✨ Good Event!</Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
@@ -160,5 +192,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
+  },
+  highlightedLocation: {
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  highlightText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFD700',
+    marginTop: 4,
+    fontFamily: 'PixeloidMono',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 0.5, height: 0.5 },
+    textShadowRadius: 1,
   },
 });

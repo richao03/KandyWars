@@ -50,6 +50,10 @@ const inventorySlice = createSlice({
     setMaxInventory: (state, action: PayloadAction<number>) => {
       state.maxInventory = action.payload;
     },
+    incrementMaxInventory: (state, action: PayloadAction<number>) => {
+      state.maxInventory += action.payload;
+      console.log(`📦 Max inventory increased by ${action.payload} to ${state.maxInventory}`);
+    },
     resetInventory: () => initialState,
   },
 });
@@ -60,6 +64,7 @@ export const {
   removeCandy,
   clearInventory,
   setMaxInventory,
+  incrementMaxInventory,
   resetInventory,
 } = inventorySlice.actions;
 

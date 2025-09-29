@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
@@ -352,6 +353,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       return;
     }
 
+    if (choice) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     setIsProcessingRound(true);
     setPlayerChoice(choice);
 
@@ -405,6 +409,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             setGameState('jokerSelection');
           } else {
             // Player didn't complete any stage, show restart option
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
               '💀 Game Over!',
               'You lost 3 times! Try again from Stage 1?',
@@ -437,6 +442,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       let isGameOver = false;
 
       if (result === 'win') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setScore((prev) => prev + 10);
         const newWins = wins + 1;
         setWins(newWins);
@@ -455,6 +461,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       } else if (result === 'tie') {
         setScore((prev) => prev + 5);
       } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setLosses((currentLosses) => {
           const newLosses = currentLosses + 1;
           console.log(`Loss! Losses: ${newLosses}/3 on stage ${stage}`);
@@ -494,6 +501,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             setGameState('jokerSelection');
           } else {
             // Player didn't complete any stage, show restart option
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
               '💀 Game Over!',
               'You lost 3 times! Try again from Stage 1?',
@@ -593,6 +601,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Start game
   const startGame = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('recess');
     trackMinigameProgress('recess');
@@ -818,6 +827,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Handle forfeit
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
 
@@ -826,6 +836,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       'Abandoning the playground battle?',
       '🏃',
       () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         router.back();
       }
     );
@@ -897,7 +908,10 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
           <TouchableOpacity
             style={styles.pixelButtonInner}
-            onPress={() => router.back()}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
           >
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>

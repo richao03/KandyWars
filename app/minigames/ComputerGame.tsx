@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
+import * as Haptics from 'expo-haptics';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -127,6 +128,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2)
       return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newFlippedCards = [...flippedCards, cardId];
     setFlippedCards(newFlippedCards);
 
@@ -142,6 +144,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
       if (firstCard && secondCard && firstCard.emoji === secondCard.emoji) {
         // Match found! Allow new clicks immediately
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setFlippedCards([]);
 
         setTimeout(() => {
@@ -157,6 +160,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         }, 1000);
       } else {
         // No match, clear flipped cards immediately but flip back after delay
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setFlippedCards([]); // Allow new clicks immediately
         setTimeout(() => {
           setCards((prev) =>
@@ -181,6 +185,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             setGameState('jokerSelection');
           } else {
             // Player didn't complete any level, show restart option
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
               '💥 System Breach Failed!',
               'You ran out of turns! Try again?',
@@ -197,6 +202,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   // Start game
   const startGame = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('computer');
     trackMinigameProgress('computer');
@@ -208,6 +214,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   const handleLevelComplete = () => {
     setIsGameActive(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     // Mark this level as completed
     setCompletedLevel(level);
@@ -241,11 +248,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   };
 
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
       '🚪 Abort Hack Session?',
       "If you leave now, you'll lose your hacking progress!",
       '🚪',
       () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         router.back();
       }
     );
@@ -329,7 +338,10 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
           <TouchableOpacity
             style={styles.pixelButtonInner}
-            onPress={() => router.back()}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
           >
             <Text style={styles.startGameButtonText}>Back</Text>
           </TouchableOpacity>

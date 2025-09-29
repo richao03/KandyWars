@@ -144,6 +144,18 @@ export class JokerService {
           `   📚 Inductive Reasoning bonus: +${dailyBonus} (${completedDays} completed days)`
         );
       }
+
+      // Handle Trade Routes: +1 inventory every period
+      const tradeRoutes = this.findJokerByName(jokers, 'Trade Routes');
+      if (tradeRoutes) {
+        // Add 1 inventory space every period (flat bonus)
+        const periodBonus = 1;
+        result += periodBonus;
+        console.log(
+          `   🗺️ Trade Routes bonus: +${periodBonus} (active every period)`
+        );
+      }
+
       console.log(`   📊 Final inventory limit: ${result}`);
     }
 
@@ -295,9 +307,9 @@ export class JokerService {
 
       if (!standardizedJoker) return;
 
-      // Check if this joker affects candy prices, sell multipliers, or escalating price increases (Trojan Horse)
+      // Check if this joker affects candy prices, sell multipliers, escalating price increases, morning purchase discounts, or afternoon sale bonuses
       const priceEffects = standardizedJoker.effects.filter(
-        (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase'
+        (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase' || effect.target === 'morning_purchase_discount' || effect.target === 'afternoon_sale_bonus'
       );
 
       priceEffects.forEach((effect) => {
@@ -374,11 +386,47 @@ export class JokerService {
             const priceIncrease = (periodWithinDay + 1) * effect.amount;
             effectText = `+$${priceIncrease.toFixed(2)} (period ${periodWithinDay + 1})`;
             effectAmount = priceIncrease;
-            
+
             // Apply to current price if active
             if (isActive && shouldApply) {
               currentPrice += priceIncrease;
             }
+          } else if (effect.target === 'morning_purchase_discount') {
+            // Special handling for Time Zone Arbitrage morning purchase discount
+            const periodWithinDay = currentPeriod % 8;
+            const isMorning = periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
+            const discountPercent = (1 - effect.amount) * 100; // Convert 0.9 to 10%
+
+            effectText = isMorning ? `-${discountPercent.toFixed(0)}% morning buy` : `Morning buy discount (inactive)`;
+            effectAmount = isMorning ? effect.amount : 1;
+            effectType = 'buy';
+            jokerEmoji = '🕘';
+
+            // Apply discount to current price if active and it's morning
+            if (isActive && shouldApply && isMorning) {
+              currentPrice = currentPrice * effect.amount;
+            }
+
+            // Override shouldApply for visual feedback
+            shouldApply = isMorning;
+          } else if (effect.target === 'afternoon_sale_bonus') {
+            // Special handling for Sunset Surge afternoon sale bonus
+            const periodWithinDay = currentPeriod % 8;
+            const isAfternoon = periodWithinDay >= 3; // Periods 3, 4, 5, 6, 7 are "afternoon"
+            const bonusPercent = (effect.amount - 1) * 100; // Convert 1.1 to 10%
+
+            effectText = isAfternoon ? `+${bonusPercent.toFixed(0)}% afternoon sell` : `Afternoon sell bonus (inactive)`;
+            effectAmount = isAfternoon ? effect.amount : 1;
+            effectType = 'sell';
+            jokerEmoji = '🌅';
+
+            // Apply bonus to current price if active and it's afternoon
+            if (isActive && shouldApply && isAfternoon) {
+              currentPrice = currentPrice * effect.amount;
+            }
+
+            // Override shouldApply for visual feedback
+            shouldApply = isAfternoon;
           }
 
           breakdown.jokerEffects.push({

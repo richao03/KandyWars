@@ -36,7 +36,8 @@
       "Bash(npm test:*)",
       "Bash(npm run test:coverage:*)",
       "Bash(npx eslint:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(timeout 15 npx expo export --platform ios --dev --clear)"
     ],
     "deny": [],
     "ask": []

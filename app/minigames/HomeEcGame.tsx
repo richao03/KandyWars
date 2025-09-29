@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import {
   Gesture,
   GestureDetector,
@@ -102,6 +103,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     (direction: 'up' | 'down' | 'left' | 'right') => {
       if (isFlying || !centerCandy || gameState !== 'playing') return;
 
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const correctDirection =
         TARGET_POSITIONS[centerCandy as keyof typeof TARGET_POSITIONS];
       const isCorrect = direction === correctDirection;
@@ -137,6 +139,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
       // Show feedback and update score
       if (isCorrect) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setScore((prev) => {
           const newScore = prev + 1;
           const levelConfig = getLevelConfig(level);
@@ -182,6 +185,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         });
         setFeedback('✅ +1');
       } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setScore((prev) => Math.max(0, prev - 1)); // Subtract 1 but don't go below 0
         setFeedback('❌ -1');
       }
@@ -222,6 +226,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   // Start game
   const startGame = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('home-ec');
     trackMinigameProgress('home-ec');
@@ -301,6 +306,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       setGameState('jokerSelection');
     } else {
       // Player didn't complete any level, show restart option
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       showModal('⏰ Time Up!', 'Try again from Level 1?', '⏰', () => {
         setGameState('instructions');
       });
@@ -345,12 +351,14 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   // Handle forfeit
   const handleForfeit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
         '🚪 Leave Kitchen?',
         'Are you sure you want to leave?',
         '🚪',
         () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           router.back();
         }
       );
