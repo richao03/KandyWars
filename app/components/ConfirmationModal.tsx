@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import FastModal from './FastModal';
+import TextWithEmojis from './TextWithEmojis';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -29,13 +30,14 @@ export default function ConfirmationModal({
   title,
   message,
   confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  cancelText,
   onConfirm,
   onCancel,
   theme = 'school',
   emoji = '❓',
   dismissible = true,
 }: ConfirmationModalProps) {
+  console.log('🔍 ConfirmationModal: cancelText =', cancelText, 'type:', typeof cancelText);
   // Theme-specific styles
   const getThemeStyles = () => {
     switch (theme) {
@@ -101,13 +103,13 @@ export default function ConfirmationModal({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.emoji}>{emoji}</Text>
-        <Text style={[styles.title, { color: themeStyles.titleColor }]}>
+        <TextWithEmojis style={styles.emoji}>{emoji}</TextWithEmojis>
+        <TextWithEmojis style={[styles.title, { color: themeStyles.titleColor }]}>
           {title}
-        </Text>
-        <Text style={[styles.message, { color: themeStyles.messageColor }]}>
+        </TextWithEmojis>
+        <TextWithEmojis style={[styles.message, { color: themeStyles.messageColor }]}>
           {message}
-        </Text>
+        </TextWithEmojis>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity

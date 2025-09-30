@@ -1,8 +1,8 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
-import * as Haptics from 'expo-haptics';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -11,6 +11,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MemoryCard {
   id: string;
@@ -187,7 +188,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             // Player didn't complete any level, show restart option
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
-              '💥 System Breach Failed!',
+              'System Breach Failed!',
               'You ran out of turns! Try again?',
               '💥',
               () => {
@@ -221,7 +222,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
     if (level < 3) {
       showModal(
-        `🎉 Level ${level} Complete!`,
+        `Level ${level} Complete!`,
         `Great memory work! Ready for Level ${level + 1}?`,
         '🎉',
         () => {
@@ -230,7 +231,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       );
     } else {
       showModal(
-        '🏆 System Infiltrated!',
+        'System Infiltrated!',
         "Incredible! You've hacked through all security layers!",
         '🏆',
         () => {
@@ -250,13 +251,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const handleForfeit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
-      '🚪 Abort Hack Session?',
+      'Abort Hack Session?',
       "If you leave now, you'll lose your hacking progress!",
       '🚪',
       () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         router.back();
-      }
+      },
+      false,
+      true
     );
   };
 
@@ -518,12 +521,22 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.instructionsButton}
-            onPress={handleForfeit}
+          <PixelBorder
+            borderColor="#00d4ff"
+            borderWidth={3}
+            backgroundColor="#16213e"
+            innerPadding={0}
+            style={{ flex: 1 }}
           >
-            <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.instructionsButtonInner}
+              onPress={handleForfeit}
+            >
+              <TextWithEmojis style={styles.instructionsButtonText}>
+                🚪 Leave
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
         </View>
       </View>
 
@@ -534,6 +547,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         emoji={modal.emoji}
         onClose={hideModal}
         onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
       />
     </>
   );
@@ -871,6 +885,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#00d4ff',
+    alignItems: 'center',
+  },
+  instructionsButtonInner: {
+    paddingVertical: 12,
     alignItems: 'center',
   },
   instructionsButtonText: {

@@ -9,7 +9,7 @@ interface FadeInWrapperProps {
   style?: ViewStyle;
 }
 
-export default function FadeInWrapper({
+const FadeInWrapper = React.memo(function FadeInWrapper({
   children,
   shouldFadeIn = true,
   duration = 1000,
@@ -17,9 +17,11 @@ export default function FadeInWrapper({
   style,
 }: FadeInWrapperProps) {
   const fadeAnim = useRef(new Animated.Value(shouldFadeIn ? 0 : 1)).current;
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    if (shouldFadeIn) {
+    if (shouldFadeIn && !hasAnimated.current) {
+      hasAnimated.current = true;
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration,
@@ -37,4 +39,6 @@ export default function FadeInWrapper({
       {children}
     </Animated.View>
   );
-}
+});
+
+export default FadeInWrapper;

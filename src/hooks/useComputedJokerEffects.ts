@@ -45,18 +45,27 @@ export const useComputedJokerEffects = () => {
   }, [computedEffects]);
 
   // Recompute effects when any relevant state changes (excluding computedEffects to prevent loops)
+  // Use a ref to track if we're already recomputing to prevent duplicate calculations
+  const isRecomputing = useRef(false);
+
   useEffect(() => {
     try {
-      // Only recompute if we have the computed effects structure in place
-      if (computedEffects) {
+      // Only recompute if we have the computed effects structure in place and not already recomputing
+      if (computedEffects && !isRecomputing.current) {
+        isRecomputing.current = true;
         console.log('🔄 Recomputing joker effects due to state change');
         dispatch(recomputeJokerEffects({
           baseInventoryLimit,
           periodCount
         }));
+        // Reset flag after a short delay to allow the dispatch to complete
+        setTimeout(() => {
+          isRecomputing.current = false;
+        }, 100);
       }
     } catch (error) {
       console.error('❌ Error in joker recomputation:', error);
+      isRecomputing.current = false;
     }
   }, [dispatch, jokers, activeEffects, periodCount, baseInventoryLimit]); // Removed computedEffects from deps
 

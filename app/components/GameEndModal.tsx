@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
+import TextWithEmojis from './TextWithEmojis';
 
 interface GameEndModalProps {
   visible: boolean;
@@ -119,9 +120,9 @@ export default function GameEndModal({
           <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
 
           <View style={styles.breakdown}>
-            <Text style={styles.breakdownText}>
+            <TextWithEmojis style={styles.breakdownText}>
               💰 Balance: ${balance.toFixed(2)}
-            </Text>
+            </TextWithEmojis>
             <Text style={styles.breakdownText}>
               🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
               {Math.abs(stashedAmount).toFixed(2)}

@@ -1,7 +1,7 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import {
   Gesture,
   GestureDetector,
@@ -21,6 +21,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface HomeEcGameProps {
   onComplete: () => void;
@@ -155,7 +156,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               setTimeout(() => {
                 console.log(`Level ${level} complete! Showing modal...`);
                 showModal(
-                  `🎉 Level ${level} Complete!`,
+                  `Level ${level} Complete!`,
                   `Ready for Level ${level + 1}?`,
                   '🎉',
                   () => {
@@ -169,7 +170,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               setTimeout(() => {
                 console.log('All levels complete! Showing final modal...');
                 showModal(
-                  '🏆 All Levels Complete!',
+                  'All Levels Complete!',
                   'Amazing work, Master Chef!',
                   '🏆',
                   () => {
@@ -307,7 +308,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     } else {
       // Player didn't complete any level, show restart option
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      showModal('⏰ Time Up!', 'Try again from Level 1?', '⏰', () => {
+      showModal('Times Up!', 'Try again from Level 1?', '⏰', () => {
         setGameState('instructions');
       });
     }
@@ -354,13 +355,15 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
-        '🚪 Leave Kitchen?',
+        'Leave Kitchen?',
         'Are you sure you want to leave?',
         '🚪',
         () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           router.back();
-        }
+        },
+        false,
+        true
       );
     } else {
       router.back();
@@ -401,9 +404,20 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           </View>
           <View style={styles.instructionStep}>
             <Text style={styles.stepNumber}>2.</Text>
-            <Text style={styles.stepText}>
-              🍭 UP, 🍬 RIGHT, 🧁 DOWN, 🍫 LEFT
-            </Text>
+            <View>
+              <TextWithEmojis style={styles.stepText} imageSize={28}>
+                🍭 UP
+              </TextWithEmojis>
+              <TextWithEmojis style={styles.stepText} imageSize={28}>
+                🍬 RIGHT
+              </TextWithEmojis>
+              <TextWithEmojis style={styles.stepText} imageSize={28}>
+                🧁 DOWN
+              </TextWithEmojis>
+              <TextWithEmojis style={styles.stepText} imageSize={28}>
+                🍫 LEFT
+              </TextWithEmojis>
+            </View>
           </View>
           <View style={styles.instructionStep}>
             <Text style={styles.stepNumber}>3.</Text>
@@ -449,11 +463,11 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         <GestureHandlerRootView style={styles.gameContainer}>
           {/* Header */}
           <MinigameHUD
-            title="🍳 Kitchen Practice 🧑‍🍳"
+            title="Kitchen Practice"
             subtitle="Sort ingredients to their designated stations"
             leftInfo={`Level ${level}/3`}
             centerInfo={`Progress: ${score}/${levelConfig.matches}`}
-            rightInfo={`⏱️ ${timeLeft}s`}
+            rightInfo={`Time: ${timeLeft}s`}
             theme="homeec"
           />
 
@@ -461,19 +475,19 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           <View style={styles.gameArea}>
             {/* Edge candies - Kitchen Stations */}
             <View style={[styles.edgeCandy, styles.topCandy]}>
-              <Text style={styles.edgeCandyText}>🍭</Text>
+              <TextWithEmojis style={styles.edgeCandyText}>🍭</TextWithEmojis>
               <Text style={styles.stationLabel}>PREP</Text>
             </View>
             <View style={[styles.edgeCandy, styles.rightCandy]}>
-              <Text style={styles.edgeCandyText}>🍬</Text>
+              <TextWithEmojis style={styles.edgeCandyText}>🍬</TextWithEmojis>
               <Text style={styles.stationLabel}>GRILL</Text>
             </View>
             <View style={[styles.edgeCandy, styles.bottomCandy]}>
-              <Text style={styles.edgeCandyText}>🧁</Text>
+              <TextWithEmojis style={styles.edgeCandyText}>🧁</TextWithEmojis>
               <Text style={styles.stationLabel}>OVEN</Text>
             </View>
             <View style={[styles.edgeCandy, styles.leftCandy]}>
-              <Text style={styles.edgeCandyText}>🍫</Text>
+              <TextWithEmojis style={styles.edgeCandyText}>🍫</TextWithEmojis>
               <Text style={styles.stationLabel}>COOL</Text>
             </View>
 
@@ -481,7 +495,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             {nextCandy && (
               <View style={styles.previewPanel}>
                 <Text style={styles.previewLabel}>NEXT:</Text>
-                <Text style={styles.previewCandy}>{nextCandy}</Text>
+                <TextWithEmojis style={styles.previewCandy}>
+                  {nextCandy}
+                </TextWithEmojis>
               </View>
             )}
 
@@ -489,7 +505,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             {centerCandy && !isFlying && (
               <GestureDetector gesture={panGesture}>
                 <Animated.View style={[styles.centerCandy, animatedStyle]}>
-                  <Text style={styles.centerCandyText}>{centerCandy}</Text>
+                  <TextWithEmojis style={styles.centerCandyText}>
+                    {centerCandy}
+                  </TextWithEmojis>
                 </Animated.View>
               </GestureDetector>
             )}
@@ -528,12 +546,22 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               },
             ]}
           >
-            <TouchableOpacity
-              style={[styles.footerBtn, styles.leaveBtn]}
-              onPress={handleForfeit}
+            <PixelBorder
+              borderColor="#adb5bd"
+              borderWidth={3}
+              backgroundColor="#6c757d"
+              innerPadding={0}
+              style={{ flex: 1 }}
             >
-              <Text style={styles.footerBtnText}>🚪 Leave</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.leaveBtnInner}
+                onPress={handleForfeit}
+              >
+                <TextWithEmojis style={styles.footerBtnText} imageSize={28}>
+                  🚪 Leave
+                </TextWithEmojis>
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
         </GestureHandlerRootView>
       </View>
@@ -545,6 +573,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         emoji={modal.emoji}
         onClose={hideModal}
         onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
         theme="school"
         dismissible={modal.dismissible}
       />
@@ -682,7 +711,7 @@ const styles = StyleSheet.create({
     marginTop: -35,
   },
   edgeCandyText: {
-    fontSize: 30,
+    fontSize: 40,
   },
   previewPanel: {
     position: 'absolute',
@@ -708,7 +737,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   previewCandy: {
-    fontSize: 20,
+    fontSize: 32,
   },
   centerCandy: {
     position: 'absolute',
@@ -797,6 +826,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#6c757d',
     borderColor: '#adb5bd',
   },
+  leaveBtnInner: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
   footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
@@ -863,7 +896,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#f8f9fa',
     fontFamily: 'PixeloidMono',
-    flex: 1,
     lineHeight: 22,
   },
   startGameButton: {

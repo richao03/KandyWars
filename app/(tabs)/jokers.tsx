@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   FlatList,
+  Image,
   SectionList,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import FastModal from '../components/FastModal';
 import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 const CANDY_TYPES = [
   'Bubble Gum',
@@ -29,6 +31,7 @@ const CANDY_TYPES = [
 ];
 
 function JokersPage() {
+  // Always call all hooks first - before any conditional returns
   const gameContext = useGame();
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
@@ -61,6 +64,12 @@ function JokersPage() {
     visible: false,
     joker: null,
   });
+
+  // Extract values from contexts
+  const isAfterSchool = gameContext?.isAfterSchool || false;
+  const day = gameContext?.day || 1;
+  const jokers = jokerContext?.jokers || [];
+  const isLoaded = jokerContext?.isLoaded || false;
 
   // Confirmation modal handler for JokerCard components
   const handleShowConfirmation = (
@@ -138,7 +147,8 @@ function JokersPage() {
 
       // Find the highest price among all candies for this period
       for (const candyType of allCandyTypes) {
-        const priceForThisPeriod = gameData.candyPrices[candyType]?.[periodCount] || 0;
+        const priceForThisPeriod =
+          gameData.candyPrices[candyType]?.[periodCount] || 0;
         if (priceForThisPeriod > highestPrice) {
           highestPrice = priceForThisPeriod;
         }
@@ -159,7 +169,8 @@ function JokersPage() {
 
       // Find the lowest price among all candies for this period
       for (const candyType of allCandyTypes) {
-        const priceForThisPeriod = gameData.candyPrices[candyType]?.[periodCount] || 0;
+        const priceForThisPeriod =
+          gameData.candyPrices[candyType]?.[periodCount] || 0;
         if (priceForThisPeriod > 0 && priceForThisPeriod < lowestPrice) {
           lowestPrice = priceForThisPeriod;
         }
@@ -227,30 +238,8 @@ function JokersPage() {
 
   // Remove selectedSubject state - we'll show all subjects as sections
 
-  // If contexts are not available, show loading or initialization message
-  if (!gameContext || !jokerContext || !seedContext) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Loading game data...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  const { isAfterSchool, day } = gameContext;
-  const { jokers, isLoaded } = jokerContext;
-
-  // Wait for jokers to load before rendering
-  if (!isLoaded) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Loading jokers...</Text>
-        </View>
-      </View>
-    );
-  }
+  // Show loading state while data loads - no early returns
+  const showLoading = !gameContext || !jokerContext || !seedContext || !isLoaded;
 
   // Create sectioned data for browse tab with 2-column layout
   const sectionedJokers = useMemo(() => {
@@ -306,8 +295,8 @@ function JokersPage() {
 
   const renderInventoryJokerRow = ({ item }: { item: any[] }) => (
     <View style={styles.row}>
-      {item.map((joker) => (
-        <View key={joker.id} style={styles.jokerCardContainer}>
+      {item.map((joker, index) => (
+        <View key={`${joker.id}-${index}`} style={styles.jokerCardContainer}>
           <JokerCard
             joker={joker}
             isAfterSchool={isAfterSchool}
@@ -340,6 +329,22 @@ function JokersPage() {
     </View>
   );
 
+  // Show loading view if needed
+  if (showLoading) {
+    return (
+      <View style={containerStyles}>
+        <GameHUD
+          theme="evening"
+          customHeaderText="School"
+          customLocationText="Jokers Collection"
+        />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading jokers...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={containerStyles}>
       <GameHUD
@@ -350,7 +355,13 @@ function JokersPage() {
 
       <View style={headerStyles}>
         <View style={styles.headerTop}>
-          <Text style={titleStyles}>🃏 Jokers</Text>
+          <View style={styles.titleRow}>
+            <Image
+              source={require('../../assets/images/emojis/joker.png')}
+              style={styles.titleIcon}
+            />
+            <Text style={titleStyles}> Jokers</Text>
+          </View>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>
               {activeTab === 'inventory' ? jokers.length : allJokersCount}
@@ -363,14 +374,15 @@ function JokersPage() {
             style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
             onPress={() => setActiveTab('inventory')}
           >
-            <Text
+            <TextWithEmojis
+              imageSize={20}
               style={[
                 styles.tabText,
-                activeTab === 'inventory' && styles.activeTabText,
+                activeTab == 'inventory' && styles.activeTabText,
               ]}
             >
-              🎒 Owned ({jokers.length})
-            </Text>
+              {`🎒 Owned (${jokers.length})`}
+            </TextWithEmojis>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -446,7 +458,7 @@ function JokersPage() {
         modalStyle={styles.modalContent}
       >
         <>
-          <Text style={styles.modalTitle}>
+          <TextWithEmojis style={styles.modalTitle}>
             {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
               ? '📈 Choose Candy to Manipulate'
               : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
@@ -454,7 +466,7 @@ function JokersPage() {
                 : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
                   ? '📰 Choose Candy to Drop Price'
                   : '🍭 Choose Candy Type'}
-          </Text>
+          </TextWithEmojis>
 
           {CANDY_TYPES.map((candyType) => (
             <TouchableOpacity
@@ -505,6 +517,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     marginBottom: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleIcon: {
+    width: 25,
+    height: 25,
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 22,

@@ -51,14 +51,15 @@ export type SpecialEventEffect = {
   dismissText?: string;
 };
 
-const candyBasePrices: Record<string, [number, number]> = {
-  Snickers: [1.5, 3.0],
-  'M&Ms': [1.0, 2.5],
-  Skittles: [0.75, 2.25],
-  Warheads: [0.25, 1.0],
-  'Sour Patch Kids': [1.0, 2.75],
-  'Bubble Gum': [0.1, 0.5],
-  'Jaw Breaker': [2, 5],
+// [minPrice, maxPrice, floorPrice]
+const candyBasePrices: Record<string, [number, number, number]> = {
+  Snickers: [1.5, 2.0, 1.25],
+  'M&Ms': [2.0, 3.5, 2.35],
+  Skittles: [1, 2.25, 3.2],
+  Warheads: [0.5, 1.0, 4.15],
+  'Sour Patch Kids': [1.8, 3.0, 1.3],
+  'Bubble Gum': [0.1, 0.5, 0.05],
+  'Jaw Breaker': [3, 5, 10.5],
 };
 
 const subjects = [
@@ -86,9 +87,10 @@ const allJokers = [
 
 export function generateSeededGameData(seed: string, totalPeriods = 80) {
   const rng = seedrandom(seed);
+
   // Price table
   const candyPrices: CandyPriceTable = {};
-  Object.entries(candyBasePrices).forEach(([candy, [min, max]]) => {
+  Object.entries(candyBasePrices).forEach(([candy, [min, max, floorPrice]]) => {
     candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
       const roll = rng();
       let price: number;
@@ -107,6 +109,9 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
         const high = max * 10;
         price = rng() * (high - low) + low;
       }
+
+      // Enforce candy-specific minimum floor price
+      price = Math.max(price, floorPrice);
 
       return parseFloat(price.toFixed(2));
     });
@@ -366,11 +371,21 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
   });
 
   // Generate 10-15 random events
-  const targetEventCount = Math.floor(rng() * 6) + 10; // 10-15 events
+  // Ensure at least 2 events per day (5 days = 10 events minimum)
+  const numDays = Math.floor(totalPeriods / 8);
+  const minEventsPerDay = 2;
+  const minTotalEvents = numDays * minEventsPerDay;
+  const targetEventCount = Math.max(minTotalEvents, Math.floor(rng() * 6) + 10); // At least 2 per day, or 10-15 events total
+
+  // Exclude lunch periods (period % 8 === 4, which is the 5th period of each day)
+  // and periods that already have events
   const availablePeriods = Array.from(
     { length: totalPeriods },
     (_, i) => i
-  ).filter((period) => !periodEvents.some((e) => e.period === period));
+  ).filter(
+    (period) =>
+      !periodEvents.some((e) => e.period === period) && period % 8 !== 4 // Exclude lunch period (5th period of each day)
+  );
 
   // Shuffle available periods
   for (let i = availablePeriods.length - 1; i > 0; i--) {

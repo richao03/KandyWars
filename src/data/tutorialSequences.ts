@@ -91,7 +91,7 @@ export const TUTORIAL_SEQUENCES = {
       },
       {
         id: 'jokers_intro',
-        title: '🃏 Joker Cards',
+        title: 'Joker Cards',
         description: 'Sometimes you\'ll find special Joker cards. These give you powerful advantages - collect them wisely!',
         character: 'teacher' as const,
         position: 'center' as const,

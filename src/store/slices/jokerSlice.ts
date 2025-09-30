@@ -95,42 +95,42 @@ const jokerSlice = createSlice({
         const { baseInventoryLimit, periodCount } = action.payload;
         const jokerService = JokerService.getInstance();
 
-        // Compute all common effects once
-        const inventoryLimit = jokerService.applyJokerEffects(
-          baseInventoryLimit,
-          'inventory_limit',
+        // Initialize the engine once with all jokers to avoid redundant clearing/adding
+        jokerService.initializeEngineForComputation(
           state.jokers,
           periodCount,
           baseInventoryLimit,
-          undefined,
           state.activeEffects
         );
 
-        const hintChance = jokerService.applyJokerEffects(
+        // Now compute all effects efficiently without re-initializing
+        const inventoryLimit = jokerService.computeEffect(
+          baseInventoryLimit,
+          'inventory_limit',
+          periodCount
+        );
+
+        const hintChance = jokerService.computeEffect(
           0,
           'hint_chance',
-          state.jokers,
           periodCount
         );
 
-        const studyTimeMultiplier = jokerService.applyJokerEffects(
+        const studyTimeMultiplier = jokerService.computeEffect(
           1,
           'study_time',
-          state.jokers,
           periodCount
         );
 
-        const droughtReliefBonus = jokerService.applyJokerEffects(
+        const droughtReliefBonus = jokerService.computeEffect(
           0,
           'drought_relief_bonus',
-          state.jokers,
           periodCount
         );
 
-        const emptyInventoryBonus = jokerService.applyJokerEffects(
+        const emptyInventoryBonus = jokerService.computeEffect(
           0,
           'empty_inventory_bonus',
-          state.jokers,
           periodCount
         );
 

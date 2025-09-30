@@ -59,12 +59,13 @@ export default function GoingToSchoolModal({
         style={styles.image}
         resizeMode="contain"
       />
-      <Text style={styles.text}>{randomNewDayText}</Text>
+
       {allowanceAmount && (
         <Text style={styles.allowanceText}>
           Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!
         </Text>
       )}
+      <Text style={styles.text}>{randomNewDayText}</Text>
     </FastModal>
   );
 }

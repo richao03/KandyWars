@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, {
   useCallback,
@@ -7,25 +8,13 @@ import React, {
   useState,
 } from 'react';
 import {
-  LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import {
-  Gesture,
-  GestureDetector,
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { useGame } from '../../src/hooks/useGame';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -34,6 +23,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 /** =========================
  *  Types
@@ -51,7 +41,7 @@ type TradeTile = {
   id: string;
   give: Inventory;
   get: Inventory;
-  label: string; // "1 🍫 → 1 🍰"
+  label: string; // "Chocolate → Cake" (item names, not emojis)
   source: 'palette' | 'slot';
 };
 type Puzzle = {
@@ -78,6 +68,24 @@ const CATALOG: Record<Item, string> = {
   Cupcake: '🧁',
 };
 const ALL_ITEMS: Item[] = Object.keys(CATALOG) as Item[];
+
+/** =========================
+ *  Trade Label Component (renders PNG images)
+ *  ========================= */
+const TradeLabel = ({ label, style }: { label: string; style?: any }) => {
+  // Label format: "Chocolate → Cake"
+  const [giveItem, getItem] = label.split(' → ');
+  const giveEmoji = CATALOG[giveItem as Item] || '';
+  const getEmoji = CATALOG[getItem as Item] || '';
+
+  return (
+    <View>
+      <TextWithEmojis style={style} imageSize={20}>
+        {`${giveEmoji} → ${getEmoji}`}
+      </TextWithEmojis>
+    </View>
+  );
+};
 
 // Economy Trading jokers
 
@@ -177,7 +185,7 @@ function generatePuzzle(levelIndex: number): Puzzle {
       id: `trade-${randomId}-${giveItem}-${getItem}`,
       give: { [giveItem]: 1 },
       get: { [getItem]: 1 },
-      label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
+      label: `${giveItem} → ${getItem}`,
       source: 'palette',
     });
   }
@@ -189,25 +197,54 @@ function generatePuzzle(levelIndex: number): Puzzle {
   const dummyTrades: TradeTile[] = [];
   const usedItems = new Set(chainItems);
 
+  // Helper function to check if a trade creates a shortcut
+  const createsShortcut = (give: Item, get: Item): boolean => {
+    const giveIndex = chainItems.indexOf(give);
+    const getIndex = chainItems.indexOf(get);
+
+    // If both items are in the chain
+    if (giveIndex !== -1 && getIndex !== -1) {
+      // Check if this trade would skip steps (get is more than 1 step ahead of give)
+      if (getIndex > giveIndex + 1) {
+        return true; // Shortcut detected
+      }
+    }
+
+    // Check if this creates a direct path to goal from start inventory
+    if (getIndex !== -1 && Object.keys(startInventory).includes(give)) {
+      // If we can reach an item in the chain that's more than 1 step from start
+      if (getIndex > 1) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   for (let i = 0; i < config.dummyTrades; i++) {
     // Pick items not in the solution chain for dummy trades
     const availableItems = ALL_ITEMS.filter((item) => !usedItems.has(item));
     if (availableItems.length < 2) {
       // If we run out of unused items, reuse items but avoid creating shortcuts
-      const giveItem = pick(rng, ALL_ITEMS);
-      const getItem = pick(rng, ALL_ITEMS, [giveItem]);
+      let giveItem: Item;
+      let getItem: Item;
+      let attempts = 0;
 
-      // Make sure dummy trade doesn't accidentally create a shortcut to goal
-      if (getItem === goal && Object.keys(startInventory).includes(giveItem)) {
-        continue; // Skip this dummy trade
-      }
+      do {
+        giveItem = pick(rng, ALL_ITEMS);
+        getItem = pick(rng, ALL_ITEMS, [giveItem]);
+        attempts++;
+        if (attempts > 100) break; // Prevent infinite loop
+      } while (createsShortcut(giveItem, getItem));
+
+      if (attempts > 100) continue; // Skip this dummy trade if we can't find a valid one
 
       const randomId = Math.floor(Math.random() * 1000000);
       dummyTrades.push({
         id: `trade-${randomId}-${giveItem}-${getItem}`,
         give: { [giveItem]: 1 },
         get: { [getItem]: 1 },
-        label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
+        label: `${giveItem} → ${getItem}`,
         source: 'palette',
       });
       continue;
@@ -221,7 +258,7 @@ function generatePuzzle(levelIndex: number): Puzzle {
       id: `trade-${randomId}-${giveItem}-${getItem}`,
       give: { [giveItem]: 1 },
       get: { [getItem]: 1 },
-      label: `${CATALOG[giveItem]} → ${CATALOG[getItem]}`,
+      label: `${giveItem} → ${getItem}`,
       source: 'palette',
     });
 
@@ -292,120 +329,53 @@ function generatePuzzle(levelIndex: number): Puzzle {
 }
 
 /** =========================
- *  Hit testing (absolute)
+ *  Tappable components (simplified tap-to-add/remove)
  *  ========================= */
-type Rect = { x: number; y: number; w: number; h: number };
-function inRect(px: number, py: number, r: Rect | null | undefined) {
-  if (!r) return false;
-  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
-}
-
-/** =========================
- *  Per-item draggable components (Option A)
- *  ========================= */
-type CommonDragProps = {
+type TappablePaletteProps = {
   tile: TradeTile;
-  // shared overlay state
-  dragX: Animated.SharedValue<number>;
-  dragY: Animated.SharedValue<number>;
-  dragScale: Animated.SharedValue<number>;
-  // JS-thread helpers
-  onStartJS: (tile: TradeTile) => void;
-  onMoveJS: (x: number, y: number) => void;
-};
-
-type PaletteDragProps = CommonDragProps & {
-  onEndFromPaletteJS: (tile: TradeTile, x: number, y: number) => void;
+  onTap: (tile: TradeTile) => void;
   style?: any;
 };
-function DraggableFromPalette({
-  tile,
-  dragX,
-  dragY,
-  dragScale,
-  onStartJS,
-  onMoveJS,
-  onEndFromPaletteJS,
-  style,
-}: PaletteDragProps) {
-  const panGesture = Gesture.Pan()
-    .onStart((e) => {
-      dragX.value = e.absoluteX;
-      dragY.value = e.absoluteY;
-      dragScale.value = 1;
-      runOnJS(onStartJS)(tile);
-    })
-    .onUpdate((e) => {
-      dragX.value = e.absoluteX;
-      dragY.value = e.absoluteY;
-      runOnJS(onMoveJS)(e.absoluteX, e.absoluteY);
-    })
-    .onEnd((e) => {
-      dragScale.value = 0;
-      runOnJS(onEndFromPaletteJS)(tile, e.absoluteX, e.absoluteY);
-      runOnJS(onMoveJS)(-1, -1); // clear hover
-    })
-    .shouldCancelWhenOutside(false)
-    .activeOffsetX([-10, 10])
-    .activeOffsetY([-10, 10]);
-
+function TappableFromPalette({ tile, onTap, style }: TappablePaletteProps) {
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View style={style}>
-        <Text style={styles.tileLabel}>{tile.label}</Text>
-      </Animated.View>
-    </GestureDetector>
+    <PixelBorder
+      borderColor="#42a5f5"
+      borderWidth={3}
+      backgroundColor="#1565c0"
+      innerPadding={0}
+      style={style}
+    >
+      <TouchableOpacity
+        style={styles.tileInner}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onTap(tile);
+        }}
+        activeOpacity={0.7}
+      >
+        <TradeLabel label={tile.label} style={styles.tileLabel} />
+      </TouchableOpacity>
+    </PixelBorder>
   );
 }
 
-type SlotDragProps = CommonDragProps & {
+type TappableSlotProps = {
+  tile: TradeTile;
   slotIndex: number;
-  onEndFromSlotJS: (
-    slotIndex: number,
-    tile: TradeTile,
-    x: number,
-    y: number
-  ) => void;
+  onTap: (slotIndex: number, tile: TradeTile) => void;
 };
-function DraggableFromSlot({
-  tile,
-  slotIndex,
-  dragX,
-  dragY,
-  dragScale,
-  onStartJS,
-  onMoveJS,
-  onEndFromSlotJS,
-}: SlotDragProps) {
-  const panGesture = Gesture.Pan()
-    .onStart((e) => {
-      dragX.value = e.absoluteX;
-      dragY.value = e.absoluteY;
-      dragScale.value = 1;
-      runOnJS(onStartJS)(tile);
-    })
-    .onUpdate((e) => {
-      dragX.value = e.absoluteX;
-      dragY.value = e.absoluteY;
-      runOnJS(onMoveJS)(e.absoluteX, e.absoluteY);
-    })
-    .onEnd((e) => {
-      dragScale.value = 0;
-      runOnJS(onEndFromSlotJS)(slotIndex, tile, e.absoluteX, e.absoluteY);
-      runOnJS(onMoveJS)(-1, -1);
-    })
-    .shouldCancelWhenOutside(false)
-    .activeOffsetX([-10, 10])
-    .activeOffsetY([-10, 10]);
-
+function TappableFromSlot({ tile, slotIndex, onTap }: TappableSlotProps) {
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View
-        style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
-      >
-        <Text style={styles.slotLabel}>{tile.label}</Text>
-      </Animated.View>
-    </GestureDetector>
+    <TouchableOpacity
+      style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onTap(slotIndex, tile);
+      }}
+      activeOpacity={0.7}
+    >
+      <TradeLabel label={tile.label} style={styles.slotLabel} />
+    </TouchableOpacity>
   );
 }
 
@@ -423,6 +393,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { trackMinigamePlayed } = useScoreboard();
   const { trackMinigamePlayed: trackMinigameProgress } = useMinigameTracking();
+  const { minigameContext, setMinigameContext } = useGame();
 
   // No seed needed - using Math.random() directly for true randomness
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection', 'gameover'
@@ -436,19 +407,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     Array(puzzle.steps).fill(null)
   );
   const [available, setAvailable] = useState<TradeTile[]>(puzzle.tiles);
-
-  // measure refs
-  const slotRefs = useRef<(View | null)[]>([]);
-  const slotRects = useRef<Array<Rect | null>>(Array(puzzle.steps).fill(null));
-  const paletteRef = useRef<View | null>(null);
-  const paletteRect = useRef<Rect | null>(null);
-
-  // floating drag overlay (position + scale)
-  const [dragLabelText, setDragLabelText] = useState('');
-  const dragX = useSharedValue(0);
-  const dragY = useSharedValue(0);
-  const dragScale = useSharedValue(0); // 0 = hidden, 1 = visible
-  const [hoveredSlotIndex, setHoveredSlotIndex] = useState<number | null>(null);
 
   // Timer effect
   useEffect(() => {
@@ -475,7 +433,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     // If player completed at least 1 level, they get a joker reward
     if (completedLevel > 0) {
       showModal(
-        "⏰ Time's Up!",
+        "Time's Up!",
         `${reason}\n\nYou completed ${completedLevel} level${completedLevel !== 1 ? 's' : ''}!\n\nYou've earned ${completedLevel} joker${completedLevel !== 1 ? 's' : ''} for your efforts!`,
         '🎯',
         () => {
@@ -488,11 +446,11 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     } else {
       // No levels completed - no reward
       showModal(
-        '⏰ Game Over!',
+        'Game Over!',
         `${reason}\n\nYou didn't complete any levels. Try again to earn joker rewards!`,
         '❌',
         () => {
-          router.back();
+          navigateBackToContext();
         }
       );
     }
@@ -516,62 +474,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     setPuzzle(p);
     setSlots(Array(p.steps).fill(null));
     setAvailable(p.tiles);
-    slotRefs.current = [];
-    slotRects.current = Array(p.steps).fill(null);
-    paletteRect.current = null;
-  };
-
-  // Force remeasure when slots or available tiles change
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      // Remeasure all slot positions
-      slotRefs.current.forEach((ref, index) => {
-        if (ref) {
-          ref.measureInWindow((x: number, y: number, w: number, h: number) => {
-            slotRects.current[index] = { x, y, w, h };
-          });
-        }
-      });
-
-      // Remeasure palette position
-      if (paletteRef.current) {
-        paletteRef.current.measureInWindow(
-          (x: number, y: number, w: number, h: number) => {
-            paletteRect.current = { x, y, w, h };
-          }
-        );
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [slots, available]);
-
-  const onSlotLayout = (index: number) => (e: LayoutChangeEvent) => {
-    const { x, y, width, height } = e.nativeEvent.layout;
-    // Use setTimeout to ensure layout is complete
-    setTimeout(() => {
-      const ref = slotRefs.current[index];
-      if (ref) {
-        ref.measureInWindow(
-          (absoluteX: number, absoluteY: number, w: number, h: number) => {
-            slotRects.current[index] = { x: absoluteX, y: absoluteY, w, h };
-          }
-        );
-      }
-    }, 0);
-  };
-
-  const onPaletteLayout = (_e: LayoutChangeEvent) => {
-    setTimeout(() => {
-      const ref = paletteRef.current;
-      if (ref) {
-        ref.measureInWindow(
-          (absoluteX: number, absoluteY: number, w: number, h: number) => {
-            paletteRect.current = { x: absoluteX, y: absoluteY, w, h };
-          }
-        );
-      }
-    }, 0);
   };
 
   /** ---------- placement helpers ---------- */
@@ -601,36 +503,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     setAvailable((prev) => [...prev, { ...tile, source: 'palette' }]);
   };
 
-  /** ---------- drag overlay ---------- */
-  const overlayStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: dragX.value - 48 }, // center on finger (half of 96px width)
-      { translateY: dragY.value - 48 }, // center on finger (half of 96px height)
-      {
-        scale: dragScale.value
-          ? withTiming(1.05, { duration: 150 })
-          : withTiming(0, { duration: 150 }),
-      },
-    ],
-    opacity: dragScale.value
-      ? withTiming(0.9, { duration: 150 })
-      : withTiming(0, { duration: 150 }),
-  }));
-
-  // JS helpers shared by all draggables
-  const onStartJS = useCallback((tile: TradeTile) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setHoveredSlotIndex(null);
-    setDragLabelText(tile.label);
-  }, []);
-  const onMoveJS = useCallback((absX: number, absY: number) => {
-    if (absX < 0 || absY < 0) {
-      setHoveredSlotIndex(null);
-      return;
-    }
-    const idx = slotRects.current.findIndex((r) => inRect(absX, absY, r));
-    setHoveredSlotIndex(idx >= 0 ? idx : null);
-  }, []);
 
   /** ---------- Actions ---------- */
   const clearAll = () => {
@@ -651,7 +523,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       if (!canAfford(inv, tile.give)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         showModal(
-          '❌ Plan Failed',
+          'Plan Failed',
           `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`,
           '❌'
         );
@@ -678,8 +550,8 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         // All levels complete - go to joker selection
         console.log('🎯 Economy Game: Showing victory modal...');
         showModal(
-          '🏆 Trading Master!',
-          `Incredible! You've mastered all trading levels!\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\n⏱️ Time left: ${timeLeft}s`,
+          'Trading Master!',
+          `Incredible! You've mastered all trading levels!\nTime left: ${timeLeft}s`,
           '🏆',
           () => {
             console.log(
@@ -697,8 +569,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
         // Level complete - advance to next level
         showModal(
-          '🎉 Level Complete!',
-          `Excellent multi-step trading! You used ${tradesExecuted} trades.\nReady for Level ${levelIndex + 2}?\n✅ Reached 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\n⏱️ Time left: ${timeLeft}s`,
+          'Level Complete!',
+          `Excellent! \nYou used ${tradesExecuted} trades.\nReady for Level ${levelIndex + 2}?
+          \n Time left: ${timeLeft}s`,
           '🎉',
           () => {
             const nextLevel = levelIndex + 1;
@@ -710,46 +583,22 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       }
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      showModal(
-        '📉 Not There Yet',
-        `❌ Did not reach 1 ${CATALOG[puzzle.goal]} ${puzzle.goal}\nEnd: ${fmtInv(inv) || 'Empty'}`,
-        '📉'
-      );
+      showModal('Not There Yet', `❌ Did not reach goal candy`, '📉');
     }
   };
 
-  /** ---------- Drop logic (JS side) ---------- */
-  const dropFromPalette = (tile: TradeTile, absX: number, absY: number) => {
-    const idx = slotRects.current.findIndex((r) => inRect(absX, absY, r));
-    if (idx >= 0) {
-      placeIntoSlot(tile, idx);
+  /** ---------- Tap logic (simplified) ---------- */
+  const handlePaletteTap = (tile: TradeTile) => {
+    // Find first empty slot
+    const emptySlotIndex = slots.findIndex((s) => s === null);
+    if (emptySlotIndex >= 0) {
+      placeIntoSlot(tile, emptySlotIndex);
     }
   };
 
-  const dropFromSlot = (
-    slotIndex: number,
-    tile: TradeTile,
-    absX: number,
-    absY: number
-  ) => {
-    // Check if dropping on another slot (for swapping)
-    const targetIdx = slotRects.current.findIndex((r) => inRect(absX, absY, r));
-    if (targetIdx >= 0 && targetIdx !== slotIndex) {
-      // Swap slots
-      setSlots((prev) => {
-        const copy = [...prev];
-        const target = copy[targetIdx];
-        copy[targetIdx] = { ...tile, source: 'slot' };
-        copy[slotIndex] = target ? { ...target, source: 'slot' } : null;
-        return copy;
-      });
-      return;
-    }
-    // Check if dropping back on palette area
-    if (inRect(absX, absY, paletteRect.current)) {
-      removeFromSlot(slotIndex);
-      return;
-    }
+  const handleSlotTap = (slotIndex: number, tile: TradeTile) => {
+    // Tapping a filled slot removes it
+    removeFromSlot(slotIndex);
   };
 
   /** ---------- Render ---------- */
@@ -758,20 +607,28 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     [available]
   );
 
+  const navigateBackToContext = () => {
+    // Clear the context and navigate back
+    setMinigameContext(null);
+    router.back();
+  };
+
   const handleForfeit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
-        '🏛️ Leave Trading Post?',
-        "If you leave now, you'll forfeit your chance to study tonight and won't get a trade tool reward.",
-        '🏛️',
+        'Leave Trading Post?',
+        "If you leave now, you'll forfeit your chance to study and won't get a trade tool reward.",
+        '🚪',
         () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          router.back();
-        }
+          navigateBackToContext();
+        },
+        false,
+        true
       );
     } else {
-      router.back();
+      navigateBackToContext();
     }
   };
 
@@ -796,8 +653,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   if (gameState === 'instructions') {
     return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.container}>
+      <View style={styles.container}>
           <View style={styles.instructionsContainer}>
             <Text style={styles.instructionsTitle}>
               Economics Study Session
@@ -861,12 +717,10 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             </TouchableOpacity>
           </View>
         </View>
-      </GestureHandlerRootView>
     );
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
       <View
         style={[
           styles.container,
@@ -890,38 +744,31 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
         {/* Slots */}
         <View style={styles.slotsWrapper}>
-          <Text style={styles.sectionTitle}>
-            Arrange your plan (drag into slots)
-          </Text>
+          <Text style={styles.sectionTitle}>Arrange your plan</Text>
           {levelIndex === 0 ? (
             // Level 1: 3 slots, centered, no scroll
             <View style={[styles.slotsRow, styles.slotsRowCentered]}>
               {slots.map((slot, i) => (
-                <View
+                <PixelBorder
                   key={`slot-${i}`}
-                  ref={(el) => (slotRefs.current[i] = el)}
-                  style={[
-                    styles.slot,
-                    !!slot && styles.slotFilled,
-                    hoveredSlotIndex === i && styles.slotHighlighted,
-                  ]}
-                  onLayout={onSlotLayout(i)}
+                  borderColor="#42a5f5"
+                  borderWidth={3}
+                  backgroundColor={slot ? '#1565c0' : '#0d47a1'}
+                  innerPadding={0}
+                  style={styles.slotWrapper}
                 >
-                  {slot ? (
-                    <DraggableFromSlot
-                      tile={slot}
-                      slotIndex={i}
-                      dragX={dragX}
-                      dragY={dragY}
-                      dragScale={dragScale}
-                      onStartJS={onStartJS}
-                      onMoveJS={onMoveJS}
-                      onEndFromSlotJS={dropFromSlot}
-                    />
-                  ) : (
-                    <Text style={styles.slotPlaceholder}>{i + 1}</Text>
-                  )}
-                </View>
+                  <View style={styles.slotInner}>
+                    {slot ? (
+                      <TappableFromSlot
+                        tile={slot}
+                        slotIndex={i}
+                        onTap={handleSlotTap}
+                      />
+                    ) : (
+                      <Text style={styles.slotPlaceholder}>{i + 1}</Text>
+                    )}
+                  </View>
+                </PixelBorder>
               ))}
             </View>
           ) : (
@@ -933,31 +780,26 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             >
               <View style={styles.slotsRow}>
                 {slots.map((slot, i) => (
-                  <View
+                  <PixelBorder
                     key={`slot-${i}`}
-                    ref={(el) => (slotRefs.current[i] = el)}
-                    style={[
-                      styles.slot,
-                      !!slot && styles.slotFilled,
-                      hoveredSlotIndex === i && styles.slotHighlighted,
-                    ]}
-                    onLayout={onSlotLayout(i)}
+                    borderColor="#42a5f5"
+                    borderWidth={3}
+                    backgroundColor={slot ? '#1565c0' : '#0d47a1'}
+                    innerPadding={0}
+                    style={styles.slotWrapper}
                   >
-                    {slot ? (
-                      <DraggableFromSlot
-                        tile={slot}
-                        slotIndex={i}
-                        dragX={dragX}
-                        dragY={dragY}
-                        dragScale={dragScale}
-                        onStartJS={onStartJS}
-                        onMoveJS={onMoveJS}
-                        onEndFromSlotJS={dropFromSlot}
-                      />
-                    ) : (
-                      <Text style={styles.slotPlaceholder}>{i + 1}</Text>
-                    )}
-                  </View>
+                    <View style={styles.slotInner}>
+                      {slot ? (
+                        <TappableFromSlot
+                          tile={slot}
+                          slotIndex={i}
+                          onTap={handleSlotTap}
+                        />
+                      ) : (
+                        <Text style={styles.slotPlaceholder}>{i + 1}</Text>
+                      )}
+                    </View>
+                  </PixelBorder>
                 ))}
               </View>
             </ScrollView>
@@ -965,23 +807,14 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         </View>
 
         {/* Palette */}
-        <View
-          ref={paletteRef}
-          style={styles.paletteWrapper}
-          onLayout={onPaletteLayout}
-        >
+        <View style={styles.paletteWrapper}>
           <Text style={styles.sectionTitle}>Available Trades</Text>
           <View style={styles.paletteGrid}>
             {paletteTiles.map((tile) => (
-              <DraggableFromPalette
+              <TappableFromPalette
                 key={tile.id}
                 tile={tile}
-                dragX={dragX}
-                dragY={dragY}
-                dragScale={dragScale}
-                onStartJS={onStartJS}
-                onMoveJS={onMoveJS}
-                onEndFromPaletteJS={dropFromPalette}
+                onTap={handlePaletteTap}
                 style={styles.tile}
               />
             ))}
@@ -989,7 +822,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
               <View style={styles.emptyPaletteContainer}>
                 <Text style={styles.emptyPaletteText}>All tiles placed!</Text>
                 <Text style={styles.emptyPaletteSubtext}>
-                  Drag tiles back here to remove them
+                  Tap tiles to remove them
                 </Text>
               </View>
             )}
@@ -1006,18 +839,33 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             },
           ]}
         >
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.footerPrimary]}
-            onPress={executePlan}
+          <PixelBorder
+            borderColor="#1976d2"
+            borderWidth={3}
+            backgroundColor="#2196f3"
+            innerPadding={0}
+            style={styles.footerBtn}
           >
-            <Text style={styles.footerPrimaryText}>Execute Trade</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.footerSecondary]}
-            onPress={clearAll}
+            <TouchableOpacity
+              style={styles.footerBtnInner}
+              onPress={executePlan}
+            >
+              <Text style={styles.footerPrimaryText}>Execute Trade</Text>
+            </TouchableOpacity>
+          </PixelBorder>
+          <PixelBorder
+            borderColor="#42a5f5"
+            borderWidth={3}
+            backgroundColor="#1565c0"
+            innerPadding={0}
+            style={styles.footerBtn}
           >
-            <Text style={styles.footerSecondaryText}>🔄 Clear</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
+              <TextWithEmojis style={styles.footerSecondaryText} imageSize={16}>
+                Clear
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
         </View>
 
         {/* Footer */}
@@ -1030,23 +878,24 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             },
           ]}
         >
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.footerBack]}
-            onPress={handleForfeit}
+          <PixelBorder
+            borderColor="#42a5f5"
+            borderWidth={3}
+            backgroundColor="#1565c0"
+            innerPadding={0}
+            style={styles.footerBtn}
           >
-            <Text style={styles.footerBackText}>🚪 Leave</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.footerBtnInner}
+              onPress={handleForfeit}
+            >
+              <TextWithEmojis style={styles.footerBackText} imageSize={28}>
+                🚪 Leave
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
         </View>
 
-        {/* Floating drag overlay */}
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.dragOverlay, overlayStyle]}
-        >
-          <View style={styles.dragOverlayCard}>
-            <Text style={styles.dragOverlayText}>{dragLabelText}</Text>
-          </View>
-        </Animated.View>
 
         <GameModal
           visible={modal.visible}
@@ -1055,10 +904,10 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           emoji={modal.emoji}
           onClose={hideModal}
           onConfirm={modal.onConfirm}
+          showCancelButton={modal.showCancelButton}
           theme="school"
         />
       </View>
-    </GestureHandlerRootView>
   );
 }
 
@@ -1169,36 +1018,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  slot: {
-    width: 88,
-    height: 44,
-    borderWidth: 3,
-    borderColor: '#1565c0',
-    borderRadius: 12,
-    padding: 8,
+  slotWrapper: {
+    width: 96,
+    height: 48,
+    margin: 0,
+  },
+  slotInner: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0d47a1',
-    shadowColor: '#2196f3',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  slotFilled: {
-    backgroundColor: '#1976d2',
-    borderColor: '#42a5f5',
-    shadowColor: '#2196f3',
-    shadowOpacity: 0.5,
-  },
-  slotHighlighted: {
-    backgroundColor: '#1e88e5',
-    borderColor: '#64b5f6',
-    borderWidth: 4,
-    shadowColor: '#2196f3',
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 10,
+    padding: 8,
   },
   slotPlaceholder: {
     textAlign: 'center',
@@ -1236,18 +1066,14 @@ const styles = StyleSheet.create({
   tile: {
     width: 96,
     height: 48,
-    borderWidth: 3,
-    borderColor: '#42a5f5',
-    borderRadius: 12,
-    padding: 8,
+    margin: 0,
+  },
+  tileInner: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1565c0',
-    shadowColor: '#2196f3',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 6,
+    padding: 8,
   },
   tileLabel: {
     fontWeight: '700',
@@ -1302,19 +1128,11 @@ const styles = StyleSheet.create({
   },
   footerBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderWidth: 3,
-    borderRadius: 16,
-    alignItems: 'center',
   },
-  footerPrimary: {
-    borderColor: '#1976d2',
-    backgroundColor: '#2196f3',
-    shadowColor: '#2196f3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
+  footerBtnInner: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footerPrimaryText: {
     fontWeight: '700',
@@ -1324,62 +1142,17 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  footerSecondary: {
-    borderColor: '#42a5f5',
-    backgroundColor: '#1565c0',
-  },
   footerSecondaryText: {
     fontWeight: '600',
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
-  footerBack: {
-    borderColor: '#42a5f5',
-    backgroundColor: '#1565c0',
-  },
   footerBackText: {
     fontWeight: '600',
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-  },
-
-  // Floating overlay
-  dragOverlay: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: 96,
-    height: 96,
-    zIndex: 999,
-    pointerEvents: 'none',
-  },
-  dragOverlayCard: {
-    width: 96,
-    height: 96,
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: '#64b5f6',
-    backgroundColor: '#1976d2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#2196f3',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 15,
-  },
-  dragOverlayText: {
-    fontWeight: '700',
-    color: '#ffffff',
-    fontFamily: 'PixeloidMono',
-    fontSize: 13,
-    textAlign: 'center',
-    textShadowColor: '#1976d2',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
 
   // Instructions Styles

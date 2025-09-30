@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -27,6 +27,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface Tile {
   id: string;
@@ -320,12 +321,26 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         .join(', ')}]`
     );
 
+    // Create a map of path positions to their next step value
+    const pathPositionToNextValue = new Map<string, number>();
+    for (let i = 0; i < pathCoords.length - 1; i++) {
+      const currentCoord = pathCoords[i];
+      const nextCoord = pathCoords[i + 1];
+      const key = `${currentCoord.row},${currentCoord.col}`;
+      const nextValue = grid[nextCoord.row][nextCoord.col].shadeValue;
+      pathPositionToNextValue.set(key, nextValue);
+    }
+
     // Fill remaining tiles with decoy values
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
         if (grid[row][col].shadeValue === -1) {
           // For each non-path tile, find all adjacent path tiles
-          const adjacentPathValues: number[] = [];
+          const adjacentPathPositions: Array<{
+            row: number;
+            col: number;
+            value: number;
+          }> = [];
           const adjacentPositions = [
             { row: row - 1, col },
             { row: row + 1, col }, // up, down
@@ -343,50 +358,67 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
               const adjTile = grid[adjPos.row][adjPos.col];
               if (adjTile.shadeValue !== -1) {
                 // It's a path tile
-                adjacentPathValues.push(adjTile.shadeValue);
+                adjacentPathPositions.push({
+                  row: adjPos.row,
+                  col: adjPos.col,
+                  value: adjTile.shadeValue,
+                });
               }
             }
           }
 
-          // Create decoy values that are more distinct from the path for better playability
+          // Create decoy values based on the NEXT correct tile's color
           const validDecoyValues: number[] = [];
 
-          // For each adjacent path tile, add values that are more visually distinct
-          for (const adjPathValue of adjacentPathValues) {
-            // Generate decoy options with larger offsets for easier visual distinction
-            const decoyOffsets = [
-              0.75, // Larger offset for clearer visual difference
-              -0.75,
-              1.5, // Even larger offset
-              -1.5,
-              1.25, // Medium-large offset
-              -1.25,
-              2.0, // Very large offset for high contrast
-              -2.0,
-            ];
+          // For each adjacent path tile, find what the next correct step would be
+          for (const adjPathPos of adjacentPathPositions) {
+            const adjKey = `${adjPathPos.row},${adjPathPos.col}`;
+            const nextCorrectValue = pathPositionToNextValue.get(adjKey);
 
-            for (const offset of decoyOffsets) {
-              const decoyValue = adjPathValue + offset;
+            if (nextCorrectValue !== undefined) {
+              // Calculate the difference between current and next correct tile
+              const difference = nextCorrectValue - adjPathPos.value;
 
-              // Make sure the decoy values are valid (≥0) and not exactly on the correct path
-              if (decoyValue >= 0 && !pathShadeValues.has(decoyValue)) {
+              // Create decoy by applying the same difference in the OPPOSITE direction
+              // If current=1 and next=1.1 (diff=+0.1), decoy=1-0.1=0.9
+              // If current=2 and next=1.5 (diff=-0.5), decoy=2+0.5=2.5
+              const decoyValue = adjPathPos.value - difference;
+
+              // Make sure the decoy value is valid and not on the correct path
+              if (
+                decoyValue >= 0 &&
+                decoyValue <= maxPossibleShade * 1.2 &&
+                !pathShadeValues.has(decoyValue)
+              ) {
                 validDecoyValues.push(decoyValue);
+              }
+            } else {
+              // If no next value (e.g., at goal), use current adjacent value with offset
+              const decoyOffsets = [0.5, -0.5, 0.7, -0.7];
+              for (const offset of decoyOffsets) {
+                const decoyValue = adjPathPos.value + offset;
+                if (
+                  decoyValue >= 0 &&
+                  decoyValue <= maxPossibleShade * 1.2 &&
+                  !pathShadeValues.has(decoyValue)
+                ) {
+                  validDecoyValues.push(decoyValue);
+                }
               }
             }
           }
 
-          // Assign a decoy value (more distinct from path - 0.75 to 2.0 grade off)
+          // Assign a decoy value based on next correct tile color
           if (validDecoyValues.length > 0) {
-            // Remove duplicates and pick randomly
             const uniqueDecoyValues = [...new Set(validDecoyValues)];
+            // Pick randomly from the valid decoys (they're already based on next correct color)
             grid[row][col].shadeValue =
               uniqueDecoyValues[
                 Math.floor(Math.random() * uniqueDecoyValues.length)
               ];
           } else {
-            // Fallback: use a random value that's not too close to path values
-            let fallbackValue = Math.random() * maxPossibleShade * 2;
-            // Round to nearest 0.5
+            // Fallback: use a random value within reasonable range
+            let fallbackValue = Math.random() * maxPossibleShade * 1;
             fallbackValue = Math.round(fallbackValue * 2) / 2;
             grid[row][col].shadeValue = fallbackValue;
           }
@@ -458,7 +490,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     } else {
       // Player didn't complete any stage, show restart option
       showModal(
-        '❌ No More Chances!',
+        'No More Chances!',
         "You've used all your chances! Try again from Level 1?",
         '❌',
         () => {
@@ -487,7 +519,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     if (stage >= 3) {
       // All stages complete!
       showModal(
-        '🎨 Master Artist!',
+        'Master Artist!',
         "Incredible! You've completed all artistic challenges!",
         '🎨'
       );
@@ -568,8 +600,8 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           if (stage < 3) {
             const nextConfig = getStageConfig(stage + 1);
             showModal(
-              `🎉 Level ${stage} Complete!`,
-              `Beautiful artwork! Ready for Level ${stage + 1}? (${nextConfig.gridSize}x${nextConfig.gridSize} canvas, ${nextConfig.mistakes} chances)`,
+              `Level ${stage} Complete!`,
+              `Beautiful artwork! Ready for Level ${stage + 1}? `,
               '🎉',
               () => {
                 nextStage();
@@ -577,7 +609,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             );
           } else {
             showModal(
-              '🎨 Master Artist!',
+              'Master Artist!',
               "Incredible! You've completed all artistic challenges!",
               '🎨',
               () => {
@@ -624,13 +656,15 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
-        '🎨 Leave Art Session?',
+        'Leave Art Session?',
         "If you leave now, you'll forfeit your chance to study tonight and won't get an artistic reward.",
-        '🎨',
+        '🚪',
         () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           router.back();
-        }
+        },
+        false,
+        true
       );
     } else {
       router.back();
@@ -748,7 +782,8 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             title="🎨 Art Creation"
             subtitle="Follow the subtle color gradation path - artistic precision required!"
             leftInfo={`Level ${stage}/3`}
-            rightInfo={`❤️ ${mistakesLeft}/5`}
+            centerInfo={' '}
+            rightInfo={`Tries: ${mistakesLeft}/5`}
             theme="gym"
           />
 
@@ -861,9 +896,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
                             isGoal && styles.goalSwatch,
                           ]}
                         >
-                          <Text style={styles.colorKeyNumber}>
-                            {isStart ? '🎨' : isGoal ? '🏆' : index + 1}
-                          </Text>
+                          <TextWithEmojis style={styles.colorKeyNumber}>
+                            {isStart ? '🎨' : isGoal ? '🏆' : String(index + 1)}
+                          </TextWithEmojis>
                         </View>
                       );
                     });
@@ -911,9 +946,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
                       ]}
                       onPress={() => handleTilePress(tile.row, tile.col)}
                     >
-                      {tile.isStart && (
-                        <Text style={styles.tileLabel}>START</Text>
-                      )}
                       {tile.isGoal && (
                         <Text style={styles.tileLabel}>GOAL</Text>
                       )}
@@ -938,12 +970,22 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             },
           ]}
         >
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.leaveBtn]}
-            onPress={handleForfeit}
+          <PixelBorder
+            borderColor="#ff6b35"
+            borderWidth={3}
+            backgroundColor="#0f1419"
+            innerPadding={0}
+            style={{ flex: 1, marginBottom: 8 }}
           >
-            <Text style={styles.footerBtnText}>🎨 Leave</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.leaveBtnInner}
+              onPress={handleForfeit}
+            >
+              <TextWithEmojis style={styles.footerBtnText} imageSize={28}>
+                🚪 Leave
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
         </View>
       </View>
 
@@ -954,6 +996,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         emoji={modal.emoji}
         onClose={hideModal}
         onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
       />
     </>
   );
@@ -966,7 +1009,7 @@ const styles = StyleSheet.create({
   },
   gameContainer: {
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
   },
   title: {
     fontSize: 28,
@@ -1006,7 +1049,7 @@ const styles = StyleSheet.create({
   gridContainer: {
     alignSelf: 'center',
     backgroundColor: '#0f1419',
-    padding: 12,
+    padding: 8,
     borderRadius: 12,
     borderWidth: 3,
     borderColor: '#ff6b35',
@@ -1170,6 +1213,10 @@ const styles = StyleSheet.create({
   leaveBtn: {
     backgroundColor: '#8b4513',
     borderColor: '#daa520',
+  },
+  leaveBtnInner: {
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   footerBtnText: {
     fontSize: 16,

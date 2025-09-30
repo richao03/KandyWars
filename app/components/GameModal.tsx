@@ -11,9 +11,10 @@ interface GameModalProps {
   onConfirm?: () => void;
   theme?: 'school' | 'evening' | 'market';
   dismissible?: boolean;
+  showCancelButton?: boolean;
 }
 
-export default function GameModal({
+const GameModal = React.memo(function GameModal({
   visible,
   title,
   message,
@@ -21,7 +22,8 @@ export default function GameModal({
   onClose,
   onConfirm,
   theme = 'school',
-  dismissible = false
+  dismissible = false,
+  showCancelButton = false
 }: GameModalProps) {
   console.log('🎮 GameModal: Rendering with visible =', visible, 'title =', title);
 
@@ -39,13 +41,16 @@ export default function GameModal({
       message={message}
       emoji={emoji}
       confirmText="OK"
+      cancelText={showCancelButton ? "Cancel" : undefined}
       onConfirm={handleConfirm}
       onCancel={onClose}
       theme={theme}
       dismissible={dismissible}
     />
   );
-}
+});
+
+export default GameModal;
 
 // Helper hook for mini-games
 export function useGameModal() {
@@ -55,17 +60,18 @@ export function useGameModal() {
     message: '',
     emoji: '🎮',
     onConfirm: undefined as (() => void) | undefined,
-    dismissible: false
+    dismissible: false,
+    showCancelButton: false
   });
 
-  const showModal = (title: string, message: string, emoji = '🎮', onConfirm?: () => void, dismissible = false) => {
-    console.log('🎮 GameModal: showModal called with:', { title, message, emoji, dismissible });
-    setModal({ visible: true, title, message, emoji, onConfirm, dismissible });
-  };
+  const showModal = React.useCallback((title: string, message: string, emoji = '🎮', onConfirm?: () => void, dismissible = false, showCancelButton = false) => {
+    console.log('🎮 GameModal: showModal called with:', { title, message, emoji, dismissible, showCancelButton });
+    setModal({ visible: true, title, message, emoji, onConfirm, dismissible, showCancelButton });
+  }, []);
 
-  const hideModal = () => {
+  const hideModal = React.useCallback(() => {
     setModal(prev => ({ ...prev, visible: false, onConfirm: undefined }));
-  };
+  }, []);
 
   return { modal, showModal, hideModal };
 }

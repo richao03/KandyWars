@@ -1,12 +1,13 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
 import FastModal from './FastModal';
+import TextWithEmojis from './TextWithEmojis';
 
 type PriceBreakdown = {
   basePrice: number;
@@ -59,8 +60,8 @@ export default function TransactionModal({
     [getInventoryLimit]
   );
 
-  // Check for Bulk Discount joker
-  const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_DISCOUNT);
+  // Check for Bulk Sale joker
+  const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_SALE);
   const qualifiesForBulkDiscount = useMemo(() => {
     return mode === 'buy' && bulkDiscountJoker && quantity > inventoryLimit / 2;
   }, [mode, bulkDiscountJoker, quantity, inventoryLimit]);
@@ -151,7 +152,7 @@ export default function TransactionModal({
 
         {priceBreakdown && priceBreakdown.jokerEffects.length > 0 && (
           <View style={styles.priceBreakdownContainer}>
-            <Text style={styles.breakdownTitle}>💰 Price Breakdown</Text>
+            <TextWithEmojis style={styles.breakdownTitle}>💰 Price Breakdown</TextWithEmojis>
 
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Base Price:</Text>
@@ -255,15 +256,21 @@ export default function TransactionModal({
           {/* Combined Bulk Discount Notification */}
           {qualifiesForBulkDiscount && mode === 'buy' && (
             <View style={styles.bulkDiscountContainer}>
-              <Text style={styles.bulkDiscountLabel}>
-                🎯 Bulk Discount Applied! You Save: $
-                {(quantity * candy.cost - quantity * finalUnitPrice).toFixed(2)}
-              </Text>
+              <View style={styles.bulkDiscountContent}>
+                <Image
+                  source={require('../../assets/images/emojis/bullseye.png')}
+                  style={styles.bullseyeIcon}
+                />
+                <Text style={styles.bulkDiscountLabel}>
+                  Bulk Discount Applied! You Save: $
+                  {(quantity * candy.cost - quantity * finalUnitPrice).toFixed(2)}
+                </Text>
+              </View>
             </View>
           )}
 
           {mode === 'buy' && maxBuyQuantity === 0 && (
-            <Text style={styles.warningText}>
+            <TextWithEmojis style={styles.warningText}>
               {playerBalance !== undefined &&
               availableInventorySpace !== undefined
                 ? playerBalance < candy.cost
@@ -272,7 +279,7 @@ export default function TransactionModal({
                     ? '⚠️ Your stash is full!'
                     : "⚠️ You can't buy this item!"
                 : '⚠️ Your stash is full!'}
-            </Text>
+            </TextWithEmojis>
           )}
 
           {mode === 'sell' && candy.averagePrice !== null && quantity > 0 && (
@@ -544,6 +551,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#16a34a',
     alignItems: 'center',
+  },
+  bulkDiscountContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bullseyeIcon: {
+    width: 16,
+    height: 16,
   },
   bulkDiscountLabel: {
     fontSize: 14,

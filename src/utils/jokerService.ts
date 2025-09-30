@@ -37,6 +37,76 @@ export class JokerService {
     return JokerService.instance;
   }
 
+  /**
+   * Initialize the joker engine once with all jokers for efficient batch computation.
+   * This should be called once before computing multiple effect targets.
+   */
+  public initializeEngineForComputation(
+    jokers: any[],
+    currentPeriod: number,
+    inventoryLimit?: number,
+    activeEffects: any[] = []
+  ): void {
+    console.log('🔧 JokerService: Initializing engine for batch computation');
+
+    // Clear previous effects
+    this.jokerEngine.clearAllEffects();
+
+    // Add all jokers once
+    jokers.forEach((joker) => {
+      const jokerName = this.cleanJokerName(joker.name);
+      const standardizedJoker = STANDARDIZED_JOKERS.find(
+        (sj) => sj.name === jokerName
+      );
+
+      if (standardizedJoker) {
+        // Handle conditional jokers
+        if (jokerName === 'Even Stevens') {
+          if (inventoryLimit && inventoryLimit % 2 === 0) {
+            this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          }
+        } else if (jokerName === 'Odd Todd') {
+          if (inventoryLimit && inventoryLimit % 2 === 1) {
+            this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          }
+        } else if (jokerName === 'Market Crash') {
+          const isActivated = activeEffects.some(
+            (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+          );
+          if (isActivated) {
+            this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          }
+        } else if (standardizedJoker.type === 'one-time') {
+          const isActivated = activeEffects.some(
+            (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+          );
+          if (isActivated) {
+            this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+          }
+        } else {
+          // Persistent joker - always add
+          this.jokerEngine.addJoker(standardizedJoker, currentPeriod);
+        }
+      }
+    });
+
+    console.log(`🔧 JokerService: Engine initialized with ${jokers.length} jokers`);
+  }
+
+  /**
+   * Compute a specific effect without re-initializing the engine.
+   * Must call initializeEngineForComputation first.
+   */
+  public computeEffect(
+    baseValue: number,
+    target: EffectTarget,
+    currentPeriod: number
+  ): number {
+    return this.jokerEngine.applyEffects(baseValue, target, {
+      currentPeriod,
+    });
+  }
+
   public applyJokerEffects(
     baseValue: number,
     target: EffectTarget,

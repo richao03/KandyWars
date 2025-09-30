@@ -1,11 +1,62 @@
 import { Marquee } from '@animatereactnative/marquee';
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useWallet } from '../../src/hooks/useWallet';
+import { EMOJI_IMAGES, EMOJI_TO_IMAGE_MAP } from '../../utils/eventImages';
 import PixelBorder from './PixelBorder';
+
+// Helper function to render text with emojis replaced by images
+const renderTextWithEmojis = (text: string, textStyle: any) => {
+  // Check if text contains any mappable emojis
+  const hasEmojis = Object.keys(EMOJI_TO_IMAGE_MAP).some((emoji) =>
+    text.includes(emoji)
+  );
+
+  if (!hasEmojis) {
+    return <Text style={textStyle}>{text}</Text>;
+  }
+
+  // Create a regex pattern for all supported emojis
+  const emojiPattern = Object.keys(EMOJI_TO_IMAGE_MAP)
+    .map((emoji) => emoji.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // Escape special regex chars
+    .join('|');
+
+  const regex = new RegExp(`(${emojiPattern})`, 'g');
+  const parts = text.split(regex);
+  const elements: React.ReactNode[] = [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+
+    if (part && EMOJI_TO_IMAGE_MAP[part as keyof typeof EMOJI_TO_IMAGE_MAP]) {
+      // This part is a supported emoji, replace with image(s)
+      const imageKey =
+        EMOJI_TO_IMAGE_MAP[part as keyof typeof EMOJI_TO_IMAGE_MAP];
+
+      // Regular emoji becomes 1 image
+      elements.push(
+        <Image
+          key={`${imageKey}-${i}`}
+          source={EMOJI_IMAGES[imageKey]}
+          style={styles.emojiImage}
+          resizeMode="contain"
+        />
+      );
+    } else if (part) {
+      // This part is regular text
+      elements.push(
+        <Text key={`text-${i}`} style={textStyle}>
+          {part}
+        </Text>
+      );
+    }
+  }
+
+  return <View style={styles.textWithEmojis}>{elements}</View>;
+};
 
 const locationNames = {
   gym: 'Gymnasium',
@@ -214,9 +265,10 @@ export default function GameHUD({
                   style={styles.marquee}
                   delay={2000}
                 >
-                  <Text style={[styles.flavor, isHint && styles.hintText]}>
-                    {text}
-                  </Text>
+                  {renderTextWithEmojis(text, [
+                    styles.flavor,
+                    isHint && styles.hintText,
+                  ])}
                 </Marquee>
               </View>
             </PixelBorder>
@@ -367,5 +419,16 @@ const styles = StyleSheet.create({
     textShadowColor: '#FFD700',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 6,
+  },
+  textWithEmojis: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  emojiImage: {
+    width: 30,
+    height: 30,
+    paddingHorizontal: 2,
+    marginTop: -8,
   },
 });

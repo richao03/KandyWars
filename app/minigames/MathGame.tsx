@@ -20,6 +20,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MathGameProps {
   onComplete: () => void;
@@ -73,13 +74,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
       case 1:
-        return { speed: 1 };
+        return { speed: 1, requiredMatches: 10 };
       case 2:
-        return { speed: 1.5 };
+        return { speed: 1.8, requiredMatches: 15 };
       case 3:
-        return { speed: 2 };
+        return { speed: 2.5, requiredMatches: 20 };
       default:
-        return { speed: 1 };
+        return { speed: 1, requiredMatches: 10 };
     }
   };
 
@@ -105,23 +106,34 @@ export default function MathGame({ onComplete }: MathGameProps) {
   };
 
   // Initialize numbers
-  const initializeNumbers = () => {
-    const sequence = generateRandomNumbers(10);
+  const initializeNumbers = (currentLevel?: number) => {
+    const levelToUse = currentLevel !== undefined ? currentLevel : level;
+    const config = getLevelConfig(levelToUse);
+    const sequence = generateRandomNumbers(config.requiredMatches);
     setNumbersSequence(sequence);
     setMatchedIndices([]);
     numbersSequenceRef.current = sequence;
     matchedIndicesRef.current = [];
-    translateX.value = -600; // Start off screen to the left
+
+    // Calculate starting position: move all numbers off-screen to the left
+    // Each number takes TOTAL_NUMBER_WIDTH pixels, so total width is count * TOTAL_NUMBER_WIDTH
+    // Start with all numbers off-screen (negative value)
+    const totalWidth = config.requiredMatches * TOTAL_NUMBER_WIDTH;
+    translateX.value = -totalWidth; // Extra padding to ensure they're fully off-screen
   };
 
   // Start scrolling animation using setInterval
-  const startScrollAnimation = () => {
+  const startScrollAnimation = (currentLevel?: number) => {
     if (animationRef.current) {
       clearInterval(animationRef.current);
     }
 
-    const config = getLevelConfig(level);
+    const levelToUse = currentLevel !== undefined ? currentLevel : level;
+    const config = getLevelConfig(levelToUse);
     const speed = SCROLL_SPEED * config.speed;
+    console.log(
+      `🎮 MathGame: Starting scroll animation for level ${levelToUse} with speed ${speed}`
+    );
 
     animationRef.current = setInterval(() => {
       if (!gameActiveRef.current) {
@@ -211,9 +223,9 @@ export default function MathGame({ onComplete }: MathGameProps) {
       jokerRewardTierRef.current = levelsCompleted;
 
       showModal(
-        '💥 Game Over!',
-        `A number reached the edge! Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
-        '🎁',
+        'Game Over!',
+        `A number reached the edge!\n Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
+        '⚠️',
         () => {
           setGameState('jokerSelection');
         }
@@ -221,9 +233,10 @@ export default function MathGame({ onComplete }: MathGameProps) {
     } else {
       // Player didn't complete any level, show restart option
       showModal(
-        '💥 Game Over!',
-        `A number reached the edge! You completed ${matchesCompletedRef.current} matches.`,
-        '💥',
+        'Game Over!',
+        `Too slow!\n\n You completed ${matchesCompletedRef.current} matches.
+      \n Have another go at level 1`,
+        '⚠️',
         () => {
           // Restart level
           setMatchesCompleted(0);
@@ -259,9 +272,10 @@ export default function MathGame({ onComplete }: MathGameProps) {
       setMatchesCompleted(newMatchesCompleted);
       matchesCompletedRef.current = newMatchesCompleted;
 
-      // Check if all numbers matched (completed set of 10)
-      if (newMatchedIndices.length >= 10) {
-        // Set completed after completing a full set of 10 numbers
+      // Check if all numbers matched
+      const config = getLevelConfig(level);
+      if (newMatchedIndices.length >= config.requiredMatches) {
+        // Set completed after completing the required matches
         stopScrollAnimation();
         setGameActive(false);
 
@@ -274,8 +288,8 @@ export default function MathGame({ onComplete }: MathGameProps) {
         jokerRewardTierRef.current = level; // Set ref for immediate access
 
         showModal(
-          '🎯 Set Complete!',
-          `Great job! You completed all 10 numbers. Ready for the next level?`,
+          'Level Complete!',
+          `Great job! You completed all ${config.requiredMatches} matches. Ready for the next level?`,
           '🎯',
           () => {
             if (level < 3) {
@@ -308,7 +322,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
 
     if (level < 3) {
       showModal(
-        `🎉 Level ${level} Complete!`,
+        `Level ${level} Complete!`,
         `Great job! Ready for Level ${level + 1}?`,
         '🎉',
         () => {
@@ -321,7 +335,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       setJokerRewardTier(level);
       jokerRewardTierRef.current = level;
 
-      showModal('🏆 Math Master!', 'You completed all levels!', '🏆', () => {
+      showModal('Math Master!', 'You completed all levels!', '🏆', () => {
         setGameState('jokerSelection');
       });
     }
@@ -329,15 +343,16 @@ export default function MathGame({ onComplete }: MathGameProps) {
 
   // Next level
   const nextLevel = () => {
-    setLevel((prev) => prev + 1);
+    const newLevel = level + 1;
+    setLevel(newLevel);
     setMatchesCompleted(0);
     matchesCompletedRef.current = 0;
     setTimeLeft(60);
-    initializeNumbers();
+    initializeNumbers(newLevel);
     setGameActive(true);
     startTimer();
     setTimeout(() => {
-      startScrollAnimation();
+      startScrollAnimation(newLevel);
     }, 500);
   };
 
@@ -381,7 +396,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       jokerRewardTierRef.current = levelsCompleted;
 
       showModal(
-        "⏰ Time's Up!",
+        "Time's Up!",
         `Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
         '🎁',
         () => {
@@ -390,7 +405,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       );
     } else {
       // Player didn't complete any level, show restart option
-      showModal("⏰ Time's Up!", 'Try again from Level 1?', '⏰', () => {
+      showModal("Time's Up!", 'Try again from Level 1?', '⏰', () => {
         setGameState('instructions');
       });
     }
@@ -529,7 +544,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
         title="Math Challenge"
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
-        centerInfo={`Matches: ${matchedIndices.length}/10`}
+        centerInfo={`Matches: ${matchedIndices.length}/${getLevelConfig(level).requiredMatches}`}
         theme="math"
       />
 
@@ -637,14 +652,18 @@ export default function MathGame({ onComplete }: MathGameProps) {
           style={styles.pixelButtonInner}
           onPress={() => {
             showModal(
-              '📚 Leave Math Study?',
+              'Leave Math Study?',
               "You'll lose your progress!",
-              '📚',
-              () => router.back()
+              '🚪',
+              () => router.back(),
+              false,
+              true
             );
           }}
         >
-          <Text style={styles.leaveButtonText}>🚪 Leave</Text>
+          <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
+            🚪 Leave
+          </TextWithEmojis>
         </TouchableOpacity>
       </PixelBorder>
 
@@ -655,6 +674,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
         emoji={modal.emoji}
         onClose={hideModal}
         onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
       />
     </View>
   );

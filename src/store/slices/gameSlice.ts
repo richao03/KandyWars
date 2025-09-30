@@ -20,11 +20,15 @@ interface GameState {
   locationHistory: LocationHistory[];
   isAfterSchool: boolean;
   hasStudiedTonight: boolean;
+  hasPlayedLunchMinigame: boolean;
+  minigameContext: 'lunch' | 'after-school' | null;
   lastActiveView: 'market' | 'after-school';
   trojanHorseCounter: number;
   isLoaded: boolean;
   isInitialized: boolean;
   pricesUpdating: boolean;
+  hasCompletedMarketTutorial: boolean;
+  hasCompletedAfterSchoolTutorial: boolean;
 }
 
 const initialState: GameState = {
@@ -33,11 +37,15 @@ const initialState: GameState = {
   locationHistory: [{ period: 0, location: 'home room' }],
   isAfterSchool: false,
   hasStudiedTonight: false,
+  hasPlayedLunchMinigame: false,
+  minigameContext: null,
   lastActiveView: 'market',
   trojanHorseCounter: 0,
   isLoaded: false,
   isInitialized: false,
   pricesUpdating: false,
+  hasCompletedMarketTutorial: false,
+  hasCompletedAfterSchoolTutorial: false,
 };
 
 const gameSlice = createSlice({
@@ -62,6 +70,9 @@ const gameSlice = createSlice({
     setHasStudiedTonight: (state, action: PayloadAction<boolean>) => {
       state.hasStudiedTonight = action.payload;
     },
+    setHasPlayedLunchMinigame: (state, action: PayloadAction<boolean>) => {
+      state.hasPlayedLunchMinigame = action.payload;
+    },
     setLastActiveView: (state, action: PayloadAction<'market' | 'after-school'>) => {
       state.lastActiveView = action.payload;
     },
@@ -80,6 +91,12 @@ const gameSlice = createSlice({
     setPricesUpdating: (state, action: PayloadAction<boolean>) => {
       state.pricesUpdating = action.payload;
     },
+    setHasCompletedMarketTutorial: (state, action: PayloadAction<boolean>) => {
+      state.hasCompletedMarketTutorial = action.payload;
+    },
+    setHasCompletedAfterSchoolTutorial: (state, action: PayloadAction<boolean>) => {
+      state.hasCompletedAfterSchoolTutorial = action.payload;
+    },
     incrementPeriod: (state, action: PayloadAction<Location>) => {
       state.periodCount++;
       state.currentLocation = action.payload;
@@ -88,10 +105,14 @@ const gameSlice = createSlice({
         location: action.payload,
       });
       state.pricesUpdating = true;
+      // Reset lunch minigame flag when moving to a new period
+      state.hasPlayedLunchMinigame = false;
       console.log('💾 Period incremented to:', state.periodCount, '- Auto-save triggered');
     },
     startAfterSchool: (state) => {
       state.isAfterSchool = true;
+      // Reset study flag when entering after-school to allow studying
+      state.hasStudiedTonight = false;
     },
     startNewDay: (state) => {
       const newPeriodCount = Math.floor(state.periodCount / 8) * 8 + 8;
@@ -131,22 +152,32 @@ const gameSlice = createSlice({
     markStudiedTonight: (state) => {
       state.hasStudiedTonight = true;
     },
+    markLunchMinigamePlayed: (state) => {
+      state.hasPlayedLunchMinigame = true;
+    },
+    setMinigameContext: (state, action: PayloadAction<'lunch' | 'after-school' | null>) => {
+      state.minigameContext = action.payload;
+    },
   },
 });
 
 export const {
   setPeriodCount,
   setCurrentLocation,
+  setMinigameContext,
   addLocationHistory,
   setLocationHistory,
   setIsAfterSchool,
   setHasStudiedTonight,
+  setHasPlayedLunchMinigame,
   setLastActiveView,
   incrementTrojanHorseCounter,
   setTrojanHorseCounter,
   setIsLoaded,
   setIsInitialized,
   setPricesUpdating,
+  setHasCompletedMarketTutorial,
+  setHasCompletedAfterSchoolTutorial,
   incrementPeriod,
   startAfterSchool,
   startNewDay,
@@ -154,6 +185,7 @@ export const {
   revertToPreviousPeriod,
   jumpToPeriod,
   markStudiedTonight,
+  markLunchMinigamePlayed,
 } = gameSlice.actions;
 
 export default gameSlice.reducer;

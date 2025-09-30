@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import PixelBorder from './PixelBorder';
 
@@ -16,10 +16,6 @@ export default function CandyPriceChart({
   prices,
   currentPeriod,
 }: CandyPriceChartProps) {
-  console.log(
-    `CandyPriceChart Debug - Candy: ${candyName}, CurrentPeriod: ${currentPeriod}, PricesLength: ${prices?.length}`
-  );
-
   // Get last 10 periods of data
   const maxPeriods = 10;
   const startPeriod = Math.max(0, currentPeriod - maxPeriods + 1);
@@ -29,10 +25,6 @@ export default function CandyPriceChart({
   const periods = Array.from(
     { length: relevantPrices.length },
     (_, i) => startPeriod + i
-  );
-
-  console.log(
-    `Chart Data - StartPeriod: ${startPeriod}, EndPeriod: ${endPeriod}, RelevantPrices: ${relevantPrices.length}`
   );
 
   // If we don't have enough data, return placeholder
@@ -50,7 +42,10 @@ export default function CandyPriceChart({
             <Text style={styles.marketStatus}>INSUFFICIENT DATA</Text>
           </View>
           <View style={styles.placeholderChart}>
-            <Text style={styles.placeholderText}>📊</Text>
+            <Image
+              source={require('../../assets/images/emojis/chart.png')}
+              style={styles.placeholderIcon}
+            />
             <Text style={styles.noDataText}>Need more periods for chart</Text>
           </View>
         </View>
@@ -175,9 +170,9 @@ export default function CandyPriceChart({
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statLabel}>RANGE</Text>
+            <Text style={styles.statLabel}>Average</Text>
             <Text style={styles.statValue}>
-              ${(maxPrice - minPrice).toFixed(2)}
+              ${maxPrice / (currentPeriod - startPeriod).toFixed(2)}
             </Text>
           </View>
         </View>
@@ -390,6 +385,12 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 32,
+    marginBottom: 8,
+  },
+  placeholderIcon: {
+    width: 32,
+    height: 32,
+    resizeMode: 'contain',
     marginBottom: 8,
   },
   noDataText: {

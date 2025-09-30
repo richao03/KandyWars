@@ -10,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
@@ -22,6 +23,7 @@ import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 export default function Settings() {
   const { resetGame } = useGame();
@@ -123,7 +125,7 @@ export default function Settings() {
             visible: true,
             title: 'Error',
             message: 'Failed to restart the game. Please try again.',
-            emoji: '❌',
+
             onConfirm: () => resetConfirmModal(),
           });
         } finally {
@@ -136,7 +138,6 @@ export default function Settings() {
       },
     });
   };
-
 
   const handleReturnToTitleScreen = () => {
     console.log('🏠 Return to Title Screen button clicked');
@@ -256,12 +257,12 @@ export default function Settings() {
     setNameValidationError(null);
   };
 
-
   const handleClearAllData = () => {
     setConfirmModal({
       visible: true,
       title: '⚠️ Clear All Data',
-      message: 'WARNING: This will delete ALL saved data including game progress, player name, joker cards, and settings. You will start as a completely new player. This action cannot be undone!',
+      message:
+        'WARNING: This will delete ALL saved data including game progress, player name, joker cards, and settings. You will start as a completely new player. This action cannot be undone!',
       emoji: '🗑️',
       confirmText: 'DELETE EVERYTHING',
       cancelText: 'Cancel',
@@ -277,9 +278,15 @@ export default function Settings() {
 
           // Clear the Firebase name association if we have a player ID
           if (currentPlayerId && currentPlayerName) {
-            console.log('🗑️ Clearing Firebase name association for:', currentPlayerId);
+            console.log(
+              '🗑️ Clearing Firebase name association for:',
+              currentPlayerId
+            );
             try {
-              await nameValidationService.clearPlayerName(currentPlayerId, currentPlayerName);
+              await nameValidationService.clearPlayerName(
+                currentPlayerId,
+                currentPlayerName
+              );
             } catch (error) {
               console.error('Failed to clear Firebase name:', error);
             }
@@ -300,7 +307,7 @@ export default function Settings() {
             'game_state',
             'inventory',
             'jokers',
-            'flavor_text_shown'
+            'flavor_text_shown',
           ];
 
           await AsyncStorage.multiRemove(specificKeys);
@@ -319,7 +326,7 @@ export default function Settings() {
           console.log('✅ All data cleared successfully');
 
           // Add a delay to ensure all operations complete
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
 
           console.log('✅ Navigating to root as new player');
 
@@ -431,9 +438,15 @@ export default function Settings() {
             style={[styles.button, styles.titleScreenButton]}
             onPress={handleReturnToTitleScreen}
           >
-            <Text style={styles.titleScreenButtonText}>
-              🏠 Return to Title Screen
-            </Text>
+            <View style={styles.titleScreenButtonRow}>
+              <Image
+                source={require('../../assets/images/emojis/home.png')}
+                style={styles.titleScreenButtonIcon}
+              />
+              <Text style={styles.titleScreenButtonText}>
+                Return to Title Screen
+              </Text>
+            </View>
             <Text style={styles.buttonSubtext}>
               Go back to main menu (progress saved)
             </Text>
@@ -466,16 +479,15 @@ export default function Settings() {
           </TouchableOpacity>
         </View>
 
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Beta Leaderboard</Text>
           <TouchableOpacity
             style={[styles.button, styles.leaderboardButton]}
             onPress={() => router.push('/leaderboard')}
           >
-            <Text style={styles.leaderboardButtonText}>
+            <TextWithEmojis style={styles.leaderboardButtonText}>
               🏆 View Leaderboard
-            </Text>
+            </TextWithEmojis>
             <Text style={styles.buttonSubtext}>
               See how you rank against other players
             </Text>
@@ -555,6 +567,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1d4ed8', // Dark blue text
     marginBottom: 4,
+  },
+  titleScreenButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleScreenButtonIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    marginRight: 8,
   },
   dangerButton: {
     backgroundColor: '#fee2e2', // Light red background

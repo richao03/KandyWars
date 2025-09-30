@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import FastModal from './FastModal';
 import { useWallet } from '../../src/hooks/useWallet';
+import TextWithEmojis from './TextWithEmojis';
 
 interface StashMoneyModalProps {
   visible: boolean;
@@ -50,7 +51,7 @@ export default function StashMoneyModal({ visible, onClose, onConfirm }: StashMo
       modalStyle={styles.modal}
     >
       <>
-          <Text style={styles.title}>💰 Stashing Your Money</Text>
+          <TextWithEmojis style={styles.title}>💰 Stashing Your Money</TextWithEmojis>
           
           <View style={styles.storyContainer}>
             <Text style={styles.flavorText}>{flavorText}</Text>

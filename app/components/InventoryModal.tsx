@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import FastModal from './FastModal';
+import TextWithEmojis from './TextWithEmojis';
 
 type CandyType = {
   id: string;
@@ -24,7 +25,7 @@ type Props = {
   capacity: number;
 };
 
-export default function InventoryModal({
+function InventoryModal({
   visible,
   onClose,
   inventory,
@@ -91,7 +92,7 @@ export default function InventoryModal({
 
         {inventoryItems.length > 0 && (
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>📈 Total Stash Value:</Text>
+            <TextWithEmojis style={styles.totalLabel}>📈 Total Stash Value:</TextWithEmojis>
             <Text style={styles.totalValue}>${totalValue.toFixed(2)}</Text>
           </View>
         )}
@@ -273,3 +274,5 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
 });
+
+export default React.memo(InventoryModal);

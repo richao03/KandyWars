@@ -17,6 +17,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface Attempt {
   candies: string[];
@@ -201,8 +202,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       if (level < 3) {
         // Level complete, move to next level
         showModal(
-          `🎉 Level ${level} Complete!`,
-          `Excellent! You solved Level ${level} in ${newAttempts.length} attempts! Ready for Level ${level + 1}?`,
+          `Level ${level} Complete!`,
+          `Excellent! You solved Level ${level} in ${newAttempts.length} attempts!\n Ready for Level ${level + 1}?`,
           '🎉',
           () => {
             setLevel(level + 1);
@@ -213,7 +214,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         // All levels complete!
         setAllLevelsComplete(true);
         showModal(
-          '🏆 Master Candy Detective!',
+          'Master Candy Detective!',
           `Incredible! You've solved all 3 difficulty levels! You are a true Logic Master!`,
           '🏆',
           () => {
@@ -229,8 +230,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       } else {
         // Player didn't complete any level - game over, no reward
         showModal(
-          '🚨 Game Over!',
-          `You've used all ${maxAttempts} attempts on Level 1. The answer was: ${secretCode.join('')}.\n\nNo joker rewards earned. Better luck next time!`,
+          'Game Over!',
+          `You've used all ${maxAttempts} attempts on Level 1. \n\n Better luck next time!`,
           '🚨',
           () => {
             router.back(); // Return to study page without reward
@@ -278,12 +279,14 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const handleForfeit = () => {
     if (gameState === 'playing') {
       showModal(
-        '🚪 Leave Candy Riddle?',
+        'Leave Candy Riddle?',
         "If you leave now, you'll miss your chance to solve logic puzzles!",
         '🚪',
         () => {
           router.back();
-        }
+        },
+        false,
+        true
       );
     } else {
       router.back();
@@ -409,7 +412,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           title="Candy Riddle"
           subtitle="Crack the secret candy code!"
           leftInfo={`Level ${level}/3`}
-          rightInfo={`Attempts: ${attempts.length}/${maxAttempts}`}
+          centerInfo={' '}
+          rightInfo={`Tries: ${attempts.length}/${maxAttempts}`}
           theme="logic"
         />
       </View>
@@ -429,7 +433,9 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           showsVerticalScrollIndicator={true}
         >
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>🍭 Make Your Guess:</Text>
+            <TextWithEmojis style={styles.inputLabel} imageSize={25}>
+              Make Your Guess:
+            </TextWithEmojis>
 
             {/* Scrollable area for attempts with max height for 4 rows */}
             <View style={styles.attemptsScrollContainer}>
@@ -450,7 +456,12 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                           getFeedbackStyle(attempt.feedback[candyIndex]),
                         ]}
                       >
-                        <Text style={styles.guessSlotText}>{candy}</Text>
+                        <TextWithEmojis
+                          imageSize={25}
+                          style={styles.guessSlotText}
+                        >
+                          {candy}
+                        </TextWithEmojis>
                       </View>
                     ))}
                   </View>
@@ -467,9 +478,12 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                       ]}
                       onPress={() => handlePositionSelect(index)}
                     >
-                      <Text style={styles.guessSlotText}>
+                      <TextWithEmojis
+                        imageSize={25}
+                        style={styles.guessSlotText}
+                      >
                         {currentGuess[index] || '?'}
-                      </Text>
+                      </TextWithEmojis>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -502,7 +516,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                         onPress={() => handleCandySelect(candy)}
                         disabled={!currentGuess.includes('')}
                       >
-                        <Text
+                        <TextWithEmojis
+                          imageSize={30}
                           style={[
                             styles.candyOptionText,
                             getCurrentCandyTypes().length > 12 &&
@@ -510,7 +525,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                           ]}
                         >
                           {candy}
-                        </Text>
+                        </TextWithEmojis>
                       </TouchableOpacity>
                     ))}
                 </View>
@@ -539,7 +554,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                         onPress={() => handleCandySelect(candy)}
                         disabled={!currentGuess.includes('')}
                       >
-                        <Text
+                        <TextWithEmojis
+                          imageSize={30}
                           style={[
                             styles.candyOptionText,
                             getCurrentCandyTypes().length > 12 &&
@@ -547,7 +563,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
                           ]}
                         >
                           {candy}
-                        </Text>
+                        </TextWithEmojis>
                       </TouchableOpacity>
                     ))}
                 </View>
@@ -562,7 +578,9 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
               onPress={handleSubmitGuess}
               disabled={currentGuess.includes('')}
             >
-              <Text style={styles.submitButtonText}>🍭 Try Pattern</Text>
+              <TextWithEmojis imageSize={30} style={styles.submitButtonText}>
+                🍭 Try Pattern
+              </TextWithEmojis>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -583,7 +601,9 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           style={styles.instructionsButton}
           onPress={handleForfeit}
         >
-          <Text style={styles.instructionsButtonText}>🚪 Leave</Text>
+          <TextWithEmojis style={styles.instructionsButtonText} imageSize={28}>
+            🚪 Leave
+          </TextWithEmojis>
         </TouchableOpacity>
       </View>
 
@@ -594,6 +614,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         emoji={modal.emoji}
         onClose={hideModal}
         onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
       />
     </View>
   );

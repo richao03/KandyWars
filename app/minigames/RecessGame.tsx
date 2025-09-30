@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Animated, {
   runOnJS,
   useAnimatedReaction,
@@ -26,6 +26,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface RecessGameProps {
   onComplete: () => void;
@@ -147,7 +148,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   // Main game timer removed
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const playerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resultTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentRoundId = useRef<number>(0);
+  const gameStateRef = useRef(gameState);
+  const playerChoiceRef = useRef(playerChoice);
+  const isProcessingRoundRef = useRef(isProcessingRound);
 
   const screenWidth = Dimensions.get('window').width;
 
@@ -251,6 +256,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     const stageToUse = currentStage ?? stage; // Use passed stage or current stage
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
+    if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
 
     // Computer makes choice
     const compChoice = GESTURES[Math.floor(Math.random() * 3)];
@@ -328,6 +334,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   // Start player timeout with round ID tracking
   const startPlayerTimeout = (timeLimit: number) => {
     const roundId = ++currentRoundId.current;
+    console.log(
+      `⏱️ Starting player timeout: ${timeLimit}ms, roundId: ${roundId}`
+    );
 
     // Show and animate timer line
     setShowTimerLine(true);
@@ -335,24 +344,53 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     timerLineWidth.value = withTiming(0, { duration: timeLimit });
 
     playerTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ Player timeout fired:', {
+        roundId,
+        currentRoundId: currentRoundId.current,
+        roundIdMatch: roundId === currentRoundId.current,
+        playerChoice: playerChoiceRef.current,
+        gameState: gameStateRef.current,
+        isProcessingRound: isProcessingRoundRef.current,
+      });
+
       if (
         roundId === currentRoundId.current &&
-        !playerChoice &&
-        gameState === 'playing' &&
-        !isProcessingRound
+        !playerChoiceRef.current &&
+        gameStateRef.current === 'playing' &&
+        !isProcessingRoundRef.current
       ) {
+        console.log('⏰ Player timed out - calling handlePlayerChoice(null)');
         setShowTimerLine(false);
         handlePlayerChoice(null); // Time out - player loses
+      } else {
+        console.log('⏰ Timeout conditions not met - skipping loss');
       }
     }, timeLimit);
   };
 
   // Handle player choice
   const handlePlayerChoice = (choice: Gesture | null) => {
-    if (gameState !== 'playing' || playerChoice || isProcessingRound) {
+    console.log('🎮 handlePlayerChoice called:', {
+      choice,
+      gameState,
+      gameStateRef: gameStateRef.current,
+      playerChoice,
+      playerChoiceRef: playerChoiceRef.current,
+      isProcessingRound,
+      isProcessingRoundRef: isProcessingRoundRef.current,
+    });
+
+    // Use refs for timeout calls to get current state
+    if (
+      gameStateRef.current !== 'playing' ||
+      playerChoiceRef.current ||
+      isProcessingRoundRef.current
+    ) {
+      console.log('🎮 Blocking handlePlayerChoice - conditions not met');
       return;
     }
 
+    console.log('🎮 Processing choice:', choice);
     if (choice) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -401,7 +439,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       setRoundsPlayed(newRoundsPlayed);
 
       // No modal - automatically continue after showing result
-      setTimeout(() => {
+      // Clear any existing result timeout to prevent duplicates
+      if (resultTimeoutRef.current) {
+        clearTimeout(resultTimeoutRef.current);
+      }
+
+      resultTimeoutRef.current = setTimeout(() => {
+        resultTimeoutRef.current = null;
         if (isGameOver) {
           // Game over - check if player completed any stage
           if (completedLevel > 0) {
@@ -411,7 +455,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             // Player didn't complete any stage, show restart option
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
-              '💀 Game Over!',
+              'Game Over!',
               'You lost 3 times! Try again from Stage 1?',
               '💀',
               () => {
@@ -426,10 +470,16 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             );
           }
         } else if (
-          gameState !== 'levelComplete' &&
-          gameState !== 'jokerSelection'
+          gameStateRef.current !== 'levelComplete' &&
+          gameStateRef.current !== 'jokerSelection'
         ) {
+          console.log('🔄 Starting next countdown after timeout loss');
           startCountdown(undefined, newRoundsPlayed);
+        } else {
+          console.log(
+            '⏹️ Not starting countdown - gameState:',
+            gameStateRef.current
+          );
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
 
@@ -486,7 +536,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       setRoundsPlayed(newRoundsPlayed);
 
       // Show result then start next round or complete stage
-      setTimeout(() => {
+      // Clear any existing result timeout to prevent duplicates
+      if (resultTimeoutRef.current) {
+        clearTimeout(resultTimeoutRef.current);
+      }
+
+      resultTimeoutRef.current = setTimeout(() => {
+        resultTimeoutRef.current = null;
         // Check if stage was just completed (4 wins total)
         if (shouldCompleteStage) {
           console.log(
@@ -503,7 +559,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             // Player didn't complete any stage, show restart option
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
-              '💀 Game Over!',
+              'Game Over!',
               'You lost 3 times! Try again from Stage 1?',
               '💀',
               () => {
@@ -518,9 +574,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             );
           }
         } else if (
-          gameState !== 'levelComplete' &&
-          gameState !== 'jokerSelection' &&
-          !isProcessingRound
+          gameStateRef.current !== 'levelComplete' &&
+          gameStateRef.current !== 'jokerSelection' &&
+          !isProcessingRoundRef.current
         ) {
           // Reset positions to edges of game area (not off-screen)
           playerGestureX.value = -200;
@@ -538,6 +594,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     console.log(`🎊 handleStageComplete called for stage ${stage}`);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
+    if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
 
     // Mark this stage as completed
     setCompletedLevel(stage);
@@ -556,7 +613,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       const nextStageNames = ['', 'Intermediate', 'Expert', ''];
 
       showModal(
-        `🎉 ${stageNames[stage]} Stage Complete!`,
+        `${stageNames[stage]} Stage Complete!`,
         `Score: ${score}\nYou got 4 wins in a row!\nReady for ${nextStageNames[stage + 1]} Stage?`,
         '🎉',
         () => {
@@ -586,7 +643,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       );
     } else {
       showModal(
-        '🏆 Rock Paper Scissors Master!',
+        'Rock Paper Scissors Master!',
         `Final Score: ${score}\nYou've mastered all stages!`,
         '🏆',
         () => {
@@ -617,6 +674,19 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     startCountdown();
   };
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    playerChoiceRef.current = playerChoice;
+  }, [playerChoice]);
+
+  useEffect(() => {
+    isProcessingRoundRef.current = isProcessingRound;
+  }, [isProcessingRound]);
+
   // Log hint modal display
   useEffect(() => {
     if (gameState === 'hint' && hintGesture) {
@@ -636,6 +706,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     return () => {
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
       if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
+      if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
     };
   }, []);
 
@@ -832,13 +903,15 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
 
     showModal(
-      '🏃 Leave Recess?',
+      'Leave Recess?',
       'Abandoning the playground battle?',
-      '🏃',
+      '🚪',
       () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         router.back();
-      }
+      },
+      false,
+      true
     );
   };
 
@@ -932,10 +1005,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     >
       {/* Header */}
       <MinigameHUD
-        title="Rock Paper Scissors!"
-        subtitle={`Round ${roundsPlayed + 1} | Wins: ${wins}/4 | Losses: ${losses}/3`}
+        title="Rock Paper Scissors"
+        subtitle={``}
         leftInfo={`Stage ${stage}/3`}
-        rightInfo={`Score: ${score}`}
+        centerInfo={`Losses:${losses}/3`}
+        rightInfo={`Wins:${wins}/4 `}
         theme="recess"
       />
 
@@ -1095,73 +1169,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         </TouchableOpacity>
       </View>
 
-      {/* DEBUG: Show all 6 gesture positions */}
-      {debugMode && (
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugTitle}>DEBUG: All Hand Positions</Text>
-
-          {/* Style 0: Diagonal corners */}
-          <View style={styles.debugRow}>
-            <Text style={styles.debugLabel}>
-              Style 0 (corners): Player(-80,-40) CPU(90,50)
-            </Text>
-            <View
-              style={[styles.debugHand, { left: -80 + 100, top: -40 + 50 }]}
-            >
-              <Image source={GESTURE_IMAGES.rock} style={styles.debugImage} />
-              <Text style={styles.debugText}>P</Text>
-            </View>
-            <View style={[styles.debugHand, { left: 90 + 100, top: 50 + 50 }]}>
-              <Image source={GESTURE_IMAGES.rock} style={styles.debugImage} />
-              <Text style={styles.debugText}>C</Text>
-            </View>
-          </View>
-
-          {/* Style 1: Opposite diagonal corners */}
-          <View style={styles.debugRow}>
-            <Text style={styles.debugLabel}>
-              Style 1 (opposite): Player(-80,40) CPU(80,-40)
-            </Text>
-            <View style={[styles.debugHand, { left: -80 + 100, top: 40 + 50 }]}>
-              <Image source={GESTURE_IMAGES.paper} style={styles.debugImage} />
-              <Text style={styles.debugText}>P</Text>
-            </View>
-            <View style={[styles.debugHand, { left: 80 + 100, top: -40 + 50 }]}>
-              <Image source={GESTURE_IMAGES.paper} style={styles.debugImage} />
-              <Text style={styles.debugText}>C</Text>
-            </View>
-          </View>
-
-          {/* Style 2: Horizontal */}
-          <View style={styles.debugRow}>
-            <Text style={styles.debugLabel}>
-              Style 2 (horizontal): Player(-80,0) CPU(80,0)
-            </Text>
-            <View style={[styles.debugHand, { left: -80 + 100, top: 0 + 50 }]}>
-              <Image
-                source={GESTURE_IMAGES.scissors}
-                style={styles.debugImage}
-              />
-              <Text style={styles.debugText}>P</Text>
-            </View>
-            <View style={[styles.debugHand, { left: 80 + 100, top: 0 + 50 }]}>
-              <Image
-                source={GESTURE_IMAGES.scissors}
-                style={styles.debugImage}
-              />
-              <Text style={styles.debugText}>C</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.debugToggle}
-            onPress={() => setDebugMode(false)}
-          >
-            <Text style={styles.debugToggleText}>Hide Debug</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Bottom Buttons */}
       <View
         style={[
@@ -1172,9 +1179,22 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           },
         ]}
       >
-        <TouchableOpacity style={styles.bottomButton} onPress={handleForfeit}>
-          <Text style={styles.bottomButtonText}>🚪 Leave</Text>
-        </TouchableOpacity>
+        <PixelBorder
+          borderColor="#4A90C1"
+          borderWidth={3}
+          backgroundColor="#6BB6E3"
+          innerPadding={0}
+          style={{ flex: 1 }}
+        >
+          <TouchableOpacity
+            style={styles.bottomButtonInner}
+            onPress={handleForfeit}
+          >
+            <TextWithEmojis style={styles.bottomButtonText} imageSize={28}>
+              🚪 Leave
+            </TextWithEmojis>
+          </TouchableOpacity>
+        </PixelBorder>
       </View>
 
       <GameModal
@@ -1185,6 +1205,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         onClose={hideModal}
         onConfirm={modal.onConfirm}
         dismissible={modal.dismissible}
+        showCancelButton={modal.showCancelButton}
       />
     </View>
   );
@@ -1437,13 +1458,11 @@ const styles = StyleSheet.create({
     padding: 0, // Removed all padding
     marginTop: 8, // Small margin from choice buttons
   },
-  bottomButton: {
-    backgroundColor: '#FF6B6B',
+  bottomButtonInner: {
     paddingVertical: 12,
     paddingHorizontal: 32,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#D84747',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bottomButtonText: {
     fontSize: 16,

@@ -1,8 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import GameHUD from '../components/GameHUD';
+import PixelBorder from '../components/PixelBorder';
 import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';
 
@@ -27,12 +29,12 @@ type CandyForDeli = Candy & {
 
 const baseCandies = [
   { name: 'Snickers', baseMin: 1.5, baseMax: 20 },
-  { name: 'M&Ms', baseMin: 1.0, baseMax: 25 },
-  { name: 'Skittles', baseMin: 0.75, baseMax: 22 },
-  { name: 'Warheads', baseMin: 0.25, baseMax: 10 },
-  { name: 'Sour Patch Kids', baseMin: 1.0, baseMax: 27 },
-  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 5 },
-  { name: 'Jaw Breaker', baseMin: 2, baseMax: 30 },
+  { name: 'M&Ms', baseMin: 2.0, baseMax: 35 },
+  { name: 'Skittles', baseMin: 1, baseMax: 22 },
+  { name: 'Warheads', baseMin: 0.5, baseMax: 10 },
+  { name: 'Sour Patch Kids', baseMin: 1.8, baseMax: 30 },
+  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 7 },
+  { name: 'Jaw Breaker', baseMin: 3, baseMax: 50 },
 ];
 
 export default function Deli() {
@@ -73,6 +75,38 @@ export default function Deli() {
     null
   );
   const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
+
+  // Pulsating glow animation
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulsate = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    pulsate.start();
+    return () => pulsate.stop();
+  }, [glowAnim]);
+
+  const shadowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.9],
+  });
+
+  const shadowRadius = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [8, 16],
+  });
 
   // Update candy prices when jokers change
   useEffect(() => {
@@ -184,58 +218,108 @@ export default function Deli() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" backgroundColor="#2a1845" />
+      <StatusBar style="light" backgroundColor="#2d1b69" />
       <GameHUD
         theme="evening"
         customHeaderText={`After School - Day ${day}`}
         customLocationText="Peaceful Evening"
       />
-      <View style={styles.header}>
-        <Text style={styles.title}>🏪 Corner Deli</Text>
-        <Text style={styles.subtitle}>
-          Stable prices • Average market rates
-        </Text>
-      </View>
-
-      {vendorKickbackJoker && (
-        <View style={styles.discountBanner}>
-          <Text style={styles.discountText}>
-            🤝 Vendor Kickback Active - All prices 50% off!
-          </Text>
-        </View>
-      )}
-
-      <FlatList
-        data={candies}
-        keyExtractor={(item) => item.name}
-        contentContainerStyle={styles.list}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => openModal(index)}
+      <View style={styles.contentContainer}>
+        {vendorKickbackJoker && (
+          <PixelBorder
+            borderColor="#22c55e"
+            borderWidth={3}
+            backgroundColor="rgba(34, 197, 94, 0.9)"
+            innerPadding={12}
+            style={styles.discountBanner}
           >
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.price}>
-              Price: ${item.cost.toFixed(2)} (avg)
+            <Text style={styles.discountText}>
+              🤝 Vendor Kickback Active - All prices 50% off!
             </Text>
-            <Text style={styles.owned}>Owned: {item.quantityOwned}</Text>
-            <Text style={styles.avgPrice}>
-              Avg Price:{' '}
-              {item.averagePrice !== null
-                ? `$${item.averagePrice.toFixed(2)}`
-                : '—'}
-            </Text>
-          </TouchableOpacity>
+          </PixelBorder>
         )}
-      />
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleReturnToAfterSchool}
-        >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
+        <FlatList
+          data={candies}
+          keyExtractor={(item) => item.name}
+          contentContainerStyle={styles.list}
+          renderItem={({ item, index }) => (
+            <View style={{ marginBottom: 8 }}>
+              <PixelBorder
+                borderColor="#ff6b35"
+                borderWidth={3}
+                backgroundColor="rgba(255, 255, 255, 0.9)"
+                innerPadding={12}
+              >
+                <TouchableOpacity
+                  style={styles.item}
+                  onPress={() => openModal(index)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.price}>${item.cost.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.itemDetails}>
+                    <Text style={styles.owned}>
+                      Owned: {item.quantityOwned}
+                    </Text>
+                    <Text style={styles.avgPrice}>
+                      Avg Cost:{' '}
+                      {item.averagePrice !== null
+                        ? `$${item.averagePrice.toFixed(2)}`
+                        : '—'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </PixelBorder>
+            </View>
+          )}
+        />
+
+        <View style={styles.buttonContainer}>
+          <Animated.View
+            style={{
+              shadowColor: '#ff6b35',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: shadowOpacity,
+              shadowRadius: shadowRadius,
+              elevation: 10,
+            }}
+          >
+            <PixelBorder
+              borderColor="#ff6b35"
+              borderWidth={4}
+              backgroundColor="rgba(13, 51, 81, 0.95)"
+              innerPadding={12}
+              style={styles.header}
+            >
+              <View style={styles.signContainer}>
+                <View style={styles.storeBranding}></View>
+                <Text style={styles.title}>CORNER DELI</Text>
+                <View style={styles.neonStrip} />
+                <Text style={styles.subtitle}>
+                  CANDY • STEADY PRICES • ALWAYS OPEN
+                </Text>
+              </View>
+            </PixelBorder>
+          </Animated.View>
+          <PixelBorder
+            borderColor="rgba(185,28,28,1)"
+            borderWidth={3}
+            backgroundColor="rgba(239,68,68,1)"
+            innerPadding={0}
+            style={styles.backButton}
+          >
+            <TouchableOpacity
+              style={styles.backButtonInner}
+              onPress={handleReturnToAfterSchool}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.backButtonText}>← Back</Text>
+            </TouchableOpacity>
+          </PixelBorder>
+        </View>
       </View>
 
       {selectedCandy && (
@@ -255,108 +339,173 @@ export default function Deli() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2a1845', // Match after-school background
+    backgroundColor: '#2d1b69', // Deep purple/blue like Circle K or Wawa
+  },
+  contentContainer: {
+    flex: 1,
+    padding: 16,
   },
   header: {
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 20,
-    backgroundColor: 'rgba(93, 76, 112, 0.85)',
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 16,
+  },
+  signContainer: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  storeBranding: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  storeNumber: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#ff6b35',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: '#ffaa66',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#8a7ca8',
+    borderColor: '#ff6b35',
+  },
+  separatorLine: {
+    width: 20,
+    height: 3,
+    backgroundColor: '#ff6b35',
+    shadowColor: '#ff6b35',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  neonStrip: {
+    width: '80%',
+    height: 4,
+    backgroundColor: '#ff1493',
+    marginVertical: 6,
+    shadowColor: '#ff1493',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderRadius: 2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#f7e98e',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(247,233,142,0.4)',
+    textShadowColor: '#ff6b35',
     textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 8,
-    marginBottom: 8,
+    textShadowRadius: 6,
     textAlign: 'center',
+    letterSpacing: 2,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#b8a9c9',
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  list: {
-    padding: 16,
-  },
-  item: {
-    marginBottom: 12,
-    padding: 16,
-    flexDirection: 'column',
-    backgroundColor: 'rgba(93, 76, 112, 0.85)',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#8a7ca8',
-    shadowColor: '#2d1b3d',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  name: {
-    fontSize: 22,
+    fontSize: 12,
+    color: '#ff1493',
     fontWeight: '700',
-    color: '#f7e98e',
-    marginBottom: 6,
+    textAlign: 'center',
     fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(247,233,142,0.3)',
+    textShadowColor: '#660033',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+    letterSpacing: 1,
+  },
+  list: {
+    padding: 0,
+    paddingBottom: 16,
+  },
+  item: {
+    flexDirection: 'column',
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  itemDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  name: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2d1b69', // Dark blue like 7-Eleven
+    fontFamily: 'PixeloidMono',
+    flex: 1,
   },
   price: {
-    fontSize: 16,
-    color: '#b8a9c9',
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 18,
+    color: '#ff6b35', // Orange pricing
+    fontWeight: '800',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: '#cc5529',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
   },
   owned: {
-    fontSize: 16,
-    color: '#b8a9c9',
-    marginBottom: 4,
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+    fontFamily: 'PixeloidMono',
   },
   avgPrice: {
-    fontSize: 16,
-    color: '#b8a9c9',
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
+    fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    borderTopColor: '#ff6b35',
+    borderTopWidth: 3,
     alignItems: 'center',
   },
   backButton: {
-    backgroundColor: 'rgba(93, 76, 112, 0.6)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: '#b8a9c9',
+    shadowColor: '#991b1b',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  backButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#f7e98e',
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
     fontFamily: 'PixeloidMono',
+    textShadowColor: '#991b1b',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  backButtonSubtext: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#fef2f2',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   discountBanner: {
-    backgroundColor: 'rgba(34, 197, 94, 0.9)', // Green background
-    marginHorizontal: 16,
     marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#22c55e',
-    alignItems: 'center',
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   discountText: {
     fontSize: 16,
@@ -364,7 +513,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: '#166534',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },

@@ -16,10 +16,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { scoreboardService } from '../../src/services/firebase';
 import FastModal from './FastModal';
+import TextWithEmojis from './TextWithEmojis';
 
 interface ScoreboardModalProps {
   visible: boolean;
@@ -169,7 +171,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
         </View>
 
         <View style={styles.leaderboardSection}>
-          <Text style={styles.sectionTitle}>💰 Top Money Earners</Text>
+          <TextWithEmojis style={styles.sectionTitle}>💰 Top Money Earners</TextWithEmojis>
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -229,9 +231,15 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
     const renderJokersLeaderboard = () => (
       <ScrollView style={styles.tabContent}>
         <View style={styles.leaderboardSection}>
-          <Text style={styles.sectionTitle}>
-            🃏 Most Obtained Jokers from Minigames
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Image
+              source={require('../../assets/images/emojis/joker.png')}
+              style={styles.sectionTitleIcon}
+            />
+            <Text style={styles.sectionTitle}>
+              Most Obtained Jokers from Minigames
+            </Text>
+          </View>
           <Text style={styles.sectionSubtitle}>
             Shows which jokers are won most often from minigames (no player
             info)
@@ -279,7 +287,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
     const renderMinigamesLeaderboard = () => (
       <ScrollView style={styles.tabContent}>
         <View style={styles.leaderboardSection}>
-          <Text style={styles.sectionTitle}>🎮 Most Played Minigames</Text>
+          <TextWithEmojis style={styles.sectionTitle}>🎮 Most Played Minigames</TextWithEmojis>
           <Text style={styles.sectionSubtitle}>
             Shows which minigames are played most often (no player info)
           </Text>
@@ -490,28 +498,32 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
               style={[styles.tab, activeTab === 'money' && styles.activeTab]}
               onPress={() => setActiveTab('money')}
             >
-              <Text
+              <TextWithEmojis
                 style={[
                   styles.tabText,
                   activeTab === 'money' && styles.activeTabText,
                 ]}
               >
                 💰 Money
-              </Text>
+              </TextWithEmojis>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.tab, activeTab === 'jokers' && styles.activeTab]}
               onPress={() => setActiveTab('jokers')}
             >
-              <Text
-                style={[
+              <View style={styles.tabTextRow}>
+                <Image
+                  source={require('../../assets/images/emojis/joker.png')}
+                  style={styles.tabIcon}
+                />
+                <Text style={[
                   styles.tabText,
                   activeTab === 'jokers' && styles.activeTabText,
-                ]}
-              >
-                🃏 Jokers
-              </Text>
+                ]}>
+                  Jokers
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -521,14 +533,14 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
               ]}
               onPress={() => setActiveTab('minigames')}
             >
-              <Text
+              <TextWithEmojis
                 style={[
                   styles.tabText,
                   activeTab === 'minigames' && styles.activeTabText,
                 ]}
               >
                 🎮 Games
-              </Text>
+              </TextWithEmojis>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -685,6 +697,26 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     padding: 20,
     paddingBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionTitleIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    marginRight: 8,
+  },
+  tabTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tabIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+    marginRight: 6,
   },
   sectionSubtitle: {
     fontSize: 14,

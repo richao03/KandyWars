@@ -126,6 +126,10 @@ export default function RootLayout() {
                       options={{ headerShown: false }}
                     />
                     <Stack.Screen
+                      name="geography-game"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
                       name="leaderboard"
                       options={{ headerShown: false }}
                     />

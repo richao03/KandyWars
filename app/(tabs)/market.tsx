@@ -1,6 +1,6 @@
-import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import React, {
   memo,
   useCallback,
@@ -8,6 +8,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  startTransition,
 } from 'react';
 import {
   FlatList,
@@ -25,19 +26,19 @@ import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects
 import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useDiamondHand } from '../../src/hooks/useDiamondHand';
 import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
-import { useHomeMadeBonus } from '../../src/hooks/useHomeMadeBonus';
-import { useTrojanHorse } from '../../src/hooks/useTrojanHorse';
 import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
+import { useHomeMadeBonus } from '../../src/hooks/useHomeMadeBonus';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
-import { useAppDispatch } from '../../src/store/hooks';
-import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { useSeed } from '../../src/hooks/useSeed';
+import { useTrojanHorse } from '../../src/hooks/useTrojanHorse';
 import { useWallet } from '../../src/hooks/useWallet';
+import { useAppDispatch } from '../../src/store/hooks';
+import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { JokerService } from '../../src/utils/jokerService';
 import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
@@ -50,6 +51,7 @@ import PixelBorder from '../components/PixelBorder';
 import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
+import StudySubjectSelector from '../components/StudySubjectSelector';
 import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';
 
@@ -78,35 +80,17 @@ type CandyForMarket = Candy & {
 
 const baseCandies = [
   { name: 'Snickers', baseMin: 1.5, baseMax: 20 },
-  { name: 'M&Ms', baseMin: 1.0, baseMax: 25 },
-  { name: 'Skittles', baseMin: 0.75, baseMax: 22 },
-  { name: 'Warheads', baseMin: 0.25, baseMax: 10 },
-  { name: 'Sour Patch Kids', baseMin: 1.0, baseMax: 27 },
-  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 5 },
-  { name: 'Jaw Breaker', baseMin: 2, baseMax: 30 },
+  { name: 'M&Ms', baseMin: 2.0, baseMax: 35 },
+  { name: 'Skittles', baseMin: 1, baseMax: 22 },
+  { name: 'Warheads', baseMin: 0.5, baseMax: 10 },
+  { name: 'Sour Patch Kids', baseMin: 1.8, baseMax: 30 },
+  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 7 },
+  { name: 'Jaw Breaker', baseMin: 3, baseMax: 50 },
 ];
 
 function Market(props) {
-  // Track focus state to prevent unnecessary work when tab is not active
-  const [isTabFocused, setIsTabFocused] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      console.log('📊 MARKET: Tab focused - enabling expensive operations');
-      setIsTabFocused(true);
-      return () => {
-        console.log(
-          '📊 MARKET: Tab unfocused - disabling expensive operations'
-        );
-        setIsTabFocused(false);
-      };
-    }, [])
-  );
-
-  // Only log when focused to reduce console noise
-  if (isTabFocused) {
-    console.log('📊 MARKET: Component rendering (tab is focused)');
-  }
+  // Check if this tab is currently focused to prevent unnecessary renders
+  const isFocused = useIsFocused();
 
   const {
     rng,
@@ -118,6 +102,9 @@ function Market(props) {
   } = useSeed();
 
   const { balance, spend, add } = useWallet();
+
+  // Always call useCopilot to satisfy Rules of Hooks, but check if tutorial is completed
+  const { hasCompletedMarketTutorial, setHasCompletedMarketTutorial } = useGame();
   const {
     start,
     stop: stopCopilot,
@@ -145,7 +132,7 @@ function Market(props) {
     }
   }, [isFirstStep, currentStep, copilotEvents, eventEmitter]);
 
-  // Debug when component mounts and track active view
+  // Track active view on mount only
   useEffect(() => {
     console.log(
       '🎓 Market component mounted with Day:',
@@ -153,11 +140,19 @@ function Market(props) {
       'Period:',
       period
     );
-    console.log('🎓 Market component - CopilotSteps should be rendered now');
-
-    // Track that user is now in market view
     setLastActiveView('market');
   }, [setLastActiveView]);
+
+  // Handle returning from lunch minigame separately
+  useFocusEffect(
+    useCallback(() => {
+      if (isLunchPeriod && hasPlayedLunchMinigame && showLunchMinigames) {
+        console.log('🍔 Returned from lunch minigame, hiding selector');
+        setShowLunchMinigames(false);
+      }
+    }, [isLunchPeriod, hasPlayedLunchMinigame])
+    // Removed showLunchMinigames from dependencies to prevent loop
+  );
   const {
     inventory,
     addToInventory,
@@ -175,6 +170,8 @@ function Market(props) {
     setLastActiveView,
     pricesUpdating,
     setPricesUpdating,
+    hasPlayedLunchMinigame,
+    markLunchMinigamePlayed,
   } = useGame();
   const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
@@ -187,13 +184,7 @@ function Market(props) {
   const { activeEffects, jokers, removeJoker } = useJokers();
   const { applySalePriceBonus, getSalePriceBonus } = useHallPass();
 
-  // Initialize computed joker effects system only when tab is focused
-  useEffect(() => {
-    if (isTabFocused) {
-      console.log('📊 MARKET: Initializing computed joker effects...');
-    }
-  }, [isTabFocused]);
-
+  // Initialize computed joker effects system
   useComputedJokerEffects();
 
   const jokerService = useMemo(() => JokerService.getInstance(), []);
@@ -204,30 +195,32 @@ function Market(props) {
   useTrojanHorse(); // This hook handles Trojan Horse joker price increases
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
   const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
-  // Tutorial using Copilot - check if we should show tutorial for day 1 period 1 (period starts at 0)
-  // Also check tutorial completion status
-  const shouldShowTutorial = day === 1 && periodCount === 0;
+  // Tutorial using Copilot - only show if not already completed
+  const shouldShowTutorial = day === 1 && periodCount === 0 && !hasCompletedMarketTutorial;
   const tutorialStarted = useRef(false);
 
-  // Debug tutorial conditions
-  console.log('🎓 Tutorial Debug:', {
-    day,
-    periodCount,
-    shouldShowTutorial,
-    tutorialStarted: tutorialStarted.current,
-    isFirstStep,
-    currentStep,
-    copilotVisible: visible,
-  });
+  // Debug tutorial conditions (only log when tutorial is active)
+  if (shouldShowTutorial || !hasCompletedMarketTutorial) {
+    console.log('🎓 Tutorial Debug:', {
+      day,
+      periodCount,
+      shouldShowTutorial,
+      hasCompletedMarketTutorial,
+      tutorialStarted: tutorialStarted.current,
+      isFirstStep,
+      currentStep,
+      copilotVisible: visible,
+    });
+  }
 
-  // Simple tutorial auto-start (copied from after-school.tsx pattern)
+  // Simple tutorial auto-start
   useEffect(() => {
     if (shouldShowTutorial && !tutorialStarted.current) {
       console.log(
-        '🎓 Auto-starting tutorial - simple approach like after-school.tsx'
+        '🎓 Auto-starting market tutorial'
       );
 
-      // Small delay to ensure UI is ready (same as after-school.tsx)
+      // Small delay to ensure UI is ready
       const timeoutId = setTimeout(() => {
         console.log('🎯 Starting market copilot tutorial');
         tutorialStarted.current = true;
@@ -237,6 +230,21 @@ function Market(props) {
       return () => clearTimeout(timeoutId);
     }
   }, [shouldShowTutorial, start]);
+
+  // Mark tutorial as completed when it finishes
+  useEffect(() => {
+    if (eventEmitter && copilotEvents) {
+      const handleComplete = () => {
+        console.log('🎓 Market tutorial completed');
+        setHasCompletedMarketTutorial(true);
+      };
+
+      eventEmitter.on(copilotEvents.STOP, handleComplete);
+      return () => {
+        eventEmitter.off(copilotEvents.STOP, handleComplete);
+      };
+    }
+  }, [eventEmitter, copilotEvents, setHasCompletedMarketTutorial]);
 
   // Show location modal after event modal is dismissed
   useEffect(() => {
@@ -258,11 +266,8 @@ function Market(props) {
     }
   }, [currentLocation, periodCount]);
 
-  // Update flavor text when period changes - only when tab is focused
+  // Update flavor text when period changes
   useEffect(() => {
-    if (!isTabFocused) {
-      return; // Skip flavor text updates when tab is not active
-    }
     // Check for current event at current location
     const currentEvent = gameData.periodEvents.find(
       (e) => e.period === periodCount && e.location === currentLocation
@@ -272,8 +277,8 @@ function Market(props) {
     const nextPeriodEvent = gameData.periodEvents.find(
       (e) => e.period === periodCount + 1 && e.location === currentLocation
     );
-
-    if (periodCount === 0) {
+    let periodOfTheDay = (periodCount % 8) + 1;
+    if (periodOfTheDay === 0) {
       setEvent('NEW_DAY');
     } else if (currentEvent && currentEvent.description) {
       // Show the current event description
@@ -292,7 +297,7 @@ function Market(props) {
       // Trigger the event modal for interactive events
       console.log(
         '🎯 EVENT: Triggering event modal for period',
-        periodCount,
+        periodOfTheDay,
         ':',
         currentEvent.title
       );
@@ -318,11 +323,11 @@ function Market(props) {
         setHint(nextPeriodEvent.hint);
       } else {
         // Show period-specific flavor text instead of hint
-        if (periodCount <= 2) {
+        if (periodOfTheDay <= 2) {
           setEvent('MORNING_TRADE');
-        } else if (periodCount >= 4 && periodCount <= 6) {
+        } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
           setEvent('LUNCH_RUSH');
-        } else if (periodCount >= 7) {
+        } else if (periodOfTheDay >= 7) {
           setEvent('FINAL_PERIOD');
         } else {
           setEvent('PERIOD_CHANGE');
@@ -330,29 +335,28 @@ function Market(props) {
       }
     } else if (nextPeriodEvent) {
       // If there's an event but no hint defined, show regular flavor text
-      if (periodCount <= 2) {
+      if (periodOfTheDay <= 2) {
         setEvent('MORNING_TRADE');
-      } else if (periodCount >= 4 && periodCount <= 6) {
+      } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
         setEvent('LUNCH_RUSH');
-      } else if (periodCount >= 7) {
+      } else if (periodOfTheDay >= 7) {
         setEvent('FINAL_PERIOD');
       } else {
         setEvent('PERIOD_CHANGE');
       }
     } else {
       // Period-specific flavor text based on time of day
-      if (periodCount <= 2) {
+      if (periodOfTheDay <= 2) {
         setEvent('MORNING_TRADE');
-      } else if (periodCount >= 4 && periodCount <= 6) {
+      } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
         setEvent('LUNCH_RUSH');
-      } else if (periodCount >= 7) {
+      } else if (periodOfTheDay >= 7) {
         setEvent('FINAL_PERIOD');
       } else {
         setEvent('PERIOD_CHANGE');
       }
     }
   }, [
-    isTabFocused,
     periodCount,
     currentLocation,
     gameData.periodEvents,
@@ -373,13 +377,16 @@ function Market(props) {
     }))
   );
 
-  // Only update candies when tab is focused to prevent excessive re-renders
-  useEffect(() => {
-    if (!isTabFocused) {
-      return; // Skip expensive computation when tab is not active
-    }
+  // Memoize joker count and inventory limit to prevent unnecessary re-renders
+  const jokerCount = useMemo(() => jokers.length, [jokers.length]);
+  const inventoryLimit = useMemo(
+    () => getInventoryLimit(),
+    [getInventoryLimit]
+  );
 
-    const currentInventoryLimit = getInventoryLimit();
+  // Update candies when prices change
+  useEffect(() => {
+    const currentInventoryLimit = inventoryLimit;
 
     setCandies((prev) =>
       prev.map((candy) => {
@@ -444,14 +451,15 @@ function Market(props) {
       })
     );
   }, [
-    isTabFocused,
     periodCount,
-    gameData,
     currentLocation,
     inventory,
-    jokers,
+    gameData.periodEvents,
+    jokerCount,
     activeEffects,
-    getInventoryLimit,
+    inventoryLimit,
+    jokers,
+    jokerService,
   ]);
 
   // Separate effect to store candy prices to avoid setState during render
@@ -524,6 +532,7 @@ function Market(props) {
   const [endDayConfirmVisible, setEndDayConfirmVisible] = useState(false);
   const [isEarlyEndDay, setIsEarlyEndDay] = useState(false);
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
+  const [showLunchMinigames, setShowLunchMinigames] = useState(false);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -551,12 +560,16 @@ function Market(props) {
           // Check for Time Zone Arbitrage joker effect (morning purchase discount)
           const periodWithinDay = periodCount % 8;
           const isMorning = periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
-          const hasTimeZoneArbitrage = jokers.some((joker: any) => joker.id === 42);
+          const hasTimeZoneArbitrage = jokers.some(
+            (joker: any) => joker.id === 42
+          );
 
           let purchasePrice = candy.cost;
           if (hasTimeZoneArbitrage && isMorning) {
             purchasePrice = candy.cost * 0.9; // 10% discount
-            console.log(`🕘 Time Zone Arbitrage: Morning purchase discount applied! ${candy.cost} -> ${purchasePrice.toFixed(2)}`);
+            console.log(
+              `🕘 Time Zone Arbitrage: Morning purchase discount applied! ${candy.cost} -> ${purchasePrice.toFixed(2)}`
+            );
           }
 
           const totalCost = purchasePrice * quantity;
@@ -686,13 +699,17 @@ function Market(props) {
           }
 
           // 5. Check for Bulk Sale bonus (sell >50% of inventory space in one sale)
-          const hasBulkSale = jokers.some((joker: any) => joker.id === JOKER_IDS.BULK_SALE);
+          const hasBulkSale = jokers.some(
+            (joker: any) => joker.id === JOKER_IDS.BULK_SALE
+          );
           const inventoryLimit = getInventoryLimit();
-          const isBulkSale = quantity > (inventoryLimit * 0.5); // More than 50% of inventory space
+          const isBulkSale = quantity > inventoryLimit * 0.5; // More than 50% of inventory space
 
           if (hasBulkSale && isBulkSale) {
             multiplier *= 1.2; // 20% bonus
-            bonusDetails.push(`📦 Bulk Sale: 20% bonus (selling ${quantity}/${inventoryLimit} slots)`);
+            bonusDetails.push(
+              `📦 Bulk Sale: 20% bonus (selling ${quantity}/${inventoryLimit} slots)`
+            );
             console.log(
               `📦 Bulk Sale: +20% sales bonus applied (selling ${quantity} > ${(inventoryLimit * 0.5).toFixed(1)} slots)`
             );
@@ -828,47 +845,63 @@ function Market(props) {
 
   const dispatch = useAppDispatch();
 
-  const handleLocationSelect = (location: Location) => {
-    setLocationModalVisible(false);
+  const handleLocationSelect = useCallback((location: Location) => {
+    // Wrap all updates in startTransition to batch them together
+    startTransition(() => {
+      setLocationModalVisible(false);
+      setLocalPricesUpdating(true);
 
-    // Show loading prices immediately
-    setLocalPricesUpdating(true);
+      // Check for Trade Routes joker (id: 39) and increment inventory limit if present
+      const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
+      if (hasTradeRoutes) {
+        console.log(
+          '🗺️ Trade Routes active: +1 inventory limit on location change'
+        );
+        dispatch(incrementMaxInventory(1));
+      }
 
-    // Check for Trade Routes joker (id: 39) and increment inventory limit if present
-    const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
-    if (hasTradeRoutes) {
-      console.log('🗺️ Trade Routes active: +1 inventory limit on location change');
-      dispatch(incrementMaxInventory(1));
-    }
-
-    // Check for Something from Nothing joker (id: 46) and add candy generation
-    const hasSomethingFromNothing = jokers.some((joker: any) => joker.id === 46);
-    if (hasSomethingFromNothing) {
-      console.log('✨ Something from Nothing active: +1 of each candy type');
-      const candyTypes = ['Skittles', 'M&Ms', 'Sour Patch Kids', 'Twix', 'Snickers', 'Kit Kat'];
-      candyTypes.forEach(candyType => {
-        // Add 1 of each candy type to inventory at current market price
-        const currentCandy = candies.find(c => c.name === candyType);
-        if (currentCandy) {
-          const success = addToInventory(candyType, 1, currentCandy.cost);
-          if (success) {
-            console.log(`✨ Something from Nothing: Added 1 ${candyType} at $${currentCandy.cost}`);
-          } else {
-            console.log(`✨ Something from Nothing: Failed to add ${candyType} (inventory full)`);
+      // Check for Something from Nothing joker (id: 46) and add candy generation
+      const hasSomethingFromNothing = jokers.some(
+        (joker: any) => joker.id === 46
+      );
+      if (hasSomethingFromNothing) {
+        console.log('✨ Something from Nothing active: +1 of each candy type');
+        const candyTypes = [
+          'Skittles',
+          'M&Ms',
+          'Sour Patch Kids',
+          'Twix',
+          'Snickers',
+          'Kit Kat',
+        ];
+        candyTypes.forEach((candyType) => {
+          // Add 1 of each candy type to inventory at current market price
+          const currentCandy = candies.find((c) => c.name === candyType);
+          if (currentCandy) {
+            const success = addToInventory(candyType, 1, currentCandy.cost);
+            if (success) {
+              console.log(
+                `✨ Something from Nothing: Added 1 ${candyType} at $${currentCandy.cost}`
+              );
+            } else {
+              console.log(
+                `✨ Something from Nothing: Failed to add ${candyType} (inventory full)`
+              );
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    // Call incrementPeriod and update flavor text
-    incrementPeriod(location);
-    setEvent('PERIOD_CHANGE');
+      // Call incrementPeriod and update flavor text
+      incrementPeriod(location);
+      setEvent('PERIOD_CHANGE');
 
-    // Reset loading state after 1.5 seconds
-    setTimeout(() => {
-      setLocalPricesUpdating(false);
-    }, 625);
-  };
+      // Reset loading state after 1.5 seconds
+      setTimeout(() => {
+        setLocalPricesUpdating(false);
+      }, 625);
+    });
+  }, [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory]);
 
   const handleEndDay = () => {
     console.log('🏠 End Day button pressed');
@@ -984,6 +1017,23 @@ function Market(props) {
 
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
+  // Check if current period is lunch (period 5, which is index 4 in 0-indexed system)
+  const isLunchPeriod = period === 5;
+
+  console.log(
+    '🍔 Market render - isLunchPeriod:',
+    isLunchPeriod,
+    'showLunchMinigames:',
+    showLunchMinigames,
+    'period:',
+    period
+  );
+
+  const handleLunchBack = () => {
+    console.log('🍔 handleLunchBack called');
+    setShowLunchMinigames(false);
+  };
+
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -1021,51 +1071,72 @@ function Market(props) {
             name="market_list"
           >
             <CopilotView style={styles.listContainer}>
-              <FlatList
-                data={candies}
-                keyExtractor={(item) => item.name}
-                contentContainerStyle={styles.list}
-                showsVerticalScrollIndicator={true}
-                overScrollMode="never"
-                renderItem={useCallback(
-                  ({ item, index }) => (
-                    <View style={{ marginBottom: 6 }}>
-                      <PixelBorder
-                        borderColor="#d4a574"
-                        borderWidth={3}
-                        backgroundColor="rgba(255, 255, 255, 0.7)"
-                        innerPadding={8}
-                      >
-                        <TouchableOpacity
-                          onPress={() => openModal(index)}
-                          style={{ backgroundColor: 'transparent' }}
+              {/* Only render StudySubjectSelector when tab is focused and conditions are met */}
+              {isFocused && isLunchPeriod && showLunchMinigames && (
+                <View style={{ flex: 1 }}>
+                  <StudySubjectSelector
+                    onBack={handleLunchBack}
+                    disabled={false}
+                    disabledMessage=""
+                    isLunchPeriod={true}
+                  />
+                </View>
+              )}
+
+              {/* Always render FlatList to maintain consistent hook calls */}
+              <View
+                style={{
+                  display:
+                    isLunchPeriod && showLunchMinigames ? 'none' : 'flex',
+                  flex: 1,
+                }}
+              >
+                <FlatList
+                  data={candies}
+                  keyExtractor={(item) => item.name}
+                  contentContainerStyle={styles.list}
+                  showsVerticalScrollIndicator={true}
+                  overScrollMode="never"
+                  renderItem={useCallback(
+                    ({ item, index }) => (
+                      <View style={{ marginBottom: 6 }}>
+                        <PixelBorder
+                          borderColor="#d4a574"
+                          borderWidth={3}
+                          backgroundColor="rgba(255, 255, 255, 0.7)"
+                          innerPadding={8}
                         >
-                          <View style={styles.candyInfo}>
-                            <View style={styles.candyNameRow}>
-                              <Text style={styles.name}>{item.name}</Text>
-                              {item.quantityOwned > 0 && (
-                                <View style={styles.ownedBadge}>
-                                  <Text style={styles.ownedText}>
-                                    {item.quantityOwned}
-                                  </Text>
-                                </View>
-                              )}
+                          <TouchableOpacity
+                            onPress={() => openModal(index)}
+                            style={{ backgroundColor: 'transparent' }}
+                          >
+                            <View style={styles.candyInfo}>
+                              <View style={styles.candyNameRow}>
+                                <Text style={styles.name}>{item.name}</Text>
+                                {item.quantityOwned > 0 && (
+                                  <View style={styles.ownedBadge}>
+                                    <Text style={styles.ownedText}>
+                                      {item.quantityOwned}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                              <View style={styles.candyPriceRow}>
+                                <Text style={styles.price}>
+                                  {localPricesUpdating
+                                    ? '$-.--'
+                                    : `$${item.cost.toFixed(2)}`}
+                                </Text>
+                              </View>
                             </View>
-                            <View style={styles.candyPriceRow}>
-                              <Text style={styles.price}>
-                                {localPricesUpdating
-                                  ? '$-.--'
-                                  : `$${item.cost.toFixed(2)}`}
-                              </Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      </PixelBorder>
-                    </View>
-                  ),
-                  [openModal, localPricesUpdating]
-                )}
-              />
+                          </TouchableOpacity>
+                        </PixelBorder>
+                      </View>
+                    ),
+                    [openModal, localPricesUpdating]
+                  )}
+                />
+              </View>
             </CopilotView>
           </CopilotStep>
 
@@ -1076,7 +1147,93 @@ function Market(props) {
           >
             <CopilotView>
               <View style={styles.buttonContainer}>
-                {period === 8 ? (
+                {isLunchPeriod && !hasPlayedLunchMinigame && !showLunchMinigames ? (
+                  // Lunch period before playing minigame: Show play minigames button and end day
+                  <View style={styles.buttonRow}>
+                    <PixelBorder
+                      borderColor="rgba(250,204,21,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(253,224,71,1)"
+                      innerPadding={0}
+                      style={styles.bigButton}
+                    >
+                      <TouchableOpacity
+                        style={styles.pixelButtonInner}
+                        onPress={() => setShowLunchMinigames(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.lunchButtonText}>
+                          🎮 Play Minigames
+                        </Text>
+                        <Text style={styles.lunchSubtext}>
+                          Earn a joker during lunch!
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+
+                    <PixelBorder
+                      borderColor="rgba(185,28,28,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(239,68,68,1)"
+                      innerPadding={0}
+                      style={styles.smallButton}
+                    >
+                      <TouchableOpacity
+                        style={styles.pixelButtonInner}
+                        onPress={handleEndDay}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.endDayButtonText}>End Day</Text>
+                        <Text style={styles.endDaySubtext}>
+                          Skip to after school
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+                  </View>
+                ) : isLunchPeriod && showLunchMinigames ? (
+                  // In StudySubjectSelector: Show Leave Lunch button and end day
+                  <View style={styles.buttonRow}>
+                    <PixelBorder
+                      borderColor="rgba(250,204,21,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(253,224,71,1)"
+                      innerPadding={0}
+                      style={styles.bigButton}
+                    >
+                      <TouchableOpacity
+                        style={styles.pixelButtonInner}
+                        onPress={handleLunchBack}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.lunchButtonText}>
+                          🚪 Leave Lunch
+                        </Text>
+                        <Text style={styles.lunchSubtext}>
+                          Back to market
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+
+                    <PixelBorder
+                      borderColor="rgba(185,28,28,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(239,68,68,1)"
+                      innerPadding={0}
+                      style={styles.smallButton}
+                    >
+                      <TouchableOpacity
+                        style={styles.pixelButtonInner}
+                        onPress={handleEndDay}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.endDayButtonText}>End Day</Text>
+                        <Text style={styles.endDaySubtext}>
+                          Skip to after school
+                        </Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+                  </View>
+                ) : period === 8 ? (
                   // Period 8: Only show leave school button
                   <TouchableOpacity
                     style={styles.nextPeriodButton}
@@ -1150,29 +1307,22 @@ function Market(props) {
         gameData={gameData}
       />
 
-      <DayStatsModal
-        visible={dayStatsModalVisible}
-        onClose={handleDayStatsClose}
-        onCancel={handleDayStatsCancel}
-        stats={React.useMemo(() => {
-          const stats = getTotalStats();
-          console.log(
-            '📊 DayStatsModal stats calculated for day:',
-            day,
-            'stats:',
-            stats
-          );
-          return (
-            stats || {
+      {dayStatsModalVisible && (
+        <DayStatsModal
+          visible={dayStatsModalVisible}
+          onClose={handleDayStatsClose}
+          onCancel={handleDayStatsCancel}
+          stats={
+            getTotalStats() || {
               profit: 0,
               spent: 0,
               candiesSold: 0,
               netGain: 0,
             }
-          );
-        }, [getTotalStats, day])}
-        day={day}
-      />
+          }
+          day={day}
+        />
+      )}
 
       <SchoolsOutModal
         visible={schoolsOutModalVisible}
@@ -1210,7 +1360,7 @@ function Market(props) {
       <ConfirmationModal
         visible={endDayConfirmVisible}
         title="End School Day?"
-        message={`Are you sure you want to end the school day early? You're currently in period ${period} of 8.\n\nThis will skip the remaining periods and take you directly to after-school activities.`}
+        message={`You're currently in period ${period} of 8.\n\nEnding the day will skip the remaining periods and take you directly to after-school activities.`}
         emoji="🏠"
         confirmText="End Day"
         cancelText="Stay in School"
@@ -1234,28 +1384,23 @@ function Market(props) {
         />
       )}
 
-      {/* Inventory Modal */}
-      <InventoryModal
-        visible={inventoryModalVisible}
-        onClose={() => {
-          console.log(
-            '🔴 Market onClose called, current state:',
-            inventoryModalVisible
-          );
-          setInventoryModalVisible(false);
-          console.log('🔴 Market onClose completed, should be false now');
-        }}
-        inventory={inventory}
-        totalCount={getTotalInventoryCount()}
-        capacity={getInventoryLimit()}
-      />
-      {/* Debug inventory data */}
-      {inventoryModalVisible &&
-        console.log('🔴 Market inventory data:', inventory)}
-      {inventoryModalVisible &&
-        console.log('🔴 Market totalCount:', getTotalInventoryCount())}
-      {inventoryModalVisible &&
-        console.log('🔴 Market capacity:', getInventoryLimit())}
+      {/* Inventory Modal - only render when visible */}
+      {inventoryModalVisible && (
+        <InventoryModal
+          visible={inventoryModalVisible}
+          onClose={() => {
+            console.log(
+              '🔴 Market onClose called, current state:',
+              inventoryModalVisible
+            );
+            setInventoryModalVisible(false);
+            console.log('🔴 Market onClose completed, should be false now');
+          }}
+          inventory={inventory}
+          totalCount={getTotalInventoryCount()}
+          capacity={getInventoryLimit()}
+        />
+      )}
 
       {/* EventModal for special events */}
       <EventModal />
@@ -1468,6 +1613,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  lunchButtonText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    textShadowColor: '#b45309',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  lunchSubtext: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#fffbeb',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginTop: 1,
+    opacity: 0.9,
   },
 });
 

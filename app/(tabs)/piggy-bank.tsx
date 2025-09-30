@@ -17,6 +17,7 @@ import { useWallet } from '../../src/hooks/useWallet';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 export default function PiggyBankPage() {
   const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } =
@@ -120,7 +121,7 @@ export default function PiggyBankPage() {
           mode === 'deposit'
             ? `Unable to deposit $${amount.toFixed(2)}. Current balance: $${balance.toFixed(2)}`
             : `Unable to withdraw $${amount.toFixed(2)}. Stashed amount: $${stashedAmount.toFixed(2)}`,
-        emoji: '❌',
+
         onConfirm: () =>
           setConfirmModal((prev) => ({ ...prev, visible: false })),
       });
@@ -181,14 +182,15 @@ export default function PiggyBankPage() {
                     setAmount(0);
                   }}
                 >
-                  <Text
+                  <TextWithEmojis
                     style={[
                       styles.tabText,
                       mode === 'deposit' && styles.tabTextActive,
                     ]}
+                    imageSize={28}
                   >
                     💰 Deposit
-                  </Text>
+                  </TextWithEmojis>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -198,14 +200,15 @@ export default function PiggyBankPage() {
                     setAmount(0);
                   }}
                 >
-                  <Text
+                  <TextWithEmojis
                     style={[
                       styles.tabText,
                       mode === 'withdraw' && styles.tabTextActive,
                     ]}
+                    imageSize={28}
                   >
                     💸 Withdraw
-                  </Text>
+                  </TextWithEmojis>
                 </TouchableOpacity>
               </View>
             </PixelBorder>
@@ -264,11 +267,14 @@ export default function PiggyBankPage() {
                   onPress={handleTransaction}
                   disabled={amount === 0}
                 >
-                  <Text style={styles.actionButtonText}>
+                  <TextWithEmojis
+                    style={styles.actionButtonText}
+                    imageSize={28}
+                  >
                     {mode === 'deposit'
                       ? '💰 Deposit Money'
                       : '💸 Withdraw Money'}
-                  </Text>
+                  </TextWithEmojis>
                 </TouchableOpacity>
               </View>
             </PixelBorder>

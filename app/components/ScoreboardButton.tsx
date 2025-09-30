@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { ScoreboardModal } from './ScoreboardModal';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import TextWithEmojis from './TextWithEmojis';
 
 interface ScoreboardButtonProps {
   style?: any;
@@ -41,7 +42,7 @@ export const ScoreboardButton: React.FC<ScoreboardButtonProps> = ({
         activeOpacity={0.8}
       >
         <View style={styles.buttonContent}>
-          <Text style={styles.emoji}>🏆</Text>
+          <TextWithEmojis style={styles.emoji}>🏆</TextWithEmojis>
           <Text style={styles.label}>Leaderboard</Text>
           {playerRank > 0 && (
             <View style={styles.rankBadge}>
@@ -80,7 +81,7 @@ export const CompactScoreboardButton: React.FC<{ onPress?: () => void }> = ({ on
   return (
     <>
       <TouchableOpacity style={styles.compactButton} onPress={handlePress}>
-        <Text style={styles.compactEmoji}>🏆</Text>
+        <TextWithEmojis style={styles.compactEmoji}>🏆</TextWithEmojis>
       </TouchableOpacity>
 
       <ScoreboardModal

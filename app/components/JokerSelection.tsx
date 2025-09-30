@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
-import { useHallPass } from '../../src/hooks/useHallPass';
 import PixelBorder from './PixelBorder';
+import TextWithEmojis from './TextWithEmojis';
 
 interface Joker {
   id: number;
@@ -39,21 +40,33 @@ export default function JokerSelection({
 }: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
   const [rerollsUsed, setRerollsUsed] = useState(0);
-  const { addJoker, getJokersBySubject: getUserJokersBySubject, jokers: ownedJokers } = useJokers();
+  const {
+    addJoker,
+    getJokersBySubject: getUserJokersBySubject,
+    jokers: ownedJokers,
+  } = useJokers();
   const { getJokerBonus } = useHallPass();
 
   // Get user's jokers for this subject (for reference, not used for selection anymore)
   // const userJokers = getUserJokersBySubject(subject); // Removed to fix linting warning
   // Filter out jokers the player already owns to prevent duplicates
-  const ownedJokerIds = ownedJokers.map(joker => joker.id);
-  const availableJokers = jokers.filter(joker => !ownedJokerIds.includes(joker.id));
+  const ownedJokerIds = ownedJokers.map((joker) => joker.id);
+  const availableJokers = jokers.filter(
+    (joker) => !ownedJokerIds.includes(joker.id)
+  );
 
-  console.log(`🃏 JokerSelection: Owned joker IDs: [${ownedJokerIds.join(', ')}]`);
-  console.log(`🃏 JokerSelection: Available jokers after filtering: ${availableJokers.length}/${jokers.length}`);
+  console.log(
+    `🃏 JokerSelection: Owned joker IDs: [${ownedJokerIds.join(', ')}]`
+  );
+  console.log(
+    `🃏 JokerSelection: Available jokers after filtering: ${availableJokers.length}/${jokers.length}`
+  );
 
   const selectRandomJokers = () => {
     if (availableJokers.length === 0) {
-      console.log('🃏 JokerSelection: No available jokers (player owns all jokers for this subject)');
+      console.log(
+        '🃏 JokerSelection: No available jokers (player owns all jokers for this subject)'
+      );
       // If no jokers available, skip selection
       onComplete();
       return;
@@ -68,14 +81,20 @@ export default function JokerSelection({
     const selected = shuffled.slice(0, jokerCount);
     setSelectedJokers(selected);
 
-    console.log(`🃏 JokerSelection: Selected ${selected.length} jokers from ${availableJokers.length} available`);
+    console.log(
+      `🃏 JokerSelection: Selected ${selected.length} jokers from ${availableJokers.length} available`
+    );
   };
 
   const rerollJokers = () => {
     // For reroll, get fresh random jokers from the full pool for this subject, excluding owned ones
     const allSubjectJokers = getJokersBySubject(subject);
-    const availableSubjectJokers = allSubjectJokers.filter(joker => !ownedJokerIds.includes(joker.id));
-    const shuffled = [...availableSubjectJokers].sort(() => Math.random() - 0.5);
+    const availableSubjectJokers = allSubjectJokers.filter(
+      (joker) => !ownedJokerIds.includes(joker.id)
+    );
+    const shuffled = [...availableSubjectJokers].sort(
+      () => Math.random() - 0.5
+    );
 
     // Reroll gives fewer jokers based on tier
     let baseRerollJokerCount;
@@ -101,7 +120,9 @@ export default function JokerSelection({
     // If still not found (for rerolled jokers), look in the available subject pool (excluding owned)
     if (!selectedJoker) {
       const allSubjectJokers = getJokersBySubject(subject);
-      const availableSubjectJokers = allSubjectJokers.filter(joker => !ownedJokerIds.includes(joker.id));
+      const availableSubjectJokers = allSubjectJokers.filter(
+        (joker) => !ownedJokerIds.includes(joker.id)
+      );
       selectedJoker = availableSubjectJokers.find((j) => j.id === jokerId);
     }
 
@@ -220,17 +241,44 @@ export default function JokerSelection({
     const count = rewardTier;
     switch (theme) {
       case 'math':
-        return `📊 Show ${count} Math Concept${count > 1 ? 's' : ''}`;
+        return (
+          <View style={styles.rewardTextRow}>
+            <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+              Show {count} Math Joker{count > 1 ? 's' : ''}
+            </Text>
+          </View>
+        );
       case 'computer':
-        return `💻 Show ${count} Hack Tool${count > 1 ? 's' : ''}`;
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Hack Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
       case 'homeec':
-        return `🍳 Show ${count} Kitchen Tool${count > 1 ? 's' : ''}`;
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Kitchen Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
       case 'economy':
-        return `🏛️ Show ${count} Trade Tool${count > 1 ? 's' : ''}`;
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Economy Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
       case 'gym':
-        return `🏃‍♂️ Show ${count} Fitness Tool${count > 1 ? 's' : ''}`;
+        return (
+          <TextWithEmojis style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Fitness Joker{count > 1 ? 's' : ''}
+          </TextWithEmojis>
+        );
       default:
-        return `🍭 Show ${count} Candy Tool${count > 1 ? 's' : ''}`;
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            {' '}
+            Show {count} Candy Tool{count > 1 ? 's' : ''}
+          </Text>
+        );
     }
   };
 
@@ -269,30 +317,36 @@ export default function JokerSelection({
         <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
           {getRewardDescription()} {'\n'}
           {availableJokers.length === 0
-            ? "You already have all available jokers for this subject!"
-            : "Select one powerful ability:"}
+            ? 'You already have all available jokers for this subject!'
+            : 'Select one powerful ability:'}
         </Text>
 
         {selectedJokers.length === 0 && availableJokers.length > 0 && (
           <PixelBorder
             borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
             borderWidth={3}
-            backgroundColor={themeStyles.generateButton?.backgroundColor || '#1a2f23'}
+            backgroundColor={
+              themeStyles.generateButton?.backgroundColor || '#1a2f23'
+            }
             innerPadding={0}
             style={{ marginBottom: 20 }}
           >
             <TouchableOpacity
-              style={{ padding: 16, alignItems: 'center', backgroundColor: 'transparent' }}
+              style={{
+                padding: 16,
+                alignItems: 'center',
+                backgroundColor: 'transparent',
+              }}
               onPress={selectRandomJokers}
             >
-              <Text
+              <View
                 style={[
                   styles.generateButtonText,
                   themeStyles.generateButtonText,
                 ]}
               >
                 {getButtonText()}
-              </Text>
+              </View>
             </TouchableOpacity>
           </PixelBorder>
         )}
@@ -310,7 +364,9 @@ export default function JokerSelection({
               key={joker.id}
               borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
               borderWidth={3}
-              backgroundColor={themeStyles.jokerCard?.backgroundColor || '#1a2f23'}
+              backgroundColor={
+                themeStyles.jokerCard?.backgroundColor || '#1a2f23'
+              }
               innerPadding={16}
               style={{ marginBottom: 12 }}
             >
@@ -325,10 +381,14 @@ export default function JokerSelection({
                   <View
                     style={[
                       styles.typeIndicator,
-                      isOneTime ? styles.instantIndicator : styles.auraIndicator,
+                      isOneTime
+                        ? styles.instantIndicator
+                        : styles.auraIndicator,
                     ]}
                   >
-                    <Text style={styles.typeEmoji}>{typeEmoji}</Text>
+                    <TextWithEmojis style={styles.typeEmoji}>
+                      {typeEmoji}
+                    </TextWithEmojis>
                     <Text
                       style={[
                         styles.typeText,
@@ -340,7 +400,10 @@ export default function JokerSelection({
                   </View>
                 </View>
                 <Text
-                  style={[styles.jokerDescription, themeStyles.jokerDescription]}
+                  style={[
+                    styles.jokerDescription,
+                    themeStyles.jokerDescription,
+                  ]}
                 >
                   {joker.description}
                 </Text>
@@ -353,19 +416,28 @@ export default function JokerSelection({
           <PixelBorder
             borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
             borderWidth={3}
-            backgroundColor={themeStyles.generateButton?.backgroundColor || '#1a2f23'}
+            backgroundColor={
+              themeStyles.generateButton?.backgroundColor || '#1a2f23'
+            }
             innerPadding={0}
             style={{ marginBottom: 20 }}
           >
             <TouchableOpacity
-              style={{ padding: 16, alignItems: 'center', backgroundColor: 'transparent' }}
+              style={{
+                padding: 16,
+                alignItems: 'center',
+                backgroundColor: 'transparent',
+              }}
               onPress={rerollJokers}
             >
-              <Text
-                style={[styles.rerollButtonText, themeStyles.generateButtonText]}
+              <TextWithEmojis
+                style={[
+                  styles.rerollButtonText,
+                  themeStyles.generateButtonText,
+                ]}
               >
                 🎲 Reroll ({getRerollDescription()})
-              </Text>
+              </TextWithEmojis>
             </TouchableOpacity>
           </PixelBorder>
         )}
@@ -378,11 +450,17 @@ export default function JokerSelection({
           style={{ marginTop: 16 }}
         >
           <TouchableOpacity
-            style={{ paddingVertical: 12, alignItems: 'center', backgroundColor: 'transparent' }}
+            style={{
+              paddingVertical: 12,
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+            }}
             onPress={onComplete}
           >
             <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
-              {availableJokers.length === 0 ? 'Continue' : 'Skip Tool Selection'}
+              {availableJokers.length === 0
+                ? 'Continue'
+                : 'Skip Joker Selection'}
             </Text>
           </TouchableOpacity>
         </PixelBorder>
@@ -413,6 +491,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
+  showButtonText: {
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+  },
   generateButton: {
     padding: 16,
     borderRadius: 16,
@@ -421,6 +504,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   generateButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rewardTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rewardIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+    marginRight: 6,
+  },
+  rewardText: {
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',

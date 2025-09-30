@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useWallet } from '../src/hooks/useWallet';
 import NamePromptModal from './components/NamePromptModal';
+import TextWithEmojis from './components/TextWithEmojis';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -512,7 +513,8 @@ export default function StoryScreen() {
 
       {/* Dog image in top center with floating hearts */}
       <Image source={getDogImage(currentLevel)} style={styles.dogImage} />
-      <Animated.Text
+      <Animated.Image
+        source={require('../assets/images/emojis/loveheart.png')}
         style={[
           styles.heartLeft,
           {
@@ -532,10 +534,9 @@ export default function StoryScreen() {
             ],
           },
         ]}
-      >
-        ❤️
-      </Animated.Text>
-      <Animated.Text
+      />
+      <Animated.Image
+        source={require('../assets/images/emojis/loveheart.png')}
         style={[
           styles.heartRight,
           {
@@ -555,9 +556,7 @@ export default function StoryScreen() {
             ],
           },
         ]}
-      >
-        ❤️
-      </Animated.Text>
+      />
 
       {/* Main story area - tap to skip */}
       <TouchableOpacity
@@ -633,7 +632,8 @@ const styles = StyleSheet.create({
     top: 100,
     left: '50%',
     marginLeft: -90,
-    fontSize: 24,
+    width: 24,
+    height: 24,
     zIndex: 11,
   },
   heartRight: {
@@ -641,7 +641,8 @@ const styles = StyleSheet.create({
     top: 100,
     left: '50%',
     marginLeft: 70,
-    fontSize: 24,
+    width: 24,
+    height: 24,
     zIndex: 11,
   },
   storyArea: {

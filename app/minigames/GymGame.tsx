@@ -1,13 +1,14 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Dimensions,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import {
   Gesture,
   GestureDetector,
@@ -22,6 +23,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface Position {
   x: number;
@@ -73,7 +75,7 @@ const initializeHallMonitors = (
   startPos: Position,
   goalPos: Position
 ): Position[] => {
-  const numMonitors = levelNum * 3; // Level 1 = 3 monitors, Level 2 = 6 monitors, Level 3 = 9 monitors
+  const numMonitors = levelNum * 4; // Level 1 = 3 monitors, Level 2 = 6 monitors, Level 3 = 9 monitors
   const monitors: Position[] = [];
   const usedPositions = new Set<string>();
 
@@ -170,6 +172,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const [gameActive, setGameActive] = useState(false);
   const [moves, setMoves] = useState(0);
   const [traveledCells, setTraveledCells] = useState<Set<string>>(new Set());
+  const [caughtPosition, setCaughtPosition] = useState<Position | null>(null);
 
   // Initialize level
   const initializeLevel = (levelNum: number) => {
@@ -207,24 +210,46 @@ export default function GymGame({ onComplete }: GymGameProps) {
       (monitor) => newPos.x === monitor.x && newPos.y === monitor.y
     );
 
-    if (caughtByMonitor) {
+    // Check if player and any monitor swapped positions (crossed paths) - CAUGHT!
+    const crossedPaths = hallMonitors.some((oldMonitor, index) => {
+      const newMonitor = newHallMonitors[index];
+      return (
+        oldMonitor.x === newPos.x &&
+        oldMonitor.y === newPos.y &&
+        newMonitor.x === playerPos.x &&
+        newMonitor.y === playerPos.y
+      );
+    });
+
+    if (caughtByMonitor || crossedPaths) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setGameActive(false);
-      if (completedLevel > 0) {
-        // Player completed at least one level, award jokers based on completion
-        setGameState('jokerSelection');
-      } else {
-        // Player didn't complete any level, show restart option
-        showModal(
-          '🚨 Caught by Hall Monitor!',
-          `A hall monitor moved to your position and caught you! Try again from Level 1?`,
-          '🚨',
-          () => {
-            setLevel(1);
-            initializeLevel(1);
-          }
-        );
-      }
+
+      // Update positions first to show where caught happened
+      setPlayerPos(newPos);
+      setHallMonitors(newHallMonitors);
+      setCaughtPosition(newPos);
+
+      // Wait 0.3 seconds to show the caught position before showing modal
+      setTimeout(() => {
+        setCaughtPosition(null);
+
+        if (completedLevel > 0) {
+          // Player completed at least one level, award jokers based on completion
+          setGameState('jokerSelection');
+        } else {
+          // Player didn't complete any level, show restart option
+          showModal(
+            'Caught by Hall Monitor!',
+            `A hall monitor moved to your position and caught you! Try again from Level 1?`,
+            '🚨',
+            () => {
+              setLevel(1);
+              initializeLevel(1);
+            }
+          );
+        }
+      }, 500);
       return;
     }
 
@@ -245,7 +270,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
       if (level < 3) {
         showModal(
-          '🎯 Level Complete!',
+          'Level Complete!',
           `Great stealth! You made it in ${moves + 1} moves. Ready for Level ${level + 1}?`,
           '🎯',
           () => {
@@ -255,7 +280,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
         );
       } else {
         showModal(
-          '🏆 Gym Master!',
+          'Gym Master!',
           `Incredible! You completed all levels with excellent stealth skills!`,
           '🏆',
           () => {
@@ -301,13 +326,15 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const handleForfeit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
-      '🚪 Leave Gym Class?',
+      'Leave Gym Class?',
       "If you leave now, you'll miss your chance to practice stealth!",
       '🚪',
       () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         router.back();
-      }
+      },
+      false,
+      true
     );
   };
 
@@ -321,21 +348,47 @@ export default function GymGame({ onComplete }: GymGameProps) {
       x === cornerPositions.start.x && y === cornerPositions.start.y;
     const isGoal = x === cornerPositions.goal.x && y === cornerPositions.goal.y;
     const isTraveled = traveledCells.has(`${x}-${y}`);
+    const isCaughtCell =
+      caughtPosition && caughtPosition.x === x && caughtPosition.y === y;
 
     let cellContent = '';
     let cellStyle = styles.gridCell;
 
-    if (isPlayer) {
-      cellContent = '🏃‍♂️';
+    if (isCaughtCell) {
+      // Show red cell with ❌ when caught
+      cellContent = (
+        <Image
+          source={require('../../assets/images/emojis/x.png')}
+          style={styles.caughtIcon}
+        />
+      );
+      cellStyle = [styles.gridCell, styles.caughtCell];
+    } else if (isPlayer) {
+      cellContent = (
+        <Image
+          source={require('../../assets/images/emojis/student.png')}
+          style={styles.studentIcon}
+        />
+      );
       cellStyle = [styles.gridCell, styles.playerCell];
     } else if (isHallMonitor) {
       cellContent = '🚨';
       cellStyle = [styles.gridCell, styles.hallMonitorCell];
     } else if (isStart && !isPlayer) {
-      cellContent = '🚪';
+      cellContent = (
+        <Image
+          source={require('../../assets/images/emojis/door.png')}
+          style={styles.doorIcon}
+        />
+      );
       cellStyle = [styles.gridCell, styles.startCell];
     } else if (isGoal) {
-      cellContent = '🎯';
+      cellContent = (
+        <Image
+          source={require('../../assets/images/emojis/bullseye.png')}
+          style={styles.bullseyeIcon}
+        />
+      );
       cellStyle = [styles.gridCell, styles.goalCell];
     } else if (isTraveled) {
       cellContent = '';
@@ -344,7 +397,11 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
     return (
       <View key={`${x}-${y}`} style={cellStyle}>
-        <Text style={styles.cellEmoji}>{cellContent}</Text>
+        {typeof cellContent === 'string' ? (
+          <Text style={styles.cellEmoji}>{cellContent}</Text>
+        ) : (
+          cellContent
+        )}
       </View>
     );
   };
@@ -385,33 +442,28 @@ export default function GymGame({ onComplete }: GymGameProps) {
             <Text style={styles.instructionsHeader}>How to Play:</Text>
 
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>1.</Text>
-              <Text style={styles.stepText}>
-                Hall monitors 🚨 move randomly each turn and will catch you if
-                they land on your position!
-              </Text>
-            </View>
-
-            <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>2.</Text>
-              <Text style={styles.stepText}>
-                More monitors each level - Level 1: 3 monitors, Level 2: 6
-                monitors, Level 3: 9 monitors!
-              </Text>
+              <Text style={styles.stepNumber}>4.</Text>
+              <View>
+                <TextWithEmojis style={styles.stepText} imageSize={28}>
+                  Get from start 🚪
+                </TextWithEmojis>
+                <TextWithEmojis style={styles.stepText} imageSize={28}>
+                  to goal 🎯
+                </TextWithEmojis>
+                <TextWithEmojis style={styles.stepText} imageSize={28}>
+                  without being caught by any monitor
+                </TextWithEmojis>
+              </View>
             </View>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>
-                Swipe to move: Up ⬆️, Down ⬇️, Left ⬅️, Right ➡️
-              </Text>
+              <Text style={styles.stepText}>Swipe to move</Text>
             </View>
-
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>4.</Text>
+              <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
-                Get from start (🚪) to goal (🎯) without being caught by any
-                monitor
+                Level 1: 3 monitors! Level 2: 6 monitors! Level 3: 9 monitors!
               </Text>
             </View>
           </PixelBorder>
@@ -419,7 +471,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
           <PixelBorder
             borderColor="#e74c3c"
             borderWidth={3}
-            backgroundColor="#f39c12"
+            backgroundColor="#1a2332"
             innerPadding={0}
             style={{ marginBottom: 10 }}
           >
@@ -461,6 +513,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
           title="Gym Class Stealth"
           subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
           leftInfo={`Level ${level}/3`}
+          centerInfo=" "
           rightInfo={`Moves: ${moves}`}
           theme="gym"
         />
@@ -481,10 +534,22 @@ export default function GymGame({ onComplete }: GymGameProps) {
               </Animated.View>
             </GestureDetector>
           </View>
-
-          <TouchableOpacity style={styles.leaveButton} onPress={handleForfeit}>
-            <Text style={styles.leaveButtonText}>🚪 Leave</Text>
-          </TouchableOpacity>
+          <PixelBorder
+            borderColor="#e74c3c"
+            borderWidth={3}
+            backgroundColor="#1a2332"
+            innerPadding={0}
+            style={{ marginTop: 20 }}
+          >
+            <TouchableOpacity
+              style={styles.leaveButton}
+              onPress={handleForfeit}
+            >
+              <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
+                🚪 Leave
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
         </View>
 
         <GameModal
@@ -494,6 +559,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
           emoji={modal.emoji}
           onClose={hideModal}
           onConfirm={modal.onConfirm}
+          showCancelButton={modal.showCancelButton}
         />
       </View>
     </GestureHandlerRootView>
@@ -552,7 +618,6 @@ const styles = StyleSheet.create({
   stepText: {
     fontSize: 16,
     color: '#ecf0f1', // Light gray for readability on dark background
-    flex: 1,
     fontFamily: 'PixeloidMono',
     lineHeight: 22,
   },
@@ -618,6 +683,11 @@ const styles = StyleSheet.create({
   hallMonitorCell: {
     backgroundColor: '#f39c12', // Warning orange for hall monitor
   },
+  caughtCell: {
+    backgroundColor: '#ff0000', // Red for caught
+    borderColor: '#ff0000',
+    borderWidth: 3,
+  },
   patternCell: {
     backgroundColor: '#ffd700',
     width: 26,
@@ -634,6 +704,22 @@ const styles = StyleSheet.create({
   },
   cellEmoji: {
     fontSize: 12,
+  },
+  bullseyeIcon: {
+    width: 24,
+    height: 24,
+  },
+  doorIcon: {
+    width: 12,
+    height: 12,
+  },
+  studentIcon: {
+    width: 24,
+    height: 24,
+  },
+  caughtIcon: {
+    width: 20,
+    height: 24,
   },
   patternEmoji: {
     fontSize: 16,
@@ -703,14 +789,10 @@ const styles = StyleSheet.create({
     color: '#ecf0f1', // Light text for visibility
   },
   leaveButton: {
-    backgroundColor: '#95a5a6', // Neutral gray for exit
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#7f8c8d', // Darker gray border
+    paddingVertical: 15,
+    paddingHorizontal: 40,
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginTop: 16,
+    backgroundColor: 'transparent',
   },
   leaveButtonText: {
     fontSize: 16,

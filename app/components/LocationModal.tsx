@@ -40,7 +40,7 @@ const locationColors: Record<Location, {bg: string, border: string}> = {
   'bathroom': {bg: '#ffcc99', border: '#ff9933'}, // Light orange
 };
 
-export default function LocationModal({ visible, onClose, onSelectLocation, gameData }: LocationModalProps) {
+function LocationModal({ visible, onClose, onSelectLocation, gameData }: LocationModalProps) {
   const { jokers } = useJokers();
   const { periodCount } = useGame();
 
@@ -211,3 +211,5 @@ const styles = StyleSheet.create({
     textShadowRadius: 1,
   },
 });
+
+export default React.memo(LocationModal);

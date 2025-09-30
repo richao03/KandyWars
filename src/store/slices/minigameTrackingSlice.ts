@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
 
 // List of all available minigames in the game
 export const ALL_MINIGAMES = [
@@ -75,10 +75,13 @@ export const selectMinigameCompletion = (minigame: MinigameType) =>
   (state: { minigameTracking: MinigameTrackingState }) =>
     state.minigameTracking.minigameCompletions[minigame] || 0;
 
-export const selectMinigameProgress = (state: { minigameTracking: MinigameTrackingState }) => ({
-  played: state.minigameTracking.playedMinigames.length,
-  total: ALL_MINIGAMES.length,
-  remaining: ALL_MINIGAMES.filter(minigame => !state.minigameTracking.playedMinigames.includes(minigame)),
-});
+export const selectMinigameProgress = createSelector(
+  [selectPlayedMinigames],
+  (playedMinigames) => ({
+    played: playedMinigames.length,
+    total: ALL_MINIGAMES.length,
+    remaining: ALL_MINIGAMES.filter(minigame => !playedMinigames.includes(minigame)),
+  })
+);
 
 export default minigameTrackingSlice.reducer;

@@ -24,12 +24,12 @@ type CandyForDeli = Candy & {
 
 const baseCandies = [
   { name: 'Snickers', baseMin: 1.5, baseMax: 20 },
-  { name: 'M&Ms', baseMin: 1.0, baseMax: 25 },
-  { name: 'Skittles', baseMin: 0.75, baseMax: 22 },
-  { name: 'Warheads', baseMin: 0.25, baseMax: 10 },
-  { name: 'Sour Patch Kids', baseMin: 1.0, baseMax: 27 },
-  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 5 },
-  { name: 'Jaw Breaker', baseMin: 2, baseMax: 30 },
+  { name: 'M&Ms', baseMin: 2.0, baseMax: 35 },
+  { name: 'Skittles', baseMin: 1, baseMax: 22 },
+  { name: 'Warheads', baseMin: 0.5, baseMax: 10 },
+  { name: 'Sour Patch Kids', baseMin: 1.8, baseMax: 30 },
+  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 7 },
+  { name: 'Jaw Breaker', baseMin: 3, baseMax: 50 },
 ];
 
 interface DeliModalProps {
@@ -53,7 +53,9 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
           : (candy.baseMin + candy.baseMax) / 2;
 
       // Apply The Good Old Days discount (50% off deli prices)
-      const hasGoodOldDays = jokers.some((joker: any) => joker.id === JOKER_IDS.THE_GOOD_OLD_DAYS);
+      const hasGoodOldDays = jokers.some(
+        (joker: any) => joker.id === JOKER_IDS.THE_GOOD_OLD_DAYS
+      );
       const finalCost = hasGoodOldDays ? averageCost * 0.5 : averageCost;
 
       return {
@@ -138,7 +140,10 @@ export default function DeliModal({ visible, onClose }: DeliModalProps) {
     (sum, item) => sum + item.quantity,
     0
   );
-  const inventoryLimit = useMemo(() => getInventoryLimit(), [getInventoryLimit]);
+  const inventoryLimit = useMemo(
+    () => getInventoryLimit(),
+    [getInventoryLimit]
+  );
   const availableInventorySpace = inventoryLimit - totalInventory;
 
   const maxBuyQty =

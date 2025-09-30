@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import PixelBorder from './PixelBorder';
+import TextWithEmojis from './TextWithEmojis';
 
 interface MinigameHUDProps {
   title: string;
@@ -36,8 +37,8 @@ const THEME_COLORS = {
     info: '#52c41a',
   },
   logic: {
-    background: '#2c2c2c',
-    border: '#3c3c3c',
+    background: '#404040',
+    border: '#666',
     title: '#87ceeb',
     subtitle: '#98fb98',
     info: '#52c41a',
@@ -108,7 +109,7 @@ export default function MinigameHUD({
       }}
     >
       <View style={styles.headerContent}>
-        <Text
+        <TextWithEmojis
           style={[
             styles.title,
             {
@@ -119,7 +120,7 @@ export default function MinigameHUD({
           ]}
         >
           {title}
-        </Text>
+        </TextWithEmojis>
 
         {subtitle && (
           <Text style={[styles.subtitle, { color: colors.subtitle }]}>
@@ -130,25 +131,37 @@ export default function MinigameHUD({
         {(leftInfo || rightInfo || centerInfo) && (
           <View style={styles.gameInfo}>
             {leftInfo && (
-              <Text
+              <TextWithEmojis
                 style={[styles.infoText, { color: colors.info, fontSize: 14 }]}
               >
                 {leftInfo}
-              </Text>
+              </TextWithEmojis>
             )}
             {centerInfo && (
-              <Text
-                style={[styles.infoText, { color: colors.info, fontSize: 14 }]}
-              >
-                {centerInfo}
-              </Text>
+              <View style={{ width: '30%' }}>
+                <TextWithEmojis
+                  imageSize={30}
+                  style={[
+                    styles.infoText,
+                    { color: colors.info, fontSize: 14 },
+                  ]}
+                >
+                  {centerInfo}
+                </TextWithEmojis>
+              </View>
             )}
             {rightInfo && (
-              <Text
-                style={[styles.infoText, { color: colors.info, fontSize: 14 }]}
-              >
-                {rightInfo}
-              </Text>
+              <View style={{ width: '30%' }}>
+                <TextWithEmojis
+                  imageSize={30}
+                  style={[
+                    styles.infoText,
+                    { color: colors.info, fontSize: 14 },
+                  ]}
+                >
+                  {rightInfo}
+                </TextWithEmojis>
+              </View>
             )}
           </View>
         )}

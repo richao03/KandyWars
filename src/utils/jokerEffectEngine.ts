@@ -235,6 +235,8 @@ export class JokerEffectEngine {
   // Clear all active effects
   clearAllEffects() {
     this.activeEffects.clear();
+    // Reset instance ID counter when clearing to prevent unbounded growth
+    this.nextInstanceId = 0;
   }
 
   // Get debug info for current effects

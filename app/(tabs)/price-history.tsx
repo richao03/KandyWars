@@ -1,6 +1,7 @@
 // app/(tabs)/price-history.tsx
-import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, View, Text, Image } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useGame } from '../../src/hooks/useGame';
 import { useSeed } from '../../src/hooks/useSeed';
 import CandyPriceChart from '../components/CandyPriceChart';
@@ -9,8 +10,17 @@ import GameHUD from '../components/GameHUD';
 export default function PriceHistory() {
   const { periodCount } = useGame();
   const { gameData } = useSeed();
+  const [isTabFocused, setIsTabFocused] = useState(false);
 
   const candyNames = Object.keys(gameData.candyPrices || {});
+
+  // Only render charts when this tab is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsTabFocused(true);
+      return () => setIsTabFocused(false);
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -25,7 +35,11 @@ export default function PriceHistory() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {candyNames.length > 0 ? (
+        {!isTabFocused ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading charts...</Text>
+          </View>
+        ) : candyNames.length > 0 ? (
           candyNames.map((candyName) => (
             <CandyPriceChart
               key={candyName}
@@ -36,7 +50,13 @@ export default function PriceHistory() {
           ))
         ) : (
           <View style={styles.noDataContainer}>
-            <Text style={styles.noDataTitle}>📊 No Price Data Yet</Text>
+            <View style={styles.noDataTitleRow}>
+              <Image
+                source={require('../../assets/images/emojis/chart.png')}
+                style={styles.noDataTitleIcon}
+              />
+              <Text style={styles.noDataTitle}>No Price Data Yet</Text>
+            </View>
             <Text style={styles.noDataText}>
               Visit the market to start tracking candy prices across periods!
             </Text>
@@ -73,11 +93,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
+  noDataTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  noDataTitleIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+    marginRight: 12,
+  },
   noDataText: {
     fontSize: 16,
     color: '#8b5a3c',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    marginTop: 100,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#8b5a3c',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
 });

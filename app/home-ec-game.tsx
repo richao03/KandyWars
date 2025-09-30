@@ -4,14 +4,29 @@ import { useGame } from '../src/hooks/useGame';
 import HomeEcGame from './minigames/HomeEcGame';
 
 export default function HomeEcGameScreen() {
-  const { markStudiedTonight } = useGame();
+  const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
 
   const handleGameComplete = () => {
-    // Mark study as completed in game state
-    markStudiedTonight();
-    console.log('Home Ec game completed! Study session finished.');
-    // Return to after-school view instead of study page
-    router.push('/(tabs)/after-school');
+    console.log('Home Ec game completed! Context:', minigameContext);
+
+    // Mark study as completed based on context
+    if (minigameContext === 'after-school') {
+      markStudiedTonight();
+      console.log('After-school study session finished.');
+    } else if (minigameContext === 'lunch') {
+      markLunchMinigamePlayed();
+      console.log('Lunch minigame finished.');
+    }
+
+    // Clear context and navigate to appropriate view
+    setMinigameContext(null);
+
+    // Navigate based on context
+    if (minigameContext === 'lunch') {
+      router.push('/(tabs)/market');
+    } else {
+      router.push('/(tabs)/after-school');
+    }
   };
 
   return <HomeEcGame onComplete={handleGameComplete} />;

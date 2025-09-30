@@ -16,6 +16,7 @@ import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import TextWithEmojis from './TextWithEmojis';
 
 interface JokerCardProps {
   joker: {
@@ -236,17 +237,17 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    // } else if (joker.id === JOKER_IDS.DODGEBALL_DASH) {
-    //   // Show confirmation for Dodgeball Dash activation
-    //   showConfirm(
-    //     'Dodgeball Dash',
-    //     'Set up your next sale to earn double profit?',
-    //     '⚡',
-    //     () => handleDodgeballDash(),
-    //     'Activate',
-    //     'Cancel',
-    //     () => {}
-    //   );
+    } else if (joker.id === JOKER_IDS.DODGEBALL_DASH) {
+      // Show confirmation for Dodgeball Dash activation
+      showConfirm(
+        'Dodgeball Dash',
+        'Set up your next sale to earn double profit?',
+        '⚡',
+        () => handleDodgeballDash(),
+        'Activate',
+        'Cancel',
+        () => {}
+      );
     } else if (joker.id === JOKER_IDS.PURSUASION) {
       // Show confirmation for Pursuasion activation
       showConfirm(
@@ -636,6 +637,13 @@ function JokerCard({
     return '#dc2626'; // Red for one-time (instant)
   }, [joker.type]);
 
+  const typeEmoji = useMemo(() => {
+    if (joker.type === 'persistent') {
+      return '🔮'; // Gold for persistent (aura)
+    }
+    return '⚡';
+  }, [joker.type]);
+
   const typeText = useMemo(() => {
     return joker.type === 'persistent' ? 'Aura' : 'Instant';
   }, [joker.type]);
@@ -654,19 +662,30 @@ function JokerCard({
 
   const CardWrapper = onLongPress ? TouchableOpacity : View;
   const handleContinentalDrift = async () => {
-    console.log('🌍 Continental Drift: Starting activation - randomizing all candy prices');
+    console.log(
+      '🌍 Continental Drift: Starting activation - randomizing all candy prices'
+    );
 
     try {
       // Define candy types (you may need to adjust these based on your game's candy types)
-      const candyTypes = ['Skittles', 'M&Ms', 'Sour Patch Kids', 'Twix', 'Snickers', 'Kit Kat'];
+      const candyTypes = [
+        'Skittles',
+        'M&Ms',
+        'Sour Patch Kids',
+        'Twix',
+        'Snickers',
+        'Kit Kat',
+        'Jaw Breaker',
+      ];
 
       // Randomize prices for all candy types
       const priceChanges: string[] = [];
-      candyTypes.forEach(candyType => {
+      candyTypes.forEach((candyType) => {
         // Generate a random price between $5-$25
         const minPrice = 5;
         const maxPrice = 25;
-        const newPrice = Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+        const newPrice =
+          Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
 
         // Get the original price for comparison
         const originalPrice = getOriginalCandyPrice(candyType);
@@ -675,7 +694,9 @@ function JokerCard({
         modifyCandyPrice(candyType, newPrice);
 
         priceChanges.push(`${candyType}: $${originalPrice} → $${newPrice}`);
-        console.log(`🌍 Continental Drift: ${candyType} price changed from $${originalPrice} to $${newPrice}`);
+        console.log(
+          `🌍 Continental Drift: ${candyType} price changed from $${originalPrice} to $${newPrice}`
+        );
       });
 
       // Remove the joker (it's one-time use)
@@ -737,7 +758,9 @@ function JokerCard({
 
           {/* Type Badge */}
           <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-            <Text style={styles.typeText}>{typeText}</Text>
+            <TextWithEmojis style={styles.typeText} imageSize={12}>
+              {`${typeEmoji} ${typeText}`}
+            </TextWithEmojis>
           </View>
 
           {/* Main Content */}
@@ -1043,7 +1066,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginBottom: 4,
+    marginBottom: 8,
     marginTop: -12,
     marginHorizontal: -8,
     borderTopLeftRadius: 20,
@@ -1075,7 +1098,7 @@ const styles = StyleSheet.create({
   typeBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 4,
   },
   typeText: {
@@ -1088,10 +1111,11 @@ const styles = StyleSheet.create({
   },
   contentSection: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 8,
   },
   jokerDescription: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#2c3e50',
     lineHeight: 14,
     fontFamily: 'PixeloidMono',
@@ -1102,7 +1126,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   jokerFlavorText: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#666',
     lineHeight: 12,
     fontFamily: 'CrayonPastel',

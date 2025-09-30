@@ -1,30 +1,22 @@
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
-  ImageBackground,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GEOGRAPHY_JOKERS } from '../../src/utils/jokerEffectEngine';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface GeographyGameProps {
   onComplete: () => void;
@@ -74,8 +66,8 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   const [selectedDogName, setSelectedDogName] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const scrambleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrambleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get screen dimensions for tile sizing
   const screenWidth = Dimensions.get('window').width;
@@ -118,12 +110,12 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
   // Get tile at position
   const getTileAtPosition = (position: number): Tile | undefined => {
-    return tiles.find(t => t.currentPosition === position);
+    return tiles.find((t) => t.currentPosition === position);
   };
 
   // Get empty tile position
   const getEmptyPosition = (): number => {
-    const emptyTile = tiles.find(t => t.id === 8);
+    const emptyTile = tiles.find((t) => t.id === 8);
     return emptyTile ? emptyTile.currentPosition : 8;
   };
 
@@ -146,7 +138,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     const validMoves: number[] = [];
     const positions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
-    positions.forEach(pos => {
+    positions.forEach((pos) => {
       if (isAdjacent(emptyPos, pos)) {
         validMoves.push(pos);
       }
@@ -170,10 +162,12 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     setIsAnimating(true);
 
     // Swap the tile with the empty position
-    setTiles(prevTiles => {
+    setTiles((prevTiles) => {
       const newTiles = [...prevTiles];
-      const tileToMove = newTiles.find(t => t.currentPosition === fromPosition);
-      const emptyTile = newTiles.find(t => t.id === 8);
+      const tileToMove = newTiles.find(
+        (t) => t.currentPosition === fromPosition
+      );
+      const emptyTile = newTiles.find((t) => t.id === 8);
 
       if (tileToMove && emptyTile) {
         // Swap positions
@@ -185,7 +179,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       return newTiles;
     });
 
-    setMoves(prev => prev + 1);
+    setMoves((prev) => prev + 1);
 
     setTimeout(() => {
       setIsAnimating(false);
@@ -194,7 +188,10 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   };
 
   // Scramble puzzle with tiles passed as parameter
-  const scramblePuzzleWithTiles = async (movesCount: number, initialTiles: Tile[]) => {
+  const scramblePuzzleWithTiles = async (
+    movesCount: number,
+    initialTiles: Tile[]
+  ) => {
     setGameState('scrambling');
     setIsAnimating(true);
 
@@ -202,9 +199,9 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     let lastMove = -1;
 
     for (let i = 0; i < movesCount; i++) {
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         scrambleTimeoutRef.current = setTimeout(() => {
-          const emptyTile = currentTiles.find(t => t.id === 8);
+          const emptyTile = currentTiles.find((t) => t.id === 8);
           if (!emptyTile) {
             resolve(undefined);
             return;
@@ -212,11 +209,14 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
           const validMoves = getValidMoves(emptyTile.currentPosition);
           // Filter out the last move to avoid undoing
-          const filteredMoves = validMoves.filter(move => move !== lastMove);
+          const filteredMoves = validMoves.filter((move) => move !== lastMove);
 
           if (filteredMoves.length > 0) {
-            const randomMove = filteredMoves[Math.floor(Math.random() * filteredMoves.length)];
-            const tileToMove = currentTiles.find(t => t.currentPosition === randomMove);
+            const randomMove =
+              filteredMoves[Math.floor(Math.random() * filteredMoves.length)];
+            const tileToMove = currentTiles.find(
+              (t) => t.currentPosition === randomMove
+            );
 
             if (tileToMove) {
               // Record the empty position before the move
@@ -248,7 +248,9 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
   // Check if puzzle is solved
   const checkWinCondition = () => {
-    const isSolved = tiles.every(tile => tile.currentPosition === tile.correctPosition);
+    const isSolved = tiles.every(
+      (tile) => tile.currentPosition === tile.correctPosition
+    );
 
     if (isSolved && gameState === 'playing') {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -258,7 +260,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
       if (level < 3) {
         showModal(
-          `🎉 Level ${level} Complete!`,
+          `Level ${level} Complete!`,
           `Solved in ${moves} moves! Ready for Level ${level + 1}?`,
           '🎉',
           () => {
@@ -268,7 +270,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         );
       } else {
         showModal(
-          '🏆 All Levels Complete!',
+          'All Levels Complete!',
           `Amazing puzzle solving! You completed all levels!`,
           '🏆',
           () => {
@@ -287,7 +289,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     setTimeLeft(config.timeLimit);
 
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           handleTimeUp();
           return 0;
@@ -304,22 +306,17 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
     if (completedLevel > 0) {
       showModal(
-        "⏰ Time's Up!",
+        "Time's Up!",
         `You completed ${completedLevel} level${completedLevel !== 1 ? 's' : ''}! You've earned ${completedLevel} joker${completedLevel !== 1 ? 's' : ''}!`,
-        '⏰',
+        '⚠️',
         () => {
           setGameState('jokerSelection');
         }
       );
     } else {
-      showModal(
-        "⏰ Time's Up!",
-        'Try again from Level 1?',
-        '⏰',
-        () => {
-          setGameState('instructions');
-        }
-      );
+      showModal("Time's Up!", 'Try again from Level 1?', '⚠️', () => {
+        setGameState('instructions');
+      });
     }
   };
 
@@ -371,15 +368,10 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     if (scrambleTimeoutRef.current) clearTimeout(scrambleTimeoutRef.current);
 
     if (gameState === 'playing') {
-      showModal(
-        '🗺️ Leave Geography?',
-        "You'll lose your progress!",
-        '🗺️',
-        () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          router.back();
-        }
-      );
+      showModal('Leave Geography?', "You'll lose your progress!", '🗺️', () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        router.back();
+      }, false, true);
     } else {
       router.back();
     }
@@ -400,7 +392,10 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     if (!tile || tile.id === 8) {
       // Empty space
       return (
-        <View key={`empty-${position}`} style={[styles.tile, styles.emptyTile]} />
+        <View
+          key={`empty-${position}`}
+          style={[styles.tile, styles.emptyTile]}
+        />
       );
     }
 
@@ -440,7 +435,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Geography Puzzle! 🗺️</Text>
+          <Text style={styles.instructionsTitle}>Geography Puzzle!</Text>
 
           <PixelBorder
             borderColor="#4a5568"
@@ -485,23 +480,15 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             </TouchableOpacity>
           </PixelBorder>
 
-          <PixelBorder
-            borderColor="#4a5568"
-            borderWidth={3}
-            backgroundColor="#3182ce"
-            innerPadding={0}
-            style={{ marginBottom: 16 }}
+          <TouchableOpacity
+            style={styles.pixelButtonInner}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.back();
+            }}
           >
-            <TouchableOpacity
-              style={styles.pixelButtonInner}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.back();
-              }}
-            >
-              <Text style={styles.startGameButtonText}>Back</Text>
-            </TouchableOpacity>
-          </PixelBorder>
+            <Text style={styles.startGameButtonText}>Back</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -525,11 +512,11 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   return (
     <View style={styles.container}>
       <MinigameHUD
-        title="🗺️ Geography Puzzle"
+        title="Pangea Puzzle"
         subtitle={selectedDogName}
         leftInfo={`Level ${level}/3`}
         centerInfo={`Moves: ${moves}`}
-        rightInfo={`⏱️ ${timeLeft}s`}
+        rightInfo={`Time: ${timeLeft}s`}
         theme="geography"
       />
 
@@ -549,8 +536,10 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
       {/* Puzzle board */}
       <View style={styles.puzzleContainer}>
-        <View style={[styles.puzzleBoard, { width: boardSize, height: boardSize }]}>
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(position => (
+        <View
+          style={[styles.puzzleBoard, { width: boardSize, height: boardSize }]}
+        >
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((position) => (
             <View
               key={`position-${position}`}
               style={[
@@ -571,12 +560,22 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.footerBtn, styles.leaveBtn]}
-          onPress={handleForfeit}
+        <PixelBorder
+          borderColor="#4a5568"
+          borderWidth={3}
+          backgroundColor="#2d3748"
+          innerPadding={0}
+          style={{ flex: 1 }}
         >
-          <Text style={styles.footerBtnText}>🚪 Leave</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.leaveBtnInner}
+            onPress={handleForfeit}
+          >
+            <TextWithEmojis style={styles.footerBtnText} imageSize={30}>
+              🚪 Leave
+            </TextWithEmojis>
+          </TouchableOpacity>
+        </PixelBorder>
       </View>
 
       <GameModal
@@ -586,6 +585,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         emoji={modal.emoji}
         onClose={hideModal}
         onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
         theme="school"
         dismissible={modal.dismissible}
       />
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
   },
   messageOverlay: {
     position: 'absolute',
-    top: 120,
+    top: '30%',
     left: 20,
     right: 20,
     backgroundColor: 'rgba(49, 130, 206, 0.9)',
@@ -728,6 +728,10 @@ const styles = StyleSheet.create({
   leaveBtn: {
     backgroundColor: '#2d3748',
     borderColor: '#4a5568',
+  },
+  leaveBtnInner: {
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   footerBtnText: {
     fontSize: 16,

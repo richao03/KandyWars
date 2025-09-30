@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
+import TextWithEmojis from './TextWithEmojis';
 
 interface SleepConfirmModalProps {
   visible: boolean;
@@ -9,11 +10,11 @@ interface SleepConfirmModalProps {
   currentDay: number;
 }
 
-export default function SleepConfirmModal({ 
-  visible, 
-  onConfirm, 
+export default function SleepConfirmModal({
+  visible,
+  onConfirm,
   onCancel,
-  currentDay
+  currentDay,
 }: SleepConfirmModalProps) {
   return (
     <FastModal
@@ -24,12 +25,15 @@ export default function SleepConfirmModal({
       modalStyle={styles.modal}
     >
       <>
-        <Text style={styles.moonEmoji}>🌙</Text>
+        <Image
+          source={require('../../assets/images/emojis/moon.png')}
+          style={styles.moonImage}
+        />
         <Text style={styles.title}>Ready for Bed?</Text>
         <Text style={styles.subtitle}>
           End Day {currentDay} and start Day {currentDay + 1}?
         </Text>
-        
+
         <Text style={styles.warningText}>
           Make sure you've done everything you wanted today!
         </Text>
@@ -40,14 +44,18 @@ export default function SleepConfirmModal({
           <Text style={styles.checklistItem}>• Studied your subjects?</Text>
           <Text style={styles.checklistItem}>• Visited the deli?</Text>
         </View>
-        
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
-            <Text style={styles.confirmButtonText}>😴 Yes, Go to Sleep</Text>
+            <TextWithEmojis style={styles.confirmButtonText}>
+              Yes, Go to Sleep
+            </TextWithEmojis>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>🔙 Not Yet</Text>
+            <TextWithEmojis style={styles.cancelButtonText}>
+              Not Yet!
+            </TextWithEmojis>
           </TouchableOpacity>
         </View>
       </>
@@ -71,9 +79,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
-  moonEmoji: {
-    fontSize: 48,
-    textAlign: 'center',
+  moonImage: {
+    width: 48,
+    height: 48,
+    alignSelf: 'center',
     marginBottom: 12,
   },
   title: {

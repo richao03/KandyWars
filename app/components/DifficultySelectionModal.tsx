@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 
 interface DifficultySelectionModalProps {
   visible: boolean;
@@ -102,89 +103,118 @@ export default function DifficultySelectionModal({
       animationType="spring"
       backdropOpacity={0.7}
       modalStyle={styles.modalContainer}
+      pixelBorderColor="#333"
+      pixelBorderWidth={4}
     >
-      <Text style={styles.title}>Choose your pet!</Text>
-      <Text style={styles.subtitle}>Select your challenge level</Text>
+      <View style={styles.modalContent}>
+        <View style={styles.innerContent}>
+          <Text style={styles.title}>Choose your pet!</Text>
+          <Text style={styles.subtitle}>Select your challenge level</Text>
 
-      <ScrollView
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.optionsContainer}>
-          {levelOptions.map((option) => (
-            <TouchableOpacity
-              key={option.level}
-              style={[
-                styles.difficultyButton,
-                {
-                  backgroundColor: option.color,
-                  borderColor: option.borderColor,
-                },
-              ]}
-              onPress={() => onSelectDifficulty(option.level)}
-            >
-              <View style={styles.buttonContent}>
-                <Image source={option.image} style={styles.dogImage} />
-                <View style={styles.textContent}>
-                  <Text
-                    style={[
-                      styles.difficultyTitle,
-                      { color: option.textColor },
-                    ]}
+          <PixelBorder
+          borderColor={'#d4a574'}
+          borderWidth={3}
+          innerPadding={8}
+          style={styles.scrollPixelBorder}
+        >
+          <ScrollView
+            style={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.optionsContainer}>
+              {levelOptions.map((option) => (
+                <PixelBorder
+                  key={option.level}
+                  borderColor={option.borderColor}
+                  borderWidth={3}
+                  backgroundColor={option.color}
+                  innerPadding={0}
+                  style={styles.pixelBorderWrapper}
+                >
+                  <TouchableOpacity
+                    style={styles.difficultyButton}
+                    onPress={() => onSelectDifficulty(option.level)}
                   >
-                    {option.title}
-                  </Text>
-                  <Text
-                    style={[styles.piggyBankText, { color: option.textColor }]}
-                  >
-                    Adaoption Fee: ${option.piggyBank.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
+                    <View style={styles.buttonContent}>
+                      <Image source={option.image} style={styles.dogImage} />
+                      <View style={styles.textContent}>
+                        <Text
+                          style={[
+                            styles.difficultyTitle,
+                            { color: option.textColor },
+                          ]}
+                        >
+                          {option.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.piggyBankText,
+                            { color: option.textColor },
+                          ]}
+                        >
+                          Adoption Fee: ${option.piggyBank.toLocaleString()}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </PixelBorder>
+              ))}
+            </View>
+          </ScrollView>
+        </PixelBorder>
+          <PixelBorder
+            borderColor="#ccc"
+            borderWidth={2}
+            backgroundColor="#f0f0f0"
+            innerPadding={0}
+          >
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-          ))}
+          </PixelBorder>
         </View>
-      </ScrollView>
-
-      <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-        <Text style={styles.cancelText}>Cancel</Text>
-      </TouchableOpacity>
+      </View>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   modalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 30,
     width: '90%',
     maxWidth: 500,
     maxHeight: '85%',
+  },
+  modalContent: {
+    padding: 0,
     alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  innerContent: {
+    padding: 30,
+    width: '100%',
+    alignItems: 'center',
+  },
+  scrollPixelBorder: {
+    width: '100%',
+    marginBottom: 24,
   },
   scrollContainer: {
     width: '100%',
     maxHeight: 400,
-    borderWidth: 3,
-    borderColor: '#d4a574',
-    padding: 8,
-    borderRadius: 10,
-    marginBottom: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 18,
     fontFamily: 'PixeloidMono',
     color: '#666',
-    marginBottom: 30,
+    marginBottom: 8,
     textAlign: 'center',
   },
   optionsContainer: {
@@ -192,16 +222,13 @@ const styles = StyleSheet.create({
     gap: 15,
     marginBottom: 25,
   },
+  pixelBorderWrapper: {
+    marginBottom: 0,
+  },
   difficultyButton: {
     paddingVertical: 15,
     paddingHorizontal: 20,
-    borderRadius: 15,
-    borderWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
+    backgroundColor: 'transparent',
   },
   buttonContent: {
     flexDirection: 'row',
@@ -238,10 +265,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     paddingVertical: 12,
     paddingHorizontal: 30,
-    borderRadius: 25,
-    backgroundColor: '#f0f0f0',
-    borderWidth: 2,
-    borderColor: '#ccc',
+    backgroundColor: 'transparent',
   },
   cancelText: {
     fontSize: 18,

@@ -1,4 +1,5 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -28,22 +29,14 @@ import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import PixelBorder from '../components/PixelBorder';
 import SleepConfirmModal from '../components/SleepConfirmModal';
+import StudySubjectSelector from '../components/StudySubjectSelector';
 
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
-const subjects = [
-  { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
-  { name: 'Gym', color: { bg: '#e6f2ff', border: '#4169e1' } },
-  { name: 'Cooking', color: { bg: '#f6ffed', border: '#52c41a' } },
-  { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' } },
-  { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
-  { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' } },
-  { name: 'Comp Sci', color: { bg: '#f0f5ff', border: '#2f54eb' } },
-  { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' } },
-  { name: 'Geography', color: { bg: '#e6f3ff', border: '#3182ce' } },
-];
-
 function AfterSchoolPage() {
+  // Check if this tab is currently focused to prevent unnecessary renders
+  const isFocused = useIsFocused();
+
   const {
     day,
     startNewDay,
@@ -54,6 +47,8 @@ function AfterSchoolPage() {
     startAfterSchool,
     setIsInitialized,
     resetGame,
+    hasCompletedAfterSchoolTutorial,
+    setHasCompletedAfterSchoolTutorial,
   } = useGame();
 
   console.log('🌅 AfterSchoolPage: hasStudiedTonight =', hasStudiedTonight);
@@ -97,12 +92,59 @@ function AfterSchoolPage() {
     setLastActiveView('after-school');
   }, [setEvent, setLastActiveView]);
 
-  // Start copilot tutorial on first after-school visit
+  // Check if game should end (when entering after-school on day 5)
   useEffect(() => {
-    if (day === 1) {
+    if (day === 5 && !gameEndModalVisible) {
+      console.log('🎯 Game End: Entered after-school on day 5');
+
+      // Calculate final score
+      const finalScore = balance + stashedAmount;
+      const targetScore = adoptionFee;
+
+      console.log('🎯 Final Score:', finalScore, 'Target:', targetScore);
+
+      // Determine win/lose
+      if (finalScore >= targetScore) {
+        console.log('🎉 Player WON! Score exceeds adoption fee');
+        setGameResult('won');
+      } else {
+        console.log('😢 Player LOST! Score below adoption fee');
+        setGameResult('lost');
+      }
+
+      // Check for newly unlocked Hall Passes
+      try {
+        const unlocked = checkUnlockRequirements();
+        console.log('🎓 Newly unlocked Hall Passes:', unlocked);
+        setUnlockedHallPasses(unlocked);
+      } catch (error) {
+        console.error('❌ Error checking Hall Pass unlocks:', error);
+        setUnlockedHallPasses([]);
+      }
+
+      // Track game completion in leaderboard
+      try {
+        trackGameCompleted(finalScore, difficultyLevel, totalCandiesSold);
+      } catch (error) {
+        console.error('❌ Error tracking game completion:', error);
+      }
+
+      // Show game end modal
+      setGameEndModalVisible(true);
+
+      // Clear game state so there's no continue option available after game ends
+      setIsInitialized(false);
+      console.log('🎯 Game state cleared - no continue option will be available');
+    }
+  }, [day, gameEndModalVisible, balance, stashedAmount, adoptionFee, checkUnlockRequirements, trackGameCompleted, difficultyLevel, totalCandiesSold, setIsInitialized]);
+
+  // Start copilot tutorial on first after-school visit (only if not already completed)
+  useEffect(() => {
+    if (day === 1 && !hasCompletedAfterSchoolTutorial) {
       console.log('🎯 After school day 1 - checking tutorial status:', {
         day,
         tutorialStarted,
+        hasCompletedAfterSchoolTutorial,
       });
 
       if (!tutorialStarted) {
@@ -116,7 +158,30 @@ function AfterSchoolPage() {
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [day, start, tutorialStarted]);
+  }, [day, start, tutorialStarted, hasCompletedAfterSchoolTutorial]);
+
+  // Mark tutorial as completed when it finishes
+  useEffect(() => {
+    if (copilotEvents) {
+      const handleComplete = () => {
+        console.log('🎓 After-school tutorial completed');
+        setHasCompletedAfterSchoolTutorial(true);
+      };
+
+      // Listen for tutorial completion
+      const stopListener = () => handleComplete();
+
+      // Note: copilotEvents might not have an eventEmitter exposed,
+      // so we'll mark as complete when tutorial is started and user progresses beyond day 1
+      if (tutorialStarted && day > 1) {
+        handleComplete();
+      }
+
+      return () => {
+        // Cleanup if needed
+      };
+    }
+  }, [copilotEvents, tutorialStarted, day, setHasCompletedAfterSchoolTutorial]);
 
   // Handle copilot events
   useEffect(() => {
@@ -134,50 +199,18 @@ function AfterSchoolPage() {
     setShowStudySubjects(true);
   };
 
-  const handleSubjectSelect = (subject: string) => {
-    if (hasStudiedTonight) {
-      return;
-    }
-
-    console.log(`Starting ${subject} minigame...`);
-
-    // Navigate to specific minigame based on subject
-    switch (subject) {
-      case 'Math':
-        router.push('/math-game');
-        break;
-      case 'Gym':
-        router.push('/history-game');
-        break;
-      case 'Cooking':
-        router.push('/home-ec-game');
-        break;
-      case 'Economy':
-        router.push('/economy-game');
-        break;
-      case 'Logic':
-        router.push('/logic-game');
-        break;
-      case 'Recess':
-        router.push('/recess-game');
-        break;
-      case 'Comp Sci':
-        router.push('/computer-game');
-        break;
-      case 'Art':
-        router.push('/art-game');
-        break;
-      case 'Geography':
-        router.push('/geography-game');
-        break;
-      default:
-        setShowStudySubjects(false);
-    }
-  };
-
   const handleBackToOptions = () => {
     setShowStudySubjects(false);
   };
+
+  // Reset study subjects view when returning from minigame
+  useFocusEffect(
+    useCallback(() => {
+      if (hasStudiedTonight && showStudySubjects) {
+        setShowStudySubjects(false);
+      }
+    }, [hasStudiedTonight, showStudySubjects])
+  );
 
   const handleStashMoney = () => {
     router.push('/(tabs)/piggy-bank');
@@ -228,83 +261,11 @@ function AfterSchoolPage() {
     // Close the interstitial
     setGoingToSchoolModalVisible(false);
 
-    // Check if this is the end of day 5 (game should end after 5 days)
-    // We check for day === 5 because we're currently at the end of day 5
+    // Game end is now handled when entering after-school on day 5
+    // This function should never be called on day 5 anymore
     if (day >= 5) {
-      console.log('🎯 Game End: 5 days completed, checking win/lose condition');
-
-      // Calculate final score (balance + stashedAmount)
-      const finalScore = balance + stashedAmount;
-      console.log(
-        '🎯 Final Score:',
-        finalScore,
-        '(balance:',
-        balance,
-        '+ stashed:',
-        stashedAmount,
-        ')'
-      );
-
-      // Player wins if they have saved enough for the adoption fee
-      const hasWon = stashedAmount >= adoptionFee;
-      console.log(
-        `🎯 Player ${hasWon ? 'WON' : 'LOST'} - Saved: $${stashedAmount}, Needed: $${adoptionFee}`
-      );
-
-      setGameResult(hasWon ? 'won' : 'lost');
-
-      // Track game completion in scoreboard
-      await trackGameCompleted();
-      console.log('🎯 Game completion tracked in scoreboard');
-
-      // Check for Hall Pass unlocks regardless of win/lose (some unlocks are based on achievements)
-      try {
-        const gameStats = {
-          completions: 1, // This would need to be tracked from a persistent store
-          finalProfit: balance + stashedAmount,
-          difficulty: difficultyLevel || 1,
-          completionTime: undefined, // Would need to track game start time
-          perfectAttendance: false, // Would need to track attendance
-          studyStreak: false, // Would need to track study streak
-          noJokers: jokers.length === 0,
-          totalCandySold: totalCandiesSold,
-          hasWon, // Pass win status for conditional unlocks
-        };
-
-        const minigameTrackingData = {
-          hasPlayedAllMinigames,
-        };
-        const newUnlocks = checkUnlockRequirements(
-          gameStats,
-          minigameTrackingData
-        );
-
-        console.log(
-          '🎖️ Checking hall pass unlocks - found:',
-          newUnlocks.length,
-          'unlocks'
-        );
-        if (newUnlocks.length > 0) {
-          console.log('🎖️ Hall Passes unlocked:', newUnlocks);
-          setUnlockedHallPasses(newUnlocks);
-        } else {
-          setUnlockedHallPasses([]);
-        }
-      } catch (error) {
-        console.error('❌ Error checking Hall Pass unlocks:', error);
-        setUnlockedHallPasses([]);
-      }
-
-      // Show game end modal
-      setGameEndModalVisible(true);
-
-      // Clear game state so there's no continue option available after game ends
-      setIsInitialized(false);
-      console.log(
-        '🎯 Game state cleared - no continue option will be available'
-      );
-
-      return; // Don't start a new day, game is over
+      console.log('🎯 Game already ended - sleep button should not be accessible on day 5');
+      return;
     }
 
     // Reset daily stats and start new day (only if game hasn't ended)
@@ -363,37 +324,45 @@ function AfterSchoolPage() {
   };
 
   const options = useMemo(
-    () => [
-      {
-        id: 'study',
+    () => {
+      const allOptions = [
+        {
+          id: 'study',
+          title: 'Study at Home',
+          desc: hasStudiedTonight
+            ? "You've already studied tonight. Rest up!"
+            : 'Cozy up with your books by the warm lamplight',
+          onPress: () => handleStudy(),
+          disabled: hasStudiedTonight,
+        },
+        {
+          id: 'stash',
+          title: 'Go to Your Stash',
+          desc: 'Make sure no one is following you',
+          onPress: () => handleStashMoney(),
+        },
+        {
+          id: 'deli',
+          title: 'Visit the Corner Deli',
+          desc: 'Walk to the neighborhood store',
+          onPress: () => handleGoDeli(),
+        },
+        {
+          id: 'sleep',
+          title: 'Go to Sleep',
+          desc: 'Rest up and start a new day at school tomorrow',
+          onPress: () => handleGoToSleep(),
+        },
+      ];
 
-        title: 'Study at Home',
-        desc: hasStudiedTonight
-          ? "You've already studied tonight. Rest up!"
-          : 'Cozy up with your books by the warm lamplight',
-        onPress: () => handleStudy(),
-        disabled: hasStudiedTonight,
-      },
-      {
-        id: 'stash',
-        title: 'Go to Your Stash',
-        desc: 'Make sure no one is following you',
-        onPress: () => handleStashMoney(),
-      },
-      {
-        id: 'deli',
-        title: 'Visit the Corner Deli',
-        desc: 'Walk to the neighborhood store',
-        onPress: () => handleGoDeli(),
-      },
-      {
-        id: 'sleep',
-        title: 'Go to Sleep',
-        desc: 'Rest up and start a new day at school tomorrow',
-        onPress: () => handleGoToSleep(),
-      },
-    ],
-    [hasStudiedTonight, handleStudy]
+      // Don't show sleep button on day 5 (game ends when entering after-school)
+      if (day >= 5) {
+        return allOptions.filter(opt => opt.id !== 'sleep');
+      }
+
+      return allOptions;
+    },
+    [hasStudiedTonight, handleStudy, day]
   );
 
   const renderMainOptions = useMemo(() => {
@@ -499,142 +468,13 @@ function AfterSchoolPage() {
 
         <View style={styles.optionsContainer}>
           {showStudySubjects ? (
-            // Study subjects view
-            <View style={styles.studyContainer}>
-              <View style={styles.studyHeader}>
-                {hasStudiedTonight && (
-                  <Text style={styles.alreadyStudiedText}>
-                    📚 You&apos;ve already studied tonight! Rest up for
-                    tomorrow.
-                  </Text>
-                )}
-              </View>
-
-              <View style={styles.subjectsContainer}>
-                {/* First Row - 3 subjects */}
-                <View style={styles.subjectsRow}>
-                  {subjects.slice(0, 3).map((subject) => (
-                    <PixelBorder
-                      key={subject.name}
-                      borderColor={
-                        hasStudiedTonight ? '#999' : subject.color.border
-                      }
-                      borderWidth={3}
-                      backgroundColor={
-                        hasStudiedTonight ? '#ccc' : subject.color.bg
-                      }
-                      innerPadding={0}
-                      style={styles.subjectButtonWrapper}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.subjectButtonInner,
-                          hasStudiedTonight && styles.disabledSubjectButton,
-                        ]}
-                        onPress={() => handleSubjectSelect(subject.name)}
-                        disabled={hasStudiedTonight}
-                      >
-                        <Text
-                          style={[
-                            styles.subjectText,
-                            hasStudiedTonight && styles.disabledText,
-                          ]}
-                        >
-                          {subject.name}
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  ))}
-                </View>
-
-                {/* Second Row - 3 subjects */}
-                <View style={styles.subjectsRow}>
-                  {subjects.slice(3, 6).map((subject) => (
-                    <PixelBorder
-                      key={subject.name}
-                      borderColor={
-                        hasStudiedTonight ? '#999' : subject.color.border
-                      }
-                      borderWidth={3}
-                      backgroundColor={
-                        hasStudiedTonight ? '#ccc' : subject.color.bg
-                      }
-                      innerPadding={0}
-                      style={styles.subjectButtonWrapper}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.subjectButtonInner,
-                          hasStudiedTonight && styles.disabledSubjectButton,
-                        ]}
-                        onPress={() => handleSubjectSelect(subject.name)}
-                        disabled={hasStudiedTonight}
-                      >
-                        <Text
-                          style={[
-                            styles.subjectText,
-                            hasStudiedTonight && styles.disabledText,
-                          ]}
-                        >
-                          {subject.name}
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  ))}
-                </View>
-
-                {/* Third Row - 3 subjects */}
-                <View style={styles.subjectsRow}>
-                  {subjects.slice(6, 9).map((subject) => (
-                    <PixelBorder
-                      key={subject.name}
-                      borderColor={
-                        hasStudiedTonight ? '#999' : subject.color.border
-                      }
-                      borderWidth={3}
-                      backgroundColor={
-                        hasStudiedTonight ? '#ccc' : subject.color.bg
-                      }
-                      innerPadding={0}
-                      style={styles.subjectButtonWrapper}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.subjectButtonInner,
-                          hasStudiedTonight && styles.disabledSubjectButton,
-                        ]}
-                        onPress={() => handleSubjectSelect(subject.name)}
-                        disabled={hasStudiedTonight}
-                      >
-                        <Text
-                          style={[
-                            styles.subjectText,
-                            hasStudiedTonight && styles.disabledText,
-                          ]}
-                        >
-                          {subject.name}
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  ))}
-                </View>
-              </View>
-
-              <PixelBorder
-                borderColor="#f7e98e"
-                borderWidth={3}
-                backgroundColor="rgba(90,99,127, 0.8)"
-                innerPadding={0}
-                style={{ marginBottom: 20 }}
-              >
-                <TouchableOpacity
-                  style={styles.backButtonInner}
-                  onPress={handleBackToOptions}
-                >
-                  <Text style={styles.backButtonText}>← Back</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-            </View>
+            isFocused && (
+              <StudySubjectSelector
+                onBack={handleBackToOptions}
+                disabled={hasStudiedTonight}
+                disabledMessage="You've already studied tonight! Rest up for tomorrow."
+              />
+            )
           ) : (
             // Main options view
             <View style={styles.optionsGrid}>{renderMainOptions}</View>
@@ -681,7 +521,7 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 10,
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -689,10 +529,11 @@ const styles = StyleSheet.create({
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    maxWidth: 320,
+    maxWidth: 420,
     width: '100%',
+    gap: 10,
   },
   gridButton: {
     width: 150,
@@ -759,116 +600,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  // Study subjects styles
-  studyContainer: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-  },
-  studyHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  studyTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#f7e98e',
-    fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(247,233,142,0.4)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 8,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  alreadyStudiedText: {
-    fontSize: 14,
-    color: '#b8a9c9',
-    fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  subjectsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  subjectsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-    paddingHorizontal: 10,
-  },
-  subjectButton: {
-    height: 80,
-    width: 80,
-    borderRadius: 12,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  subjectButtonWrapper: {
-    height: 80,
-    width: 80,
-    margin: 5,
-  },
-  subjectButtonInner: {
-    height: '100%',
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  disabledSubjectButton: {
-    opacity: 0.5,
-  },
-  subjectText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2a1845',
-    fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-  },
-  backButton: {
-    backgroundColor: 'rgba(90,99,127, 0.8)',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#f7e98e',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 20,
-    shadowColor: '#2d1b3d',
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  backButtonInner: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: 'transparent',
-  },
-  backButtonText: {
-    color: '#f7e98e',
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-    textShadowColor: 'rgba(125,125,125,0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
   gridButtonWrapper: {
-    width: 150,
-    height: 150,
-    marginBottom: 10,
+    width: 190,
+    height: 100,
+    margin: 5,
   },
   gridButtonInner: {
     backgroundColor: 'transparent',

@@ -9,14 +9,17 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import { useScoreboard } from '../src/hooks/useScoreboard';
 import { scoreboardService } from '../src/services/firebase';
+import TextWithEmojis from './components/TextWithEmojis';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function LeaderboardScreen() {
-  const { topScores, playerRank, betaStats, isLoading, refreshScoreboard } = useScoreboard();
+  const { topScores, playerRank, betaStats, isLoading, refreshScoreboard } =
+    useScoreboard();
 
   const [activeTab, setActiveTab] = useState('money');
   const [topJokersFromMinigames, setTopJokersFromMinigames] = useState<
@@ -33,7 +36,6 @@ export default function LeaderboardScreen() {
 
     setAnalyticsLoading(true);
     try {
-      console.log('📊 Loading analytics data...');
       const [jokersData, minigamesData] = await Promise.all([
         scoreboardService.getMostObtainedJokersFromMinigames(10),
         scoreboardService.getMostPlayedMinigames(10),
@@ -41,7 +43,6 @@ export default function LeaderboardScreen() {
 
       setTopJokersFromMinigames(jokersData);
       setTopMinigames(minigamesData);
-      console.log('📊 Analytics data loaded successfully');
     } catch (error) {
       console.error('❌ Failed to load analytics data:', error);
     } finally {
@@ -52,11 +53,8 @@ export default function LeaderboardScreen() {
   // Load data when screen mounts
   useEffect(() => {
     const delayedLoad = setTimeout(() => {
-      console.log('📊 LeaderboardScreen: Loading data...');
-
       // Refresh scoreboard if no data exists
       if (topScores.length === 0 && !isLoading) {
-        console.log('📊 LeaderboardScreen: No data exists, fetching...');
         refreshScoreboard();
       }
 
@@ -129,7 +127,7 @@ export default function LeaderboardScreen() {
       </View>
 
       <View style={styles.leaderboardSection}>
-        <Text style={styles.sectionTitle}>💰 Top Players by Net Worth</Text>
+        <TextWithEmojis style={styles.sectionTitle}>💰 Top Players by Net Worth</TextWithEmojis>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -182,7 +180,7 @@ export default function LeaderboardScreen() {
 
       {betaStats && (
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>📊 Beta Stats</Text>
+          <Text style={styles.sectionTitle}>Beta Stats</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{betaStats.totalGames}</Text>
@@ -212,7 +210,7 @@ export default function LeaderboardScreen() {
       ) : (
         <>
           <View style={styles.analyticsSection}>
-            <Text style={styles.sectionTitle}>🎮 Most Played Minigames</Text>
+            <TextWithEmojis style={styles.sectionTitle}>🎮 Most Played Minigames</TextWithEmojis>
             {topMinigames.length === 0 ? (
               <Text style={styles.emptyAnalyticsText}>
                 No minigame data yet - play some minigames to see stats!
@@ -233,7 +231,13 @@ export default function LeaderboardScreen() {
           </View>
 
           <View style={styles.analyticsSection}>
-            <Text style={styles.sectionTitle}>🃏 Most Obtained Jokers</Text>
+            <View style={styles.sectionTitleRow}>
+              <Image
+                source={require('../assets/images/emojis/joker.png')}
+                style={styles.sectionTitleIcon}
+              />
+              <Text style={styles.sectionTitle}>Most Obtained Jokers</Text>
+            </View>
             {topJokersFromMinigames.length === 0 ? (
               <Text style={styles.emptyAnalyticsText}>
                 No joker data yet - win some minigames to see stats!
@@ -279,14 +283,14 @@ export default function LeaderboardScreen() {
           style={[styles.tab, activeTab === 'money' && styles.activeTab]}
           onPress={() => setActiveTab('money')}
         >
-          <Text
+          <TextWithEmojis
             style={[
               styles.tabText,
               activeTab === 'money' && styles.activeTabText,
             ]}
           >
             💰 Leaderboard
-          </Text>
+          </TextWithEmojis>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -299,7 +303,7 @@ export default function LeaderboardScreen() {
               activeTab === 'analytics' && styles.activeTabText,
             ]}
           >
-            📊 Analytics
+            Analytics
           </Text>
         </TouchableOpacity>
       </View>
@@ -412,6 +416,18 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginBottom: 16,
     textAlign: 'center',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  sectionTitleIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+    marginRight: 8,
   },
   loadingContainer: {
     alignItems: 'center',
