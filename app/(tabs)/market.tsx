@@ -115,22 +115,6 @@ function Market(props) {
     visible,
   } = useCopilot();
 
-  // Debug copilot state and events
-  useEffect(() => {
-    console.log(
-      '🎓 Copilot state - isFirstStep:',
-      isFirstStep,
-      'currentStep:',
-      currentStep,
-      'copilotEvents:',
-      copilotEvents
-    );
-
-    // Log available events
-    if (eventEmitter && eventEmitter._events) {
-      console.log('🎓 Available events:', Object.keys(eventEmitter._events));
-    }
-  }, [isFirstStep, currentStep, copilotEvents, eventEmitter]);
 
   // Track active view on mount only
   useEffect(() => {
@@ -198,20 +182,6 @@ function Market(props) {
   // Tutorial using Copilot - only show if not already completed
   const shouldShowTutorial = day === 1 && periodCount === 0 && !hasCompletedMarketTutorial;
   const tutorialStarted = useRef(false);
-
-  // Debug tutorial conditions (only log when tutorial is active)
-  if (shouldShowTutorial || !hasCompletedMarketTutorial) {
-    console.log('🎓 Tutorial Debug:', {
-      day,
-      periodCount,
-      shouldShowTutorial,
-      hasCompletedMarketTutorial,
-      tutorialStarted: tutorialStarted.current,
-      isFirstStep,
-      currentStep,
-      copilotVisible: visible,
-    });
-  }
 
   // Simple tutorial auto-start
   useEffect(() => {
@@ -1019,15 +989,6 @@ function Market(props) {
 
   // Check if current period is lunch (period 5, which is index 4 in 0-indexed system)
   const isLunchPeriod = period === 5;
-
-  console.log(
-    '🍔 Market render - isLunchPeriod:',
-    isLunchPeriod,
-    'showLunchMinigames:',
-    showLunchMinigames,
-    'period:',
-    period
-  );
 
   const handleLunchBack = () => {
     console.log('🍔 handleLunchBack called');

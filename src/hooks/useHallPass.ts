@@ -7,7 +7,9 @@ import {
   selectAllHallPasses,
   selectHallPass,
   selectSelectedHallPass,
+  selectSelectedHallPasses,
   selectSelectedHallPassEffects,
+  selectSelectedPassIds,
   selectUnlockedHallPasses,
   unlockHallPass,
 } from '../store/slices/hallPassSlice';
@@ -16,7 +18,9 @@ export const useHallPass = () => {
   const dispatch = useAppDispatch();
   const allPasses = useAppSelector(selectAllHallPasses);
   const unlockedPasses = useAppSelector(selectUnlockedHallPasses);
-  const selectedPass = useAppSelector(selectSelectedHallPass);
+  const selectedPass = useAppSelector(selectSelectedHallPass); // For backwards compatibility
+  const selectedPasses = useAppSelector(selectSelectedHallPasses);
+  const selectedPassIds = useAppSelector(selectSelectedPassIds);
   const selectedEffects = useAppSelector(selectSelectedHallPassEffects);
   const hallPassState = useAppSelector((state) => state.hallPass);
 
@@ -41,7 +45,7 @@ export const useHallPass = () => {
   );
 
   const selectPass = useCallback(
-    (passId: string | null) => {
+    (passId: string) => {
       dispatch(selectHallPass(passId));
     },
     [dispatch]
@@ -197,7 +201,9 @@ export const useHallPass = () => {
     // State
     allPasses,
     unlockedPasses,
-    selectedPass,
+    selectedPass, // For backwards compatibility
+    selectedPasses,
+    selectedPassIds,
     selectedEffects,
     isLoaded: hallPassState.isLoaded,
 

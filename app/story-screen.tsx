@@ -11,10 +11,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useWallet } from '../src/hooks/useWallet';
 import NamePromptModal from './components/NamePromptModal';
-import TextWithEmojis from './components/TextWithEmojis';
-
+import PixelBorder from './components/PixelBorder';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const getDogImage = (level: number) => {
@@ -234,6 +241,10 @@ export default function StoryScreen() {
   const heartLeftAnim = useRef(new Animated.Value(0)).current;
   const heartRightAnim = useRef(new Animated.Value(0)).current;
 
+  // Pulsating glow animation for Start Day 1 button
+  const glowScale = useSharedValue(1);
+  const glowOpacity = useSharedValue(0.6);
+
   // Initialize with a small delay to prevent flash
   useEffect(() => {
     console.log('🎬 StoryScreen: Initializing...');
@@ -256,6 +267,31 @@ export default function StoryScreen() {
 
       setIsTyping(false);
       setShowContinue(true);
+
+      // Start pulsating glow animation for Start Day 1 button
+      glowScale.value = withRepeat(
+        withSequence(
+          withTiming(1.08, {
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+      glowOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.9, {
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(0.5, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+
       return;
     }
 
@@ -427,6 +463,11 @@ export default function StoryScreen() {
     router.replace('/(tabs)/market');
   };
 
+  const glowAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: glowScale.value }],
+    opacity: glowOpacity.value,
+  }));
+
   // Render styled text with colors
   const renderStyledText = () => {
     const result = [];
@@ -588,12 +629,16 @@ export default function StoryScreen() {
       {/* Continue button */}
       {showContinue && (
         <View style={styles.continueContainer}>
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-          >
-            <Text style={styles.continueText}>Start Day 1</Text>
-          </TouchableOpacity>
+          <View style={{ position: 'relative' }}>
+            <PixelBorder borderColor="#5f5f5f" borderWidth={3} innerPadding={0}>
+              <TouchableOpacity
+                style={styles.continueButton}
+                onPress={handleContinue}
+              >
+                <Text style={styles.continueText}>Start Day 1</Text>
+              </TouchableOpacity>
+            </PixelBorder>
+          </View>
           <Text style={styles.tapHint}>
             Your future best friend is waiting...
           </Text>
@@ -699,7 +744,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff6b35',
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderRadius: 30,
+    borderRadius: 15,
     borderWidth: 2,
     borderColor: '#ff8c42',
     shadowColor: '#ff6b35',
@@ -720,5 +765,23 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     marginTop: 15,
     fontStyle: 'italic',
+  },
+  glowContainer: {
+    position: 'absolute',
+    top: -12,
+    left: -12,
+    right: -12,
+    bottom: -12,
+    zIndex: -1,
+  },
+  glow: {
+    flex: 1,
+    backgroundColor: '#ff6b35',
+    borderRadius: 25,
+    shadowColor: '#ff6b35',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 25,
+    elevation: 15,
   },
 });

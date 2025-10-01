@@ -110,10 +110,10 @@ export default function CandyWarsTitleScreen({
   };
 
   // Hall Pass selection handler for toggling active pass
-  const handleHallPassToggle = (passId: string | null) => {
+  const handleHallPassToggle = (passId: string) => {
     console.log('🎬 HALL PASSES: Hall Pass toggled:', passId);
     selectPass(passId);
-    setShowHallPassModal(false);
+    // Don't close modal - user can select multiple
   };
 
   const handleDifficultySelect = async (level: number) => {

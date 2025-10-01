@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +10,7 @@ import {
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { HallPass } from '../../src/store/slices/hallPassSlice';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 
 interface HallPassModalProps {
   visible: boolean;
@@ -23,9 +25,9 @@ export default function HallPassModal({
   onSelectPass,
   viewMode = 'selection',
 }: HallPassModalProps) {
-  const { allPasses, unlockedPasses, selectedPass } = useHallPass();
-  const [localSelectedId, setLocalSelectedId] = useState<string | null>(
-    selectedPass?.id || null
+  const { allPasses, unlockedPasses, selectedPassIds } = useHallPass();
+  const [localSelectedIds, setLocalSelectedIds] = useState<string[]>(
+    selectedPassIds || []
   );
 
   const isSelectionMode = viewMode === 'selection' && onSelectPass;
@@ -60,88 +62,116 @@ export default function HallPassModal({
     }
   };
 
-  const handleSelectPass = (passId: string | null) => {
+  const handleSelectPass = (passId: string) => {
     if (isSelectionMode) {
-      setLocalSelectedId(passId);
+      // Toggle selection and immediately call onSelectPass to update Redux
+      if (onSelectPass) {
+        onSelectPass(passId); // This toggles in Redux
+      }
+      // Update local state for UI
+      if (localSelectedIds.includes(passId)) {
+        setLocalSelectedIds(localSelectedIds.filter((id) => id !== passId));
+      } else {
+        setLocalSelectedIds([...localSelectedIds, passId]);
+      }
     }
   };
 
   const handleConfirm = () => {
-    if (isSelectionMode && onSelectPass) {
-      onSelectPass(localSelectedId);
-    }
     onClose();
   };
 
   const renderPassCard = (pass: HallPass) => {
-    const isSelected = isSelectionMode && localSelectedId === pass.id;
+    const isSelected = isSelectionMode && localSelectedIds.includes(pass.id);
     const isUnlocked = pass.isUnlocked;
     const isCurrentlySelected =
-      !isSelectionMode && selectedPass?.id === pass.id;
+      !isSelectionMode && selectedPassIds.includes(pass.id);
 
     return (
-      <TouchableOpacity
+      <PixelBorder
         key={pass.id}
-        style={[
-          styles.passCard,
-          {
-            backgroundColor: isUnlocked
-              ? getRarityBackground(pass.rarity)
-              : '#f5f5f5',
-            borderColor:
-              isSelected || isCurrentlySelected
-                ? '#2196F3'
-                : getRarityColor(pass.rarity),
-            borderWidth: isSelected || isCurrentlySelected ? 3 : 2,
-            opacity: isUnlocked ? 1 : 0.6,
-          },
-        ]}
-        onPress={() =>
-          isUnlocked && isSelectionMode && handleSelectPass(pass.id)
+        borderColor={
+          isSelected || isCurrentlySelected
+            ? '#2196F3'
+            : getRarityColor(pass.rarity)
         }
-        disabled={!isUnlocked || !isSelectionMode}
+        borderWidth={isSelected || isCurrentlySelected ? 4 : 3}
+        backgroundColor={
+          isUnlocked ? getRarityBackground(pass.rarity) : '#f5f5f5'
+        }
+        innerPadding={0}
+        style={[styles.passCardWrapper, { opacity: isUnlocked ? 1 : 0.6 }]}
       >
-        <View style={styles.passHeader}>
+        <TouchableOpacity
+          style={styles.passCard}
+          onPress={() =>
+            isUnlocked && isSelectionMode && handleSelectPass(pass.id)
+          }
+          disabled={!isUnlocked || !isSelectionMode}
+        >
+          <View style={styles.passHeader}>
+            <Image
+              source={require('../../assets/images/emojis/hallpass.png')}
+              style={[styles.hallPassIcon, { opacity: isUnlocked ? 1 : 0.4 }]}
+            />
+            <View style={styles.headerTextContainer}>
+              <Text
+                style={[
+                  styles.passName,
+                  { color: isUnlocked ? getRarityColor(pass.rarity) : '#999' },
+                ]}
+              >
+                {pass.name}
+              </Text>
+              <Text
+                style={[
+                  styles.passRarity,
+                  { color: isUnlocked ? getRarityColor(pass.rarity) : '#999' },
+                ]}
+              >
+                {pass.rarity.toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
           <Text
             style={[
-              styles.passName,
-              { color: isUnlocked ? getRarityColor(pass.rarity) : '#999' },
+              styles.passDescription,
+              { color: isUnlocked ? '#333' : '#999' },
             ]}
           >
-            {pass.name}
+            {pass.description}
           </Text>
-        </View>
 
-        <Text
-          style={[
-            styles.passDescription,
-            { color: isUnlocked ? '#333' : '#999' },
-          ]}
-        >
-          {pass.description}
-        </Text>
-
-        <View style={styles.effectsContainer}>
-          {pass.effects.map((effect, index) => (
-            <Text
-              key={index}
-              style={[
-                styles.effectText,
-                { color: isUnlocked ? '#4a7c4a' : '#999' },
-              ]}
-            >
-              {effect.description}
+          {
+            <Text style={styles.unlockRequirement}>
+              🔒 {pass.unlockRequirement}
             </Text>
-          ))}
-        </View>
-        {(isSelected || isCurrentlySelected) && (
-          <View style={styles.selectedIndicator}>
-            <Text style={styles.selectedText}>✓</Text>
-          </View>
-        )}
+          }
 
-        {!isUnlocked && <View style={styles.lockedOverlay}></View>}
-      </TouchableOpacity>
+          <View style={styles.effectsContainer}>
+            {pass.effects.map((effect, index) => (
+              <Text
+                key={index}
+                style={[
+                  styles.effectText,
+                  { color: isUnlocked ? '#4a7c4a' : '#999' },
+                ]}
+              >
+                • {effect.description}
+              </Text>
+            ))}
+          </View>
+
+          {(isSelected || isCurrentlySelected) && (
+            <View style={styles.selectedIndicator}>
+              <Text style={styles.selectedText}>✓</Text>
+            </View>
+          )}
+
+          {!isUnlocked && <View style={styles.lockedOverlay}></View>}
+        </TouchableOpacity>
+      </PixelBorder>
     );
   };
 
@@ -156,7 +186,7 @@ export default function HallPassModal({
       <Text style={styles.title}>Hall Pass Hall of Fame</Text>
       <Text style={styles.subtitle}>
         {isSelectionMode
-          ? 'Choose a Hall Pass to gain permanent bonuses'
+          ? 'Choose Hall Passes to gain permanent bonuses (select multiple)'
           : 'Your collection of earned Hall Passes'}
       </Text>
 
@@ -164,28 +194,6 @@ export default function HallPassModal({
         style={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* None option - only show in selection mode */}
-        {isSelectionMode && (
-          <TouchableOpacity
-            style={[
-              styles.noneOption,
-              {
-                borderColor: localSelectedId === null ? '#2196F3' : '#ccc',
-                borderWidth: localSelectedId === null ? 3 : 2,
-              },
-            ]}
-            onPress={() => handleSelectPass(null)}
-          >
-            <Text style={styles.noneText}>No Hall Pass</Text>
-            <Text style={styles.noneDescription}>Play without any bonuses</Text>
-            {localSelectedId === null && (
-              <View style={styles.selectedIndicator}>
-                <Text style={styles.selectedText}>✓</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
-
         {/* All passes */}
         {allPasses.map(renderPassCard)}
       </ScrollView>
@@ -285,47 +293,67 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     color: '#666',
   },
-  passCard: {
-    padding: 16,
-    borderRadius: 12,
+  passCardWrapper: {
     marginBottom: 12,
+  },
+  passCard: {
+    padding: 8,
+    paddingHorizontal: 12,
     position: 'relative',
   },
   passHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  hallPassIcon: {
+    width: 48,
+    height: 48,
+    marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   passName: {
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    flex: 1,
+    marginBottom: 2,
   },
   passRarity: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
   },
   passDescription: {
     fontSize: 14,
     fontFamily: 'PixeloidMono',
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 20,
   },
-  passRequirement: {
+  unlockRequirement: {
     fontSize: 12,
     fontFamily: 'PixeloidMono',
     fontStyle: 'italic',
-    marginBottom: 8,
+    marginBottom: 12,
+    color: '#999',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    padding: 8,
+    borderRadius: 6,
   },
   effectsContainer: {
-    marginTop: 4,
+    marginTop: 0,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
+
   effectText: {
-    fontSize: 13,
-    fontFamily: 'CrayonPastel',
-    marginBottom: 2,
+    fontSize: 12,
+    fontFamily: 'PixeloidMono',
+    marginBottom: 4,
+    lineHeight: 18,
   },
   selectedIndicator: {
     position: 'absolute',

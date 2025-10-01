@@ -103,84 +103,87 @@ export default function DifficultySelectionModal({
       animationType="spring"
       backdropOpacity={0.7}
       modalStyle={styles.modalContainer}
-      pixelBorderColor="#333"
-      pixelBorderWidth={4}
     >
-      <View style={styles.modalContent}>
-        <View style={styles.innerContent}>
-          <Text style={styles.title}>Choose your pet!</Text>
-          <Text style={styles.subtitle}>Select your challenge level</Text>
+      <PixelBorder borderColor={'#d4a574'} borderWidth={3} innerPadding={0}>
+        <View style={styles.modalContent}>
+          <View style={styles.innerContent}>
+            <Text style={styles.title}>Choose your pet!</Text>
+            <Text style={styles.subtitle}>Select your challenge level</Text>
 
-          <PixelBorder
-          borderColor={'#d4a574'}
-          borderWidth={3}
-          innerPadding={8}
-          style={styles.scrollPixelBorder}
-        >
-          <ScrollView
-            style={styles.scrollContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.optionsContainer}>
-              {levelOptions.map((option) => (
-                <PixelBorder
-                  key={option.level}
-                  borderColor={option.borderColor}
-                  borderWidth={3}
-                  backgroundColor={option.color}
-                  innerPadding={0}
-                  style={styles.pixelBorderWrapper}
-                >
-                  <TouchableOpacity
-                    style={styles.difficultyButton}
-                    onPress={() => onSelectDifficulty(option.level)}
-                  >
-                    <View style={styles.buttonContent}>
-                      <Image source={option.image} style={styles.dogImage} />
-                      <View style={styles.textContent}>
-                        <Text
-                          style={[
-                            styles.difficultyTitle,
-                            { color: option.textColor },
-                          ]}
-                        >
-                          {option.title}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.piggyBankText,
-                            { color: option.textColor },
-                          ]}
-                        >
-                          Adoption Fee: ${option.piggyBank.toLocaleString()}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </PixelBorder>
-              ))}
-            </View>
-          </ScrollView>
-        </PixelBorder>
-          <PixelBorder
-            borderColor="#ccc"
-            borderWidth={2}
-            backgroundColor="#f0f0f0"
-            innerPadding={0}
-          >
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </PixelBorder>
+            <PixelBorder
+              borderColor={'#d4a574'}
+              borderWidth={3}
+              innerPadding={0}
+              style={styles.scrollPixelBorder}
+            >
+              <ScrollView
+                style={styles.scrollContainer}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.optionsContainer}>
+                  {levelOptions.map((option) => (
+                    <PixelBorder
+                      key={option.level}
+                      borderColor={option.borderColor}
+                      borderWidth={3}
+                      backgroundColor={option.color}
+                      innerPadding={0}
+                      style={styles.pixelBorderWrapper}
+                    >
+                      <TouchableOpacity
+                        style={styles.difficultyButton}
+                        onPress={() => onSelectDifficulty(option.level)}
+                      >
+                        <View style={styles.buttonContent}>
+                          <Image
+                            source={option.image}
+                            style={styles.dogImage}
+                          />
+                          <View style={styles.textContent}>
+                            <Text
+                              style={[
+                                styles.difficultyTitle,
+                                { color: option.textColor },
+                              ]}
+                            >
+                              {option.title}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.piggyBankText,
+                                { color: option.textColor },
+                              ]}
+                            >
+                              Adoption Fee: ${option.piggyBank.toLocaleString()}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    </PixelBorder>
+                  ))}
+                </View>
+              </ScrollView>
+            </PixelBorder>
+            <PixelBorder
+              borderColor="#ccc"
+              borderWidth={2}
+              backgroundColor="#f0f0f0"
+              innerPadding={0}
+            >
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </PixelBorder>
+          </View>
         </View>
-      </View>
+      </PixelBorder>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   modalContainer: {
-    width: '90%',
+    width: '95%',
     maxWidth: 500,
     maxHeight: '85%',
   },
@@ -190,13 +193,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   innerContent: {
-    padding: 30,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
     width: '100%',
     alignItems: 'center',
   },
   scrollPixelBorder: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 12,
+    paddingHorizontal: 8,
   },
   scrollContainer: {
     width: '100%',

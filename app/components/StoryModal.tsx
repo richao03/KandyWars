@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 
 interface StoryModalProps {
   visible: boolean;
@@ -117,12 +118,14 @@ export default function StoryModal({
       backdropOpacity={0.8}
       modalStyle={styles.modalContainer}
     >
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <View style={styles.header}>
-          <Image source={storyContent.dogImage} style={styles.dogImage} />
-          <Text style={styles.title}>{storyContent.title}</Text>
-        </View>
-      </Animated.View>
+      <PixelBorder borderWidth={3} borderColor="#d4a574">
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View style={styles.header}>
+            <Image source={storyContent.dogImage} style={styles.dogImage} />
+            <Text style={styles.title}>{storyContent.title}</Text>
+          </View>
+        </Animated.View>
+      </PixelBorder>
     </FastModal>
   );
 }
@@ -133,8 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#d4a574',
+
     shadowColor: '#8b4513',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,

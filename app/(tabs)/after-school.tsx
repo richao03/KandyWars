@@ -50,20 +50,6 @@ function AfterSchoolPage() {
     hasCompletedAfterSchoolTutorial,
     setHasCompletedAfterSchoolTutorial,
   } = useGame();
-
-  console.log('🌅 AfterSchoolPage: hasStudiedTonight =', hasStudiedTonight);
-
-  // Force reset hasStudiedTonight when entering after-school to prevent stale state
-  // Fixed: Remove the problematic useEffect that was causing infinite loops
-  // The hasStudiedTonight state should be managed by the game flow, not forced here
-
-  // Track hasStudiedTonight changes
-  useEffect(() => {
-    console.log(
-      '🌅 AfterSchoolPage: hasStudiedTonight changed to:',
-      hasStudiedTonight
-    );
-  }, [hasStudiedTonight]);
   const { resetDailyStats } = useDailyStats();
   const { balance, stashedAmount, adoptionFee, addAllowance, difficultyLevel } =
     useWallet();

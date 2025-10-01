@@ -1,19 +1,19 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import PixelBorder from './PixelBorder';
 
 const subjects = [
-  { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' } },
-  { name: 'Gym', color: { bg: '#e6f2ff', border: '#4169e1' } },
-  { name: 'Cooking', color: { bg: '#f6ffed', border: '#52c41a' } },
-  { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' } },
-  { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' } },
-  { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' } },
-  { name: 'Comp Sci', color: { bg: '#f0f5ff', border: '#2f54eb' } },
-  { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' } },
-  { name: 'Geography', color: { bg: '#e6f3ff', border: '#3182ce' } },
+  { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' }, icon: require('../../assets/images/emojis/math.png') },
+  { name: 'Gym', color: { bg: '#e6f2ff', border: '#4169e1' }, icon: require('../../assets/images/emojis/gym.png') },
+  { name: 'Cooking', color: { bg: '#f6ffed', border: '#52c41a' }, icon: require('../../assets/images/emojis/cooking.png') },
+  { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' }, icon: require('../../assets/images/emojis/economy.png') },
+  { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' }, icon: require('../../assets/images/emojis/logic.png') },
+  { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' }, icon: require('../../assets/images/emojis/recess.png') },
+  { name: 'Comp Sci', color: { bg: '#f0f5ff', border: '#2f54eb' }, icon: require('../../assets/images/emojis/computer.png') },
+  { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' }, icon: require('../../assets/images/emojis/art.png') },
+  { name: 'Geography', color: { bg: '#e6f3ff', border: '#3182ce' }, icon: require('../../assets/images/emojis/geography.png') },
 ];
 
 interface StudySubjectSelectorProps {
@@ -120,6 +120,13 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                 onPress={() => handleSubjectSelect(subject.name)}
                 disabled={disabled}
               >
+                <Image
+                  source={subject.icon}
+                  style={[
+                    styles.subjectIcon,
+                    disabled && styles.disabledIcon,
+                  ]}
+                />
                 <Text
                   style={[styles.subjectText, disabled && styles.disabledText]}
                 >
@@ -153,6 +160,13 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                 onPress={() => handleSubjectSelect(subject.name)}
                 disabled={disabled}
               >
+                <Image
+                  source={subject.icon}
+                  style={[
+                    styles.subjectIcon,
+                    disabled && styles.disabledIcon,
+                  ]}
+                />
                 <Text
                   style={[styles.subjectText, disabled && styles.disabledText]}
                 >
@@ -186,6 +200,13 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                 onPress={() => handleSubjectSelect(subject.name)}
                 disabled={disabled}
               >
+                <Image
+                  source={subject.icon}
+                  style={[
+                    styles.subjectIcon,
+                    disabled && styles.disabledIcon,
+                  ]}
+                />
                 <Text
                   style={[styles.subjectText, disabled && styles.disabledText]}
                 >
@@ -269,12 +290,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
+    gap: 6,
   },
   disabledSubjectButton: {
     opacity: 0.5,
   },
+  subjectIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
+  },
+  disabledIcon: {
+    opacity: 0.5,
+  },
   subjectText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#2a1845',
     fontFamily: 'PixeloidMono',

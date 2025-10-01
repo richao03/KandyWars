@@ -41,10 +41,12 @@ export default function LeaderboardScreen() {
         scoreboardService.getMostPlayedMinigames(10),
       ]);
 
-      setTopJokersFromMinigames(jokersData);
-      setTopMinigames(minigamesData);
+      setTopJokersFromMinigames(jokersData || []);
+      setTopMinigames(minigamesData || []);
     } catch (error) {
       console.error('❌ Failed to load analytics data:', error);
+      setTopJokersFromMinigames([]);
+      setTopMinigames([]);
     } finally {
       setAnalyticsLoading(false);
     }

@@ -25,7 +25,7 @@ export interface HallPass {
 interface HallPassState {
   availablePasses: HallPass[];
   unlockedPassIds: string[];
-  selectedPassId: string | null;
+  selectedPassIds: string[];
   isLoaded: boolean;
 }
 
@@ -40,7 +40,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       {
         type: 'sale_price_bonus',
         value: 10,
-        description: '+50% profit bonus on candy sales (10% × 5x multiplier)',
+        description: '+50% profit bonus on candy sales',
       },
     ],
     rarity: 'common',
@@ -194,7 +194,7 @@ const initialState: HallPassState = {
     isUnlocked: false,
   })),
   unlockedPassIds: [],
-  selectedPassId: null,
+  selectedPassIds: [],
   isLoaded: false,
 };
 
@@ -204,6 +204,23 @@ const hallPassSlice = createSlice({
   reducers: {
     initializeHallPasses: (state) => {
       state.isLoaded = true;
+
+      // Migration: convert old selectedPassId to selectedPassIds array
+      if (!state.selectedPassIds) {
+        state.selectedPassIds = [];
+      }
+      // Check if there's an old selectedPassId field (for backwards compatibility)
+      const oldState = state as any;
+      if (
+        oldState.selectedPassId &&
+        typeof oldState.selectedPassId === 'string'
+      ) {
+        if (!state.selectedPassIds.includes(oldState.selectedPassId)) {
+          state.selectedPassIds.push(oldState.selectedPassId);
+        }
+        delete oldState.selectedPassId;
+      }
+
       // Refresh Hall Pass definitions from static data while preserving unlock status
       state.availablePasses = ALL_HALL_PASSES.map((pass) => ({
         ...pass,
@@ -231,11 +248,19 @@ const hallPassSlice = createSlice({
         state.availablePasses[passIndex].unlockedAt = timestamp;
       }
     },
-    selectHallPass: (state, action: PayloadAction<string | null>) => {
-      state.selectedPassId = action.payload;
+    selectHallPass: (state, action: PayloadAction<string>) => {
+      const passId = action.payload;
+      // Toggle: add if not present, remove if present
+      if (state.selectedPassIds.includes(passId)) {
+        state.selectedPassIds = state.selectedPassIds.filter(
+          (id) => id !== passId
+        );
+      } else {
+        state.selectedPassIds.push(passId);
+      }
     },
     resetHallPassSelection: (state) => {
-      state.selectedPassId = null;
+      state.selectedPassIds = [];
     },
     resetHallPasses: () => initialState,
   },
@@ -259,21 +284,28 @@ export const selectUnlockedHallPasses = createSelector(
   (passes) => passes.filter((pass) => pass.isUnlocked)
 );
 
-// Memoized selector for selected hall pass
-export const selectSelectedHallPass = createSelector(
-  [(state: { hallPass: HallPassState }) => state.hallPass.selectedPassId,
-   selectAllHallPasses],
-  (selectedPassId, passes) => {
-    if (!selectedPassId) return null;
-    return passes.find((pass) => pass.id === selectedPassId) || null;
+// Memoized selector for selected hall passes (now returns array)
+export const selectSelectedHallPasses = createSelector(
+  [
+    (state: { hallPass: HallPassState }) => state.hallPass.selectedPassIds,
+    selectAllHallPasses,
+  ],
+  (selectedPassIds, passes) => {
+    if (!selectedPassIds || selectedPassIds.length === 0) return [];
+    return passes.filter((pass) => selectedPassIds.includes(pass.id));
   }
+);
+
+// Keep backwards compatibility - returns first selected pass (or null)
+export const selectSelectedHallPass = createSelector(
+  [selectSelectedHallPasses],
+  (selectedPasses) => selectedPasses[0] || null
 );
 
 // Memoized factory selector for finding hall pass by ID
 export const selectHallPassById = (passId: string) =>
-  createSelector(
-    [selectAllHallPasses],
-    (passes) => passes.find((pass) => pass.id === passId)
+  createSelector([selectAllHallPasses], (passes) =>
+    passes.find((pass) => pass.id === passId)
   );
 
 export const selectUnlockedPassIds = (state: { hallPass: HallPassState }) =>
@@ -284,8 +316,14 @@ export const selectIsHallPassUnlocked =
     state.hallPass.unlockedPassIds.includes(passId);
 
 export const selectSelectedHallPassEffects = createSelector(
-  [selectSelectedHallPass],
-  (selectedPass) => selectedPass?.effects || []
+  [selectSelectedHallPasses],
+  (selectedPasses) => {
+    // Combine all effects from all selected passes
+    return selectedPasses.flatMap((pass) => pass.effects);
+  }
 );
+
+export const selectSelectedPassIds = (state: { hallPass: HallPassState }) =>
+  state.hallPass.selectedPassIds;
 
 export default hallPassSlice.reducer;

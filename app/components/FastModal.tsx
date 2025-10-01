@@ -1,19 +1,19 @@
 import React, { useEffect } from 'react';
 import {
+  Dimensions,
   StyleSheet,
   TouchableWithoutFeedback,
   View,
-  Dimensions,
   ViewStyle,
 } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-  interpolate,
   Easing,
+  interpolate,
   runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -43,7 +43,10 @@ export default function FastModal({
     if (visible) {
       setIsRendered(true);
       // Show modal
-      backdropValue.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.ease) });
+      backdropValue.value = withTiming(1, {
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+      });
 
       if (animationType === 'spring') {
         animationValue.value = withSpring(1, {
@@ -54,27 +57,31 @@ export default function FastModal({
       } else if (animationType === 'slide') {
         animationValue.value = withTiming(1, {
           duration: 250,
-          easing: Easing.out(Easing.cubic)
+          easing: Easing.out(Easing.cubic),
         });
       } else {
         animationValue.value = withTiming(1, {
           duration: 200,
-          easing: Easing.out(Easing.ease)
+          easing: Easing.out(Easing.ease),
         });
       }
     } else {
       // Hide modal
       animationValue.value = withTiming(0, {
         duration: 200,
-        easing: Easing.in(Easing.ease)
+        easing: Easing.in(Easing.ease),
       });
-      backdropValue.value = withTiming(0, {
-        duration: 200,
-        easing: Easing.in(Easing.ease)
-      }, () => {
-        'worklet';
-        runOnJS(setIsRendered)(false);
-      });
+      backdropValue.value = withTiming(
+        0,
+        {
+          duration: 200,
+          easing: Easing.in(Easing.ease),
+        },
+        () => {
+          'worklet';
+          runOnJS(setIsRendered)(false);
+        }
+      );
     }
   }, [visible, animationType]);
 
@@ -104,18 +111,10 @@ export default function FastModal({
         opacity: animationValue.value,
         transform: [
           {
-            scale: interpolate(
-              animationValue.value,
-              [0, 1],
-              [0.8, 1]
-            ),
+            scale: interpolate(animationValue.value, [0, 1], [0.8, 1]),
           },
           {
-            translateY: interpolate(
-              animationValue.value,
-              [0, 1],
-              [50, 0]
-            ),
+            translateY: interpolate(animationValue.value, [0, 1], [50, 0]),
           },
         ],
       };
@@ -131,18 +130,20 @@ export default function FastModal({
   }
 
   return (
-    <View style={[StyleSheet.absoluteFillObject, { zIndex: 10002, elevation: 10002 }]} pointerEvents={visible ? 'auto' : 'none'}>
+    <View
+      style={[
+        StyleSheet.absoluteFillObject,
+        { zIndex: 10002, elevation: 10002 },
+      ]}
+      pointerEvents={visible ? 'auto' : 'none'}
+    >
       <TouchableWithoutFeedback onPress={onClose}>
         <Animated.View style={[styles.backdrop, backdropAnimatedStyle]} />
       </TouchableWithoutFeedback>
 
       <View style={styles.modalContainer} pointerEvents="box-none">
         <Animated.View
-          style={[
-            styles.modal,
-            modalStyle,
-            modalAnimatedStyle,
-          ]}
+          style={[styles.modal, modalStyle, modalAnimatedStyle]}
           pointerEvents="auto"
         >
           {children}
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
   },
   modal: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 25,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

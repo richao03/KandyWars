@@ -36,7 +36,13 @@ export default function DayStatsModal({
       backdropOpacity={0.6}
       modalStyle={styles.modal}
     >
-      <>
+      <PixelBorder
+        borderColor="#d4af37"
+        borderWidth={3}
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        innerPadding={24}
+        style={styles.titleContainer}
+      >
         <PixelBorder
           borderColor="#d4af37"
           borderWidth={3}
@@ -165,7 +171,7 @@ export default function DayStatsModal({
             <Text style={styles.cancelButtonSubtext}>Continue trading</Text>
           </TouchableOpacity>
         </PixelBorder> */}
-      </>
+      </PixelBorder>
     </FastModal>
   );
 }
@@ -174,12 +180,10 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: '#fefaf5',
     borderRadius: 24,
-    padding: 24,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
-    borderWidth: 3,
-    borderColor: '#d4a574',
+
     shadowColor: '#8b4513',
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,

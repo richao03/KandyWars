@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
+import { scoreboardService } from '../../src/services/firebase';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
 
@@ -148,6 +149,15 @@ export default function JokerSelection({
       };
 
       addJoker(jokerToAdd);
+
+      // Track joker obtained from minigame in Firebase
+      scoreboardService.trackJokerFromMinigame(
+        selectedJoker.name,
+        selectedJoker.id,
+        subject
+      ).catch(error => {
+        console.error('Failed to track joker from minigame:', error);
+      });
     }
     onComplete();
   };

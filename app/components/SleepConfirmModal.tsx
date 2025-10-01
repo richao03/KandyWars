@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
 
 interface SleepConfirmModalProps {
@@ -22,62 +23,87 @@ export default function SleepConfirmModal({
       onClose={onCancel}
       animationType="spring"
       backdropOpacity={0.7}
-      modalStyle={styles.modal}
+      modalStyle={styles.modalContainer}
     >
-      <>
-        <Image
-          source={require('../../assets/images/emojis/moon.png')}
-          style={styles.moonImage}
-        />
-        <Text style={styles.title}>Ready for Bed?</Text>
-        <Text style={styles.subtitle}>
-          End Day {currentDay} and start Day {currentDay + 1}?
-        </Text>
+      <PixelBorder
+        borderColor="#2d3561"
+        borderWidth={3}
+        backgroundColor="#1a1f36"
+        innerPadding={0}
+      >
+        <View style={styles.modalContent}>
+          <Image
+            source={require('../../assets/images/emojis/moon.png')}
+            style={styles.moonImage}
+          />
+          <Text style={styles.title}>Ready for Bed?</Text>
+          <Text style={styles.subtitle}>
+            End Day {currentDay} and start Day {currentDay + 1}?
+          </Text>
 
-        <Text style={styles.warningText}>
-          Make sure you've done everything you wanted today!
-        </Text>
+          <Text style={styles.warningText}>
+            Make sure you've done everything you wanted today!
+          </Text>
 
-        <View style={styles.checklist}>
-          <Text style={styles.checklistItem}>• Sold all your candy?</Text>
-          <Text style={styles.checklistItem}>• Stashed your money?</Text>
-          <Text style={styles.checklistItem}>• Studied your subjects?</Text>
-          <Text style={styles.checklistItem}>• Visited the deli?</Text>
+          <PixelBorder
+            borderColor="rgba(255, 255, 255, 0.3)"
+            borderWidth={3}
+            backgroundColor="rgba(255, 255, 255, 0.1)"
+            innerPadding={0}
+            style={styles.checklistBorder}
+          >
+            <View style={styles.checklist}>
+              <Text style={styles.checklistItem}>• Sold all your candy?</Text>
+              <Text style={styles.checklistItem}>• Stashed your money?</Text>
+              <Text style={styles.checklistItem}>• Studied your subjects?</Text>
+              <Text style={styles.checklistItem}>• Visited the deli?</Text>
+            </View>
+          </PixelBorder>
+
+          <View style={styles.buttonContainer}>
+            <PixelBorder
+              borderColor="#3a7bc8"
+              borderWidth={3}
+              backgroundColor="#4a90e2"
+              innerPadding={0}
+            >
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={onConfirm}
+              >
+                <TextWithEmojis style={styles.confirmButtonText}>
+                  Yes, Go to Sleep
+                </TextWithEmojis>
+              </TouchableOpacity>
+            </PixelBorder>
+
+            <PixelBorder
+              borderColor="rgba(255, 255, 255, 0.3)"
+              borderWidth={3}
+              backgroundColor="rgba(255, 255, 255, 0.2)"
+              innerPadding={0}
+            >
+              <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+                <TextWithEmojis style={styles.cancelButtonText}>
+                  Not Yet!
+                </TextWithEmojis>
+              </TouchableOpacity>
+            </PixelBorder>
+          </View>
         </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.confirmButton} onPress={onConfirm}>
-            <TextWithEmojis style={styles.confirmButtonText}>
-              Yes, Go to Sleep
-            </TextWithEmojis>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <TextWithEmojis style={styles.cancelButtonText}>
-              Not Yet!
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </View>
-      </>
+      </PixelBorder>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
-  modal: {
-    backgroundColor: '#1a1f36', // Night-time dark blue
-    borderRadius: 24,
-    padding: 24,
+  modalContainer: {
     width: '100%',
     maxWidth: 380,
     alignSelf: 'center',
-    borderWidth: 3,
-    borderColor: '#2d3561', // Darker blue border
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+  },
+  modalContent: {
+    padding: 24,
   },
   moonImage: {
     width: 48,
@@ -91,6 +117,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     color: '#ffffff',
+    borderRadius: 20,
     fontFamily: 'PixeloidMono',
     textShadowColor: '#4a90e2',
     textShadowOffset: { width: 1, height: 1 },
@@ -111,13 +138,11 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontFamily: 'PixeloidMono',
   },
-  checklist: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 16,
+  checklistBorder: {
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  checklist: {
+    padding: 16,
   },
   checklistItem: {
     fontSize: 15,
@@ -129,17 +154,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   confirmButton: {
-    backgroundColor: '#4a90e2',
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: '#3a7bc8',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
   },
   confirmButtonText: {
     fontSize: 18,
@@ -149,12 +165,8 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   cancelButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   cancelButtonText: {
     fontSize: 18,
