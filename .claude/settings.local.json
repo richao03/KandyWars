@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(npx ts-prune:*)"
+      "Bash(npx ts-prune:*)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

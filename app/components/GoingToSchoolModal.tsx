@@ -95,6 +95,7 @@ const styles = StyleSheet.create({
   },
   allowanceText: {
     paddingHorizontal: 8,
+    marginBottom: 12,
     fontSize: 18,
     fontWeight: '600',
     color: '#2E8B57', // Sea green for money/positive message

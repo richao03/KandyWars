@@ -27,6 +27,7 @@ interface HallPassState {
   unlockedPassIds: string[];
   selectedPassIds: string[];
   isLoaded: boolean;
+  newlyUnlockedPassIds: string[]; // Hall passes unlocked in the current playthrough
 }
 
 // Define all possible Hall Passes
@@ -196,6 +197,7 @@ const initialState: HallPassState = {
   unlockedPassIds: [],
   selectedPassIds: [],
   isLoaded: false,
+  newlyUnlockedPassIds: [],
 };
 
 const hallPassSlice = createSlice({
@@ -238,6 +240,10 @@ const hallPassSlice = createSlice({
 
       if (!state.unlockedPassIds.includes(passId)) {
         state.unlockedPassIds.push(passId);
+        // Track as newly unlocked in this playthrough
+        if (!state.newlyUnlockedPassIds.includes(passId)) {
+          state.newlyUnlockedPassIds.push(passId);
+        }
       }
 
       const passIndex = state.availablePasses.findIndex(
@@ -262,6 +268,9 @@ const hallPassSlice = createSlice({
     resetHallPassSelection: (state) => {
       state.selectedPassIds = [];
     },
+    clearNewlyUnlockedPasses: (state) => {
+      state.newlyUnlockedPassIds = [];
+    },
     resetHallPasses: () => initialState,
   },
 });
@@ -271,6 +280,7 @@ export const {
   unlockHallPass,
   selectHallPass,
   resetHallPassSelection,
+  clearNewlyUnlockedPasses,
   resetHallPasses,
 } = hallPassSlice.actions;
 
@@ -282,6 +292,17 @@ export const selectAllHallPasses = (state: { hallPass: HallPassState }) =>
 export const selectUnlockedHallPasses = createSelector(
   [selectAllHallPasses],
   (passes) => passes.filter((pass) => pass.isUnlocked)
+);
+
+// Selector for newly unlocked passes in current playthrough
+export const selectNewlyUnlockedHallPasses = createSelector(
+  [
+    (state: { hallPass: HallPassState }) => state.hallPass.newlyUnlockedPassIds || [],
+    selectAllHallPasses,
+  ],
+  (newlyUnlockedIds, passes) => {
+    return passes.filter((pass) => newlyUnlockedIds.includes(pass.id));
+  }
 );
 
 // Memoized selector for selected hall passes (now returns array)

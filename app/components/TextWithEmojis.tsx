@@ -36,10 +36,7 @@ export const TextWithEmojis: React.FC<TextWithEmojisProps> = ({
     : style || {};
 
   // Create updated style with custom textSize if provided
-  const updatedStyle = textSize
-    ? { ...flatStyle, fontSize: textSize }
-    : style;
-
+  const updatedStyle = textSize ? { ...flatStyle, fontSize: textSize } : style;
   // Check if text contains any mappable emojis
   const hasEmojis = Object.keys(EMOJI_TO_IMAGE_MAP).some((emoji) =>
     children.includes(emoji)

@@ -90,9 +90,6 @@ export class JokerEffectEngine {
   addJoker(joker: StandardizedJoker, currentPeriod: number) {
     const uniqueKey = `${joker.id}_${this.nextInstanceId++}`;
     this.activeEffects.set(uniqueKey, { joker, activatedAt: currentPeriod });
-    console.log(
-      `🔧 JokerEffectEngine: Added "${joker.name}" with key "${uniqueKey}". Total effects: ${this.activeEffects.size}`
-    );
   }
 
   // Remove a joker from active effects
@@ -169,13 +166,6 @@ export class JokerEffectEngine {
     let result = baseValue;
 
     if (target === 'inventory_limit') {
-      console.log(
-        `🔧 JokerEffectEngine: Processing ${effects.length} effects for ${target}`
-      );
-      console.log(
-        `   Effects found:`,
-        effects.map((e) => `${e.operation} ${e.amount}`)
-      );
     }
 
     // Apply operations in order: set -> add -> multiply
@@ -485,7 +475,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
         target: 'inventory_limit',
         operation: 'add',
         amount: 15,
-        duration: 'one-time',
+        duration: 'persistent',
       },
     ],
   },

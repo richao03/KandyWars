@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
 
 interface GameEndModalProps {
@@ -102,70 +103,123 @@ export default function GameEndModal({
       backdropOpacity={0.8}
       modalStyle={styles.modalContent}
     >
-      <View style={styles.container}>
-        <Text style={styles.title}>
-          {gameResult === 'won' ? '🎉 CONGRATULATIONS! 🎉' : '💸 GAME OVER 💸'}
-        </Text>
+      <PixelBorder
+        borderColor="#FFD700"
+        borderWidth={4}
+        backgroundColor="#1a0d2e"
+        innerPadding={0}
+      >
+        <View style={styles.container}>
+          <TextWithEmojis style={styles.title} imageSize={24}>
+            {gameResult === 'won'
+              ? '🎉 CONGRATULATIONS! 🎉'
+              : '💸 GAME OVER 💸'}
+          </TextWithEmojis>
 
-        <Image source={dogImage} style={styles.dogImage} />
+          <PixelBorder
+            borderColor="#FFD700"
+            borderWidth={3}
+            backgroundColor="transparent"
+            innerPadding={0}
+            borderRadius={10}
+            style={styles.dogImageBorder}
+          >
+            <Image source={dogImage} style={styles.dogImage} />
+          </PixelBorder>
 
-        <Text style={styles.subtitle}>
-          {gameResult === 'won'
-            ? `You paid off all your debt and adapted ${dogBreed}`
-            : `${dogBreed} has gone with another loving family`}
-        </Text>
+          <Text style={styles.subtitle}>
+            {gameResult === 'won'
+              ? `You paid off all your debt and adapted ${dogBreed}`
+              : `${dogBreed} has gone with another loving family`}
+          </Text>
 
-        <View style={styles.scoreContainer}>
-          <Text style={styles.scoreTitle}>NET FINAL SCORE</Text>
-          <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
+          <PixelBorder
+            borderColor="#FFD700"
+            borderWidth={3}
+            backgroundColor="rgba(255, 255, 255, 0.1)"
+            innerPadding={16}
+            style={styles.scoreContainerBorder}
+          >
+            <View style={styles.scoreContainer}>
+              <Text style={styles.scoreTitle}>NET FINAL SCORE</Text>
+              <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
 
-          <View style={styles.breakdown}>
-            <TextWithEmojis style={styles.breakdownText}>
-              💰 Balance: ${balance.toFixed(2)}
-            </TextWithEmojis>
-            <Text style={styles.breakdownText}>
-              🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
-              {Math.abs(stashedAmount).toFixed(2)}
-            </Text>
-            <Text style={styles.breakdownText}>
-              {gameResult === 'won'
-                ? '✅ All debt paid off!'
-                : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
-            </Text>
+              <View style={styles.breakdown}>
+                <TextWithEmojis style={styles.breakdownText} imageSize={14}>
+                  💰 Balance: ${balance.toFixed(2)}
+                </TextWithEmojis>
+                <TextWithEmojis style={styles.breakdownText} imageSize={14}>
+                  🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
+                  {Math.abs(stashedAmount).toFixed(2)}
+                </TextWithEmojis>
+                <TextWithEmojis style={styles.breakdownText} imageSize={14}>
+                  {gameResult === 'won'
+                    ? '✅ All debt paid off!'
+                    : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
+                </TextWithEmojis>
+              </View>
+            </View>
+          </PixelBorder>
+
+          <TextWithEmojis style={styles.scoreboardText} imageSize={14}>
+            🏆 Your score has been submitted to the leaderboard!
+          </TextWithEmojis>
+
+          {unlockedHallPasses.length > 0 && (
+            <PixelBorder
+              borderColor="#FFD700"
+              borderWidth={3}
+              backgroundColor="rgba(255, 215, 0, 0.1)"
+              innerPadding={12}
+              style={styles.hallPassContainerBorder}
+            >
+              <View style={styles.hallPassContainer}>
+                <TextWithEmojis style={styles.hallPassTitle} imageSize={16}>
+                  🎖️ Hall Passes Unlocked!
+                </TextWithEmojis>
+                {unlockedHallPasses.map((passId, index) => (
+                  <TextWithEmojis
+                    key={index}
+                    style={styles.hallPassText}
+                    imageSize={14}
+                  >
+                    ✨ {passId}
+                  </TextWithEmojis>
+                ))}
+              </View>
+            </PixelBorder>
+          )}
+
+          <View style={styles.buttonContainer}>
+            <PixelBorder
+              borderColor="#4CAF50"
+              borderWidth={3}
+              backgroundColor="#4CAF50"
+              innerPadding={0}
+              style={styles.buttonBorder}
+            >
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleViewScoreboard}
+              >
+                <Text style={styles.buttonText}>View Leaderboard</Text>
+              </TouchableOpacity>
+            </PixelBorder>
+
+            <PixelBorder
+              borderColor="#FF6B6B"
+              borderWidth={3}
+              backgroundColor="#FF6B6B"
+              innerPadding={0}
+              style={styles.buttonBorder}
+            >
+              <TouchableOpacity style={styles.button} onPress={onRestart}>
+                <Text style={styles.buttonText}>Play Again</Text>
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
         </View>
-
-        <Text style={styles.scoreboardText}>
-          🏆 Your score has been submitted to the leaderboard!
-        </Text>
-
-        {unlockedHallPasses.length > 0 && (
-          <View style={styles.hallPassContainer}>
-            <Text style={styles.hallPassTitle}>🎖️ Hall Passes Unlocked!</Text>
-            {unlockedHallPasses.map((passId, index) => (
-              <Text key={index} style={styles.hallPassText}>
-                ✨ {passId}
-              </Text>
-            ))}
-          </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleViewScoreboard}
-          >
-            <Text style={styles.buttonText}>View Leaderboard</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.restartButton]}
-            onPress={onRestart}
-          >
-            <Text style={styles.buttonText}>Play Again</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </PixelBorder>
     </FastModal>
   );
 }
@@ -174,15 +228,10 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '90%',
     maxWidth: 400,
-    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: '#1a0d2e',
-    borderWidth: 2,
-    borderColor: '#FFD700',
   },
   container: {
-    padding: 30,
-    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
   },
   title: {
@@ -190,15 +239,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFD700',
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
+    fontFamily: 'PixeloidMono',
+  },
+  dogImageBorder: {
+    marginBottom: 16,
   },
   dogImage: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    marginBottom: 15,
-    borderWidth: 3,
-    borderColor: '#FFD700',
   },
   dogMessage: {
     fontSize: 16,
@@ -208,18 +257,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     fontWeight: '600',
     lineHeight: 22,
+    fontFamily: 'PixeloidMono',
   },
   subtitle: {
     fontSize: 16,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    fontFamily: 'PixeloidMono',
+  },
+  scoreContainerBorder: {
+    width: '100%',
+    marginBottom: 16,
   },
   scoreContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
     width: '100%',
     alignItems: 'center',
   },
@@ -228,12 +279,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFD700',
     marginBottom: 10,
+    fontFamily: 'PixeloidMono',
   },
   finalScore: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#00FF00',
-    marginBottom: 15,
+    marginBottom: 12,
+    fontFamily: 'PixeloidMono',
   },
   breakdown: {
     width: '100%',
@@ -242,57 +295,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 4,
+    fontFamily: 'PixeloidMono',
   },
   scoreboardText: {
     fontSize: 14,
     color: '#90EE90',
     textAlign: 'center',
-    marginBottom: 20,
-    fontStyle: 'italic',
+    marginBottom: 16,
+    fontFamily: 'PixeloidMono',
+  },
+  hallPassContainerBorder: {
+    marginBottom: 16,
   },
   hallPassContainer: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#FFD700',
+    alignItems: 'center',
   },
   hallPassTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFD700',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    fontFamily: 'PixeloidMono',
   },
   hallPassText: {
     fontSize: 14,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 4,
+    fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 15,
+    gap: 12,
+  },
+  buttonBorder: {
+    flex: 1,
   },
   button: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 25,
-    elevation: 3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  restartButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: 'transparent',
   },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+    fontFamily: 'PixeloidMono',
   },
 });

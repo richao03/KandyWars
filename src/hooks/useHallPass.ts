@@ -2,10 +2,12 @@ import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   HallPassEffect,
+  clearNewlyUnlockedPasses,
   initializeHallPasses,
   resetHallPassSelection,
   selectAllHallPasses,
   selectHallPass,
+  selectNewlyUnlockedHallPasses,
   selectSelectedHallPass,
   selectSelectedHallPasses,
   selectSelectedHallPassEffects,
@@ -18,6 +20,7 @@ export const useHallPass = () => {
   const dispatch = useAppDispatch();
   const allPasses = useAppSelector(selectAllHallPasses);
   const unlockedPasses = useAppSelector(selectUnlockedHallPasses);
+  const newlyUnlockedPasses = useAppSelector(selectNewlyUnlockedHallPasses);
   const selectedPass = useAppSelector(selectSelectedHallPass); // For backwards compatibility
   const selectedPasses = useAppSelector(selectSelectedHallPasses);
   const selectedPassIds = useAppSelector(selectSelectedPassIds);
@@ -53,6 +56,10 @@ export const useHallPass = () => {
 
   const resetSelection = useCallback(() => {
     dispatch(resetHallPassSelection());
+  }, [dispatch]);
+
+  const clearNewlyUnlocked = useCallback(() => {
+    dispatch(clearNewlyUnlockedPasses());
   }, [dispatch]);
 
   const isPassUnlocked = useCallback(
@@ -201,6 +208,7 @@ export const useHallPass = () => {
     // State
     allPasses,
     unlockedPasses,
+    newlyUnlockedPasses,
     selectedPass, // For backwards compatibility
     selectedPasses,
     selectedPassIds,
@@ -211,6 +219,7 @@ export const useHallPass = () => {
     unlockPass,
     selectPass,
     resetSelection,
+    clearNewlyUnlocked,
     isPassUnlocked,
 
     // Effect getters

@@ -1,16 +1,30 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+interface BestSale {
+  candyName: string;
+  quantity: number;
+  profit: number;
+  period: number;
+}
+
+interface CandySoldCount {
+  [candyName: string]: number;
+}
+
 interface DayStats {
   day: number;
   revenue: number;
   candiesSold: number;
   expenses: number;
   profit: number;
+  allowance: number;
 }
 
 interface DailyStatsState {
   dailyStats: DayStats[];
   currentDayStats: DayStats | null;
+  bestSale: BestSale | null;
+  candySoldCounts: CandySoldCount;
 }
 
 const initialState: DailyStatsState = {
@@ -21,7 +35,10 @@ const initialState: DailyStatsState = {
     candiesSold: 0,
     expenses: 0,
     profit: 0,
+    allowance: 0,
   },
+  bestSale: null,
+  candySoldCounts: {},
 };
 
 const dailyStatsSlice = createSlice({
@@ -52,6 +69,7 @@ const dailyStatsSlice = createSlice({
           candiesSold: 0,
           expenses: 0,
           profit: 0,
+          allowance: 0,
           ...action.payload,
         };
       }
@@ -59,6 +77,17 @@ const dailyStatsSlice = createSlice({
     clearDailyStats: (state) => {
       state.dailyStats = [];
       state.currentDayStats = null;
+    },
+    recordSale: (state, action: PayloadAction<{ candyName: string; quantity: number; profit: number; period: number }>) => {
+      const { candyName, quantity, profit, period } = action.payload;
+
+      // Track best sale
+      if (!state.bestSale || profit > state.bestSale.profit) {
+        state.bestSale = { candyName, quantity, profit, period };
+      }
+
+      // Track candy sold counts
+      state.candySoldCounts[candyName] = (state.candySoldCounts[candyName] || 0) + quantity;
     },
     resetDailyStats: () => initialState,
   },
@@ -70,6 +99,7 @@ export const {
   setCurrentDayStats,
   updateCurrentDayStats,
   clearDailyStats,
+  recordSale,
   resetDailyStats,
 } = dailyStatsSlice.actions;
 

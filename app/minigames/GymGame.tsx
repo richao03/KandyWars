@@ -792,6 +792,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 40,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
   },
   leaveButtonText: {

@@ -24,6 +24,7 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useWallet } from '../../src/hooks/useWallet';
+import { forceSave } from '../../src/store/store';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
@@ -50,7 +51,7 @@ function AfterSchoolPage() {
     hasCompletedAfterSchoolTutorial,
     setHasCompletedAfterSchoolTutorial,
   } = useGame();
-  const { resetDailyStats } = useDailyStats();
+  const { resetDailyStats, addAllowance: addAllowanceToStats } = useDailyStats();
   const { balance, stashedAmount, adoptionFee, addAllowance, difficultyLevel } =
     useWallet();
   const { jokers } = useJokers();
@@ -59,7 +60,7 @@ function AfterSchoolPage() {
   const { checkUnlockRequirements } = useHallPass();
   const { hasPlayedAllMinigames } = useMinigameTracking();
   const { totalCandiesSold } = useCandySales();
-  const { start, copilotEvents } = useCopilot();
+  const { start, copilotEvents, eventEmitter } = useCopilot();
   const [tutorialStarted, setTutorialStarted] = useState(false);
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
@@ -100,7 +101,24 @@ function AfterSchoolPage() {
 
       // Check for newly unlocked Hall Passes
       try {
-        const unlocked = checkUnlockRequirements();
+        // Construct game stats for Hall Pass unlock checking
+        const gameStats = {
+          completions: 1, // This is the first completion (can be tracked in future with Firebase)
+          finalProfit: finalScore, // Total profit from this game
+          difficulty: difficultyLevel,
+          completionTime: periodCount, // Number of periods played
+          perfectAttendance: periodCount >= 40, // 5 days * 8 periods
+          totalCandySold: totalCandiesSold,
+          // These could be calculated if needed:
+          // studyStreak: hasStudiedEveryNight,
+          // noJokers: jokers.length === 0,
+        };
+
+        const minigameTrackingData = {
+          hasPlayedAllMinigames,
+        };
+
+        const unlocked = checkUnlockRequirements(gameStats, minigameTrackingData);
         console.log('🎓 Newly unlocked Hall Passes:', unlocked);
         setUnlockedHallPasses(unlocked);
       } catch (error) {
@@ -146,37 +164,28 @@ function AfterSchoolPage() {
     }
   }, [day, start, tutorialStarted, hasCompletedAfterSchoolTutorial]);
 
-  // Mark tutorial as completed when it finishes
+  // Mark tutorial as completed when it finishes or is skipped
   useEffect(() => {
-    if (copilotEvents) {
+    if (eventEmitter && copilotEvents) {
       const handleComplete = () => {
         console.log('🎓 After-school tutorial completed');
         setHasCompletedAfterSchoolTutorial(true);
+        // Force immediate save to AsyncStorage
+        setTimeout(() => {
+          forceSave();
+          console.log('💾 Tutorial completion saved to AsyncStorage');
+        }, 100);
       };
 
-      // Listen for tutorial completion
-      const stopListener = () => handleComplete();
-
-      // Note: copilotEvents might not have an eventEmitter exposed,
-      // so we'll mark as complete when tutorial is started and user progresses beyond day 1
-      if (tutorialStarted && day > 1) {
-        handleComplete();
-      }
-
+      // Listen for both STOP (finish) and SKIP events
+      eventEmitter.on(copilotEvents.STOP, handleComplete);
+      eventEmitter.on(copilotEvents.SKIP, handleComplete);
       return () => {
-        // Cleanup if needed
+        eventEmitter.off(copilotEvents.STOP, handleComplete);
+        eventEmitter.off(copilotEvents.SKIP, handleComplete);
       };
     }
-  }, [copilotEvents, tutorialStarted, day, setHasCompletedAfterSchoolTutorial]);
-
-  // Handle copilot events
-  useEffect(() => {
-    if (!copilotEvents) return;
-
-    copilotEvents.on('stop', () => {
-      setTutorialStarted(true); // Prevent restart
-    });
-  }, [copilotEvents]);
+  }, [eventEmitter, copilotEvents, setHasCompletedAfterSchoolTutorial]);
 
   const handleStudy = () => {
     if (hasStudiedTonight) {
@@ -231,6 +240,9 @@ function AfterSchoolPage() {
     const receivedAllowance = addAllowance(jokers, periodCount);
     console.log('🌙 AfterSchool: Allowance received:', receivedAllowance);
     setAllowanceAmount(receivedAllowance);
+
+    // Track allowance in daily stats
+    addAllowanceToStats(receivedAllowance);
 
     setGoingToSchoolModalVisible(true);
   };

@@ -9,6 +9,11 @@ import {
   selectComputedEffects
 } from '../store/slices/jokerSlice';
 
+// Global state to prevent multiple simultaneous recomputations across all hook instances
+let globalRecomputeInProgress = false;
+let globalRecomputeTimer: NodeJS.Timeout | null = null;
+let lastRecomputeKey = '';
+
 /**
  * Hook that automatically recomputes joker effects when relevant state changes.
  * This centralizes all joker effect calculations in Redux to avoid repeated computations.
@@ -44,30 +49,63 @@ export const useComputedJokerEffects = () => {
     }
   }, [computedEffects]);
 
-  // Recompute effects when any relevant state changes (excluding computedEffects to prevent loops)
-  // Use a ref to track if we're already recomputing to prevent duplicate calculations
-  const isRecomputing = useRef(false);
-
+  // Recompute effects when any relevant state changes
   useEffect(() => {
-    try {
-      // Only recompute if we have the computed effects structure in place and not already recomputing
-      if (computedEffects && !isRecomputing.current) {
-        isRecomputing.current = true;
+    if (!computedEffects) return;
+
+    // Create a unique key for this state combination
+    const stateKey = `${jokers.length}-${activeEffects.length}-${periodCount}-${baseInventoryLimit}`;
+
+    // Skip if we already processed this exact state
+    if (stateKey === lastRecomputeKey) {
+      return;
+    }
+
+    // Skip if a recompute is already in progress
+    if (globalRecomputeInProgress) {
+      return;
+    }
+
+    // Clear any pending timer and schedule a new recompute
+    if (globalRecomputeTimer) {
+      clearTimeout(globalRecomputeTimer);
+    }
+
+    // Debounce: wait 50ms for state to settle before recomputing
+    globalRecomputeTimer = setTimeout(() => {
+      try {
+        // Double-check we're not already computing
+        if (globalRecomputeInProgress) return;
+
+        globalRecomputeInProgress = true;
+        lastRecomputeKey = stateKey;
+
         console.log('🔄 Recomputing joker effects due to state change');
         dispatch(recomputeJokerEffects({
           baseInventoryLimit,
           periodCount
         }));
-        // Reset flag after a short delay to allow the dispatch to complete
+
+        // Reset after a short delay
         setTimeout(() => {
-          isRecomputing.current = false;
-        }, 100);
+          globalRecomputeInProgress = false;
+          globalRecomputeTimer = null;
+        }, 50);
+      } catch (error) {
+        console.error('❌ Error in joker recomputation:', error);
+        globalRecomputeInProgress = false;
+        globalRecomputeTimer = null;
       }
-    } catch (error) {
-      console.error('❌ Error in joker recomputation:', error);
-      isRecomputing.current = false;
-    }
-  }, [dispatch, jokers, activeEffects, periodCount, baseInventoryLimit]); // Removed computedEffects from deps
+    }, 50);
+
+    // Cleanup function
+    return () => {
+      if (globalRecomputeTimer) {
+        clearTimeout(globalRecomputeTimer);
+        globalRecomputeTimer = null;
+      }
+    };
+  }, [dispatch, jokers.length, activeEffects.length, periodCount, baseInventoryLimit, computedEffects]);
 
   // Return selectors for easy access to computed effects
   return {

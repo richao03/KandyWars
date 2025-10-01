@@ -6,6 +6,7 @@ import {
   setCurrentDayStats,
   updateCurrentDayStats,
   clearDailyStats,
+  recordSale,
   resetDailyStats,
   selectTotalProfit,
 } from '../store/slices/dailyStatsSlice';
@@ -44,17 +45,27 @@ export const useDailyStats = () => {
   }, [dispatch]);
 
   const getTotalStats = useCallback(() => {
-    const currentDay = dailyStatsState.currentDayStats || { profit: 0, expenses: 0, candiesSold: 0 };
-    console.log('📊 useDailyStats getTotalStats called, currentDay:', currentDay);
-    const result = {
-      profit: currentDay.profit || 0,
-      spent: currentDay.expenses || 0,
-      candiesSold: currentDay.candiesSold || 0,
-      netGain: (currentDay.profit || 0) - (currentDay.expenses || 0),
-    };
-    console.log('📊 useDailyStats getTotalStats returning:', result);
+    // Sum up ALL days including current day
+    const allDays = [...dailyStatsState.dailyStats];
+    if (dailyStatsState.currentDayStats) {
+      // Add current day if not already in array
+      const currentDayExists = allDays.some(d => d.day === dailyStatsState.currentDayStats!.day);
+      if (!currentDayExists) {
+        allDays.push(dailyStatsState.currentDayStats);
+      }
+    }
+
+    const result = allDays.reduce((acc, day) => ({
+      profit: acc.profit + (day.profit || 0),
+      spent: acc.spent + (day.expenses || 0),
+      candiesSold: acc.candiesSold + (day.candiesSold || 0),
+      netGain: acc.netGain + ((day.profit || 0) - (day.expenses || 0)),
+      allowance: acc.allowance + (day.allowance || 0),
+    }), { profit: 0, spent: 0, candiesSold: 0, netGain: 0, allowance: 0 });
+
+    console.log('📊 useDailyStats getTotalStats - all days:', allDays, 'result:', result);
     return result;
-  }, [dailyStatsState.currentDayStats]);
+  }, [dailyStatsState.dailyStats, dailyStatsState.currentDayStats]);
 
   const addProfit = useCallback((amount: number) => {
     dispatch(updateCurrentDayStats({ profit: (dailyStatsState.currentDayStats?.profit || 0) + amount }));
@@ -68,6 +79,10 @@ export const useDailyStats = () => {
     dispatch(updateCurrentDayStats({ candiesSold: (dailyStatsState.currentDayStats?.candiesSold || 0) + quantity }));
   }, [dispatch, dailyStatsState.currentDayStats]);
 
+  const addAllowance = useCallback((amount: number) => {
+    dispatch(updateCurrentDayStats({ allowance: (dailyStatsState.currentDayStats?.allowance || 0) + amount }));
+  }, [dispatch, dailyStatsState.currentDayStats]);
+
   const setStartingMoney = useCallback((amount: number) => {
     // This could be stored in a separate field if needed
     console.log('setStartingMoney called with:', amount);
@@ -77,10 +92,31 @@ export const useDailyStats = () => {
     return dailyStatsState.dailyStats.find(s => s.day === day);
   }, [dailyStatsState.dailyStats]);
 
+  const recordSaleAction = useCallback((candyName: string, quantity: number, profit: number, period: number) => {
+    dispatch(recordSale({ candyName, quantity, profit, period }));
+  }, [dispatch]);
+
+  const getBestSale = useCallback(() => {
+    return dailyStatsState.bestSale;
+  }, [dailyStatsState.bestSale]);
+
+  const getMostSoldCandy = useCallback(() => {
+    const counts = dailyStatsState.candySoldCounts;
+    if (Object.keys(counts).length === 0) return null;
+
+    const mostSold = Object.entries(counts).reduce((max, [candy, count]) =>
+      count > max.count ? { candy, count } : max
+    , { candy: '', count: 0 });
+
+    return mostSold.count > 0 ? mostSold : null;
+  }, [dailyStatsState.candySoldCounts]);
+
   return {
     dailyStats: dailyStatsState.dailyStats,
     currentDayStats: dailyStatsState.currentDayStats,
     totalProfit,
+    bestSale: dailyStatsState.bestSale,
+    candySoldCounts: dailyStatsState.candySoldCounts,
     updateDailyStats,
     addDayStatsEntry,
     updateCurrentDay,
@@ -92,7 +128,11 @@ export const useDailyStats = () => {
     addProfit,
     addSpent,
     addCandySold,
+    addAllowance,
     setStartingMoney,
     getStatsByDay,
+    recordSale: recordSaleAction,
+    getBestSale,
+    getMostSoldCandy,
   };
 };

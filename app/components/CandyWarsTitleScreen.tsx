@@ -193,13 +193,6 @@ export default function CandyWarsTitleScreen({
     }
   };
 
-  console.log(
-    '🎬 CandyWarsTitleScreen: Rendering - showButtons:',
-    showButtons,
-    'animationComplete:',
-    animationComplete
-  );
-
   return (
     <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
       <Animated.View

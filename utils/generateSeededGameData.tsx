@@ -85,7 +85,7 @@ const allJokers = [
   'Sneak',
 ];
 
-export function generateSeededGameData(seed: string, totalPeriods = 80) {
+export function generateSeededGameData(seed: string, totalPeriods = 40) {
   const rng = seedrandom(seed);
 
   // Price table
@@ -329,90 +329,57 @@ export function generateSeededGameData(seed: string, totalPeriods = 80) {
 
   const periodEvents: SpecialEventEffect[] = [];
 
-  // Always add the test event for library period 3 cheap gum
-  periodEvents.push({
-    period: 2,
-    description: 'Bullying is an epidemic',
-    effect: 'LOSE_MONEY',
-    category: 'bad',
-    heading: 'Give me your lunch money!',
-    title: 'A bully took all your money',
-    subtitle: 'Better hit the weights to get your weight up!',
-    hint: '👀 Rumor is someone is out looking for you....👀',
-    backgroundImage: 'bully',
-  });
-
-  // periodEvents.push({
-  //   period: 2,
-  //   description: 'Found some money!',
-  //   effect: 'FOUND_MONEY',
-  //   location: 'home room',
-  //   category: 'good',
-  //   heading: '🍀 Lucky!',
-  //   title: 'You found some money laying around!',
-  //   dollarAmount: 50,
-  //   subtitle: 'Street rules: Finders Keepers',
-  //   hint: '👀 Someone said they left some money in the homeroom... 👀',
-  //   backgroundImage: require('../assets/images/foundmoney.png'),
-  // });
-  periodEvents.push({
-    period: 2,
-    description: 'Skittles are popular in the school yard!',
-    candy: 'Skittles',
-    effect: 'PRICE_SPIKE',
-    multiplier: 5,
-    category: 'neutral',
-    heading: 'Hut Hut Price HIKE!!',
-    title: 'Skittles price rockets!',
-    subtitle:
-      'The football team wants to eat Skittles like their fravorite NFL running back',
-    backgroundImage: 'pricehike',
-    hint: '👀 psst, come to the school yard next period... make sure you bring skittles... lots of them... 👀',
-  });
-
-  // Generate 10-15 random events
-  // Ensure at least 2 events per day (5 days = 10 events minimum)
+  // Calculate number of school days (8 periods per day)
   const numDays = Math.floor(totalPeriods / 8);
-  const minEventsPerDay = 2;
-  const minTotalEvents = numDays * minEventsPerDay;
-  const targetEventCount = Math.max(minTotalEvents, Math.floor(rng() * 6) + 10); // At least 2 per day, or 10-15 events total
 
-  // Exclude lunch periods (period % 8 === 4, which is the 5th period of each day)
-  // and periods that already have events
-  const availablePeriods = Array.from(
-    { length: totalPeriods },
-    (_, i) => i
-  ).filter(
-    (period) =>
-      !periodEvents.some((e) => e.period === period) && period % 8 !== 4 // Exclude lunch period (5th period of each day)
-  );
+  // Generate 2-6 events per day
+  for (let day = 0; day < numDays; day++) {
+    const eventsThisDay = Math.floor(rng() * 5) + 2; // Random between 2 and 6
+    const dayStartPeriod = day * 8;
+    const dayEndPeriod = dayStartPeriod + 8;
 
-  // Shuffle available periods
-  for (let i = availablePeriods.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [availablePeriods[i], availablePeriods[j]] = [
-      availablePeriods[j],
-      availablePeriods[i],
-    ];
-  }
+    // Get available periods for this day (exclude lunch period which is period 4 of each day)
+    const availablePeriodsThisDay = Array.from(
+      { length: 8 },
+      (_, i) => dayStartPeriod + i
+    ).filter(
+      (period) =>
+        period % 8 !== 4 && // Exclude lunch period (5th period, index 4)
+        !periodEvents.some((e) => e.period === period) // Exclude already used periods
+    );
 
-  // Generate events for the first targetEventCount periods
-  for (
-    let i = 0;
-    i < Math.min(targetEventCount, availablePeriods.length);
-    i++
-  ) {
-    const period = availablePeriods[i];
-    const template = eventTemplates[Math.floor(rng() * eventTemplates.length)];
-    const event = { ...template(), period };
-
-    // Only add generic hint for events without location if they don't have one
-    if (!event.location && !event.hint && period > 0) {
-      event.hint = `You overhear students talking about something happening next period...`;
+    // Shuffle available periods for this day
+    for (let i = availablePeriodsThisDay.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [availablePeriodsThisDay[i], availablePeriodsThisDay[j]] = [
+        availablePeriodsThisDay[j],
+        availablePeriodsThisDay[i],
+      ];
     }
 
-    periodEvents.push(event);
+    // Add events for this day
+    for (let i = 0; i < Math.min(eventsThisDay, availablePeriodsThisDay.length); i++) {
+      const period = availablePeriodsThisDay[i];
+      const template = eventTemplates[Math.floor(rng() * eventTemplates.length)];
+      const event = { ...template(), period };
+
+      // Only add generic hint for events without location if they don't have one
+      if (!event.location && !event.hint && period > 0) {
+        event.hint = `You overhear students talking about something happening next period...`;
+      }
+
+      console.log(`📅 Generated event for day ${day}, period ${period}:`, {
+        effect: event.effect,
+        candy: event.candy,
+        location: event.location,
+        multiplier: event.multiplier,
+      });
+
+      periodEvents.push(event);
+    }
   }
+
+  console.log(`📊 Total events generated: ${periodEvents.length}`);
 
   // Joker drafts
   const jokerDrafts: JokerDraft[] = [];

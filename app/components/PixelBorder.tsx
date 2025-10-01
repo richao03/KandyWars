@@ -8,6 +8,7 @@ interface PixelBorderProps {
   backgroundColor?: string;
   style?: ViewStyle;
   innerPadding?: number;
+  pixelSize?: number;
 }
 
 /**

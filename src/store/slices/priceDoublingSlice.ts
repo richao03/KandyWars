@@ -30,6 +30,12 @@ const priceDoublingSlice = createSlice({
       );
       if (!existing) {
         state.modifiedPrices.push(action.payload);
+
+        // Keep only last 20 entries to prevent unbounded growth
+        // This covers roughly 2-3 periods worth of price modifications
+        if (state.modifiedPrices.length > 20) {
+          state.modifiedPrices = state.modifiedPrices.slice(-20);
+        }
       }
     },
     removeModifiedPrice: (state, action: PayloadAction<{ candyType: string; period: number }>) => {

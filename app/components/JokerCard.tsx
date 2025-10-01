@@ -696,7 +696,7 @@ function JokerCard({
         const originalPrice = getOriginalCandyPrice(candyType);
 
         // Apply the new randomized price
-        modifyCandyPrice(candyType, newPrice);
+        modifyCandyPrice(candyType, newPrice, periodCount);
 
         priceChanges.push(`${candyType}: $${originalPrice} → $${newPrice}`);
         console.log(

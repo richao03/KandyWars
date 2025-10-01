@@ -1,14 +1,14 @@
+import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
 import React, {
   memo,
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  startTransition,
 } from 'react';
 import {
   FlatList,
@@ -39,6 +39,7 @@ import { useTrojanHorse } from '../../src/hooks/useTrojanHorse';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppDispatch } from '../../src/store/hooks';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
+import { forceSave } from '../../src/store/store';
 import { JokerService } from '../../src/utils/jokerService';
 import ConfirmationModal from '../components/ConfirmationModal';
 import DayStatsModal from '../components/DayStatsModal';
@@ -52,6 +53,7 @@ import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
+import TextWithEmojis from '../components/TextWithEmojis';
 import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';
 
@@ -104,7 +106,8 @@ function Market(props) {
   const { balance, spend, add } = useWallet();
 
   // Always call useCopilot to satisfy Rules of Hooks, but check if tutorial is completed
-  const { hasCompletedMarketTutorial, setHasCompletedMarketTutorial } = useGame();
+  const { hasCompletedMarketTutorial, setHasCompletedMarketTutorial } =
+    useGame();
   const {
     start,
     stop: stopCopilot,
@@ -115,15 +118,8 @@ function Market(props) {
     visible,
   } = useCopilot();
 
-
   // Track active view on mount only
   useEffect(() => {
-    console.log(
-      '🎓 Market component mounted with Day:',
-      day,
-      'Period:',
-      period
-    );
     setLastActiveView('market');
   }, [setLastActiveView]);
 
@@ -131,7 +127,6 @@ function Market(props) {
   useFocusEffect(
     useCallback(() => {
       if (isLunchPeriod && hasPlayedLunchMinigame && showLunchMinigames) {
-        console.log('🍔 Returned from lunch minigame, hiding selector');
         setShowLunchMinigames(false);
       }
     }, [isLunchPeriod, hasPlayedLunchMinigame])
@@ -159,7 +154,13 @@ function Market(props) {
   } = useGame();
   const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
-  const { getTotalStats, addProfit, addSpent, addCandySold } = useDailyStats();
+  const {
+    getTotalStats,
+    addProfit,
+    addSpent,
+    addCandySold,
+    recordSale: recordDailyStatsSale,
+  } = useDailyStats();
   const { setEvent, setFlavorText, setHint } = useFlavorText();
   const { addSale, resetSales, consecutivePeriodSales } = useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
@@ -180,15 +181,32 @@ function Market(props) {
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
   const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
   // Tutorial using Copilot - only show if not already completed
-  const shouldShowTutorial = day === 1 && periodCount === 0 && !hasCompletedMarketTutorial;
+  const shouldShowTutorial =
+    day === 1 && periodCount === 0 && !hasCompletedMarketTutorial;
   const tutorialStarted = useRef(false);
 
-  // Simple tutorial auto-start
+  // Reset tutorialStarted ref when not on day 1
   useEffect(() => {
+    if (day !== 1) {
+      tutorialStarted.current = false;
+    }
+  }, [day]);
+
+  // Simple tutorial auto-start - only run on day 1
+  useEffect(() => {
+    // Skip entirely if not day 1
+    if (day !== 1) return;
+
+    console.log('🎓 Tutorial check:', {
+      day,
+      periodCount,
+      hasCompletedMarketTutorial,
+      shouldShowTutorial,
+      tutorialStarted: tutorialStarted.current,
+    });
+
     if (shouldShowTutorial && !tutorialStarted.current) {
-      console.log(
-        '🎓 Auto-starting market tutorial'
-      );
+      console.log('🎓 Auto-starting market tutorial');
 
       // Small delay to ensure UI is ready
       const timeoutId = setTimeout(() => {
@@ -199,22 +217,89 @@ function Market(props) {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [shouldShowTutorial, start]);
+  }, [shouldShowTutorial, start, day, periodCount, hasCompletedMarketTutorial]);
 
-  // Mark tutorial as completed when it finishes
+  // Mark tutorial as completed when it finishes or is skipped - only on day 1
   useEffect(() => {
+    // Skip entirely if not day 1
+    if (day !== 1) return;
+
     if (eventEmitter && copilotEvents) {
-      const handleComplete = () => {
-        console.log('🎓 Market tutorial completed');
+      console.log('🎓 Setting up tutorial event listeners');
+      console.log('🎓 copilotEvents object:', copilotEvents);
+      console.log('🎓 All copilotEvents keys:', Object.keys(copilotEvents));
+      console.log('🎓 STOP event name:', copilotEvents.STOP);
+      console.log('🎓 SKIP event name:', copilotEvents.SKIP);
+
+      const handleComplete = (eventType: string) => {
+        console.log('🎓 Market tutorial event fired:', eventType);
+        console.log('🎓 Current hasCompletedMarketTutorial:', hasCompletedMarketTutorial);
         setHasCompletedMarketTutorial(true);
+        // Force immediate save to AsyncStorage
+        setTimeout(() => {
+          forceSave();
+          console.log('💾 Tutorial completion saved to AsyncStorage');
+        }, 100);
       };
 
-      eventEmitter.on(copilotEvents.STOP, handleComplete);
+      const handleStop = () => handleComplete('STOP');
+      const handleSkip = () => handleComplete('SKIP');
+
+      // Listen to ALL possible events to see what fires
+      const allEventHandler = (eventName: string) => {
+        console.log('🔔 Copilot event fired:', eventName);
+      };
+
+      // Try to listen to all events
+      if (copilotEvents.STOP) {
+        eventEmitter.on(copilotEvents.STOP, handleStop);
+        console.log('✅ Registered STOP listener');
+      }
+      if (copilotEvents.SKIP) {
+        eventEmitter.on(copilotEvents.SKIP, handleSkip);
+        console.log('✅ Registered SKIP listener');
+      }
+
+      // Also try common event names
+      ['stop', 'skip', 'stepChange', 'start'].forEach(eventName => {
+        eventEmitter.on(eventName, () => allEventHandler(eventName));
+      });
+
+      console.log('🎓 Event listeners registered');
+
       return () => {
-        eventEmitter.off(copilotEvents.STOP, handleComplete);
+        console.log('🎓 Cleaning up event listeners');
+        if (copilotEvents.STOP) eventEmitter.off(copilotEvents.STOP, handleStop);
+        if (copilotEvents.SKIP) eventEmitter.off(copilotEvents.SKIP, handleSkip);
+        ['stop', 'skip', 'stepChange', 'start'].forEach(eventName => {
+          eventEmitter.off(eventName, () => allEventHandler(eventName));
+        });
       };
     }
-  }, [eventEmitter, copilotEvents, setHasCompletedMarketTutorial]);
+  }, [eventEmitter, copilotEvents, setHasCompletedMarketTutorial, hasCompletedMarketTutorial, day]);
+
+  // Fallback: Mark tutorial as complete when user navigates away or advances to period 1+
+  useEffect(() => {
+    if (day === 1 && periodCount > 0 && !hasCompletedMarketTutorial && tutorialStarted.current) {
+      console.log('🎓 Fallback: Marking market tutorial complete (user advanced period)');
+      setHasCompletedMarketTutorial(true);
+      forceSave();
+    }
+  }, [day, periodCount, hasCompletedMarketTutorial, setHasCompletedMarketTutorial]);
+
+  // Fallback: Mark tutorial as complete when screen loses focus after tutorial started
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // On blur/unfocus
+        if (day === 1 && !hasCompletedMarketTutorial && tutorialStarted.current) {
+          console.log('🎓 Fallback: Marking market tutorial complete (user navigated away)');
+          setHasCompletedMarketTutorial(true);
+          forceSave();
+        }
+      };
+    }, [day, hasCompletedMarketTutorial, setHasCompletedMarketTutorial])
+  );
 
   // Show location modal after event modal is dismissed
   useEffect(() => {
@@ -236,17 +321,58 @@ function Market(props) {
     }
   }, [currentLocation, periodCount]);
 
+  // Track the last event period to prevent duplicate triggers
+  const lastEventPeriodRef = useRef<number>(-1);
+
+  // Log all events once when game is initialized
+  const hasLoggedEventsRef = useRef(false);
+  if (!hasLoggedEventsRef.current && gameData.periodEvents.length > 0) {
+    hasLoggedEventsRef.current = true;
+    console.log(`📊 ALL GENERATED EVENTS (${gameData.periodEvents.length} total):`);
+    gameData.periodEvents.forEach((event, index) => {
+      console.log(`  Event ${index + 1}: Period ${event.period}, Effect: ${event.effect}, Candy: ${event.candy || 'N/A'}, Location: ${event.location || 'ANY'}, Multiplier: ${event.multiplier || 'N/A'}`);
+    });
+  }
+
   // Update flavor text when period changes
   useEffect(() => {
+    console.log(`🔍 Checking events for period ${periodCount}, location: ${currentLocation}`);
+    console.log(`📋 Total events in gameData:`, gameData.periodEvents.length);
+
     // Check for current event at current location
+    // Events without a location field trigger at any location
     const currentEvent = gameData.periodEvents.find(
-      (e) => e.period === periodCount && e.location === currentLocation
+      (e) =>
+        e.period === periodCount &&
+        (!e.location || e.location === currentLocation)
     );
 
+    if (currentEvent) {
+      console.log(`✅ Found current event:`, {
+        effect: currentEvent.effect,
+        candy: currentEvent.candy,
+        location: currentEvent.location,
+        multiplier: currentEvent.multiplier,
+      });
+    } else {
+      console.log(`❌ No event found for current period/location`);
+    }
+
     // Check if there's an upcoming event at current location
+    // Events without a location field can show hints at any location
     const nextPeriodEvent = gameData.periodEvents.find(
-      (e) => e.period === periodCount + 1 && e.location === currentLocation
+      (e) =>
+        e.period === periodCount + 1 &&
+        (!e.location || e.location === currentLocation)
     );
+
+    if (nextPeriodEvent) {
+      console.log(`🔮 Found upcoming event:`, {
+        effect: nextPeriodEvent.effect,
+        candy: nextPeriodEvent.candy,
+        location: nextPeriodEvent.location,
+      });
+    }
     let periodOfTheDay = (periodCount % 8) + 1;
     if (periodOfTheDay === 0) {
       setEvent('NEW_DAY');
@@ -264,17 +390,24 @@ function Market(props) {
         setEvent('STASH_LOCKED');
       }
 
-      // Trigger the event modal for interactive events
-      console.log(
-        '🎯 EVENT: Triggering event modal for period',
-        periodOfTheDay,
-        ':',
-        currentEvent.title
-      );
-      handleEvent(currentEvent);
+      // Only trigger event if we haven't already triggered it for this period
+      // This prevents duplicate event triggers when other dependencies change
+      console.log(`🔄 Event trigger check - lastEventPeriod: ${lastEventPeriodRef.current}, currentPeriod: ${periodCount}`);
+      if (lastEventPeriodRef.current !== periodCount) {
+        lastEventPeriodRef.current = periodCount;
+        console.log(
+          '🎯 EVENT: Triggering event modal for period',
+          periodOfTheDay,
+          ':',
+          currentEvent.title
+        );
+        handleEvent(currentEvent);
 
-      // Also show the event's specific description
-      setTimeout(() => setFlavorText(currentEvent.description || ''), 100);
+        // Also show the event's specific description
+        setTimeout(() => setFlavorText(currentEvent.description || ''), 100);
+      } else {
+        console.log(`⏭️ Event already triggered for period ${periodCount}, skipping`);
+      }
     } else if (nextPeriodEvent && nextPeriodEvent.hint) {
       // Check if jokers affect hint chance
       const baseHintChance = 0.7; // 70% base chance
@@ -361,10 +494,11 @@ function Market(props) {
     setCandies((prev) =>
       prev.map((candy) => {
         // Check for current location-specific events with price overrides or multipliers
+        // Events without a location field apply at any location
         const currentEvent = gameData.periodEvents.find(
           (e) =>
             e.period === periodCount &&
-            e.location === currentLocation &&
+            (!e.location || e.location === currentLocation) &&
             e.candy === candy.name &&
             (e.priceOverride !== undefined || e.multiplier !== undefined)
         );
@@ -396,7 +530,20 @@ function Market(props) {
         if (currentEvent?.priceOverride !== undefined) {
           finalCost = currentEvent.priceOverride;
         } else if (currentEvent?.multiplier !== undefined) {
-          finalCost = currentPrice * currentEvent.multiplier;
+          // Use base price to avoid double-spiking (gameData.candyPrices already has spikes)
+          const calculatedPrice = trueBasePrice * currentEvent.multiplier;
+
+          // Apply caps based on event type
+          if (
+            currentEvent.effect === 'PRICE_SPIKE' ||
+            currentEvent.effect === 'PRICE_HIKE'
+          ) {
+            finalCost = Math.min(calculatedPrice, 100);
+          } else if (currentEvent.effect === 'PRICE_DROP') {
+            finalCost = Math.max(calculatedPrice, 0.01);
+          } else {
+            finalCost = calculatedPrice;
+          }
         }
 
         // Note: Price storage moved to separate useEffect to avoid setState during render
@@ -432,10 +579,19 @@ function Market(props) {
     jokerService,
   ]);
 
+  // Track last processed period to prevent duplicate processing
+  const lastPriceProcessedPeriodRef = useRef<number>(-1);
+
   // Separate effect to store candy prices to avoid setState during render
   useEffect(() => {
+    // Skip if we've already processed this period
+    if (lastPriceProcessedPeriodRef.current === periodCount) {
+      return;
+    }
+    lastPriceProcessedPeriodRef.current = periodCount;
+
     baseCandies.forEach((candy) => {
-      if (!gameData.candyPrices[candy.name]?.[periodCount]) {
+      if (gameData.candyPrices[candy.name]?.[periodCount]) {
         // Calculate the same price as in the candies state update
         const seed = candy.name.charCodeAt(0) + periodCount;
         const random = Math.sin(seed) * 10000;
@@ -444,22 +600,46 @@ function Market(props) {
           candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
 
         // Check for current location-specific events with price overrides or multipliers
+        // Events without a location field apply at any location
         const currentEvent = gameData.periodEvents.find(
           (e) =>
             e.period === periodCount &&
-            e.location === currentLocation &&
+            (!e.location || e.location === currentLocation) &&
             e.candy === candy.name &&
             (e.priceOverride !== undefined || e.multiplier !== undefined)
         );
+
+        // Get the previous period's price to apply multiplier
+        const previousPeriod = periodCount - 1;
+        const previousPrice =
+          previousPeriod >= 0
+            ? gameData.candyPrices[candy.name]?.[previousPeriod] ||
+              trueBasePrice
+            : trueBasePrice;
 
         let finalCost =
           gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice;
         if (currentEvent?.priceOverride !== undefined) {
           finalCost = currentEvent.priceOverride;
         } else if (currentEvent?.multiplier !== undefined) {
-          finalCost =
-            (gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice) *
-            currentEvent.multiplier;
+          // For event-based price changes, use the base price (not the pre-generated spike)
+          // This prevents double-spiking when candyPrices already has spikes built in
+          const calculatedPrice = trueBasePrice * currentEvent.multiplier;
+
+          // Apply caps based on event type
+          if (
+            currentEvent.effect === 'PRICE_SPIKE' ||
+            currentEvent.effect === 'PRICE_HIKE'
+          ) {
+            // For price spikes/hikes: cap at $100
+            finalCost = Math.min(calculatedPrice, 100);
+          } else if (currentEvent.effect === 'PRICE_DROP') {
+            // For price drops: floor at $0.01
+            finalCost = Math.max(calculatedPrice, 0.01);
+          } else {
+            // Default: use calculated price
+            finalCost = calculatedPrice;
+          }
         }
 
         modifyCandyPrice(candy.name, finalCost, periodCount);
@@ -737,6 +917,7 @@ function Market(props) {
           add(totalGain);
           addProfit(totalGain); // Track daily profit
           addCandySold(quantity); // Track daily candy sales
+          recordDailyStatsSale(candy.name, quantity, totalGain, periodCount); // Track best sale and most sold candy
           removeFromInventory(candy.name, quantity);
 
           // === SHOW BONUS NOTIFICATIONS ===
@@ -815,63 +996,68 @@ function Market(props) {
 
   const dispatch = useAppDispatch();
 
-  const handleLocationSelect = useCallback((location: Location) => {
-    // Wrap all updates in startTransition to batch them together
-    startTransition(() => {
-      setLocationModalVisible(false);
-      setLocalPricesUpdating(true);
+  const handleLocationSelect = useCallback(
+    (location: Location) => {
+      // Wrap all updates in startTransition to batch them together
+      startTransition(() => {
+        setLocationModalVisible(false);
+        setLocalPricesUpdating(true);
 
-      // Check for Trade Routes joker (id: 39) and increment inventory limit if present
-      const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
-      if (hasTradeRoutes) {
-        console.log(
-          '🗺️ Trade Routes active: +1 inventory limit on location change'
+        // Check for Trade Routes joker (id: 39) and increment inventory limit if present
+        const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
+        if (hasTradeRoutes) {
+          console.log(
+            '🗺️ Trade Routes active: +1 inventory limit on location change'
+          );
+          dispatch(incrementMaxInventory(1));
+        }
+
+        // Check for Something from Nothing joker (id: 46) and add candy generation
+        const hasSomethingFromNothing = jokers.some(
+          (joker: any) => joker.id === 46
         );
-        dispatch(incrementMaxInventory(1));
-      }
-
-      // Check for Something from Nothing joker (id: 46) and add candy generation
-      const hasSomethingFromNothing = jokers.some(
-        (joker: any) => joker.id === 46
-      );
-      if (hasSomethingFromNothing) {
-        console.log('✨ Something from Nothing active: +1 of each candy type');
-        const candyTypes = [
-          'Skittles',
-          'M&Ms',
-          'Sour Patch Kids',
-          'Twix',
-          'Snickers',
-          'Kit Kat',
-        ];
-        candyTypes.forEach((candyType) => {
-          // Add 1 of each candy type to inventory at current market price
-          const currentCandy = candies.find((c) => c.name === candyType);
-          if (currentCandy) {
-            const success = addToInventory(candyType, 1, currentCandy.cost);
-            if (success) {
-              console.log(
-                `✨ Something from Nothing: Added 1 ${candyType} at $${currentCandy.cost}`
-              );
-            } else {
-              console.log(
-                `✨ Something from Nothing: Failed to add ${candyType} (inventory full)`
-              );
+        if (hasSomethingFromNothing) {
+          console.log(
+            '✨ Something from Nothing active: +1 of each candy type'
+          );
+          const candyTypes = [
+            'Skittles',
+            'M&Ms',
+            'Sour Patch Kids',
+            'Twix',
+            'Snickers',
+            'Kit Kat',
+          ];
+          candyTypes.forEach((candyType) => {
+            // Add 1 of each candy type to inventory at current market price
+            const currentCandy = candies.find((c) => c.name === candyType);
+            if (currentCandy) {
+              const success = addToInventory(candyType, 1, currentCandy.cost);
+              if (success) {
+                console.log(
+                  `✨ Something from Nothing: Added 1 ${candyType} at $${currentCandy.cost}`
+                );
+              } else {
+                console.log(
+                  `✨ Something from Nothing: Failed to add ${candyType} (inventory full)`
+                );
+              }
             }
-          }
-        });
-      }
+          });
+        }
 
-      // Call incrementPeriod and update flavor text
-      incrementPeriod(location);
-      setEvent('PERIOD_CHANGE');
+        // Call incrementPeriod and update flavor text
+        incrementPeriod(location);
+        setEvent('PERIOD_CHANGE');
 
-      // Reset loading state after 1.5 seconds
-      setTimeout(() => {
-        setLocalPricesUpdating(false);
-      }, 625);
-    });
-  }, [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory]);
+        // Reset loading state after 1.5 seconds
+        setTimeout(() => {
+          setLocalPricesUpdating(false);
+        }, 625);
+      });
+    },
+    [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory]
+  );
 
   const handleEndDay = () => {
     console.log('🏠 End Day button pressed');
@@ -884,6 +1070,13 @@ function Market(props) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     setEndDayConfirmVisible(false);
+
+    // If it's day 5, go directly to game end screen
+    if (day === 5) {
+      console.log('🎮 Day 5 detected - navigating to game end screen');
+      router.push('/game-end');
+      return;
+    }
 
     // Don't advance periods - just show day stats to simulate end of day
     console.log('🏠 Ending day early - showing day stats modal');
@@ -1108,7 +1301,9 @@ function Market(props) {
           >
             <CopilotView>
               <View style={styles.buttonContainer}>
-                {isLunchPeriod && !hasPlayedLunchMinigame && !showLunchMinigames ? (
+                {isLunchPeriod &&
+                !hasPlayedLunchMinigame &&
+                !showLunchMinigames ? (
                   // Lunch period before playing minigame: Show play minigames button and end day
                   <View style={styles.buttonRow}>
                     <PixelBorder
@@ -1144,9 +1339,13 @@ function Market(props) {
                         onPress={handleEndDay}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.endDayButtonText}>End Day</Text>
+                        <Text style={styles.endDayButtonText}>
+                          {day === 5 ? 'Game End' : 'End Day'}
+                        </Text>
                         <Text style={styles.endDaySubtext}>
-                          Skip to after school
+                          {day === 5
+                            ? 'Finish the game'
+                            : 'Skip to after school'}
                         </Text>
                       </TouchableOpacity>
                     </PixelBorder>
@@ -1169,9 +1368,7 @@ function Market(props) {
                         <Text style={styles.lunchButtonText}>
                           🚪 Leave Lunch
                         </Text>
-                        <Text style={styles.lunchSubtext}>
-                          Back to market
-                        </Text>
+                        <Text style={styles.lunchSubtext}>Back to market</Text>
                       </TouchableOpacity>
                     </PixelBorder>
 
@@ -1187,15 +1384,48 @@ function Market(props) {
                         onPress={handleEndDay}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.endDayButtonText}>End Day</Text>
+                        <Text style={styles.endDayButtonText}>
+                          {day === 5 ? 'Game End' : 'End Day'}
+                        </Text>
                         <Text style={styles.endDaySubtext}>
-                          Skip to after school
+                          {day === 5
+                            ? 'Finish the game'
+                            : 'Skip to after school'}
                         </Text>
                       </TouchableOpacity>
                     </PixelBorder>
                   </View>
+                ) : period === 8 && day === 5 ? (
+                  // Period 8 on Day 5: Show end game button
+                  <PixelBorder
+                    borderColor="rgba(101,181,101,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(151,221,151,1)"
+                    innerPadding={0}
+                  >
+                    <TouchableOpacity
+                      style={styles.pixelButtonInner}
+                      onPress={() => {
+                        Haptics.notificationAsync(
+                          Haptics.NotificationFeedbackType.Success
+                        );
+                        router.push('/game-end');
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <TextWithEmojis
+                        style={styles.nextPeriodButtonText}
+                        imageSize={28}
+                      >
+                        🏆 End Game
+                      </TextWithEmojis>
+                      <TextWithEmojis style={styles.nextPeriodSubtext}>
+                        See your final results!
+                      </TextWithEmojis>
+                    </TouchableOpacity>
+                  </PixelBorder>
                 ) : period === 8 ? (
-                  // Period 8: Only show leave school button
+                  // Period 8 on other days: Show leave school button
                   <TouchableOpacity
                     style={styles.nextPeriodButton}
                     onPress={handleNextDay}
@@ -1244,9 +1474,13 @@ function Market(props) {
                         onPress={handleEndDay}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.endDayButtonText}>End Day</Text>
+                        <Text style={styles.endDayButtonText}>
+                          {day === 5 ? 'Game End' : 'End Day'}
+                        </Text>
                         <Text style={styles.endDaySubtext}>
-                          Skip to after school
+                          {day === 5
+                            ? 'Finish the game'
+                            : 'Skip to after school'}
                         </Text>
                       </TouchableOpacity>
                     </PixelBorder>
@@ -1320,10 +1554,14 @@ function Market(props) {
 
       <ConfirmationModal
         visible={endDayConfirmVisible}
-        title="End School Day?"
-        message={`You're currently in period ${period} of 8.\n\nEnding the day will skip the remaining periods and take you directly to after-school activities.`}
-        emoji="🏠"
-        confirmText="End Day"
+        title={day === 5 ? 'End Game?' : 'End School Day?'}
+        message={
+          day === 5
+            ? `This is the final day!\n\nEnding the game will take you to the results screen where you can see if you've paid off your debt.`
+            : `You're currently in period ${period} of 8.\n\nEnding the day will skip the remaining periods and take you directly to after-school activities.`
+        }
+        emoji={day === 5 ? '🎮' : '🏠'}
+        confirmText={day === 5 ? 'End Game' : 'End Day'}
         cancelText="Stay in School"
         onConfirm={handleEndDayConfirm}
         onCancel={handleEndDayCancel}

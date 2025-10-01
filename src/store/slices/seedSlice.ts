@@ -37,7 +37,10 @@ const seedSlice = createSlice({
     setIsLoaded: (state, action: PayloadAction<boolean>) => {
       state.isLoaded = action.payload;
     },
-    modifyCandyPrice: (state, action: PayloadAction<{ candyId: string; price: number; period?: number }>) => {
+    modifyCandyPrice: (
+      state,
+      action: PayloadAction<{ candyId: string; price: number; period?: number }>
+    ) => {
       if (!state.gameData.candyPrices) {
         state.gameData.candyPrices = {};
       }
@@ -45,7 +48,8 @@ const seedSlice = createSlice({
         state.gameData.candyPrices[action.payload.candyId] = [];
       }
       const period = action.payload.period || 0;
-      state.gameData.candyPrices[action.payload.candyId][period] = action.payload.price;
+      state.gameData.candyPrices[action.payload.candyId][period] =
+        action.payload.price;
     },
     resetSeed: () => initialState,
   },

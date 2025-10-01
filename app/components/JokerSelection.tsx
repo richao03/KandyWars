@@ -56,13 +56,6 @@ export default function JokerSelection({
     (joker) => !ownedJokerIds.includes(joker.id)
   );
 
-  console.log(
-    `🃏 JokerSelection: Owned joker IDs: [${ownedJokerIds.join(', ')}]`
-  );
-  console.log(
-    `🃏 JokerSelection: Available jokers after filtering: ${availableJokers.length}/${jokers.length}`
-  );
-
   const selectRandomJokers = () => {
     if (availableJokers.length === 0) {
       console.log(
@@ -81,10 +74,6 @@ export default function JokerSelection({
     const jokerCount = Math.min(requestedJokerCount, availableJokers.length);
     const selected = shuffled.slice(0, jokerCount);
     setSelectedJokers(selected);
-
-    console.log(
-      `🃏 JokerSelection: Selected ${selected.length} jokers from ${availableJokers.length} available`
-    );
   };
 
   const rerollJokers = () => {

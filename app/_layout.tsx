@@ -63,6 +63,7 @@ export default function RootLayout() {
                 tooltipStyle={{
                   fontSize: 16,
                 }}
+                stopOnOutsideClick={true}
               >
                 {showStudioScreen ? (
                   <StudioTitleScreen

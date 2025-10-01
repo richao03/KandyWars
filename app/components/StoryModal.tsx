@@ -17,9 +17,7 @@ export default function StoryModal({
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    console.log('🎬 StoryModal useEffect - visible:', visible, 'level:', level);
     if (visible) {
-      console.log('🎬 StoryModal starting fade in animation');
       // Fade in
       Animated.timing(fadeAnim, {
         toValue: 1,

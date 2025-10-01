@@ -15,17 +15,13 @@ export default function SchoolsOutModal({
 }: SchoolsOutModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
 
-  const handleComplete = () => {
-    showTabBar();
-    onComplete();
-  };
-
   useEffect(() => {
     if (visible) {
       hideTabBar();
       // Auto-dismiss after 2.5 seconds
       const timer = setTimeout(() => {
-        handleComplete();
+        showTabBar();
+        onComplete();
       }, 2500);
 
       return () => {
@@ -33,7 +29,7 @@ export default function SchoolsOutModal({
         showTabBar();
       };
     }
-  }, [visible, onComplete, hideTabBar, showTabBar]);
+  }, [visible]);
 
   if (!visible) return null;
 

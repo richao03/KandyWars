@@ -27,7 +27,8 @@ const candySalesSlice = createSlice({
   initialState,
   reducers: {
     addSale: (state, action: PayloadAction<SaleRecord>) => {
-      state.sales.push(action.payload);
+      // NOTE: Disabled to prevent memory leak - sales array was growing unbounded
+      // state.sales.push(action.payload);
       state.totalRevenue += action.payload.total;
       state.totalCandiesSold += action.payload.quantity;
     },

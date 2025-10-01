@@ -29,6 +29,11 @@ const eventHandlerSlice = createSlice({
           ...action.payload,
           timestamp: Date.now(),
         });
+
+        // Keep only last 10 events to prevent unbounded growth
+        if (state.eventHistory.length > 10) {
+          state.eventHistory = state.eventHistory.slice(-10);
+        }
       }
     },
     clearCurrentEvent: (state) => {

@@ -37,7 +37,6 @@ export default function ConfirmationModal({
   emoji = '❓',
   dismissible = true,
 }: ConfirmationModalProps) {
-  console.log('🔍 ConfirmationModal: cancelText =', cancelText, 'type:', typeof cancelText);
   // Theme-specific styles
   const getThemeStyles = () => {
     switch (theme) {

@@ -6,12 +6,9 @@ import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
 import { useGame } from '../src/hooks/useGame';
 
 export default function TitleScreenPage() {
-  console.log('🔍 DEBUG: TitleScreenPage rendering/re-rendering');
   const { lastActiveView, periodCount, isInitialized } = useGame();
   const [refreshKey, setRefreshKey] = useState(0);
   const [showStudioScreen, setShowStudioScreen] = useState(true);
-
-  console.log('🔍 DEBUG: TitleScreenPage state - showStudioScreen:', showStudioScreen, 'refreshKey:', refreshKey);
 
   // Force component refresh when screen comes into focus
   useFocusEffect(

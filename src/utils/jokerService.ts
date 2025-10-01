@@ -47,8 +47,6 @@ export class JokerService {
     inventoryLimit?: number,
     activeEffects: any[] = []
   ): void {
-    console.log('🔧 JokerService: Initializing engine for batch computation');
-
     // Clear previous effects
     this.jokerEngine.clearAllEffects();
 
@@ -89,8 +87,6 @@ export class JokerService {
         }
       }
     });
-
-    console.log(`🔧 JokerService: Engine initialized with ${jokers.length} jokers`);
   }
 
   /**

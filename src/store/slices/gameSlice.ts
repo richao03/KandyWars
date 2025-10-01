@@ -104,6 +104,12 @@ const gameSlice = createSlice({
         period: state.periodCount,
         location: action.payload,
       });
+
+      // Keep only last 10 periods of location history to prevent unbounded growth
+      if (state.locationHistory.length > 10) {
+        state.locationHistory = state.locationHistory.slice(-10);
+      }
+
       state.pricesUpdating = true;
       // Reset lunch minigame flag when moving to a new period
       state.hasPlayedLunchMinigame = false;
@@ -127,7 +133,14 @@ const gameSlice = createSlice({
       console.log('💾 New day started, period:', newPeriodCount, '- Auto-save triggered');
     },
     resetGame: (state) => {
-      return initialState;
+      // Preserve tutorial completion flags across game resets
+      const hasCompletedMarketTutorial = state.hasCompletedMarketTutorial;
+      const hasCompletedAfterSchoolTutorial = state.hasCompletedAfterSchoolTutorial;
+      return {
+        ...initialState,
+        hasCompletedMarketTutorial,
+        hasCompletedAfterSchoolTutorial,
+      };
     },
     revertToPreviousPeriod: (state) => {
       if (state.periodCount > 0) {
