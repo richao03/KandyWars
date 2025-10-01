@@ -239,7 +239,8 @@ function JokersPage() {
   // Remove selectedSubject state - we'll show all subjects as sections
 
   // Show loading state while data loads - no early returns
-  const showLoading = !gameContext || !jokerContext || !seedContext || !isLoaded;
+  const showLoading =
+    !gameContext || !jokerContext || !seedContext || !isLoaded;
 
   // Create sectioned data for browse tab with 2-column layout
   const sectionedJokers = useMemo(() => {

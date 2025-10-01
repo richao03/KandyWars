@@ -1,12 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -503,7 +497,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     setAvailable((prev) => [...prev, { ...tile, source: 'palette' }]);
   };
 
-
   /** ---------- Actions ---------- */
   const clearAll = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -654,100 +647,120 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   if (gameState === 'instructions') {
     return (
       <View style={styles.container}>
-          <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsTitle}>
-              Economics Study Session
-            </Text>
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsTitle}>Economics Study Session</Text>
 
-            <PixelBorder
-              borderColor="#42a5f5"
-              borderWidth={3}
-              backgroundColor="#1e3a8a"
-              innerPadding={20}
-              style={{ marginBottom: 20, width: '100%' }}
-            >
-              <Text style={styles.instructionsHeader}>How to Trade:</Text>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>1. </Text>
-                <Text style={styles.stepText}>
-                  Build multi-step trading chains to reach your goal candy
-                </Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>2. </Text>
-                <Text style={styles.stepText}>
-                  Level 1: 3 steps • Level 2: 4 steps • Level 3: 5 steps - no
-                  shortcuts!
-                </Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>3. </Text>
-                <Text style={styles.stepText}>
-                  You have 60 seconds per level to complete the trading chain!
-                </Text>
-              </View>
-              <View style={styles.instructionStep}>
-                <Text style={styles.stepNumber}>4. </Text>
-                <Text style={styles.stepText}>
-                  Drag tiles to slots in the correct order to execute your plan
-                </Text>
-              </View>
-            </PixelBorder>
+          <PixelBorder
+            borderColor="#42a5f5"
+            borderWidth={3}
+            backgroundColor="#1e3a8a"
+            innerPadding={20}
+            style={{ marginBottom: 20, width: '100%' }}
+          >
+            <Text style={styles.instructionsHeader}>How to Trade:</Text>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>1. </Text>
+              <Text style={styles.stepText}>
+                Build a trading chain to reach your goal candy
+              </Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>2. </Text>
+              <Text style={styles.stepText}>You have 60 seconds!</Text>
+            </View>
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>3. </Text>
+              <Text style={styles.stepText}>
+                Tap tiles to slot in the correct order to execute your plan
+              </Text>
+            </View>
+          </PixelBorder>
 
-            <PixelBorder
-              borderColor="#42a5f5"
-              borderWidth={3}
-              backgroundColor="#2196f3"
-              innerPadding={0}
-              style={{ marginBottom: 16 }}
-            >
-              <TouchableOpacity
-                style={styles.pixelButtonInner}
-                onPress={startGame}
-              >
-                <Text style={styles.startGameButtonText}>Start Trading!</Text>
-              </TouchableOpacity>
-            </PixelBorder>
-
+          <PixelBorder
+            borderColor="#42a5f5"
+            borderWidth={3}
+            backgroundColor="#2196f3"
+            innerPadding={0}
+            style={{ marginBottom: 16 }}
+          >
             <TouchableOpacity
               style={styles.pixelButtonInner}
-              onPress={handleForfeit}
+              onPress={startGame}
             >
-              <Text style={styles.startGameButtonText}>Back</Text>
+              <Text style={styles.startGameButtonText}>Start Trading!</Text>
             </TouchableOpacity>
-          </View>
+          </PixelBorder>
+
+          <TouchableOpacity
+            style={styles.pixelButtonInner}
+            onPress={handleForfeit}
+          >
+            <Text style={styles.startGameButtonText}>Back</Text>
+          </TouchableOpacity>
         </View>
+      </View>
     );
   }
 
   return (
-      <View
-        style={[
-          styles.container,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
-      >
-        {/* Header */}
-        <MinigameHUD
-          title="Barter Trading"
-          subtitle="Trade your way to the goal candy!"
-          leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
-          centerInfo={`Start: ${Object.keys(puzzle.startInventory)
-            .map((item) => CATALOG[item as Item])
-            .join('')}`}
-          rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
-          theme="economy"
-        />
+    <View
+      style={[
+        styles.container,
+        {
+          padding: ResponsiveSpacing.containerPadding(),
+          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+        },
+      ]}
+    >
+      {/* Header */}
+      <MinigameHUD
+        title="Barter Trading"
+        subtitle="Trade your way to the goal candy!"
+        leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
+        centerInfo={`Start: ${Object.keys(puzzle.startInventory)
+          .map((item) => CATALOG[item as Item])
+          .join('')}`}
+        rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
+        theme="economy"
+      />
 
-        {/* Slots */}
-        <View style={styles.slotsWrapper}>
-          <Text style={styles.sectionTitle}>Arrange your plan</Text>
-          {levelIndex === 0 ? (
-            // Level 1: 3 slots, centered, no scroll
-            <View style={[styles.slotsRow, styles.slotsRowCentered]}>
+      {/* Slots */}
+      <View style={styles.slotsWrapper}>
+        <Text style={styles.sectionTitle}>Arrange your plan</Text>
+        {levelIndex === 0 ? (
+          // Level 1: 3 slots, centered, no scroll
+          <View style={[styles.slotsRow, styles.slotsRowCentered]}>
+            {slots.map((slot, i) => (
+              <PixelBorder
+                key={`slot-${i}`}
+                borderColor="#42a5f5"
+                borderWidth={3}
+                backgroundColor={slot ? '#1565c0' : '#0d47a1'}
+                innerPadding={0}
+                style={styles.slotWrapper}
+              >
+                <View style={styles.slotInner}>
+                  {slot ? (
+                    <TappableFromSlot
+                      tile={slot}
+                      slotIndex={i}
+                      onTap={handleSlotTap}
+                    />
+                  ) : (
+                    <Text style={styles.slotPlaceholder}>{i + 1}</Text>
+                  )}
+                </View>
+              </PixelBorder>
+            ))}
+          </View>
+        ) : (
+          // Level 2-3: Left aligned, swipeable
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.slotsScrollContent}
+          >
+            <View style={styles.slotsRow}>
               {slots.map((slot, i) => (
                 <PixelBorder
                   key={`slot-${i}`}
@@ -771,143 +784,108 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
                 </PixelBorder>
               ))}
             </View>
-          ) : (
-            // Level 2-3: Left aligned, swipeable
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.slotsScrollContent}
-            >
-              <View style={styles.slotsRow}>
-                {slots.map((slot, i) => (
-                  <PixelBorder
-                    key={`slot-${i}`}
-                    borderColor="#42a5f5"
-                    borderWidth={3}
-                    backgroundColor={slot ? '#1565c0' : '#0d47a1'}
-                    innerPadding={0}
-                    style={styles.slotWrapper}
-                  >
-                    <View style={styles.slotInner}>
-                      {slot ? (
-                        <TappableFromSlot
-                          tile={slot}
-                          slotIndex={i}
-                          onTap={handleSlotTap}
-                        />
-                      ) : (
-                        <Text style={styles.slotPlaceholder}>{i + 1}</Text>
-                      )}
-                    </View>
-                  </PixelBorder>
-                ))}
-              </View>
-            </ScrollView>
+          </ScrollView>
+        )}
+      </View>
+
+      {/* Palette */}
+      <View style={styles.paletteWrapper}>
+        <Text style={styles.sectionTitle}>Available Trades</Text>
+        <View style={styles.paletteGrid}>
+          {paletteTiles.map((tile) => (
+            <TappableFromPalette
+              key={tile.id}
+              tile={tile}
+              onTap={handlePaletteTap}
+              style={styles.tile}
+            />
+          ))}
+          {paletteTiles.length === 0 && (
+            <View style={styles.emptyPaletteContainer}>
+              <Text style={styles.emptyPaletteText}>All tiles placed!</Text>
+              <Text style={styles.emptyPaletteSubtext}>
+                Tap tiles to remove them
+              </Text>
+            </View>
           )}
         </View>
-
-        {/* Palette */}
-        <View style={styles.paletteWrapper}>
-          <Text style={styles.sectionTitle}>Available Trades</Text>
-          <View style={styles.paletteGrid}>
-            {paletteTiles.map((tile) => (
-              <TappableFromPalette
-                key={tile.id}
-                tile={tile}
-                onTap={handlePaletteTap}
-                style={styles.tile}
-              />
-            ))}
-            {paletteTiles.length === 0 && (
-              <View style={styles.emptyPaletteContainer}>
-                <Text style={styles.emptyPaletteText}>All tiles placed!</Text>
-                <Text style={styles.emptyPaletteSubtext}>
-                  Tap tiles to remove them
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Execute Button */}
-        <View
-          style={[
-            styles.footer,
-            {
-              gap: ResponsiveSpacing.buttonGap(),
-              paddingVertical: ResponsiveSpacing.buttonPadding(),
-            },
-          ]}
-        >
-          <PixelBorder
-            borderColor="#1976d2"
-            borderWidth={3}
-            backgroundColor="#2196f3"
-            innerPadding={0}
-            style={styles.footerBtn}
-          >
-            <TouchableOpacity
-              style={styles.footerBtnInner}
-              onPress={executePlan}
-            >
-              <Text style={styles.footerPrimaryText}>Execute Trade</Text>
-            </TouchableOpacity>
-          </PixelBorder>
-          <PixelBorder
-            borderColor="#42a5f5"
-            borderWidth={3}
-            backgroundColor="#1565c0"
-            innerPadding={0}
-            style={styles.footerBtn}
-          >
-            <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
-              <TextWithEmojis style={styles.footerSecondaryText} imageSize={16}>
-                Clear
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
-        </View>
-
-        {/* Footer */}
-        <View
-          style={[
-            styles.footer,
-            {
-              gap: ResponsiveSpacing.buttonGap(),
-              paddingVertical: ResponsiveSpacing.buttonPadding(),
-            },
-          ]}
-        >
-          <PixelBorder
-            borderColor="#42a5f5"
-            borderWidth={3}
-            backgroundColor="#1565c0"
-            innerPadding={0}
-            style={styles.footerBtn}
-          >
-            <TouchableOpacity
-              style={styles.footerBtnInner}
-              onPress={handleForfeit}
-            >
-              <TextWithEmojis style={styles.footerBackText} imageSize={28}>
-                🚪 Leave
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
-        </View>
-
-
-        <GameModal
-          visible={modal.visible}
-          title={modal.title}
-          message={modal.message}
-          emoji={modal.emoji}
-          onClose={hideModal}
-          onConfirm={modal.onConfirm}
-          showCancelButton={modal.showCancelButton}
-          theme="school"
-        />
       </View>
+
+      {/* Execute Button */}
+      <View
+        style={[
+          styles.footer,
+          {
+            gap: ResponsiveSpacing.buttonGap(),
+            paddingVertical: ResponsiveSpacing.buttonPadding(),
+          },
+        ]}
+      >
+        <PixelBorder
+          borderColor="#1976d2"
+          borderWidth={3}
+          backgroundColor="#2196f3"
+          innerPadding={0}
+          style={styles.footerBtn}
+        >
+          <TouchableOpacity style={styles.footerBtnInner} onPress={executePlan}>
+            <Text style={styles.footerPrimaryText}>Execute Trade</Text>
+          </TouchableOpacity>
+        </PixelBorder>
+        <PixelBorder
+          borderColor="#42a5f5"
+          borderWidth={3}
+          backgroundColor="#1565c0"
+          innerPadding={0}
+          style={styles.footerBtn}
+        >
+          <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
+            <TextWithEmojis style={styles.footerSecondaryText} imageSize={16}>
+              Clear
+            </TextWithEmojis>
+          </TouchableOpacity>
+        </PixelBorder>
+      </View>
+
+      {/* Footer */}
+      <View
+        style={[
+          styles.footer,
+          {
+            gap: ResponsiveSpacing.buttonGap(),
+            paddingVertical: ResponsiveSpacing.buttonPadding(),
+          },
+        ]}
+      >
+        <PixelBorder
+          borderColor="#42a5f5"
+          borderWidth={3}
+          backgroundColor="#1565c0"
+          innerPadding={0}
+          style={styles.footerBtn}
+        >
+          <TouchableOpacity
+            style={styles.footerBtnInner}
+            onPress={handleForfeit}
+          >
+            <TextWithEmojis style={styles.footerBackText} imageSize={28}>
+              🚪 Leave
+            </TextWithEmojis>
+          </TouchableOpacity>
+        </PixelBorder>
+      </View>
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
+        theme="school"
+      />
+    </View>
   );
 }
 

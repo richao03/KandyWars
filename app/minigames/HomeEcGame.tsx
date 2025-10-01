@@ -472,69 +472,69 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           />
 
           {/* Game Area - Center Panel */}
-          <View style={styles.gameArea}>
-            {/* Edge candies - Kitchen Stations */}
-            <View style={[styles.edgeCandy, styles.topCandy]}>
-              <TextWithEmojis style={styles.edgeCandyText}>🍭</TextWithEmojis>
-              <Text style={styles.stationLabel}>PREP</Text>
-            </View>
-            <View style={[styles.edgeCandy, styles.rightCandy]}>
-              <TextWithEmojis style={styles.edgeCandyText}>🍬</TextWithEmojis>
-              <Text style={styles.stationLabel}>GRILL</Text>
-            </View>
-            <View style={[styles.edgeCandy, styles.bottomCandy]}>
-              <TextWithEmojis style={styles.edgeCandyText}>🧁</TextWithEmojis>
-              <Text style={styles.stationLabel}>OVEN</Text>
-            </View>
-            <View style={[styles.edgeCandy, styles.leftCandy]}>
-              <TextWithEmojis style={styles.edgeCandyText}>🍫</TextWithEmojis>
-              <Text style={styles.stationLabel}>COOL</Text>
-            </View>
-
-            {/* Preview panel */}
-            {nextCandy && (
-              <View style={styles.previewPanel}>
-                <Text style={styles.previewLabel}>NEXT:</Text>
-                <TextWithEmojis style={styles.previewCandy}>
-                  {nextCandy}
-                </TextWithEmojis>
+          <GestureDetector gesture={panGesture}>
+            <View style={styles.gameArea}>
+              {/* Edge candies - Kitchen Stations */}
+              <View style={[styles.edgeCandy, styles.topCandy]}>
+                <TextWithEmojis style={styles.edgeCandyText}>🍭</TextWithEmojis>
+                <Text style={styles.stationLabel}>PREP</Text>
               </View>
-            )}
+              <View style={[styles.edgeCandy, styles.rightCandy]}>
+                <TextWithEmojis style={styles.edgeCandyText}>🍬</TextWithEmojis>
+                <Text style={styles.stationLabel}>GRILL</Text>
+              </View>
+              <View style={[styles.edgeCandy, styles.bottomCandy]}>
+                <TextWithEmojis style={styles.edgeCandyText}>🧁</TextWithEmojis>
+                <Text style={styles.stationLabel}>OVEN</Text>
+              </View>
+              <View style={[styles.edgeCandy, styles.leftCandy]}>
+                <TextWithEmojis style={styles.edgeCandyText}>🍫</TextWithEmojis>
+                <Text style={styles.stationLabel}>COOL</Text>
+              </View>
 
-            {/* Center candy */}
-            {centerCandy && !isFlying && (
-              <GestureDetector gesture={panGesture}>
+              {/* Preview panel */}
+              {nextCandy && (
+                <View style={styles.previewPanel}>
+                  <Text style={styles.previewLabel}>NEXT:</Text>
+                  <TextWithEmojis style={styles.previewCandy}>
+                    {nextCandy}
+                  </TextWithEmojis>
+                </View>
+              )}
+
+              {/* Center candy */}
+              {centerCandy && !isFlying && (
                 <Animated.View style={[styles.centerCandy, animatedStyle]}>
                   <TextWithEmojis style={styles.centerCandyText}>
                     {centerCandy}
                   </TextWithEmojis>
                 </Animated.View>
-              </GestureDetector>
-            )}
+              )}
 
-            {/* Flying candy */}
-            {centerCandy && isFlying && (
-              <Animated.View style={[styles.centerCandy, animatedStyle]}>
-                <Text style={styles.centerCandyText}>{centerCandy}</Text>
-              </Animated.View>
-            )}
+              {/* Flying candy */}
+              {centerCandy && isFlying && (
+                <Animated.View style={[styles.centerCandy, animatedStyle]}>
+                  <Text style={styles.centerCandyText}>{centerCandy}</Text>
+                </Animated.View>
+              )}
 
-            {/* Feedback */}
-            {feedback && feedbackPosition && (
-              <View
-                style={[
-                  styles.feedbackContainer,
-                  {
-                    left: feedbackPosition.x,
-                    top: feedbackPosition.y,
-                    transform: [{ translateX: -30 }, { translateY: -15 }],
-                  },
-                ]}
-              >
-                <Text style={styles.feedbackText}>{feedback}</Text>
-              </View>
-            )}
-          </View>
+              {/* Feedback */}
+              {feedback && feedbackPosition && (
+                <View
+                  style={[
+                    styles.feedbackContainer,
+                    {
+                      left: feedbackPosition.x,
+                      top: feedbackPosition.y,
+                      transform: [{ translateX: -30 }, { translateY: -15 }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.feedbackText}>{feedback}</Text>
+                </View>
+              )}
+            </View>
+          </GestureDetector>
 
           {/* Footer - Bottom Buttons */}
           <View

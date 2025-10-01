@@ -496,16 +496,16 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         setScore((prev) => prev + 10);
         const newWins = wins + 1;
         setWins(newWins);
-        console.log(`Win! Total wins: ${newWins}/4 on stage ${stage}`);
+        console.log(`✅ Win! Total wins: ${newWins}/4 on stage ${stage}`);
 
         if (newWins >= 4) {
           shouldCompleteStage = true;
           console.log(
-            `🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins!`
+            `🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins! shouldCompleteStage=${shouldCompleteStage}`
           );
         } else {
           console.log(
-            `Win ${newWins}/4 on stage ${stage} - need ${4 - newWins} more wins`
+            `✨ Win ${newWins}/4 on stage ${stage} - need ${4 - newWins} more wins`
           );
         }
       } else if (result === 'tie') {
@@ -543,6 +543,10 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
       resultTimeoutRef.current = setTimeout(() => {
         resultTimeoutRef.current = null;
+        // Reset isProcessingRound flag since we're done processing this round
+        setIsProcessingRound(false);
+        isProcessingRoundRef.current = false;
+        console.log(`⏰ Result timeout fired - shouldCompleteStage=${shouldCompleteStage}, isGameOver=${isGameOver}, gameState=${gameStateRef.current}`);
         // Check if stage was just completed (4 wins total)
         if (shouldCompleteStage) {
           console.log(
@@ -579,11 +583,14 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           !isProcessingRoundRef.current
         ) {
           // Reset positions to edges of game area (not off-screen)
+          console.log(`🔄 Starting next countdown after win - gameState=${gameStateRef.current}, isProcessing=${isProcessingRoundRef.current}`);
           playerGestureX.value = -200;
           playerGestureY.value = 0;
           computerGestureX.value = 200;
           computerGestureY.value = 0;
           startCountdown(undefined, newRoundsPlayed);
+        } else {
+          console.log(`❌ NOT starting countdown - gameState=${gameStateRef.current}, levelComplete=${gameStateRef.current === 'levelComplete'}, jokerSelection=${gameStateRef.current === 'jokerSelection'}, isProcessing=${isProcessingRoundRef.current}`);
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
     }
@@ -623,6 +630,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             console.log(`Stage advancing from ${prev} to ${newStage}`);
             return newStage;
           });
+
+          // Reset game state before starting new stage
+          setGameState('countdown');
 
           // Use setTimeout to ensure state update completes before starting countdown
           setTimeout(() => {

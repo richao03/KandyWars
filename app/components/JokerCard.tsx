@@ -1,11 +1,14 @@
 import React, { memo, useMemo, useState } from 'react';
 import {
+  Dimensions,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
@@ -17,6 +20,8 @@ import ConfirmationModal from './ConfirmationModal';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface JokerCardProps {
   joker: {
@@ -756,11 +761,24 @@ function JokerCard({
             {showOwned && <View style={styles.ownedIndicator} />}
           </View>
 
-          {/* Type Badge */}
-          <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-            <TextWithEmojis style={styles.typeText} imageSize={12}>
-              {`${typeEmoji} ${typeText}`}
-            </TextWithEmojis>
+          {/* Type Badge and Play Card Row */}
+          <View style={styles.badgeRow}>
+            <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
+              <TextWithEmojis style={styles.typeText} imageSize={12}>
+                {`${typeEmoji} ${typeText}`}
+              </TextWithEmojis>
+            </View>
+
+            {joker.type === 'one-time' &&
+              !disableActivation &&
+              !isAfterSchool && (
+                <TouchableOpacity
+                  style={styles.useButton}
+                  onPress={handleActivate}
+                >
+                  <Text style={styles.useButtonText}>USE</Text>
+                </TouchableOpacity>
+              )}
           </View>
 
           {/* Main Content */}
@@ -771,148 +789,144 @@ function JokerCard({
           {/* Footer Section */}
           <View style={styles.footerSection}>
             <Text style={styles.jokerFlavorText}>{flavorText}</Text>
-
-            {joker.type === 'one-time' &&
-              !disableActivation &&
-              !isAfterSchool && (
-                <TouchableOpacity
-                  style={styles.activateButton}
-                  onPress={handleActivate}
-                >
-                  <Text style={styles.activateButtonText}>PLAY CARD</Text>
-                </TouchableOpacity>
-              )}
           </View>
         </CardWrapper>
       </PixelBorder>
 
       {/* Period Selector Modal */}
-      <FastModal
+      <Modal
         visible={showPeriodSelector}
-        onClose={() => setShowPeriodSelector(false)}
-        animationType="spring"
-        backdropOpacity={0.5}
-        modalStyle={styles.modalContent}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPeriodSelector(false)}
       >
-        <>
-          <Text style={styles.modalTitle}>⚡ Choose Period to Travel To</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>⚡ Choose Period to Travel To</Text>
 
-          <Text style={styles.modalSubtitle}>
-            Current Period: {periodCount}
-          </Text>
+            <Text style={styles.modalSubtitle}>
+              Current Period: {periodCount}
+            </Text>
 
-          {Array.from({ length: periodCount + 1 }, (_, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[
-                styles.periodOption,
-                i === periodCount && styles.currentPeriodOption,
-              ]}
-              onPress={() => handlePeriodSelection(i)}
-              disabled={i === periodCount}
-            >
-              <Text
+            {Array.from({ length: periodCount + 1 }, (_, i) => (
+              <TouchableOpacity
+                key={i}
                 style={[
-                  styles.periodOptionText,
-                  i === periodCount && styles.currentPeriodText,
+                  styles.periodOption,
+                  i === periodCount && styles.currentPeriodOption,
                 ]}
+                onPress={() => handlePeriodSelection(i)}
+                disabled={i === periodCount}
               >
-                Period {i} {i === periodCount ? '(Current)' : ''}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.periodOptionText,
+                    i === periodCount && styles.currentPeriodText,
+                  ]}
+                >
+                  Period {i} {i === periodCount ? '(Current)' : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowPeriodSelector(false)}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </>
-      </FastModal>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowPeriodSelector(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Joker Selector Modal */}
-      <FastModal
+      <Modal
         visible={showJokerSelector}
-        onClose={() => setShowJokerSelector(false)}
-        animationType="spring"
-        backdropOpacity={0.5}
-        modalStyle={[
-          styles.modalContent,
-          styles.jokerModalContent,
-          isAfterSchool && styles.modalContentAfterSchool,
-        ]}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowJokerSelector(false)}
       >
-        <>
-          <Text style={styles.modalTitle}>🔄 Choose Joker to Copy</Text>
-
-          <ScrollView
-            style={styles.jokerScrollView}
-            showsVerticalScrollIndicator={false}
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              styles.jokerModalContent,
+              isAfterSchool && styles.modalContentAfterSchool,
+            ]}
           >
-            {availableJokersForDuplication.length > 0 ? (
-              availableJokersForDuplication.map((availableJoker) => (
-                <TouchableOpacity
-                  key={availableJoker.id}
-                  style={styles.jokerOption}
-                  onPress={() => handleJokerSelection(availableJoker)}
-                >
-                  <View style={styles.jokerOptionHeader}>
-                    <Text style={styles.jokerOptionName}>
-                      {availableJoker.name}
+            <Text style={styles.modalTitle}>🔄 Choose Joker to Copy</Text>
+
+            <ScrollView
+              style={styles.jokerScrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              {availableJokersForDuplication.length > 0 ? (
+                availableJokersForDuplication.map((availableJoker) => (
+                  <TouchableOpacity
+                    key={availableJoker.id}
+                    style={styles.jokerOption}
+                    onPress={() => handleJokerSelection(availableJoker)}
+                  >
+                    <View style={styles.jokerOptionHeader}>
+                      <Text style={styles.jokerOptionName}>
+                        {availableJoker.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.jokerOptionType,
+                          {
+                            color:
+                              availableJoker.type === 'persistent'
+                                ? '#4ade80'
+                                : '#fb7185',
+                          },
+                        ]}
+                      >
+                        {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
+                      </Text>
+                    </View>
+                    <Text style={styles.jokerOptionDescription}>
+                      {availableJoker.description}
                     </Text>
-                    <Text
-                      style={[
-                        styles.jokerOptionType,
-                        {
-                          color:
-                            availableJoker.type === 'persistent'
-                              ? '#4ade80'
-                              : '#fb7185',
-                        },
-                      ]}
-                    >
-                      {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
-                    </Text>
-                  </View>
-                  <Text style={styles.jokerOptionDescription}>
-                    {availableJoker.description}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noJokersContainer}>
+                  <Text style={styles.noJokersText}>
+                    No other jokers to copy!
                   </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noJokersContainer}>
-                <Text style={styles.noJokersText}>
-                  No other jokers to copy!
-                </Text>
-                <Text style={styles.noJokersSubtext}>
-                  Study to earn more jokers first
-                </Text>
-              </View>
-            )}
-          </ScrollView>
+                  <Text style={styles.noJokersSubtext}>
+                    Study to earn more jokers first
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowJokerSelector(false)}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </>
-      </FastModal>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowJokerSelector(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Candy Conversion Step 1: Select Source Modal */}
-      <FastModal
+      <Modal
         visible={showConversionStep1}
-        onClose={() => setShowConversionStep1(false)}
-        animationType="spring"
-        backdropOpacity={0.5}
-        modalStyle={[
-          styles.modalContent,
-          styles.jokerModalContent,
-          isAfterSchool && styles.modalContentAfterSchool,
-        ]}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConversionStep1(false)}
       >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              styles.jokerModalContent,
+              isAfterSchool && styles.modalContentAfterSchool,
+            ]}
+          >
         <>
           <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
 
@@ -969,55 +983,58 @@ function JokerCard({
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
         </>
-      </FastModal>
+          </View>
+        </View>
+      </Modal>
 
       {/* Candy Conversion Step 2: Select Target Modal */}
-      <FastModal
+      <Modal
         visible={showConversionStep2}
-        onClose={() => setShowConversionStep2(false)}
-        animationType="spring"
-        backdropOpacity={0.5}
-        modalStyle={styles.modalContent}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConversionStep2(false)}
       >
-        <>
-          <Text style={styles.modalTitle}>🔄 Convert to Which Candy?</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🔄 Convert to Which Candy?</Text>
 
-          {selectedSourceCandy && (
-            <Text style={styles.conversionSummary}>
-              Converting:{' '}
-              {inventory.find((item) => item.name === selectedSourceCandy)
-                ?.quantity || 0}{' '}
-              {selectedSourceCandy}
-            </Text>
-          )}
-
-          {availableTargetCandies.map((candyType) => (
-            <TouchableOpacity
-              key={candyType}
-              style={styles.candyOption}
-              onPress={() => handleTargetCandySelection(candyType)}
-            >
-              <Text style={styles.candyOptionText}>{candyType}</Text>
-              <Text style={styles.targetPrice}>
-                Current Price: $
-                {(gameData.candyPrices[candyType]?.[periodCount] || 0).toFixed(
-                  2
-                )}
+            {selectedSourceCandy && (
+              <Text style={styles.conversionSummary}>
+                Converting:{' '}
+                {inventory.find((item) => item.name === selectedSourceCandy)
+                  ?.quantity || 0}{' '}
+                {selectedSourceCandy}
               </Text>
-            </TouchableOpacity>
-          ))}
+            )}
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => {
-              setShowConversionStep2(false);
-              setSelectedSourceCandy(null);
-            }}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </>
-      </FastModal>
+            {availableTargetCandies.map((candyType) => (
+              <TouchableOpacity
+                key={candyType}
+                style={styles.candyOption}
+                onPress={() => handleTargetCandySelection(candyType)}
+              >
+                <Text style={styles.candyOptionText}>{candyType}</Text>
+                <Text style={styles.targetPrice}>
+                  Current Price: $
+                  {(gameData.candyPrices[candyType]?.[periodCount] || 0).toFixed(
+                    2
+                  )}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                setShowConversionStep2(false);
+                setSelectedSourceCandy(null);
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Confirmation Modal - only render if not using page-level modal */}
       {!onShowConfirmation && (
@@ -1095,8 +1112,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 2,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   typeBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1105,6 +1127,22 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: '700',
     color: '#fff',
+    fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  useButton: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+  },
+  useButtonText: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#fbbf24',
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1166,12 +1204,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 10,
+  },
   modalContent: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 20,
-    margin: 20,
-    width: '80%',
+    padding: 24,
+    minHeight: 300,
+    maxWidth: 600,
   },
   modalTitle: {
     fontSize: 20,
@@ -1212,10 +1257,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   jokerModalContent: {
-    maxHeight: '80%',
+    maxHeight: '90%',
+    minHeight: 500,
+    width: SCREEN_WIDTH - 20,
   },
   jokerScrollView: {
-    maxHeight: 300,
+    maxHeight: 400,
     marginBottom: 16,
   },
   jokerOption: {

@@ -132,8 +132,15 @@ export default function FastModal({
   return (
     <View
       style={[
-        StyleSheet.absoluteFillObject,
-        { zIndex: 10002, elevation: 10002 },
+        {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 999999,
+          elevation: 999999,
+        },
       ]}
       pointerEvents={visible ? 'auto' : 'none'}
     >
@@ -157,16 +164,16 @@ const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'black',
-    zIndex: 9999,
-    elevation: 9999,
+    zIndex: 999998,
+    elevation: 999998,
   },
   modalContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    zIndex: 10000,
-    elevation: 10000,
+    paddingHorizontal: 10,
+    zIndex: 999999,
+    elevation: 999999,
   },
   modal: {
     backgroundColor: 'white',
