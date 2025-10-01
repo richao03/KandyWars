@@ -597,14 +597,22 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           },
         ]}
       >
-        <TouchableOpacity
-          style={styles.instructionsButton}
-          onPress={handleForfeit}
+        <PixelBorder
+          borderColor="#adb5bd"
+          borderWidth={3}
+          backgroundColor="#6c757d"
+          innerPadding={0}
+          style={{ flex: 1 }}
         >
-          <TextWithEmojis style={styles.instructionsButtonText} imageSize={28}>
-            🚪 Leave
-          </TextWithEmojis>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.instructionsButtonInner}
+            onPress={handleForfeit}
+          >
+            <TextWithEmojis style={styles.instructionsButtonText} imageSize={28}>
+              🚪 Leave
+            </TextWithEmojis>
+          </TouchableOpacity>
+        </PixelBorder>
       </View>
 
       <GameModal
@@ -1006,6 +1014,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#666',
+    alignItems: 'center',
+  },
+  instructionsButtonInner: {
+    paddingVertical: 12,
     alignItems: 'center',
   },
   instructionsButtonText: {

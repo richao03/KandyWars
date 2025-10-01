@@ -143,15 +143,6 @@ export const EMOJI_TO_IMAGE_MAP = {
   // Add more mappings as images become available
 } as const;
 
-// Combined registry for easy access
-export const IMAGE_REGISTRY = {
-  events: EVENT_IMAGES,
-  backgrounds: BACKGROUND_IMAGES,
-  dogs: DOG_IMAGES,
-  games: GAME_IMAGES,
-  emojis: EMOJI_IMAGES,
-} as const;
-
 // Debug logging to verify stable loading
 console.log('🖼️ Image Registry - Stable References Loaded');
 console.log('📊 Event Images:', Object.keys(EVENT_IMAGES));

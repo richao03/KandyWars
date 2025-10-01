@@ -41,7 +41,6 @@ export default function DayStatsModal({
         borderWidth={3}
         backgroundColor="rgba(255, 255, 255, 0.95)"
         innerPadding={24}
-        style={styles.titleContainer}
       >
         <PixelBorder
           borderColor="#d4af37"
@@ -183,7 +182,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
-
     shadowColor: '#8b4513',
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,

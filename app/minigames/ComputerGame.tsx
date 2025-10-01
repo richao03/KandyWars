@@ -368,7 +368,8 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           title="💻 Hack the System"
           subtitle="Match the tech pairs to infiltrate the network!"
           leftInfo={`Level ${level}/3`}
-          rightInfo={`Turns: ${turns}/${maxTurns}`}
+          centerInfo={`❌: ${turns}/${maxTurns}`}
+          rightInfo={'hax0rs'}
           theme="computer"
         />
 
@@ -532,7 +533,10 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
               style={styles.instructionsButtonInner}
               onPress={handleForfeit}
             >
-              <TextWithEmojis style={styles.instructionsButtonText}>
+              <TextWithEmojis
+                style={styles.instructionsButtonText}
+                imageSize={28}
+              >
                 🚪 Leave
               </TextWithEmojis>
             </TouchableOpacity>

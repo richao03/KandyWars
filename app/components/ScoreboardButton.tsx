@@ -69,29 +69,6 @@ export const ScoreboardButton: React.FC<ScoreboardButtonProps> = ({
   );
 };
 
-// Compact version for smaller spaces
-export const CompactScoreboardButton: React.FC<{ onPress?: () => void }> = ({ onPress }) => {
-  const [modalVisible, setModalVisible] = useState(false);
-
-  const handlePress = () => {
-    setModalVisible(true);
-    onPress?.();
-  };
-
-  return (
-    <>
-      <TouchableOpacity style={styles.compactButton} onPress={handlePress}>
-        <TextWithEmojis style={styles.compactEmoji}>🏆</TextWithEmojis>
-      </TouchableOpacity>
-
-      <ScoreboardModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-      />
-    </>
-  );
-};
-
 const styles = StyleSheet.create({
   button: {
     backgroundColor: '#3b82f6',
@@ -147,22 +124,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     textAlign: 'center',
-  },
-  compactButton: {
-    backgroundColor: '#3b82f6',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  compactEmoji: {
-    fontSize: 20,
   },
 });
 

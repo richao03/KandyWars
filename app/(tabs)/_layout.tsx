@@ -1,9 +1,8 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
-import { EMOJI_IMAGES } from '../../utils/eventImages';
 import FadeInWrapper from '../components/FadeInWrapper';
 
 export default function TabLayout() {
@@ -48,7 +47,7 @@ export default function TabLayout() {
             title: 'Home',
             tabBarIcon: ({ color, size }) => (
               <Image
-                source={require('../../assets/images/emojis/home-small.png')}
+                source={require('../../assets/images/emojis/home.png')}
                 style={{
                   width: size || 24,
                   height: size || 24,
@@ -65,7 +64,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => {
               return (
                 <Image
-                  source={require('../../assets/images/emojis/joker-small.png')}
+                  source={require('../../assets/images/emojis/joker.png')}
                   style={{
                     width: size || 24,
                     height: size || 24,
@@ -82,7 +81,7 @@ export default function TabLayout() {
             title: 'History',
             tabBarIcon: ({ color, size }) => (
               <Image
-                source={require('../../assets/images/emojis/chart-small.png')}
+                source={require('../../assets/images/emojis/chart.png')}
                 style={{
                   width: size || 24,
                   height: size || 24,
@@ -98,7 +97,7 @@ export default function TabLayout() {
             title: 'Settings',
             tabBarIcon: ({ color, size }) => (
               <Image
-                source={require('../../assets/images/emojis/gear-small.png')}
+                source={require('../../assets/images/emojis/gear.png')}
                 style={{
                   width: size || 24,
                   height: size || 24,

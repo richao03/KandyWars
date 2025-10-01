@@ -544,7 +544,8 @@ export default function MathGame({ onComplete }: MathGameProps) {
         title="Math Challenge"
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
-        centerInfo={`Matches: ${matchedIndices.length}/${getLevelConfig(level).requiredMatches}`}
+        centerInfo={`🎯: ${matchedIndices.length}/${getLevelConfig(level).requiredMatches}`}
+        rightInfo={'Mathing!'}
         theme="math"
       />
 

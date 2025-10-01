@@ -466,7 +466,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             title="Kitchen Practice"
             subtitle="Sort ingredients to their designated stations"
             leftInfo={`Level ${level}/3`}
-            centerInfo={`Progress: ${score}/${levelConfig.matches}`}
+            centerInfo={`🎯: ${score}/${levelConfig.matches}`}
             rightInfo={`Time: ${timeLeft}s`}
             theme="homeec"
           />
