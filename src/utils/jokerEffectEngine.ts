@@ -41,6 +41,7 @@ export type EffectTarget =
   | 'bulk_sale_bonus' // gives bonus when selling more than half inventory space
   | 'afternoon_sale_bonus' // gives bonus during afternoon periods
   | 'morning_purchase_discount' // gives discount during morning periods
+  | 'perfect_balance_bonus' // gives bonus when cash ends in .00 at end of day
   | 'location_highlights' // highlights locations with good events
   | 'randomize_prices' // randomizes all candy prices
   | 'price_prediction'; // enables price prediction features
@@ -400,7 +401,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     id: 9,
     name: 'Data Compression',
     subject: 'Computer',
-    type: 'one-time',
+    type: 'persistent',
     flavorText: 'No loss compression for sugar to save space',
     description: 'Inventory limit + 13',
     effects: [
@@ -408,7 +409,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
         target: 'inventory_limit',
         operation: 'add',
         amount: 13,
-        duration: 'one-time',
+        duration: 'persistent',
       },
     ],
   },
@@ -432,15 +433,15 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     id: 11,
     name: 'Trojan Horse',
     subject: 'Computer',
-    type: 'persistent',
-    flavorText: 'The virus resets nightly during the automated antivirus sweep',
-    description: 'Every period candy price increase by $10, resets daily',
+    type: 'one-time',
+    flavorText: 'Sneaky delivery of candy contraband',
+    description: 'Skip one level and get 5 of every candy',
     effects: [
       {
-        target: 'escalating_price_increase',
+        target: 'skip_level_and_gain_candy',
         operation: 'activate',
-        amount: 10,
-        duration: 'persistent',
+        amount: 5,
+        duration: 'one-time',
       },
     ],
   },
@@ -481,17 +482,17 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 15,
-    name: 'Deep Storage',
+    name: 'Perfect Bake',
     subject: 'Home Economics',
-    type: 'one-time',
-    flavorText: 'Just shove it in the bag till it pops',
-    description: 'Increase inventory limit +30 for 1 period',
+    type: 'persistent',
+    flavorText: 'Timing... ... ...is everything',
+    description: 'End the day with 0 candy in inventory and get $300',
     effects: [
       {
-        target: 'inventory_limit',
+        target: 'empty_inventory_bonus',
         operation: 'add',
-        amount: 30,
-        duration: 'one-time',
+        amount: 300,
+        duration: 'persistent',
       },
     ],
   },
@@ -529,17 +530,17 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 18,
-    name: 'Decoy Cake',
+    name: 'Slow Cooker',
     subject: 'Home Economics',
-    type: 'one-time',
-    flavorText: 'Is that made of cake!?',
-    description: 'Prevents 1 negative event then is consumed',
+    type: 'persistent',
+    flavorText: 'Good things come to those who wait',
+    description: 'Candy in inventory gains compounding +5% profit per period held',
     effects: [
       {
-        target: 'event_immunity',
-        operation: 'enable',
-        amount: 1, // blocks one negative event
-        duration: 'one-time',
+        target: 'sell_multiplier',
+        operation: 'multiply',
+        amount: 1.05, // +5% per period held
+        duration: 'persistent',
       },
     ],
   },
@@ -599,15 +600,15 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     id: 67,
     name: 'Medieval Shield',
     subject: 'History',
-    type: 'one-time',
+    type: 'persistent',
     flavorText: 'This shield belonged to one Captain Rogers, of Brooklyn',
-    description: 'Protect against one negative event',
+    description: 'Protect against money loss from negative events',
     effects: [
       {
-        target: 'event_immunity',
+        target: 'money_protection',
         operation: 'enable',
         amount: 1,
-        duration: 1, // Lasts 1 period
+        duration: 'persistent',
       },
     ],
   },
@@ -617,12 +618,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Gym',
     type: 'persistent',
     flavorText: "Don't call it a come back!",
-    description: 'Every 3 period of no sale, you receive $1000',
+    description: 'Every 3 period of no sale, you receive $500',
     effects: [
       {
         target: 'drought_relief_bonus',
         operation: 'add',
-        amount: 1000,
+        amount: 500,
         duration: 'persistent',
       },
     ],
@@ -663,17 +664,17 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 45,
-    name: 'Loophole',
+    name: 'Making Cents',
     subject: 'Logic',
-    type: 'one-time',
-    flavorText: 'Slide through like you had a hall pass',
-    description: 'Bypass one negative event',
+    type: 'persistent',
+    flavorText: 'It only makes dollars if it makes cents',
+    description: 'If your cash ends in .00 at the end of the day, get +$1000 bonus',
     effects: [
       {
-        target: 'event_immunity',
-        operation: 'enable',
-        amount: 1,
-        duration: 'one-time',
+        target: 'perfect_balance_bonus',
+        operation: 'add',
+        amount: 1000,
+        duration: 'persistent',
       },
     ],
   },
@@ -750,12 +751,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Gym',
     type: 'persistent',
     flavorText: 'Stay hungry, no, stay starving.',
-    description: 'Every period you end with 0 inventory, you get $500',
+    description: 'Every period you end with 0 inventory, you get $100',
     effects: [
       {
         target: 'empty_inventory_bonus',
         operation: 'add',
-        amount: 500,
+        amount: 100,
         duration: 'persistent',
       },
     ],
@@ -847,8 +848,9 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     name: 'Bulk Sale',
     subject: 'Economy',
     type: 'persistent',
-    flavorText: 'Sell in bulk, profit big',
-    description: 'Sell >50% of your inventory space in one sale and get +20% sale profit',
+    flavorText: 'The more you buy, the more you save!',
+    description:
+      'buy >50% of your inventory space in one sale and get -20% in price',
     effects: [
       {
         target: 'bulk_sale_bonus',
@@ -899,7 +901,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Economy',
     type: 'persistent',
     flavorText: 'Hodl the line! 🚀💎🙌',
-    description: '+$50 per candy in your inventory at the start of each period',
+    description: '+$5 per candy in your inventory at the start of each period',
     effects: [
       {
         target: 'period_start_inventory_bonus',
@@ -929,7 +931,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     id: 28,
     name: 'Therefore...',
     subject: 'Logic',
-    type: 'one-time',
+    type: 'persistent',
     flavorText: 'By logical deduction, you deserve more allowance',
     description: '+$200 to daily allowance',
     effects: [
@@ -937,7 +939,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
         target: 'allowance_add',
         operation: 'add',
         amount: 200,
-        duration: 'one-time',
+        duration: 'persistent',
       },
     ],
   },
@@ -1079,10 +1081,10 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Geography',
     type: 'one-time',
     flavorText: 'Shift the market landscape',
-    description: 'Randomize all candy prices for this period',
+    description: 'Shuffle all candy prices for this period',
     effects: [
       {
-        target: 'randomize_prices',
+        target: 'shuffle_prices',
         operation: 'activate',
         amount: 1,
         duration: 'one-time',

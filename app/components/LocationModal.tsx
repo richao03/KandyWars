@@ -1,16 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import FastModal from './FastModal';
-import { useJokers } from '../../src/hooks/useJokers';
 import { useGame } from '../../src/hooks/useGame';
+import { useJokers } from '../../src/hooks/useJokers';
+import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
+import TextWithEmojis from './TextWithEmojis';
 
-export type Location = 
-  | 'gym' 
-  | 'cafeteria' 
-  | 'home room' 
-  | 'library' 
-  | 'science lab' 
-  | 'school yard' 
+export type Location =
+  | 'gym'
+  | 'cafeteria'
+  | 'home room'
+  | 'library'
+  | 'science lab'
+  | 'school yard'
   | 'bathroom';
 
 interface LocationModalProps {
@@ -22,25 +24,30 @@ interface LocationModalProps {
 
 const locations: Location[] = [
   'gym',
-  'cafeteria', 
+  'cafeteria',
   'home room',
   'library',
   'science lab',
   'school yard',
-  'bathroom'
+  'bathroom',
 ];
 
-const locationColors: Record<Location, {bg: string, border: string}> = {
-  'gym': {bg: '#ffe6e6', border: '#ff6b6b'}, // Light red
-  'cafeteria': {bg: '#e6ffe6', border: '#51c451'}, // Light green
-  'home room': {bg: '#e6f3ff', border: '#4da6ff'}, // Light blue
-  'library': {bg: '#f3e6ff', border: '#b366ff'}, // Light purple
-  'science lab': {bg: '#ffffcc', border: '#ffff66'}, // Light yellow
-  'school yard': {bg: '#e6ffcc', border: '#a3ff66'}, // Light lime
-  'bathroom': {bg: '#ffcc99', border: '#ff9933'}, // Light orange
+const locationColors: Record<Location, { bg: string; border: string }> = {
+  gym: { bg: '#ffe6e6', border: '#ff6b6b' }, // Light red
+  cafeteria: { bg: '#e6ffe6', border: '#51c451' }, // Light green
+  'home room': { bg: '#e6f3ff', border: '#4da6ff' }, // Light blue
+  library: { bg: '#f3e6ff', border: '#b366ff' }, // Light purple
+  'science lab': { bg: '#ffffcc', border: '#ffff66' }, // Light yellow
+  'school yard': { bg: '#e6ffcc', border: '#a3ff66' }, // Light lime
+  bathroom: { bg: '#ffcc99', border: '#ff9933' }, // Light orange
 };
 
-function LocationModal({ visible, onClose, onSelectLocation, gameData }: LocationModalProps) {
+function LocationModal({
+  visible,
+  onClose,
+  onSelectLocation,
+  gameData,
+}: LocationModalProps) {
   const { jokers } = useJokers();
   const { periodCount } = useGame();
 
@@ -48,22 +55,32 @@ function LocationModal({ visible, onClose, onSelectLocation, gameData }: Locatio
     console.log('🟡 LocationModal - visible prop changed to:', visible);
   }, [visible]);
 
-  // Check if Map Maker joker is active (id: 41)
-  const hasMapMaker = jokers.some((joker: any) => joker.id === 41);
+  // Check if Map Maker joker is active (id: 53)
+  const hasMapMaker = jokers.some((joker: any) => joker.id === 53);
 
-  // Find locations with good events in next period
-  const goodEventLocations = React.useMemo(() => {
-    if (!hasMapMaker || !gameData?.periodEvents) return [];
+  // Find locations with good and bad events in next period
+  const eventLocations = React.useMemo(() => {
+    if (!hasMapMaker || !gameData?.periodEvents) return { good: [], bad: [] };
 
     const goodEffects = ['FOUND_MONEY', 'PRICE_SPIKE'];
-    const nextPeriod = periodCount + 1;
+    const badEffects = ['LOSE_MONEY', 'STASH_LOCKED', 'PRICE_DROP'];
+    // Note: periodCount is 0-indexed (0-39), event periods are 1-indexed (1-40)
+    // For next period events, we need periodCount + 2
+    const nextPeriod = periodCount + 2;
 
-    return gameData.periodEvents
-      .filter((event: any) =>
-        event.period === nextPeriod &&
-        goodEffects.includes(event.effect)
-      )
+    const nextPeriodEvents = gameData.periodEvents.filter(
+      (event: any) => event.period === nextPeriod && event.location
+    );
+
+    const good = nextPeriodEvents
+      .filter((event: any) => goodEffects.includes(event.effect))
       .map((event: any) => event.location);
+
+    const bad = nextPeriodEvents
+      .filter((event: any) => badEffects.includes(event.effect))
+      .map((event: any) => event.location);
+
+    return { good, bad };
   }, [hasMapMaker, gameData, periodCount]);
 
   const handleLocationSelect = (location: Location) => {
@@ -84,35 +101,57 @@ function LocationModal({ visible, onClose, onSelectLocation, gameData }: Locatio
 
       <View style={styles.locationGrid}>
         {locations.map((location) => {
-          const hasGoodEvent = goodEventLocations.includes(location);
+          const hasGoodEvent = eventLocations.good.includes(location);
+          const hasBadEvent = eventLocations.bad.includes(location);
+
+          let borderColor = locationColors[location].border;
+          let borderWidth = 3;
+
           return (
-            <TouchableOpacity
+            <PixelBorder
               key={location}
-              style={[
-                styles.locationButton,
-                {
-                  backgroundColor: locationColors[location].bg,
-                  borderColor: hasGoodEvent ? '#FFD700' : locationColors[location].border,
-                  borderWidth: hasGoodEvent ? 4 : 3,
-                },
-                hasGoodEvent && styles.highlightedLocation
-              ]}
-              onPress={() => handleLocationSelect(location)}
+              borderColor={borderColor}
+              borderWidth={borderWidth}
+              backgroundColor={locationColors[location].bg}
+              innerPadding={0}
+              style={styles.locationButtonWrapper}
             >
-              <Text style={styles.locationText}>
-                {location.charAt(0).toUpperCase() + location.slice(1)}
-              </Text>
-              {hasGoodEvent && (
-                <Text style={styles.highlightText}>✨ Good Event!</Text>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.locationButton}
+                onPress={() => handleLocationSelect(location)}
+              >
+                {!hasGoodEvent && !hasBadEvent && (
+                  <TextWithEmojis style={styles.locationText}>
+                    {location.charAt(0).toUpperCase() + location.slice(1)}
+                  </TextWithEmojis>
+                )}
+                {hasGoodEvent && (
+                  <TextWithEmojis style={styles.goodEventText} imageSize={24}>
+                    {location.charAt(0).toUpperCase() + location.slice(1)}
+                  </TextWithEmojis>
+                )}
+                {hasBadEvent && (
+                  <TextWithEmojis style={styles.badEventText} imageSize={24}>
+                    {location.charAt(0).toUpperCase() + location.slice(1)}
+                  </TextWithEmojis>
+                )}
+              </TouchableOpacity>
+            </PixelBorder>
           );
         })}
       </View>
 
-      <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-        <Text style={styles.cancelText}>Cancel</Text>
-      </TouchableOpacity>
+      <PixelBorder
+        borderColor="#999"
+        borderWidth={2}
+        backgroundColor="#f0f0f0"
+        innerPadding={0}
+        style={styles.cancelButtonWrapper}
+      >
+        <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </PixelBorder>
     </FastModal>
   );
 }
@@ -159,18 +198,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  locationButton: {
+  locationButtonWrapper: {
     width: '45%',
-    borderRadius: 16,
-    padding: 18,
     marginBottom: 10,
+  },
+  locationButton: {
+    padding: 18,
     alignItems: 'center',
-    borderWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   locationText: {
     fontSize: 15,
@@ -179,32 +213,40 @@ const styles = StyleSheet.create({
     color: '#5d4e37', // Dark brown
     fontFamily: 'PixeloidMono',
   },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 16,
-    padding: 16,
+  cancelButtonWrapper: {
     marginTop: 12,
+  },
+  cancelButton: {
+    padding: 16,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ccc',
   },
   cancelText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
+    fontFamily: 'PixeloidMono',
   },
   highlightedLocation: {
-    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 5,
   },
-  highlightText: {
-    fontSize: 11,
+  goodEventText: {
+    fontSize: 15,
     fontWeight: '700',
+    textAlign: 'center',
     color: '#FFD700',
-    marginTop: 4,
+    fontFamily: 'PixeloidMono',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 0.5, height: 0.5 },
+    textShadowRadius: 1,
+  },
+  badEventText: {
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#FF0000',
     fontFamily: 'PixeloidMono',
     textShadowColor: '#000',
     textShadowOffset: { width: 0.5, height: 0.5 },

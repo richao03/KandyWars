@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Modal,
@@ -50,6 +50,8 @@ interface JokerCardProps {
     onCancel?: () => void
   ) => void;
   onShowCandySelector?: (joker: any) => void;
+  onShowJokerSelector?: (joker: any) => void;
+  onTriggerEvent?: (eventData: any) => void;
 }
 
 const CANDY_TYPES = [
@@ -72,6 +74,8 @@ function JokerCard({
   disableActivation = false,
   onShowConfirmation,
   onShowCandySelector,
+  onShowJokerSelector,
+  onTriggerEvent,
 }: JokerCardProps) {
   const { jokers, activateJoker, addJoker, removeJoker } = useJokers();
   const { periodCount, revertToPreviousPeriod, incrementPeriod, jumpToPeriod } =
@@ -116,55 +120,82 @@ function JokerCard({
     onConfirm: () => {},
   });
 
-  const showConfirm = (
-    title: string,
-    message: string,
-    emoji: string,
-    onConfirm: () => void,
-    confirmText = 'OK',
-    cancelText = 'Cancel',
-    onCancel?: () => void
-  ) => {
-    // Use the page-level confirmation modal if available, otherwise fall back to internal modal
-    if (onShowConfirmation) {
-      onShowConfirmation(
-        title,
-        message,
-        emoji,
-        onConfirm,
-        confirmText,
-        cancelText,
-        onCancel
-      );
-    } else {
-      setConfirmModal({
-        visible: true,
-        title,
-        message,
-        emoji,
-        onConfirm: () => {
-          setConfirmModal((prev) => ({ ...prev, visible: false }));
-          onConfirm();
-        },
-        onCancel: onCancel
-          ? () => {
-              setConfirmModal((prev) => ({ ...prev, visible: false }));
-              onCancel();
-            }
-          : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
-        confirmText,
-        cancelText: onCancel ? cancelText : undefined,
-      });
+  const showConfirm = useCallback(
+    (
+      title: string,
+      message: string,
+      emoji: string,
+      onConfirm: () => void,
+      confirmText = 'OK',
+      cancelText = 'Cancel',
+      onCancel?: () => void
+    ) => {
+      // Use the page-level confirmation modal if available, otherwise fall back to internal modal
+      if (onShowConfirmation) {
+        onShowConfirmation(
+          title,
+          message,
+          emoji,
+          onConfirm,
+          confirmText,
+          cancelText,
+          onCancel
+        );
+      } else {
+        setConfirmModal({
+          visible: true,
+          title,
+          message,
+          emoji,
+          onConfirm: () => {
+            setConfirmModal((prev) => ({ ...prev, visible: false }));
+            onConfirm();
+          },
+          onCancel: onCancel
+            ? () => {
+                setConfirmModal((prev) => ({ ...prev, visible: false }));
+                onCancel();
+              }
+            : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
+          confirmText,
+          cancelText: onCancel ? cancelText : undefined,
+        });
+      }
+    },
+    [onShowConfirmation]
+  );
+
+  const showAlert = useCallback(
+    (title: string, message: string, emoji = '✨') => {
+      showConfirm(title, message, emoji, () => {}, 'OK');
+    },
+    [showConfirm]
+  );
+
+  // Prevent multiple rapid activations
+  const isActivating = useRef(false);
+
+  const handleActivate = useCallback(() => {
+    if (isActivating.current) {
+      console.log('🃏 Activation already in progress, ignoring duplicate call for:', joker.name);
+      return;
     }
-  };
 
-  const showAlert = (title: string, message: string, emoji = '✨') => {
-    showConfirm(title, message, emoji, () => {}, 'OK');
-  };
+    if (disableActivation) {
+      console.log('🃏 Activation disabled for:', joker.name);
+      return;
+    }
 
-  const handleActivate = () => {
-    if (joker.effect === 'double_candy_price') {
-      // Show candy selector modal
+    isActivating.current = true;
+    console.log('🃏 handleActivate called for joker:', joker.name, 'ID:', joker.id);
+
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      isActivating.current = false;
+    }, 1000); // Increased to 1 second
+
+    if (joker.id === JOKER_IDS.DOUBLE_UP || joker.effect === 'double_candy_price') {
+      // Show candy selector modal for Double Up
       onShowCandySelector?.(joker);
     } else if (joker.effect === 'revert_period') {
       // Show confirmation for time revert
@@ -179,10 +210,14 @@ function JokerCard({
       );
     } else if (joker.id === JOKER_IDS.GLITCH_IN_THE_MATRIX) {
       // Show joker selector modal for duplication
-      setShowJokerSelector(true);
+      if (onShowJokerSelector) {
+        onShowJokerSelector(joker);
+      } else {
+        setShowJokerSelector(true);
+      }
     } else if (joker.id === JOKER_IDS.MASTER_NEGOTIATOR) {
-      // Show candy conversion modal - step 1 (select source)
-      setShowConversionStep1(true);
+      // Show candy selector modal for conversion
+      onShowCandySelector?.(joker);
     } else if (joker.id === JOKER_IDS.TEMPORARY_EMPEROR) {
       // Show confirmation for time skip with auto profits
       showConfirm(
@@ -232,10 +267,16 @@ function JokerCard({
         () => {}
       );
     } else if (joker.id === JOKER_IDS.LOST_AND_FOUND) {
-      // Show confirmation for Lost and Found activation
+      // Generate random amount for preview
+      const baseAmount = Math.floor(Math.random() * 401) + 100; // 100 to 500
+      const hasHideAndSeek = jokers.some((j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK);
+      const finalAmount = hasHideAndSeek ? baseAmount * 3 : baseAmount;
+
       showConfirm(
         'Lost and Found',
-        "Find someone's lost lunch money worth $100?",
+        hasHideAndSeek
+          ? `Find someone's lost lunch money! You'll find $${baseAmount} (tripled to $${finalAmount} with Hide and Seek!)`
+          : `Find someone's lost lunch money worth $${baseAmount}?`,
         '🎒',
         () => handleLostAndFound(),
         'Find Money',
@@ -279,9 +320,20 @@ function JokerCard({
       // Show confirmation for Continental Drift
       showConfirm(
         'Continental Drift',
-        'Randomize all candy prices for this period?',
+        'Shuffle all candy prices for this period?',
         '🌍',
         () => handleContinentalDrift(),
+        'Activate',
+        'Cancel',
+        () => {}
+      );
+    } else if (joker.id === JOKER_IDS.TROJAN_HORSE) {
+      // Show confirmation for Trojan Horse
+      showConfirm(
+        'Trojan Horse',
+        'Skip one period and get 5 of every candy (even if it overflows)?',
+        '🐴',
+        () => handleTrojanHorse(),
         'Activate',
         'Cancel',
         () => {}
@@ -297,8 +349,16 @@ function JokerCard({
         'Cancel',
         () => {}
       );
+    } else {
+      // Log unhandled instant joker activation
+      console.warn('⚠️ Unhandled instant joker activation:', joker.name, 'ID:', joker.id, 'Effect:', joker.effect);
+      showAlert(
+        'Not Implemented',
+        `The activation for "${joker.name}" is not yet implemented.`,
+        '🚧'
+      );
     }
-  };
+  }, [joker, disableActivation, onShowCandySelector, onShowJokerSelector, showConfirm, showAlert]);
 
   const handleTimeRevert = async () => {
     const timeReverted = revertToPreviousPeriod();
@@ -513,19 +573,21 @@ function JokerCard({
 
     try {
       // Add $200 to wallet
-      console.log('🪙 Roman Coin: Adding $200 to wallet');
-      addMoney(200);
-
-      // Remove the joker (it's one-time use)
-      console.log('🪙 Roman Coin: Removing joker with ID:', joker.id);
-      removeJoker(joker.id);
+      console.log('🪙 Roman Coin: Adding $2000 to wallet');
+      addMoney(2000);
 
       console.log('🪙 Roman Coin: Showing success alert');
       showAlert(
         'Roman Coin Sold!',
-        'You sold the ancient Roman coin and received $200!',
+        'You sold the ancient Roman coin and received $2000!',
         '🪙'
       );
+
+      // Remove the joker after a delay to avoid interfering with modal
+      setTimeout(() => {
+        console.log('🪙 Roman Coin: Removing joker with ID:', joker.id);
+        removeJoker(joker.id);
+      }, 500);
     } catch (error) {
       console.error('🪙 Roman Coin: Error during activation:', error);
       showAlert(
@@ -540,21 +602,46 @@ function JokerCard({
     console.log('🎒 Lost and Found: Starting activation');
 
     try {
-      // Generate maximum find money event (typically $50-100)
-      const maxAmount = 100; // Max amount for found money events
-      console.log(`🎒 Lost and Found: Adding $${maxAmount} to wallet`);
-      addMoney(maxAmount);
+      // Generate random amount between $100-$500
+      const baseAmount = Math.floor(Math.random() * 401) + 100; // 100 to 500
 
-      // Remove the joker (it's one-time use)
-      console.log('🎒 Lost and Found: Removing joker with ID:', joker.id);
-      removeJoker(joker.id);
+      // Check for Hide and Seek joker (triples found money)
+      const hasHideAndSeek = jokers.some((j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK);
+      const finalAmount = hasHideAndSeek ? baseAmount * 3 : baseAmount;
 
-      console.log('🎒 Lost and Found: Showing success alert');
-      showAlert(
-        'Lost and Found!',
-        `You found someone\'s lost lunch money and received $${maxAmount}!`,
-        '🎒'
-      );
+      console.log(`🎒 Lost and Found: Found $${baseAmount}${hasHideAndSeek ? ` × 3 (Hide and Seek) = $${finalAmount}` : ''}`);
+
+      // Trigger the found money event through the event handler
+      if (onTriggerEvent) {
+        const eventData = {
+          description: 'Found some money!',
+          effect: 'FOUND_MONEY' as const,
+          category: 'good' as const,
+          heading: 'Lucky!',
+          title: 'You found some money!',
+          subtitle: hasHideAndSeek
+            ? `With Hide and Seek, you found $${finalAmount}!`
+            : `You found $${finalAmount}!`,
+          dollarAmount: finalAmount,
+          backgroundImage: 'foundmoney',
+        };
+
+        onTriggerEvent(eventData);
+      } else {
+        // Fallback if no event handler
+        addMoney(finalAmount);
+        showAlert(
+          'Lost and Found!',
+          `You found $${finalAmount}!${hasHideAndSeek ? ' (Tripled by Hide and Seek)' : ''}`,
+          '🎒'
+        );
+      }
+
+      // Remove the joker after a delay to avoid interfering with modal
+      setTimeout(() => {
+        console.log('🎒 Lost and Found: Removing joker with ID:', joker.id);
+        removeJoker(joker.id);
+      }, 500);
     } catch (error) {
       console.error('🎒 Lost and Found: Error during activation:', error);
       showAlert(
@@ -594,17 +681,27 @@ function JokerCard({
 
   const handlePersuasion = async () => {
     console.log('🗣️ Pursuasion: Starting activation');
+    console.log('🗣️ Pursuasion: Current period:', periodCount);
+    console.log('🗣️ Pursuasion: Joker ID:', joker.id);
 
     try {
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-      console.log('🗣️ Pursuasion: Joker removed from inventory');
+      // Activate the joker effect for current period
+      const activated = await activateJoker(Number(joker.id), undefined, periodCount);
+      console.log('🗣️ Pursuasion: Effect activated result:', activated);
+      console.log('🗣️ Pursuasion: Effect activated for period', periodCount);
 
+      // Show alert BEFORE removing joker to avoid re-render interference
       showAlert(
         'Pursuasion Activated!',
         'Your next candy sale will earn 2x profit!',
         '🗣️'
       );
+
+      // Remove the joker after a delay to avoid interfering with modal
+      setTimeout(() => {
+        removeJoker(joker.id);
+        console.log('🗣️ Pursuasion: Joker removed from inventory');
+      }, 500);
     } catch (error) {
       console.error('🗣️ Pursuasion: Error during activation:', error);
       showAlert('Error', 'An error occurred while activating Pursuasion', '❌');
@@ -619,15 +716,17 @@ function JokerCard({
       addMoney(1000);
       console.log('🧁 Bake Sale: Added $1000 to wallet');
 
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-      console.log('🧁 Bake Sale: Joker removed from inventory');
-
       showAlert(
         'Bake Sale Success!',
         'You collected $1000 from your bake sale! Cash rules everything around me!',
         '🧁'
       );
+
+      // Remove the joker after a delay to avoid interfering with modal
+      setTimeout(() => {
+        removeJoker(joker.id);
+        console.log('🧁 Bake Sale: Joker removed from inventory');
+      }, 500);
     } catch (error) {
       console.error('🧁 Bake Sale: Error during activation:', error);
       showAlert('Error', 'An error occurred while activating Bake Sale', '❌');
@@ -668,37 +767,52 @@ function JokerCard({
   const CardWrapper = onLongPress ? TouchableOpacity : View;
   const handleContinentalDrift = async () => {
     console.log(
-      '🌍 Continental Drift: Starting activation - randomizing all candy prices'
+      '🌍 Continental Drift: Starting activation - shuffling candy prices'
     );
 
     try {
-      // Define candy types (you may need to adjust these based on your game's candy types)
+      // Define candy types (matches the game's candy types)
       const candyTypes = [
-        'Skittles',
-        'M&Ms',
-        'Sour Patch Kids',
-        'Twix',
         'Snickers',
-        'Kit Kat',
+        'M&Ms',
+        'Skittles',
+        'Warheads',
+        'Sour Patch Kids',
+        'Bubble Gum',
         'Jaw Breaker',
       ];
 
-      // Randomize prices for all candy types
+      // Get all current prices for this period
+      const currentPrices = candyTypes.map((candyType) => ({
+        candy: candyType,
+        price: getOriginalCandyPrice(candyType, periodCount),
+      }));
+
+      console.log('🌍 Continental Drift: Current prices:', currentPrices);
+
+      // Extract just the prices and shuffle them
+      const prices = currentPrices.map((cp) => cp.price);
+
+      // Fisher-Yates shuffle algorithm
+      for (let i = prices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [prices[i], prices[j]] = [prices[j], prices[i]];
+      }
+
+      console.log('🌍 Continental Drift: Shuffled prices:', prices);
+
+      // Apply shuffled prices to candies
       const priceChanges: string[] = [];
-      candyTypes.forEach((candyType) => {
-        // Generate a random price between $5-$25
-        const minPrice = 5;
-        const maxPrice = 25;
-        const newPrice =
-          Math.floor(Math.random() * (maxPrice - minPrice + 1)) + minPrice;
+      candyTypes.forEach((candyType, index) => {
+        const originalPrice = currentPrices[index].price;
+        const newPrice = prices[index];
 
-        // Get the original price for comparison
-        const originalPrice = getOriginalCandyPrice(candyType);
-
-        // Apply the new randomized price
+        // Apply the shuffled price
         modifyCandyPrice(candyType, newPrice, periodCount);
 
-        priceChanges.push(`${candyType}: $${originalPrice} → $${newPrice}`);
+        priceChanges.push(
+          `${candyType}: $${originalPrice.toFixed(2)} → $${newPrice.toFixed(2)}`
+        );
         console.log(
           `🌍 Continental Drift: ${candyType} price changed from $${originalPrice} to $${newPrice}`
         );
@@ -709,7 +823,7 @@ function JokerCard({
 
       showAlert(
         'Continental Drift Activated!',
-        `The market landscape has shifted! All candy prices have been randomized for this period:\n\n${priceChanges.join('\n')}`,
+        `The market landscape has shifted! All candy prices have been shuffled:\n\n${priceChanges.join('\n')}`,
         '🌍'
       );
     } catch (error) {
@@ -722,6 +836,54 @@ function JokerCard({
     }
   };
 
+  const handleTrojanHorse = async () => {
+    console.log(
+      '🐴 Trojan Horse: Starting activation - skipping period and adding candy'
+    );
+
+    try {
+      // Define candy types
+      const candyTypes = [
+        'Snickers',
+        'M&Ms',
+        'Skittles',
+        'Warheads',
+        'Sour Patch Kids',
+        'Bubble Gum',
+        'Jaw Breaker',
+      ];
+
+      // Add 5 of each candy type (even if it overflows inventory)
+      candyTypes.forEach((candyType) => {
+        const currentPrice = getOriginalCandyPrice(candyType, periodCount);
+        addToInventory(candyType, 5, currentPrice);
+        console.log(
+          `🐴 Trojan Horse: Added 5 ${candyType} at $${currentPrice.toFixed(2)}`
+        );
+      });
+
+      // Skip one period
+      incrementPeriod();
+      console.log('🐴 Trojan Horse: Skipped one period');
+
+      // Remove the joker (it's one-time use)
+      removeJoker(joker.id);
+
+      showAlert(
+        'Trojan Horse Activated!',
+        `Smuggled in 5 of every candy and skipped ahead one period!`,
+        '🐴'
+      );
+    } catch (error) {
+      console.error('🐴 Trojan Horse: Error during activation:', error);
+      showAlert(
+        'Error',
+        'An error occurred while activating Trojan Horse',
+        '❌'
+      );
+    }
+  };
+
   const handleAtlasBonus = async () => {
     console.log('🏔️ Atlas Bonus: Starting activation - adding $1500');
 
@@ -729,14 +891,16 @@ function JokerCard({
       // Add $1500 to wallet
       addMoney(1500);
 
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-
       showAlert(
         'Atlas Bonus Activated!',
         'The weight of the world brings heavy profits! You gained $1500.',
         '🏔️'
       );
+
+      // Remove the joker after a delay to avoid interfering with modal
+      setTimeout(() => {
+        removeJoker(joker.id);
+      }, 500);
     } catch (error) {
       console.error('🏔️ Atlas Bonus: Error during activation:', error);
       showAlert(
@@ -840,77 +1004,53 @@ function JokerCard({
       </Modal>
 
       {/* Joker Selector Modal */}
-      <Modal
+      <FastModal
         visible={showJokerSelector}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowJokerSelector(false)}
+        onClose={() => setShowJokerSelector(false)}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={styles.modalContent}
       >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              styles.jokerModalContent,
-              isAfterSchool && styles.modalContentAfterSchool,
-            ]}
-          >
-            <Text style={styles.modalTitle}>🔄 Choose Joker to Copy</Text>
-
-            <ScrollView
-              style={styles.jokerScrollView}
-              showsVerticalScrollIndicator={false}
-            >
-              {availableJokersForDuplication.length > 0 ? (
-                availableJokersForDuplication.map((availableJoker) => (
-                  <TouchableOpacity
-                    key={availableJoker.id}
-                    style={styles.jokerOption}
-                    onPress={() => handleJokerSelection(availableJoker)}
-                  >
-                    <View style={styles.jokerOptionHeader}>
-                      <Text style={styles.jokerOptionName}>
-                        {availableJoker.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.jokerOptionType,
-                          {
-                            color:
-                              availableJoker.type === 'persistent'
-                                ? '#4ade80'
-                                : '#fb7185',
-                          },
-                        ]}
-                      >
-                        {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
-                      </Text>
-                    </View>
-                    <Text style={styles.jokerOptionDescription}>
-                      {availableJoker.description}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.noJokersContainer}>
-                  <Text style={styles.noJokersText}>
-                    No other jokers to copy!
-                  </Text>
-                  <Text style={styles.noJokersSubtext}>
-                    Study to earn more jokers first
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setShowJokerSelector(false)}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+        <>
+          <View style={{ alignItems: 'center' }}>
+            <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
+              🔄
+            </TextWithEmojis>
           </View>
-        </View>
-      </Modal>
+          <TextWithEmojis style={styles.modalTitle} imageSize={24}>
+            Choose Joker to Copy
+          </TextWithEmojis>
+
+          {availableJokersForDuplication.length > 0 ? (
+            availableJokersForDuplication.map((availableJoker) => (
+              <TouchableOpacity
+                key={availableJoker.id}
+                style={styles.jokerSelectButton}
+                onPress={() => handleJokerSelection(availableJoker)}
+              >
+                <Text style={styles.jokerSelectButtonText}>
+                  {availableJoker.name}{' '}
+                  {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
+                </Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.noJokersContainer}>
+              <Text style={styles.noJokersText}>No other jokers to copy!</Text>
+              <Text style={styles.noJokersSubtext}>
+                Study to earn more jokers first
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => setShowJokerSelector(false)}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
 
       {/* Candy Conversion Step 1: Select Source Modal */}
       <Modal
@@ -927,62 +1067,66 @@ function JokerCard({
               isAfterSchool && styles.modalContentAfterSchool,
             ]}
           >
-        <>
-          <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
+            <>
+              <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
 
-          <ScrollView
-            style={styles.jokerScrollView}
-            showsVerticalScrollIndicator={false}
-          >
-            {availableCandiesForConversion.length > 0 ? (
-              availableCandiesForConversion.map((candyType) => (
-                <TouchableOpacity
-                  key={candyType}
-                  style={[
-                    styles.candyOption,
-                    isAfterSchool && styles.candyOptionAfterSchool,
-                  ]}
-                  onPress={() => handleSourceCandySelection(candyType)}
-                >
-                  <View style={styles.candyOptionHeader}>
-                    <Text
+              <ScrollView
+                style={styles.jokerScrollView}
+                showsVerticalScrollIndicator={false}
+              >
+                {availableCandiesForConversion.length > 0 ? (
+                  availableCandiesForConversion.map((candyType) => (
+                    <TouchableOpacity
+                      key={candyType}
                       style={[
-                        styles.candyOptionText,
-                        isAfterSchool && styles.candyOptionTextAfterSchool,
+                        styles.candyOption,
+                        isAfterSchool && styles.candyOptionAfterSchool,
                       ]}
+                      onPress={() => handleSourceCandySelection(candyType)}
                     >
-                      {candyType}
+                      <View style={styles.candyOptionHeader}>
+                        <Text
+                          style={[
+                            styles.candyOptionText,
+                            isAfterSchool && styles.candyOptionTextAfterSchool,
+                          ]}
+                        >
+                          {candyType}
+                        </Text>
+                        <Text style={styles.candyQuantity}>
+                          ×
+                          {inventory.find((item) => item.name === candyType)
+                            ?.quantity || 0}
+                        </Text>
+                      </View>
+                      <Text style={styles.candyAvgPrice}>
+                        Avg: $
+                        {(
+                          inventory.find((item) => item.name === candyType)
+                            ?.price || 0
+                        ).toFixed(2)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.noJokersContainer}>
+                    <Text style={styles.noJokersText}>
+                      No candy to convert!
                     </Text>
-                    <Text style={styles.candyQuantity}>
-                      ×
-                      {inventory.find((item) => item.name === candyType)
-                        ?.quantity || 0}
+                    <Text style={styles.noJokersSubtext}>
+                      Buy some candy first
                     </Text>
                   </View>
-                  <Text style={styles.candyAvgPrice}>
-                    Avg: $
-                    {(
-                      inventory.find((item) => item.name === candyType)
-                        ?.price || 0
-                    ).toFixed(2)}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noJokersContainer}>
-                <Text style={styles.noJokersText}>No candy to convert!</Text>
-                <Text style={styles.noJokersSubtext}>Buy some candy first</Text>
-              </View>
-            )}
-          </ScrollView>
+                )}
+              </ScrollView>
 
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => setShowConversionStep1(false)}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowConversionStep1(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </>
           </View>
         </View>
       </Modal>
@@ -1016,9 +1160,9 @@ function JokerCard({
                 <Text style={styles.candyOptionText}>{candyType}</Text>
                 <Text style={styles.targetPrice}>
                   Current Price: $
-                  {(gameData.candyPrices[candyType]?.[periodCount] || 0).toFixed(
-                    2
-                  )}
+                  {(
+                    gameData.candyPrices[candyType]?.[periodCount] || 0
+                  ).toFixed(2)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -1264,6 +1408,23 @@ const styles = StyleSheet.create({
   jokerScrollView: {
     maxHeight: 400,
     marginBottom: 16,
+  },
+  jokerSelectButton: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 4,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3a3a3a',
+  },
+  jokerSelectButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   jokerOption: {
     backgroundColor: '#f5e6d3',

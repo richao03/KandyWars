@@ -15,6 +15,11 @@ interface DayStatsModalProps {
     netGain: number;
   };
   day: number;
+  bonuses?: Array<{
+    jokerName: string;
+    amount: number;
+    emoji?: string;
+  }>;
 }
 
 export default function DayStatsModal({
@@ -23,10 +28,15 @@ export default function DayStatsModal({
   onCancel,
   stats,
   day,
+  bonuses,
 }: DayStatsModalProps) {
   if (!stats) {
     return null;
   }
+
+  // Calculate total bonuses
+  const totalBonuses = bonuses?.reduce((sum, bonus) => sum + bonus.amount, 0) || 0;
+  const netGainWithBonuses = stats.netGain + totalBonuses;
 
   return (
     <FastModal
@@ -104,6 +114,31 @@ export default function DayStatsModal({
             </View>
           </PixelBorder>
 
+          {bonuses && bonuses.length > 0 && (
+            <>
+              {bonuses.map((bonus, index) => (
+                <PixelBorder
+                  key={index}
+                  borderColor="#d4af37"
+                  borderWidth={2}
+                  backgroundColor="#fffef7"
+                  innerPadding={12}
+                  style={styles.statRowBorder}
+                >
+                  <View style={styles.statRow}>
+                    <Text style={styles.bonusLabel}>
+                      {bonus.emoji && `${bonus.emoji} `}
+                      {bonus.jokerName}:
+                    </Text>
+                    <Text style={styles.bonusValue}>
+                      +${bonus.amount.toFixed(2)}
+                    </Text>
+                  </View>
+                </PixelBorder>
+              ))}
+            </>
+          )}
+
           <PixelBorder
             borderColor="#d4a574"
             borderWidth={3}
@@ -116,12 +151,12 @@ export default function DayStatsModal({
               <Text
                 style={[
                   styles.netGainValue,
-                  stats.netGain >= 0
+                  netGainWithBonuses >= 0
                     ? styles.positiveGain
                     : styles.negativeGain,
                 ]}
               >
-                {stats.netGain >= 0 ? '+' : ''}${stats.netGain.toFixed(2)}
+                {netGainWithBonuses >= 0 ? '+' : ''}${netGainWithBonuses.toFixed(2)}
               </Text>
             </View>
           </PixelBorder>
@@ -240,6 +275,19 @@ const styles = StyleSheet.create({
   },
   soldValue: {
     color: '#3b82f6',
+  },
+  bonusLabel: {
+    fontSize: 16,
+    color: '#6b4423',
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    flex: 1,
+  },
+  bonusValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+    color: '#22c55e',
   },
   netGainRow: {},
   netGainLabel: {

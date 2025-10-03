@@ -43,10 +43,34 @@ export const useWallet = () => {
 
   const addAllowance = useCallback((jokers?: any[], periodCount?: number): number => {
     // Base allowance
-    const baseAllowance = 10;
+    let baseAllowance = 10;
 
-    // Apply Hall Pass allowance bonus
-    const finalAllowance = HallPassUtils.applyAllowanceBonus(baseAllowance, hallPassEffects);
+    // Apply Hall Pass allowance bonus first
+    baseAllowance = HallPassUtils.applyAllowanceBonus(baseAllowance, hallPassEffects);
+
+    // Apply joker effects
+    let finalAllowance = baseAllowance;
+    if (jokers && jokers.length > 0) {
+      // Calculate allowance multipliers from jokers
+      let allowanceMultiplier = 1;
+      let allowanceAddition = 0;
+
+      jokers.forEach(joker => {
+        if (joker.effects) {
+          joker.effects.forEach((effect: any) => {
+            if (effect.target === 'allowance_multiplier' && effect.operation === 'multiply') {
+              allowanceMultiplier *= effect.amount;
+            } else if (effect.target === 'allowance_add' && effect.operation === 'add') {
+              allowanceAddition += effect.amount;
+            }
+          });
+        }
+      });
+
+      // Apply multipliers first, then additions
+      finalAllowance = (baseAllowance * allowanceMultiplier) + allowanceAddition;
+      console.log(`💰 Allowance calculation: base=${baseAllowance}, multiplier=${allowanceMultiplier}, addition=${allowanceAddition}, final=${finalAllowance}`);
+    }
 
     dispatch(addBalance(finalAllowance));
     return finalAllowance;

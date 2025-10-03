@@ -88,7 +88,8 @@ const allJokers = [
 export function generateSeededGameData(seed: string, totalPeriods = 40) {
   const rng = seedrandom(seed);
 
-  // Price table
+  // Price table (0-indexed: periods 0-39 for internal array indexing)
+  // Note: Events use 1-based period numbers (1-40), so subtract 1 when looking up prices
   const candyPrices: CandyPriceTable = {};
   Object.entries(candyBasePrices).forEach(([candy, [min, max, floorPrice]]) => {
     candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
@@ -236,7 +237,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       heading: 'Jackpot!',
       title: 'Cash on the floor!',
       subtitle: 'Quick pocket move, nobody saw a thing.',
-      dollarAmount: 40,
+      dollarAmount: 250,
       backgroundImage: 'foundmoney',
       hint: "👀 There's a commotion in the hallway... someone's missing cash. 👀",
     }),
@@ -280,7 +281,7 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       title: 'Buy candy, fund the trip!',
       subtitle: 'Suddenly, Snickers are selling like crazy.',
       backgroundImage: 'pricehike',
-      hint: "👀 The student council's hoarding Snickers for the bake sale next period... 👀",
+      hint: "👀 The student council's hoarding Snickers for the bake sale, next period... 👀",
     }),
     () => ({
       description: 'Principal checks lockers during lunch!',
@@ -335,19 +336,21 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
   // Generate 2-6 events per day
   for (let day = 0; day < numDays; day++) {
     const eventsThisDay = Math.floor(rng() * 5) + 2; // Random between 2 and 6
-    const dayStartPeriod = day * 8;
+    const dayStartPeriod = day * 8 + 1; // Start at period 1 for day 0, period 9 for day 1, etc.
     const dayEndPeriod = dayStartPeriod + 8;
 
-    // Get available periods for this day (exclude lunch period which is period 4 of each day)
+    // Get available periods for this day (exclude lunch period which is period 5 of each day)
     const availablePeriodsThisDay = Array.from(
       { length: 8 },
       (_, i) => dayStartPeriod + i
     ).filter(
       (period) =>
-        period % 8 !== 4 && // Exclude lunch period (5th period, index 4)
+        period !== 1 && // Exclude period 1 (first period of day 1)
+        (period - 1) % 8 !== 4 && // Exclude lunch period (5th period of each day)
         !periodEvents.some((e) => e.period === period) // Exclude already used periods
     );
 
+    console.log('availablePeriodsThisDay', availablePeriodsThisDay);
     // Shuffle available periods for this day
     for (let i = availablePeriodsThisDay.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
@@ -358,13 +361,18 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
     }
 
     // Add events for this day
-    for (let i = 0; i < Math.min(eventsThisDay, availablePeriodsThisDay.length); i++) {
+    for (
+      let i = 0;
+      i < Math.min(eventsThisDay, availablePeriodsThisDay.length);
+      i++
+    ) {
       const period = availablePeriodsThisDay[i];
-      const template = eventTemplates[Math.floor(rng() * eventTemplates.length)];
+      const template =
+        eventTemplates[Math.floor(rng() * eventTemplates.length)];
       const event = { ...template(), period };
 
       // Only add generic hint for events without location if they don't have one
-      if (!event.location && !event.hint && period > 0) {
+      if (!event.location && !event.hint && period > 1) {
         event.hint = `You overhear students talking about something happening next period...`;
       }
 

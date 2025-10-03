@@ -23,6 +23,7 @@ interface ConfirmationModalProps {
   theme?: 'school' | 'evening' | 'market';
   emoji?: string;
   dismissible?: boolean; // Allow dismissing by clicking background or back button
+  isBonusModal?: boolean; // Special formatting for sale bonus modals
 }
 
 export default function ConfirmationModal({
@@ -36,6 +37,7 @@ export default function ConfirmationModal({
   theme = 'school',
   emoji = '❓',
   dismissible = true,
+  isBonusModal = false,
 }: ConfirmationModalProps) {
   // Theme-specific styles
   const getThemeStyles = () => {
@@ -81,6 +83,84 @@ export default function ConfirmationModal({
 
   const themeStyles = getThemeStyles();
 
+  // Parse bonus lines if this is a bonus modal
+  const renderMessage = () => {
+    if (isBonusModal) {
+      // Message format: "emoji|jokerName|$amount\nemoji|jokerName|$amount\n\n$baseGain\n$totalGain"
+      // Split by double newline to separate bonuses from summary
+      const parts = message.split('\n\n');
+      const bonusLines = parts[0]?.split('\n').filter((l) => l.trim()) || [];
+      const summaryParts = parts[1]?.split('\n').filter((l) => l.trim()) || [];
+
+      console.log('what is parts', parts);
+
+      return (
+        <View style={styles.messageContainer}>
+          {bonusLines.length > 0 && (
+            <View style={styles.bonusContainer}>
+              {bonusLines.map((line, i) => {
+                // Each line format: "emoji|jokerName|$amount"
+                const [emoji, jokerName, amount] = line.split('|');
+                if (!emoji || !jokerName || !amount) return null;
+
+                return (
+                  <View key={`bonus-${i}`} style={styles.bonusLine}>
+                    <TextWithEmojis style={styles.bonusEmoji} imageSize={16}>
+                      {emoji}
+                    </TextWithEmojis>
+                    <TextWithEmojis
+                      style={[
+                        styles.bonusText,
+                        { color: themeStyles.messageColor },
+                      ]}
+                      imageSize={12}
+                    >
+                      {jokerName}
+                    </TextWithEmojis>
+                    <TextWithEmojis
+                      style={[
+                        styles.bonusAmount,
+                        { color: themeStyles.messageColor },
+                      ]}
+                      imageSize={12}
+                    >
+                      {amount}
+                    </TextWithEmojis>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+          {summaryParts.length >= 2 && (
+            <View style={styles.summaryContainer}>
+              <TextWithEmojis
+                style={[styles.summaryText, { color: themeStyles.messageColor }]}
+                imageSize={12}
+              >
+                Base: {summaryParts[0]}
+              </TextWithEmojis>
+              <TextWithEmojis
+                style={[styles.summaryText, { color: themeStyles.messageColor, fontWeight: 'bold' }]}
+                imageSize={12}
+              >
+                Total: {summaryParts[1]}
+              </TextWithEmojis>
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <TextWithEmojis
+        style={[styles.message, { color: themeStyles.messageColor }]}
+        imageSize={12}
+      >
+        {message}
+      </TextWithEmojis>
+    );
+  };
+
   return (
     <FastModal
       visible={visible}
@@ -103,12 +183,12 @@ export default function ConfirmationModal({
         showsVerticalScrollIndicator={false}
       >
         <TextWithEmojis style={styles.emoji}>{emoji}</TextWithEmojis>
-        <TextWithEmojis style={[styles.title, { color: themeStyles.titleColor }]}>
+        <TextWithEmojis
+          style={[styles.title, { color: themeStyles.titleColor }]}
+        >
           {title}
         </TextWithEmojis>
-        <TextWithEmojis style={[styles.message, { color: themeStyles.messageColor }]}>
-          {message}
-        </TextWithEmojis>
+        {renderMessage()}
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
@@ -193,8 +273,56 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 24,
-    lineHeight: 22,
+    lineHeight: 24,
     fontFamily: 'PixeloidMono',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageContainer: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  bonusContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  bonusLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  bonusEmoji: {
+    fontSize: 16,
+    width: 24,
+    marginRight: 8,
+    textAlign: 'left',
+  },
+  bonusText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 20,
+  },
+  bonusAmount: {
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 20,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  summaryContainer: {
+    width: '100%',
+    marginTop: 16,
+    gap: 4,
+  },
+  summaryText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontFamily: 'PixeloidMono',
+    lineHeight: 20,
   },
   buttonContainer: {
     gap: 12,

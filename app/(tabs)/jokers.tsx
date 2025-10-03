@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -9,24 +9,26 @@ import {
   View,
 } from 'react-native';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
+import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
-import ConfirmationModal from '../components/ConfirmationModal';
+import EventModal from '../components/EventModal';
 import FastModal from '../components/FastModal';
 import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
+import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 const CANDY_TYPES = [
-  'Bubble Gum',
+  'Snickers',
   'M&Ms',
-  'Sour Straws',
-  'Chocolate Bar',
-  'Lollipop',
-  'Gummy Bears',
+  'Skittles',
+  'Warheads',
+  'Sour Patch Kids',
+  'Bubble Gum',
   'Jaw Breaker',
 ];
 
@@ -36,9 +38,11 @@ function JokersPage() {
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
   const seedContext = useSeed();
+  const { triggerEvent } = useEventHandler();
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
+  const [debugMode, setDebugMode] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -65,6 +69,24 @@ function JokersPage() {
     joker: null,
   });
 
+  // Joker Selector Modal state (for Glitch in the Matrix)
+  const [jokerSelectorModal, setJokerSelectorModal] = useState<{
+    visible: boolean;
+    joker: any | null;
+  }>({
+    visible: false,
+    joker: null,
+  });
+
+  // State for Master Negotiator candy conversion
+  const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(null);
+  const [isModalTransitioning, setIsModalTransitioning] = useState(false);
+
+  // Debug log for modal state changes
+  useEffect(() => {
+    console.log('📋 confirmModal.visible changed to:', confirmModal.visible);
+  }, [confirmModal.visible]);
+
   // Extract values from contexts
   const isAfterSchool = gameContext?.isAfterSchool || false;
   const day = gameContext?.day || 1;
@@ -76,7 +98,42 @@ function JokersPage() {
     title: string,
     message: string,
     emoji: string,
-    onConfirmCallback: () => void,
+    onConfirmCallback?: () => void,
+    confirmText = 'OK',
+    cancelText = 'Cancel',
+    onCancelCallback?: () => void
+  ) => {
+    console.log('📋 Opening confirmation modal:', title, '| Current visible:', confirmModal.visible, '| Transitioning:', isModalTransitioning);
+
+    // If a modal is transitioning, queue the new modal
+    if (isModalTransitioning) {
+      console.log('📋 Modal is transitioning, queueing request...');
+      setTimeout(() => {
+        handleShowConfirmation(title, message, emoji, onConfirmCallback, confirmText, cancelText, onCancelCallback);
+      }, 100);
+      return;
+    }
+
+    // If a modal is already open, close it first then open the new one
+    if (confirmModal.visible) {
+      console.log('📋 Modal already open, closing first...');
+      setIsModalTransitioning(true);
+      setConfirmModal((prev) => ({ ...prev, visible: false }));
+      setTimeout(() => {
+        setIsModalTransitioning(false);
+        openConfirmModal(title, message, emoji, onConfirmCallback, confirmText, cancelText, onCancelCallback);
+      }, 250);
+      return;
+    }
+
+    openConfirmModal(title, message, emoji, onConfirmCallback, confirmText, cancelText, onCancelCallback);
+  };
+
+  const openConfirmModal = (
+    title: string,
+    message: string,
+    emoji: string,
+    onConfirmCallback?: () => void,
     confirmText = 'OK',
     cancelText = 'Cancel',
     onCancelCallback?: () => void
@@ -87,15 +144,35 @@ function JokersPage() {
       message,
       emoji,
       onConfirm: () => {
+        console.log('📋 Confirm pressed, closing modal');
+        setIsModalTransitioning(true);
         setConfirmModal((prev) => ({ ...prev, visible: false }));
-        onConfirmCallback();
+        // Use setTimeout to ensure modal closes before callback executes
+        setTimeout(() => {
+          setIsModalTransitioning(false);
+          if (onConfirmCallback) {
+            onConfirmCallback();
+          }
+        }, 200);
       },
       onCancel: onCancelCallback
         ? () => {
+            console.log('📋 Cancel pressed, closing modal');
+            setIsModalTransitioning(true);
             setConfirmModal((prev) => ({ ...prev, visible: false }));
-            onCancelCallback();
+            setTimeout(() => {
+              setIsModalTransitioning(false);
+              onCancelCallback();
+            }, 200);
           }
-        : () => setConfirmModal((prev) => ({ ...prev, visible: false })),
+        : () => {
+            console.log('📋 Closing modal (no cancel callback)');
+            setIsModalTransitioning(true);
+            setConfirmModal((prev) => ({ ...prev, visible: false }));
+            setTimeout(() => {
+              setIsModalTransitioning(false);
+            }, 200);
+          },
       confirmText,
       cancelText: onCancelCallback ? cancelText : undefined,
     });
@@ -107,6 +184,43 @@ function JokersPage() {
       visible: true,
       joker,
     });
+  };
+
+  // Joker selector modal handler for JokerCard components (Glitch in the Matrix)
+  const handleShowJokerSelector = (joker: any) => {
+    setJokerSelectorModal({
+      visible: true,
+      joker,
+    });
+  };
+
+  // Handle joker selection for Glitch in the Matrix
+  const handleJokerSelection = (selectedJoker: any) => {
+    const { joker } = jokerSelectorModal;
+    if (!joker || !jokerContext) return;
+
+    const { addJoker, removeJoker } = jokerContext;
+
+    // Create a copy of the selected joker with a new ID
+    const duplicatedJoker = {
+      ...selectedJoker,
+      id: Date.now() + Math.random(), // Generate unique ID
+      name: selectedJoker.name + ' (Copy)',
+    };
+
+    // Add the duplicated joker to inventory
+    addJoker(duplicatedJoker);
+
+    // Remove the Glitch in the Matrix joker (it's one-time use)
+    removeJoker(joker.id);
+
+    // Close modal and show confirmation
+    setJokerSelectorModal({ visible: false, joker: null });
+    handleShowConfirmation(
+      'Glitch in the Matrix!',
+      `Created a copy of ${selectedJoker.name}!`,
+      '🔄'
+    );
   };
 
   // Handle candy selection for various jokers
@@ -189,8 +303,8 @@ function JokersPage() {
         `${selectedCandy} price set to lowest market price: $${lowestPrice.toFixed(2)}`,
         '📉'
       );
-    } else if (joker.effect === 'double_candy_price') {
-      // Legacy double candy price jokers
+    } else if (joker.id === JOKER_IDS.DOUBLE_UP || joker.effect === 'double_candy_price') {
+      // Double Up joker - doubles candy price for current period
       const originalPrice =
         gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = originalPrice * 2;
@@ -199,8 +313,8 @@ function JokersPage() {
       removeJoker(joker.id);
 
       handleShowConfirmation(
-        'Price Doubled!',
-        `${selectedCandy} price doubled! New price: $${newPrice.toFixed(2)}`,
+        'Double Up Activated!',
+        `${selectedCandy} price doubled to $${newPrice.toFixed(2)} for this period!`,
         '💰'
       );
     } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
@@ -231,6 +345,46 @@ function JokersPage() {
         `Added ${quantityToAdd} ${selectedCandy} to your inventory!`,
         '🏃‍♂️'
       );
+    } else if (joker.id === JOKER_IDS.MASTER_NEGOTIATOR) {
+      // Two-step candy conversion
+      if (!selectedSourceCandy) {
+        // Step 1: Select source candy
+        setSelectedSourceCandy(selectedCandy);
+        return; // Keep modal open for step 2
+      } else {
+        // Step 2: Select target candy and perform conversion
+        const targetCandy = selectedCandy;
+
+        if (selectedSourceCandy === targetCandy) {
+          handleShowConfirmation(
+            'Same Candy Selected',
+            'Please select a different candy type to convert to.',
+            '⚠️'
+          );
+          return;
+        }
+
+        // Get the quantity and price of source candy
+        const sourceCandyItem = inventoryContext.inventory.find(
+          (item) => item.name === selectedSourceCandy
+        );
+        const quantity = sourceCandyItem?.quantity || 1;
+        const originalPrice = sourceCandyItem?.price || 0;
+
+        // Remove source candy and add target candy with same quantity and price
+        inventoryContext.removeFromInventory(selectedSourceCandy, quantity);
+        inventoryContext.addToInventory(targetCandy, quantity, originalPrice, periodCount);
+        removeJoker(joker.id);
+
+        handleShowConfirmation(
+          'Master Negotiator Activated!',
+          `Converted ${quantity} ${selectedSourceCandy} to ${targetCandy}!`,
+          '🤝'
+        );
+
+        // Reset source candy selection
+        setSelectedSourceCandy(null);
+      }
     }
 
     setCandySelectorModal({ visible: false, joker: null });
@@ -297,7 +451,7 @@ function JokersPage() {
   const renderInventoryJokerRow = ({ item }: { item: any[] }) => (
     <View style={styles.row}>
       {item.map((joker, index) => (
-        <View key={`${joker.id}-${index}`} style={styles.jokerCardContainer}>
+        <View key={joker.id} style={styles.jokerCardContainer}>
           <JokerCard
             joker={joker}
             isAfterSchool={isAfterSchool}
@@ -306,16 +460,36 @@ function JokersPage() {
             disableActivation={false}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
+            onShowJokerSelector={handleShowJokerSelector}
+            onTriggerEvent={triggerEvent}
           />
         </View>
       ))}
     </View>
   );
 
+  const handleDebugAddJoker = (joker: any) => {
+    if (debugMode) {
+      jokerContext.addJoker(joker);
+      handleShowConfirmation(
+        'Debug: Joker Added!',
+        `${joker.emoji} ${joker.name} added to inventory`,
+        '🐛',
+        () => {},
+        'OK'
+      );
+    }
+  };
+
   const renderJokerRow = ({ item }: { item: any[] }) => (
     <View style={styles.row}>
       {item.map((joker) => (
-        <View key={joker.id} style={styles.jokerCardContainer}>
+        <TouchableOpacity
+          key={joker.id}
+          style={styles.jokerCardContainer}
+          onPress={() => handleDebugAddJoker(joker)}
+          disabled={!debugMode}
+        >
           <JokerCard
             joker={joker}
             isAfterSchool={isAfterSchool}
@@ -324,8 +498,15 @@ function JokersPage() {
             disableActivation={true}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
+            onShowJokerSelector={handleShowJokerSelector}
+            onTriggerEvent={triggerEvent}
           />
-        </View>
+          {debugMode && (
+            <View style={styles.debugBadge}>
+              <Text style={styles.debugBadgeText}>🐛 TAP</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       ))}
     </View>
   );
@@ -389,6 +570,18 @@ function JokersPage() {
           <TouchableOpacity
             style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
             onPress={() => setActiveTab('see-all')}
+            onLongPress={() => {
+              setDebugMode(!debugMode);
+              handleShowConfirmation(
+                debugMode ? 'Debug Mode OFF' : 'Debug Mode ON',
+                debugMode
+                  ? 'Tap jokers to add disabled'
+                  : 'Tap any joker to add it to inventory',
+                debugMode ? '✅' : '🐛',
+                () => {},
+                'OK'
+              );
+            }}
           >
             <Text
               style={[
@@ -396,7 +589,7 @@ function JokersPage() {
                 activeTab !== 'inventory' && styles.activeTabText,
               ]}
             >
-              📖 All ({allJokersCount})
+              📖 All ({allJokersCount}) {debugMode && '🐛'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -435,20 +628,31 @@ function JokersPage() {
       )}
 
       {/* Confirmation Modal - rendered at page level for full screen overlay */}
-      <ConfirmationModal
-        visible={confirmModal.visible}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        emoji={confirmModal.emoji}
-        confirmText={confirmModal.confirmText}
-        cancelText={confirmModal.cancelText}
-        onConfirm={confirmModal.onConfirm}
-        onCancel={
-          confirmModal.onCancel ||
-          (() => setConfirmModal((prev) => ({ ...prev, visible: false })))
-        }
-        theme="market"
-      />
+      {(() => {
+        console.log('📋 Rendering JokerConfirmationModal - visible:', confirmModal.visible, 'title:', confirmModal.title);
+        return (
+          <JokerConfirmationModal
+            visible={confirmModal.visible}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            emoji={confirmModal.emoji}
+            confirmText={confirmModal.confirmText}
+            cancelText={confirmModal.cancelText}
+            onConfirm={() => {
+              console.log('📋 JokerConfirmationModal onConfirm triggered');
+              confirmModal.onConfirm();
+            }}
+            onCancel={() => {
+              console.log('📋 JokerConfirmationModal onCancel triggered');
+              if (confirmModal.onCancel) {
+                confirmModal.onCancel();
+              } else {
+                setConfirmModal((prev) => ({ ...prev, visible: false }));
+              }
+            }}
+          />
+        );
+      })()}
 
       {/* Candy Selector Modal */}
       <FastModal
@@ -459,17 +663,59 @@ function JokersPage() {
         modalStyle={styles.modalContent}
       >
         <>
-          <TextWithEmojis style={styles.modalTitle}>
+          <View
+            style={{
+              alignItems: 'center',
+            }}
+          >
+            <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
+              {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
+                ? '📈'
+                : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
+                  ? '💸'
+                  : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
+                    ? '📰'
+                    : candySelectorModal.joker?.id ===
+                        JOKER_IDS.BET_YOU_IM_FASTER
+                      ? '⚡'
+                      : candySelectorModal.joker?.id ===
+                          JOKER_IDS.MASTER_NEGOTIATOR
+                        ? '🤝'
+                        : '🍭'}
+            </TextWithEmojis>
+          </View>
+          <TextWithEmojis style={styles.modalTitle} imageSize={24}>
             {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
-              ? '📈 Choose Candy to Manipulate'
+              ? 'Choose Candy to Manipulate'
               : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
-                ? '📉 Choose Candy to Short'
+                ? 'Choose Candy to Short'
                 : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
-                  ? '📰 Choose Candy to Drop Price'
-                  : '🍭 Choose Candy Type'}
+                  ? 'Choose Candy to Drop Price'
+                  : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
+                    ? 'Choose Candy to Fill Inventory'
+                    : candySelectorModal.joker?.id ===
+                        JOKER_IDS.MASTER_NEGOTIATOR
+                      ? selectedSourceCandy
+                        ? `Choose Candy to Convert ${selectedSourceCandy} Into`
+                        : 'Choose Candy to Convert From'
+                      : 'Choose Candy Type'}
           </TextWithEmojis>
 
-          {CANDY_TYPES.map((candyType) => (
+          {CANDY_TYPES.filter((candyType) => {
+            // For Master Negotiator, only show candies in inventory for source selection
+            if (
+              candySelectorModal.joker?.id === JOKER_IDS.MASTER_NEGOTIATOR &&
+              !selectedSourceCandy
+            ) {
+              return (
+                inventoryContext?.inventory.some(
+                  (item) => item.name === candyType
+                ) || false
+              );
+            }
+            // For target selection (after source is selected), show all candies
+            return true;
+          }).map((candyType) => (
             <TouchableOpacity
               key={candyType}
               style={styles.candyButton}
@@ -481,8 +727,66 @@ function JokersPage() {
 
           <TouchableOpacity
             style={styles.cancelButton}
+            onPress={() => {
+              setCandySelectorModal({ visible: false, joker: null });
+              setSelectedSourceCandy(null); // Reset source candy selection
+            }}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </>
+      </FastModal>
+
+      {/* Joker Selector Modal (Glitch in the Matrix) */}
+      <FastModal
+        visible={jokerSelectorModal.visible}
+        onClose={() => setJokerSelectorModal({ visible: false, joker: null })}
+        animationType="spring"
+        backdropOpacity={0.5}
+        modalStyle={styles.modalContent}
+      >
+        <>
+          <View style={{ alignItems: 'center' }}>
+            <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
+              🔮
+            </TextWithEmojis>
+          </View>
+          <TextWithEmojis style={styles.modalTitle} imageSize={24}>
+            Choose Joker to Copy
+          </TextWithEmojis>
+
+          {jokers.filter((j) => j.name !== 'Glitch in the Matrix').length >
+          0 ? (
+            jokers
+              .filter((j) => j.name !== 'Glitch in the Matrix')
+              .map((availableJoker) => (
+                <TouchableOpacity
+                  key={availableJoker.id}
+                  style={styles.candyButton}
+                  onPress={() => handleJokerSelection(availableJoker)}
+                >
+                  <TextWithEmojis style={styles.candyButtonText} imageSize={24}>
+                    {`${availableJoker.name} ${availableJoker.type === 'persistent' ? '🔮' : '⚡'}`}
+                  </TextWithEmojis>
+                </TouchableOpacity>
+              ))
+          ) : (
+            <View style={{ alignItems: 'center', padding: 20 }}>
+              <Text style={styles.candyButtonText}>
+                No other jokers to copy!
+              </Text>
+              <Text
+                style={{ color: '#888', marginTop: 8, textAlign: 'center' }}
+              >
+                Study to earn more jokers first
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.cancelButton}
             onPress={() =>
-              setCandySelectorModal({ visible: false, joker: null })
+              setJokerSelectorModal({ visible: false, joker: null })
             }
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -641,6 +945,24 @@ const styles = StyleSheet.create({
     height: 180, // Fixed height to ensure all cards are the same size
     marginBottom: 8,
     marginRight: 8,
+    position: 'relative',
+  },
+  debugBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FF6B00',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#FFD700',
+  },
+  debugBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    fontFamily: 'PixeloidMono',
   },
   emptyContainer: {
     flex: 1,

@@ -11,6 +11,7 @@ import {
   removeActiveEffect,
   clearAllActiveEffects,
 } from '../store/slices/jokerSlice';
+import { scoreboardService } from '../services/firebase';
 
 interface ActiveJokerEffect {
   jokerId: number;
@@ -26,6 +27,14 @@ export const useJokers = () => {
 
   const addJokerAction = useCallback((joker: any, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
     dispatch(addJoker(joker));
+
+    // Track analytics when joker is added from minigame
+    if (source === 'minigame' && minigameType && joker.name && joker.id) {
+      console.log('🃏 Tracking joker from minigame:', joker.name, 'ID:', joker.id, 'from', minigameType);
+      scoreboardService.trackJokerFromMinigame(joker.name, joker.id, minigameType).catch(error => {
+        console.error('Failed to track joker from minigame:', error);
+      });
+    }
   }, [dispatch]);
 
   const removeJokerAction = useCallback((jokerId: string | number) => {

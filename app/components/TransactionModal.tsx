@@ -1,8 +1,9 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
@@ -52,13 +53,66 @@ export default function TransactionModal({
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [quantity, setQuantity] = useState(1);
   const { jokers } = useJokers();
-  const { getInventoryLimit } = useInventory();
+  const { getInventoryLimit, inventory } = useInventory();
+  const { periodCount } = useGame();
 
-  const maxQuantity = mode === 'buy' ? maxBuyQuantity : maxSellQuantity;
+  // Clamp maxBuyQuantity and maxSellQuantity to prevent negative values
+  // If value is negative, set to 0
+  const clampedMaxBuyQuantity = maxBuyQuantity < 0 ? 0 : maxBuyQuantity;
+  const clampedMaxSellQuantity = maxSellQuantity < 0 ? 0 : maxSellQuantity;
+  const maxQuantity =
+    mode === 'buy' ? clampedMaxBuyQuantity : clampedMaxSellQuantity;
+
+  // Debug logging for sell mode
+  if (mode === 'sell') {
+    console.log(`📊 TransactionModal SELL mode:`);
+    console.log(
+      `📊 maxSellQuantity=${maxSellQuantity}, clamped=${clampedMaxSellQuantity}`
+    );
+    console.log(`📊 candy=${candy.name}, quantityOwned=${candy.quantityOwned}`);
+    console.log(`📊 maxQuantity=${maxQuantity}`);
+  }
+
   const inventoryLimit = useMemo(
     () => getInventoryLimit(),
     [getInventoryLimit]
   );
+
+  // Reset quantity when modal opens or when maxQuantity changes
+  useEffect(() => {
+    if (visible) {
+      // Clamp quantity to valid range
+      const validQuantity = Math.max(0, Math.min(quantity, maxQuantity));
+      if (validQuantity !== quantity) {
+        setQuantity(validQuantity);
+      }
+    }
+  }, [visible, maxQuantity]);
+
+  // Check for Time Zone Arbitrage joker (morning purchase discount)
+  const timeZoneArbitrageJoker = findJokerById(
+    jokers,
+    JOKER_IDS.TIME_ZONE_ARBITRAGE
+  );
+  const isMorning = useMemo(() => {
+    const periodWithinDay = periodCount % 8;
+    return periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
+  }, [periodCount]);
+
+  const qualifiesForMorningDiscount = useMemo(() => {
+    return mode === 'buy' && timeZoneArbitrageJoker && isMorning;
+  }, [mode, timeZoneArbitrageJoker, isMorning]);
+
+  // Check for Sunset Surge joker (afternoon sale bonus)
+  const sunsetSurgeJoker = findJokerById(jokers, JOKER_IDS.SUNSET_SURGE);
+  const isAfternoon = useMemo(() => {
+    const periodWithinDay = periodCount % 8;
+    return periodWithinDay >= 6; // Periods 6, 7 are "afternoon"
+  }, [periodCount]);
+
+  const qualifiesForAfternoonBonus = useMemo(() => {
+    return mode === 'sell' && sunsetSurgeJoker && isAfternoon;
+  }, [mode, sunsetSurgeJoker, isAfternoon]);
 
   // Check for Bulk Sale joker
   const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_SALE);
@@ -66,13 +120,52 @@ export default function TransactionModal({
     return mode === 'buy' && bulkDiscountJoker && quantity > inventoryLimit / 2;
   }, [mode, bulkDiscountJoker, quantity, inventoryLimit]);
 
-  // Calculate final price with bulk discount
-  const finalUnitPrice = useMemo(() => {
-    if (qualifiesForBulkDiscount) {
-      return candy.cost * 0.9; // Apply 10% discount
+  // Check for Slow Cooker joker (sell multiplier)
+  const slowCookerJoker = findJokerById(jokers, JOKER_IDS.SLOW_COOKER);
+
+  // Calculate periodsHeld for Slow Cooker
+  const { periodsHeld, slowCookerMultiplier } = useMemo(() => {
+    if (!slowCookerJoker || mode !== 'sell') {
+      return { periodsHeld: 0, slowCookerMultiplier: 1 };
     }
-    return candy.cost;
-  }, [qualifiesForBulkDiscount, candy.cost]);
+    const inventoryItem = inventory.find((item) => item.name === candy.name);
+    const purchasedAtPeriod = inventoryItem?.purchasedAt ?? periodCount;
+    const periods = Math.max(1, periodCount - purchasedAtPeriod + 1);
+    const multiplier = Math.pow(1.05, periods);
+    return { periodsHeld: periods, slowCookerMultiplier: multiplier };
+  }, [slowCookerJoker, mode, inventory, candy.name, periodCount]);
+
+  // Calculate final price with discounts/bonuses
+  const finalUnitPrice = useMemo(() => {
+    // For selling, use the priceBreakdown if available (includes all joker effects)
+    if (mode === 'sell' && priceBreakdown) {
+      console.log(
+        `💰 TransactionModal finalUnitPrice: basePrice=${priceBreakdown.basePrice}, finalPrice=${priceBreakdown.finalPrice}`
+      );
+      return priceBreakdown.finalPrice;
+    }
+
+    // For buying, calculate discounts manually
+    let price = candy.cost;
+
+    // Apply morning discount (10% off) for buying
+    if (qualifiesForMorningDiscount) {
+      price = price * 0.9;
+    }
+
+    // Apply bulk discount (10% off) - stacks with morning discount
+    if (qualifiesForBulkDiscount) {
+      price = price * 0.9;
+    }
+
+    return price;
+  }, [
+    mode,
+    priceBreakdown,
+    qualifiesForMorningDiscount,
+    qualifiesForBulkDiscount,
+    candy.cost,
+  ]);
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
@@ -100,9 +193,9 @@ export default function TransactionModal({
   const handleSliderChange = (value: number) => {
     // Trigger light haptic feedback on slider value change
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setQuantity(value);
+    // Ensure quantity never goes below 0
+    setQuantity(Math.max(0, Math.round(value)));
   };
-
 
   return (
     <FastModal
@@ -150,95 +243,114 @@ export default function TransactionModal({
           )}
         </View>
 
-        {priceBreakdown && priceBreakdown.jokerEffects.length > 0 && (
-          <View style={styles.priceBreakdownContainer}>
-            <TextWithEmojis style={styles.breakdownTitle}>💰 Price Breakdown</TextWithEmojis>
+        {priceBreakdown &&
+          priceBreakdown.jokerEffects.length > 0 &&
+          mode === 'sell' &&
+          (() => {
+            // Collect all active sell effects for simplified display
+            const activeEffects: Array<{ emoji: string; text: string }> = [];
 
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Base Price:</Text>
-              <Text style={styles.breakdownValue}>
-                ${priceBreakdown.basePrice.toFixed(2)}
-              </Text>
-            </View>
+            // Check for Slow Cooker
+            const slowCookerEffect = priceBreakdown.jokerEffects.find(
+              (effect) =>
+                effect.jokerName === 'Slow Cooker' &&
+                effect.effectType === 'sell'
+            );
+            if (slowCookerEffect && slowCookerJoker) {
+              const basePrice = priceBreakdown.basePrice;
+              const additionalProfit =
+                basePrice * (slowCookerMultiplier - 1) * quantity;
+              const periodText = periodsHeld === 1 ? 'period' : 'periods';
+              activeEffects.push({
+                emoji: '🍲',
+                text: `Slow cooked for ${periodsHeld} ${periodText}: +$${additionalProfit.toFixed(2)}`,
+              });
+            }
 
-            <View style={styles.divider} />
+            // Check for other sell effects (Pursuasion, Even Stevens, Odd Todd, etc.)
+            // Calculate bonuses with proper compounding
+            let currentPrice = priceBreakdown.basePrice;
 
-            {priceBreakdown.jokerEffects.map((effect, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.breakdownRow,
-                  !effect.isActive && styles.inactiveEffectRow,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.jokerEffectLabel,
-                    !effect.isActive && styles.inactiveEffectText,
-                  ]}
-                >
-                  {effect.jokerEmoji} {effect.jokerName}
-                  {effect.effectType === 'sell' ? ' (Sell)' : ''}
-                  {!effect.isActive ? ' (Inactive)' : ''}:
-                </Text>
-                <Text
-                  style={[
-                    styles.jokerEffectValue,
-                    {
-                      color: effect.isActive
-                        ? effect.amount >= 0
-                          ? '#22c55e'
-                          : '#ef4444'
-                        : '#999',
-                    },
-                    !effect.isActive && styles.inactiveEffectText,
-                  ]}
-                >
-                  {effect.effect}
-                </Text>
-              </View>
-            ))}
+            priceBreakdown.jokerEffects.forEach((effect) => {
+              console.log('📊 TransactionModal effect:', effect);
 
-            <View style={styles.divider} />
+              if (
+                effect.isActive &&
+                effect.effectType === 'sell' &&
+                effect.jokerName !== 'Slow Cooker'
+              ) {
+                // Calculate the actual bonus amount with compounding
+                const priceBeforeBonus = currentPrice;
+                const multiplier = 1 + effect.amount / 100;
+                const priceAfterBonus = currentPrice * multiplier;
+                const bonusAmount =
+                  (priceAfterBonus - priceBeforeBonus) * quantity;
 
-            <View style={styles.breakdownRow}>
-              <Text style={styles.finalPriceLabel}>Final Price:</Text>
-              <Text style={styles.finalPriceValue}>
-                ${priceBreakdown.finalPrice.toFixed(2)}
-              </Text>
-            </View>
-          </View>
-        )}
+                // Update current price for next effect (compounding)
+                currentPrice = priceAfterBonus;
+
+                console.log(
+                  `📊 Adding ${effect.jokerName} to display: priceBeforeBonus=${priceBeforeBonus.toFixed(2)}, priceAfterBonus=${priceAfterBonus.toFixed(2)}, bonusAmount=${bonusAmount.toFixed(2)}`
+                );
+
+                activeEffects.push({
+                  emoji: effect.jokerEmoji,
+                  text: `${effect.jokerName}: +$${bonusAmount.toFixed(2)}`,
+                });
+              }
+            });
+
+            if (activeEffects.length > 0) {
+              return (
+                <View style={styles.priceBreakdownContainer}>
+                  {activeEffects.map((effect, index) => (
+                    <Text key={index} style={styles.slowCookerText}>
+                      {effect.emoji} {effect.text}
+                    </Text>
+                  ))}
+                </View>
+              );
+            }
+
+            return null;
+          })()}
 
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, mode === 'buy' && styles.activeTab]}
             onPress={() => changeMode('buy')}
           >
-            <Text style={styles.tabText}>{mode === 'buy' ? 'Buy Max' : 'Buy'}</Text>
+            <Text style={styles.tabText}>
+              {mode === 'buy' ? 'Buy Max' : 'Buy'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, mode === 'sell' && styles.activeTab]}
             onPress={() => changeMode('sell')}
           >
-            <Text style={styles.tabText}>{mode === 'sell' ? 'Sell Max' : 'Sell'}</Text>
+            <Text style={styles.tabText}>
+              {mode === 'sell' ? 'Sell Max' : 'Sell'}
+            </Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.sliderSection}>
           <Text style={styles.quantityLabel}>
-            Quantity: {quantity} / {maxQuantity}
+            {mode === 'buy' && maxQuantity <= 0
+              ? 'Inventory Full'
+              : `Quantity: ${quantity} / ${maxQuantity}`}
           </Text>
 
           <Slider
             style={{ width: '100%', height: 50, marginVertical: 10 }}
             minimumValue={0}
-            maximumValue={maxQuantity}
+            maximumValue={maxQuantity > 0 ? maxQuantity : 1}
             step={1}
-            value={quantity}
+            value={Math.max(0, Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0))}
             onValueChange={handleSliderChange}
             minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
             maximumTrackTintColor="#ccc"
+            disabled={mode === 'buy' && maxQuantity <= 0}
           />
 
           <View style={styles.totalValueContainer}>
@@ -253,17 +365,54 @@ export default function TransactionModal({
             </Text>
           </View>
 
+          {/* Morning Discount Notification */}
+          {qualifiesForMorningDiscount && mode === 'buy' && (
+            <View style={styles.morningDiscountContainer}>
+              <View style={styles.morningDiscountContent}>
+                <Text style={styles.morningDiscountLabel}>
+                  Morning Discount Applied!
+                </Text>
+                <Text style={styles.morningDiscountLabel}>
+                  You Save: ${(quantity * candy.cost * 0.1).toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Afternoon Sale Bonus Notification */}
+          {qualifiesForAfternoonBonus && mode === 'sell' && (
+            <View style={styles.afternoonBonusContainer}>
+              <View style={styles.afternoonBonusContent}>
+                <Text style={styles.afternoonBonusLabel}>
+                  Afternoon Bonus Applied!
+                </Text>
+                <Text style={styles.afternoonBonusLabel}>
+                  You Earn: ${(quantity * candy.cost * 0.1).toFixed(2)} extra
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Combined Bulk Discount Notification */}
           {qualifiesForBulkDiscount && mode === 'buy' && (
             <View style={styles.bulkDiscountContainer}>
               <View style={styles.bulkDiscountContent}>
-                <Image
+                {/* <Image
                   source={require('../../assets/images/emojis/bullseye.png')}
                   style={styles.bullseyeIcon}
-                />
+                /> */}
                 <Text style={styles.bulkDiscountLabel}>
-                  Bulk Discount Applied! You Save: $
-                  {(quantity * candy.cost - quantity * finalUnitPrice).toFixed(2)}
+                  Bulk Discount Applied!
+                </Text>
+                <Text style={styles.bulkDiscountLabel}>
+                  You Save: $
+                  {(
+                    quantity *
+                    (qualifiesForMorningDiscount
+                      ? candy.cost * 0.9
+                      : candy.cost) *
+                    0.1
+                  ).toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -285,18 +434,20 @@ export default function TransactionModal({
           {mode === 'sell' && candy.averagePrice !== null && quantity > 0 && (
             <View style={styles.profitContainer}>
               <Text style={styles.profitLabel}>
-                {candy.cost > candy.averagePrice ? 'Profit:' : 'Loss:'}
+                {finalUnitPrice > candy.averagePrice ? 'Profit:' : 'Loss:'}
               </Text>
               <Text
                 style={[
                   styles.profitAmount,
                   {
                     color:
-                      candy.cost > candy.averagePrice ? '#22c55e' : '#ef4444',
+                      finalUnitPrice > candy.averagePrice
+                        ? '#22c55e'
+                        : '#ef4444',
                   },
                 ]}
               >
-                ${((candy.cost - candy.averagePrice) * quantity).toFixed(2)}
+                ${((finalUnitPrice - candy.averagePrice) * quantity).toFixed(2)}
               </Text>
             </View>
           )}
@@ -467,10 +618,17 @@ const styles = StyleSheet.create({
   priceBreakdownContainer: {
     backgroundColor: '#f0f8ff',
     borderRadius: 10,
-    padding: 10,
+    padding: 4,
     marginVertical: 6,
     borderWidth: 2,
     borderColor: '#4a90e2',
+  },
+  slowCookerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#22c55e',
+    textAlign: 'center',
+    fontFamily: 'PixeloidMono',
   },
   breakdownTitle: {
     fontSize: 16,
@@ -543,28 +701,84 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bulkDiscountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
     backgroundColor: '#dcfce7',
-    borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 8,
-    marginTop: 4,
-    borderWidth: 1,
+    maxWidth: '100%',
     borderColor: '#16a34a',
-    alignItems: 'center',
   },
   bulkDiscountContent: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 6,
   },
   bullseyeIcon: {
-    width: 16,
-    height: 16,
+    width: 24,
+    height: 24,
   },
   bulkDiscountLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#15803d',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+  },
+  morningDiscountContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: '#fef3c7',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    maxWidth: '100%',
+    borderColor: '#f59e0b',
+  },
+  morningDiscountContent: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+  },
+  morningDiscountLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400e',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+  },
+  afternoonBonusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    backgroundColor: '#f3e8ff',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    maxWidth: '100%',
+    borderColor: '#a855f7',
+  },
+  afternoonBonusContent: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+  },
+  afternoonBonusLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b21a8',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },

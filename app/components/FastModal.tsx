@@ -129,6 +129,8 @@ export default function FastModal({
     return null;
   }
 
+  console.log('🎭 FastModal rendering - visible:', visible, 'isRendered:', isRendered);
+
   return (
     <View
       style={[
@@ -144,8 +146,11 @@ export default function FastModal({
       ]}
       pointerEvents={visible ? 'auto' : 'none'}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View style={[styles.backdrop, backdropAnimatedStyle]} />
+      <TouchableWithoutFeedback onPress={onClose || (() => {})}>
+        <Animated.View
+          style={[styles.backdrop, backdropAnimatedStyle]}
+          pointerEvents={visible ? 'auto' : 'none'}
+        />
       </TouchableWithoutFeedback>
 
       <View style={styles.modalContainer} pointerEvents="box-none">

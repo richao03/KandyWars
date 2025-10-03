@@ -336,7 +336,9 @@ export class JokerService {
     jokers: any[],
     currentPeriod: number,
     inventoryLimit?: number,
-    activeEffects: any[] = []
+    activeEffects: any[] = [],
+    consecutivePeriodSales?: number,
+    totalSales?: number
   ): {
     basePrice: number;
     jokerEffects: Array<{
@@ -349,6 +351,8 @@ export class JokerService {
     }>;
     finalPrice: number;
   } {
+    console.log(`💰 getPriceBreakdown called with ${jokers.length} jokers:`, jokers.map(j => j.name));
+
     const breakdown = {
       basePrice,
       jokerEffects: [] as Array<{
@@ -371,12 +375,23 @@ export class JokerService {
         (sj) => sj.name === jokerName
       );
 
-      if (!standardizedJoker) return;
+      if (!standardizedJoker) {
+        console.log(`💰 No standardized joker found for: ${jokerName}`);
+        return;
+      }
 
-      // Check if this joker affects candy prices, sell multipliers, escalating price increases, morning purchase discounts, or afternoon sale bonuses
+      if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum' || jokerName === 'Jump Rope Rhythm') {
+        console.log(`💰 Processing ${jokerName}:`, standardizedJoker);
+      }
+
+      // Check if this joker affects candy prices, sell multipliers, escalating price increases, morning purchase discounts, afternoon sale bonuses, even period bonuses, consecutive sale bonuses, or every third sale bonuses
       const priceEffects = standardizedJoker.effects.filter(
-        (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase' || effect.target === 'morning_purchase_discount' || effect.target === 'afternoon_sale_bonus'
+        (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase' || effect.target === 'morning_purchase_discount' || effect.target === 'afternoon_sale_bonus' || effect.target === 'even_period_sale_bonus' || effect.target === 'consecutive_sale_bonus' || effect.target === 'every_third_sale_bonus'
       );
+
+      if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum' || jokerName === 'Jump Rope Rhythm') {
+        console.log(`💰 ${jokerName} price effects:`, priceEffects);
+      }
 
       priceEffects.forEach((effect) => {
         let shouldApply = true;
@@ -399,6 +414,8 @@ export class JokerService {
           jokerEmoji = '🗣️';
         } else if (jokerName === 'Trojan Horse') {
           jokerEmoji = '🐴';
+        } else if (jokerName === 'Slow Cooker') {
+          jokerEmoji = '🍲';
         }
         // Determine if the joker is currently active
         let isActive = false;
@@ -411,7 +428,7 @@ export class JokerService {
         }
 
         // Determine effect type
-        const effectType: 'buy' | 'sell' = (effect.target === 'candy_price' || effect.target === 'escalating_price_increase') ? 'buy' : 'sell';
+        let effectType: 'buy' | 'sell' = (effect.target === 'candy_price' || effect.target === 'escalating_price_increase') ? 'buy' : 'sell';
 
         if (shouldApply || !isActive) { // Show all relevant effects, even if not active
           let effectAmount = 0;
@@ -443,8 +460,16 @@ export class JokerService {
             // Show sell multiplier effects
             if (effect.operation === 'multiply') {
               const percentage = (effect.amount - 1) * 100;
-              effectText = `+${percentage.toFixed(0)}% selling`;
-              effectAmount = percentage;
+              // Special formatting for Slow Cooker
+              if (jokerName === 'Slow Cooker') {
+                // Calculate additional profit based on base price
+                const additionalProfit = basePrice * (effect.amount - 1);
+                effectText = `Slow cooked: +$${additionalProfit.toFixed(2)}`;
+                effectAmount = additionalProfit;
+              } else {
+                effectText = `+${percentage.toFixed(0)}% selling`;
+                effectAmount = percentage;
+              }
             }
           } else if (effect.target === 'escalating_price_increase') {
             // Special handling for Trojan Horse escalating price increase
@@ -493,16 +518,109 @@ export class JokerService {
 
             // Override shouldApply for visual feedback
             shouldApply = isAfternoon;
+          } else if (effect.target === 'even_period_sale_bonus') {
+            // Special handling for Hopscotch even period bonus
+            // Periods are 0-indexed internally (0-7) but displayed as 1-indexed (1-8)
+            // So we add 1 to get the displayed period number
+            const displayedPeriod = currentPeriod + 1;
+            const isEvenPeriod = displayedPeriod % 2 === 0;
+
+            console.log(`💰 Hopscotch check: currentPeriod=${currentPeriod}, displayedPeriod=${displayedPeriod}, isEvenPeriod=${isEvenPeriod}`);
+
+            // Only show if active
+            if (!isEvenPeriod) {
+              console.log(`💰 Hopscotch SKIPPED - not even period`);
+              return; // Skip adding to breakdown if inactive
+            }
+
+            console.log(`💰 Hopscotch ACTIVE - will add to breakdown`);
+
+            const bonusPercent = (effect.amount - 1) * 100; // Convert 1.2 to 20%
+            effectText = `+${bonusPercent.toFixed(0)}% even period`;
+            effectAmount = bonusPercent;
+            effectType = 'sell';
+            jokerEmoji = '🏃‍♂️';
+
+            // Apply bonus to current price if active and it's an even period
+            if (isActive && shouldApply && isEvenPeriod) {
+              currentPrice = currentPrice * effect.amount;
+            }
+
+            // Override shouldApply for visual feedback
+            shouldApply = isEvenPeriod;
+          } else if (effect.target === 'consecutive_sale_bonus') {
+            // Special handling for Swingset consecutive sales bonus
+            const consecutiveSales = consecutivePeriodSales || 0;
+            const hasConsecutiveSales = consecutiveSales > 1;
+
+            console.log(`💰 Swingset check: consecutivePeriodSales=${consecutivePeriodSales}, consecutiveSales=${consecutiveSales}, hasConsecutiveSales=${hasConsecutiveSales}`);
+
+            // Only show if active
+            if (!hasConsecutiveSales) {
+              console.log(`💰 Swingset SKIPPED - not enough consecutive sales`);
+              return; // Skip adding to breakdown if inactive
+            }
+
+            console.log(`💰 Swingset ACTIVE - will add to breakdown`);
+
+            // Calculate cumulative bonus: (1.1^n - 1) * 100
+            const swingsetMultiplier = 1 + (consecutiveSales - 1) * 0.1;
+            const totalBonusPercent = ((swingsetMultiplier - 1) * 100).toFixed(0);
+
+            effectText = `+${totalBonusPercent}% (${consecutiveSales} consecutive sales)`;
+            effectAmount = parseFloat(totalBonusPercent);
+
+            // Apply bonus to current price
+            if (isActive && shouldApply) {
+              currentPrice = currentPrice * swingsetMultiplier;
+            }
+
+            effectType = 'sell';
+            jokerEmoji = '⚡';
+            shouldApply = hasConsecutiveSales;
+          } else if (effect.target === 'every_third_sale_bonus') {
+            // Special handling for Jump Rope Rhythm every third sale bonus
+            const sales = totalSales || 0;
+            const isThirdSale = (sales + 1) % 3 === 0; // +1 because this is the pending sale
+
+            console.log(`💰 Jump Rope check: totalSales=${totalSales}, sales=${sales}, isThirdSale=${isThirdSale}`);
+
+            // Only show if active
+            if (!isThirdSale) {
+              console.log(`💰 Jump Rope SKIPPED - not third sale`);
+              return; // Skip adding to breakdown if inactive
+            }
+
+            console.log(`💰 Jump Rope ACTIVE - will add to breakdown`);
+
+            const bonusPercent = (effect.amount - 1) * 100; // Convert 1.33 to 33%
+            effectText = `+${bonusPercent.toFixed(0)}% (3rd sale)`;
+            effectAmount = bonusPercent;
+
+            // Apply bonus to current price
+            if (isActive && shouldApply) {
+              currentPrice = currentPrice * effect.amount;
+            }
+
+            effectType = 'sell';
+            jokerEmoji = '🪢';
+            shouldApply = isThirdSale;
           }
 
-          breakdown.jokerEffects.push({
+          const effectEntry = {
             jokerName: jokerName,
             jokerEmoji: jokerEmoji,
             effect: effectText,
             amount: effectAmount,
             effectType: effectType,
             isActive: isActive && shouldApply,
-          });
+          };
+
+          if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum') {
+            console.log(`💰 Adding ${jokerName} to breakdown:`, effectEntry);
+          }
+
+          breakdown.jokerEffects.push(effectEntry);
         }
       });
     };
@@ -520,7 +638,7 @@ export class JokerService {
 
       if (standardizedJoker) {
         const priceEffects = standardizedJoker.effects.filter(
-          (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase'
+          (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase' || effect.target === 'morning_purchase_discount' || effect.target === 'afternoon_sale_bonus' || effect.target === 'even_period_sale_bonus' || effect.target === 'consecutive_sale_bonus' || effect.target === 'every_third_sale_bonus'
         );
 
         if (priceEffects.length > 0) {
@@ -538,6 +656,33 @@ export class JokerService {
             }
           } else if (typeof firstEffect.duration === 'number') {
             limitedDurationJokers.push(joker);
+          }
+        }
+      }
+    });
+
+    // Also check for activated effects that aren't in the jokers array (e.g., one-time jokers that were removed after activation)
+    activeEffects.forEach((activeEffect) => {
+      if (activeEffect.period === currentPeriod) {
+        const standardizedJoker = STANDARDIZED_JOKERS.find(
+          (sj) => sj.id === activeEffect.jokerId
+        );
+
+        if (standardizedJoker) {
+          const priceEffects = standardizedJoker.effects.filter(
+            (effect) => (effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase') && effect.duration === 'one-time'
+          );
+
+          if (priceEffects.length > 0) {
+            // Check if this joker is already in oneTimeJokers
+            const alreadyIncluded = oneTimeJokers.some((j) => j.id === activeEffect.jokerId);
+            if (!alreadyIncluded) {
+              // Create a temporary joker object for processing
+              oneTimeJokers.push({
+                id: activeEffect.jokerId,
+                name: standardizedJoker.name,
+              });
+            }
           }
         }
       }
@@ -583,31 +728,28 @@ export class JokerService {
     jokers: any[],
     currentPeriod: number,
     activeEffects: any[]
-  ): { hasEffect: boolean; jokerName?: string; multiplier?: number } {
-    for (const joker of jokers) {
-      const jokerName = this.cleanJokerName(joker.name);
-      const standardizedJoker = STANDARDIZED_JOKERS.find(
-        (sj) => sj.name === jokerName
-      );
-
-      if (standardizedJoker) {
-        const sellEffects = standardizedJoker.effects.filter(
-          (effect) =>
-            effect.target === 'sell_multiplier' &&
-            effect.duration === 'one-time'
+  ): { hasEffect: boolean; jokerName?: string; multiplier?: number; jokerId?: number } {
+    // Check activeEffects first - this allows effects to work even after joker is removed
+    for (const activeEffect of activeEffects) {
+      if (activeEffect.period === currentPeriod) {
+        // Find the joker definition by ID
+        const standardizedJoker = STANDARDIZED_JOKERS.find(
+          (sj) => sj.id === activeEffect.jokerId
         );
 
-        if (sellEffects.length > 0) {
-          // Check if this joker has been activated for this period
-          const isActivated = activeEffects.some(
-            (effect) => effect.jokerId === joker.id && effect.period === currentPeriod
+        if (standardizedJoker) {
+          const sellEffects = standardizedJoker.effects.filter(
+            (effect) =>
+              effect.target === 'sell_multiplier' &&
+              effect.duration === 'one-time'
           );
-          
-          if (isActivated) {
+
+          if (sellEffects.length > 0) {
             return {
               hasEffect: true,
-              jokerName: jokerName,
+              jokerName: standardizedJoker.name,
               multiplier: sellEffects[0].amount,
+              jokerId: activeEffect.jokerId,
             };
           }
         }

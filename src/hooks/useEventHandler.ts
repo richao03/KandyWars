@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { JOKER_IDS } from '../constants/jokerIds';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addToEventHistory,
@@ -9,6 +10,7 @@ import {
   setIsProcessing,
 } from '../store/slices/eventHandlerSlice';
 import { useInventory } from './useInventory';
+import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
 
 export const useEventHandler = () => {
@@ -16,6 +18,7 @@ export const useEventHandler = () => {
   const eventHandlerState = useAppSelector((state) => state.eventHandler);
   const { balance, spend, add } = useWallet();
   const { clearInventory } = useInventory();
+  const { jokers } = useJokers();
 
   const handleEvent = useCallback(
     (eventData: any) => {
@@ -30,38 +33,72 @@ export const useEventHandler = () => {
         eventData.backgroundImage
       );
 
+      // Check for protection jokers
+      const hasMedievalShield = jokers.some(
+        (j) => j.id.toString() === JOKER_IDS.MEDIEVAL_SHIELD.toString()
+      );
+      const hasCandyVault = jokers.some(
+        (j) => j.id.toString() === JOKER_IDS.CANDY_VAULT.toString()
+      );
+      const hasHideAndSeek = jokers.some(
+        (j) => j.id.toString() === JOKER_IDS.HIDE_AND_SEEK.toString()
+      );
+
+      // Create a mutable copy of eventData to add protection flags
+      let processedEventData = { ...eventData };
+
       // Apply event effects immediately when event is triggered
       if (eventData.effect === 'LOSE_MONEY') {
-        // Bully steals 50% of money (or specific amount)
-        const amountToSteal =
-          eventData.dollarAmount || Math.floor(balance * 0.5);
-        const actualSteal = Math.min(amountToSteal, balance);
-        console.log(
-          '💸 EVENT: Bully stealing $',
-          actualSteal,
-          'from balance of $',
-          balance
-        );
-        spend(actualSteal);
+        // Check for Medieval Shield protection
+        if (hasMedievalShield) {
+          console.log('🛡️ Medieval Shield: Protected from money loss!');
+          // Add protection flag to event data
+          processedEventData.protectedByMedievalShield = true;
+        } else {
+          // Bully steals 50% of money (or specific amount)
+          const amountToSteal =
+            eventData.dollarAmount || Math.floor(balance * 0.5);
+          const actualSteal = Math.min(amountToSteal, balance);
+          console.log(
+            '💸 EVENT: Bully stealing $',
+            actualSteal,
+            'from balance of $',
+            balance
+          );
+          // Store the original balance and amount stolen for countdown animation
+          processedEventData.originalBalance = balance;
+          processedEventData.amountStolen = actualSteal;
+          spend(actualSteal);
+        }
       } else if (eventData.effect === 'FOUND_MONEY') {
         // Found money event
-        const amountFound = eventData.dollarAmount || 50;
+        let amountFound = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
         console.log('💰 EVENT: Found $', amountFound);
-        add(amountFound);
+        if (hasHideAndSeek) {
+          amountFound = amountFound * 3;
+          add(amountFound);
+        }
       } else if (eventData.effect === 'STASH_LOCKED') {
-        // Teacher confiscates candy inventory
-        console.log('📚 EVENT: Teacher confiscating all candy inventory');
-        clearInventory();
+        // Check for Candy Vault protection
+        if (hasCandyVault) {
+          console.log('🏦 Candy Vault: Protected from confiscation!');
+          // Add protection flag to event data
+          processedEventData.protectedByCandyVault = true;
+        } else {
+          // Teacher confiscates candy inventory
+          console.log('📚 EVENT: Teacher confiscating all candy inventory');
+          clearInventory();
+        }
       }
 
       console.log(
         '🔄 EVENT: About to store in Redux - backgroundImage ID:',
-        eventData.backgroundImage
+        processedEventData.backgroundImage
       );
-      dispatch(setCurrentEvent(eventData));
+      dispatch(setCurrentEvent(processedEventData));
       console.log('🔄 EVENT: Stored in Redux successfully');
     },
-    [dispatch, balance, spend, add, clearInventory]
+    [dispatch, balance, spend, add, clearInventory, jokers]
   );
 
   const clearEvent = useCallback(() => {

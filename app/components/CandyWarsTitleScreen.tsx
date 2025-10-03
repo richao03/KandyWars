@@ -16,6 +16,7 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
+import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import DifficultySelectionModal from './DifficultySelectionModal';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import HallPassModal from './HallPassModal';
@@ -40,7 +41,7 @@ export default function CandyWarsTitleScreen({
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
-  const { setSeed } = useSeed();
+  const { setSeed, setGameData } = useSeed();
   const { selectPass } = useHallPass();
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
@@ -128,6 +129,11 @@ export default function CandyWarsTitleScreen({
       const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       setSeed(newSeed);
       console.log('🔄 New seed set:', newSeed);
+
+      // Generate game data using the seed
+      const gameData = generateSeededGameData(newSeed, 40);
+      setGameData(gameData);
+      console.log('🎲 Generated game data with 40 periods:', gameData.periodEvents.length, 'events');
 
       // Reset all game state before initializing new game
       console.log('🔄 Resetting all game state for new game');

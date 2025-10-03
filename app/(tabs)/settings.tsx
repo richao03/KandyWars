@@ -21,6 +21,7 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
+import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import PixelBorder from '../components/PixelBorder';
@@ -28,7 +29,7 @@ import TextWithEmojis from '../components/TextWithEmojis';
 
 export default function Settings() {
   const { resetGame } = useGame();
-  const { setSeed } = useSeed();
+  const { setSeed, setGameData } = useSeed();
   const walletContext = useWallet();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
@@ -89,7 +90,7 @@ export default function Settings() {
           '✅ Restart confirmed, restarting with current difficulty:',
           currentDifficulty
         );
-        resetConfirmModal();
+        // Don't reset modal yet - keep it visible during restart
         setIsRestarting(true);
 
         try {
@@ -105,19 +106,32 @@ export default function Settings() {
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
 
+          // Generate game data using the seed
+          const gameData = generateSeededGameData(newSeed, 40);
+          setGameData(gameData);
+          console.log('🎲 Generated game data with 40 periods:', gameData.periodEvents.length, 'events');
+
           // Reset wallet completely (don't initialize with difficulty yet - let title screen handle it)
           resetWallet();
 
-          // Show success modal
+          // Show success modal (this replaces the current modal)
           setConfirmModal({
             visible: true,
             title: 'Game Restarted',
             message: `Starting a fresh game! Please select your difficulty.`,
             emoji: '✨',
+            confirmText: 'Go to Title Screen',
             onConfirm: () => {
+              // Close modal first
               resetConfirmModal();
-              // Navigate to title screen to properly start a new game
-              router.replace('/title-screen');
+              // Navigate after modal closes
+              setTimeout(() => {
+                router.replace('/title-screen');
+              }, 200);
+            },
+            onCancel: () => {
+              // Allow closing without navigating
+              resetConfirmModal();
             },
           });
         } catch (error) {
@@ -126,8 +140,9 @@ export default function Settings() {
             visible: true,
             title: 'Error',
             message: 'Failed to restart the game. Please try again.',
-
+            emoji: '❌',
             onConfirm: () => resetConfirmModal(),
+            onCancel: () => resetConfirmModal(),
           });
         } finally {
           setIsRestarting(false);
@@ -151,9 +166,10 @@ export default function Settings() {
       cancelText: 'Cancel',
       onConfirm: () => {
         console.log('✅ Return to title screen confirmed');
-        setConfirmModal((prev) => ({ ...prev, visible: false }));
-        // Navigate to title screen
+        // Navigate to title screen first
         router.replace('/title-screen');
+        // Reset modal after navigation
+        setTimeout(() => resetConfirmModal(), 100);
       },
       onCancel: () => {
         console.log('❌ Return to title screen canceled');
@@ -323,6 +339,11 @@ export default function Settings() {
           // Generate new seed
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
+
+          // Generate game data using the seed
+          const gameData = generateSeededGameData(newSeed, 40);
+          setGameData(gameData);
+          console.log('🎲 Generated game data with 40 periods:', gameData.periodEvents.length, 'events');
 
           console.log('✅ All data cleared successfully');
 

@@ -22,8 +22,8 @@ export const useInventory = () => {
   const isInventoryFull = useAppSelector(selectIsInventoryFull);
 
   // Legacy method names for backward compatibility
-  const addToInventory = useCallback((name: string, quantity: number, price: number): boolean => {
-    dispatch(addCandy({ id: name, name, price, quantity }));
+  const addToInventory = useCallback((name: string, quantity: number, price: number, purchasedAt?: number): boolean => {
+    dispatch(addCandy({ id: name, name, price, quantity, purchasedAt }));
     return true;
   }, [dispatch]);
 

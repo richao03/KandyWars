@@ -1,17 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 import { useGame } from './useGame';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
-import { JokerService } from '../utils/jokerService';
-import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useDiamondHand = () => {
   const { periodCount } = useGame();
   const { getTotalInventoryCount } = useInventory();
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
-  
+
   const [lastPeriod, setLastPeriod] = useState(periodCount);
 
   // Check for Diamond Hand bonus when period changes
@@ -29,13 +28,15 @@ export const useDiamondHand = () => {
 
     // Get current inventory count
     const currentInventory = getTotalInventoryCount();
-    
+
     if (currentInventory > 0) {
-      // Calculate bonus: $50 per candy in inventory
-      const bonusAmount = currentInventory * 50;
-      
+      // Calculate bonus: $5 per candy in inventory
+      const bonusAmount = currentInventory * 5;
+
       addMoney(bonusAmount);
-      console.log(`💎 Diamond Hand: +$${bonusAmount} for ${currentInventory} candies at period start!`);
+      console.log(
+        `💎 Diamond Hand: +$${bonusAmount} for ${currentInventory} candies at period start!`
+      );
     }
   }, [jokers, getTotalInventoryCount, addMoney]);
 

@@ -137,16 +137,8 @@ export default function JokerSelection({
         effects: selectedJoker.effects, // Include the full effects array!
       };
 
-      addJoker(jokerToAdd);
-
-      // Track joker obtained from minigame in Firebase
-      scoreboardService.trackJokerFromMinigame(
-        selectedJoker.name,
-        selectedJoker.id,
-        subject
-      ).catch(error => {
-        console.error('Failed to track joker from minigame:', error);
-      });
+      // Add joker with source and minigame type for analytics
+      addJoker(jokerToAdd, 'minigame', subject);
     }
     onComplete();
   };

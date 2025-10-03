@@ -5,6 +5,7 @@ interface CandyType {
   name: string;
   price: number;
   quantity?: number;
+  purchasedAt?: number; // Period when candy was purchased
 }
 
 interface InventoryState {

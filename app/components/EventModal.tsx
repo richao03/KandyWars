@@ -156,14 +156,21 @@ const EventModal = React.memo(function EventModal() {
             currentEvent.subtitle?.toLowerCase().includes('found') ||
             currentEvent.subtitle?.toLowerCase().includes('picked up')));
 
-      // For LOSE_MONEY events, calculate the amount that will be stolen
+      // For LOSE_MONEY events, use the stored original balance and amount stolen
+      let startAmount = balance;
       let endAmount = balance;
       if (isMoneyStealingEvent) {
         if (currentEvent.effect === 'LOSE_MONEY') {
-          // Bully event: steal 50% of money (before joker protection)
-          const fiftyPercent = Math.floor(balance * 0.5);
-          const amountToSteal = currentEvent.dollarAmount || fiftyPercent;
-          endAmount = Math.max(0, balance - amountToSteal);
+          // Use the stored original balance (before spend) and amount stolen
+          if (currentEvent.originalBalance !== undefined && currentEvent.amountStolen !== undefined) {
+            startAmount = currentEvent.originalBalance;
+            endAmount = currentEvent.originalBalance - currentEvent.amountStolen;
+          } else {
+            // Fallback for old events without stored values
+            const fiftyPercent = Math.floor(balance * 0.5);
+            const amountToSteal = currentEvent.dollarAmount || fiftyPercent;
+            endAmount = Math.max(0, balance - amountToSteal);
+          }
         } else {
           // Other money-stealing events: check if they take all money
           const takesAllMoney = currentEvent.subtitle
@@ -182,12 +189,12 @@ const EventModal = React.memo(function EventModal() {
         scaleAnim.setValue(1);
 
         // If it's a money-stealing event, show money loss and delay dismissal
-        if (isMoneyStealingEvent && balance > 0) {
+        if (isMoneyStealingEvent && startAmount > 0) {
           setCanDismiss(false);
           setShowMoneyLoss(true);
-          setStartAmount(balance);
+          setStartAmount(startAmount);
           setFinalAmount(endAmount);
-          moneyValue.value = balance;
+          moneyValue.value = startAmount;
 
           // Animate on UI thread with Reanimated
           moneyValue.value = withTiming(
@@ -425,28 +432,67 @@ const EventModal = React.memo(function EventModal() {
                       >
                         {currentEvent.subtitle}
                       </Text>
-                      {showMoneyLoss && (
+                      {currentEvent.protectedByMedievalShield && (
                         <PixelBorder
-                          borderColor="#ef4444"
+                          borderColor="#d4af37"
                           borderWidth={3}
                           backgroundColor="rgba(0, 0, 0, 0.2)"
                           innerPadding={12}
                           style={{ marginTop: 12 }}
                         >
-                          <View style={styles.moneyCountdownContainer}>
-                            <Text style={styles.moneyLabel}>
-                              ${startAmount.toFixed(2)} →
+                          <View style={styles.protectionContainer}>
+                            <Text style={styles.protectionEmoji}>🛡️</Text>
+                            <Text style={styles.protectionText}>
+                              Medieval Shield Activated!
                             </Text>
-                            <AnimatedMoneyCounter
-                              startValue={startAmount}
-                              endValue={finalAmount}
-                              duration={2000}
-                              moneyLoss={true}
-                              isActive={showMoneyLoss}
-                            />
+                            <Text style={styles.protectionSubtext}>
+                              Your money is protected
+                            </Text>
                           </View>
                         </PixelBorder>
                       )}
+                      {currentEvent.protectedByCandyVault && (
+                        <PixelBorder
+                          borderColor="rgb(161,215,106)"
+                          borderWidth={3}
+                          backgroundColor="rgba(0, 0, 0, 0.2)"
+                          innerPadding={12}
+                          style={{ marginTop: 12 }}
+                        >
+                          <View style={styles.protectionContainer}>
+                            <Text style={styles.protectionEmoji}>🏦</Text>
+                            <Text style={styles.protectionText}>
+                              Candy Vault Activated!
+                            </Text>
+                            <Text style={styles.protectionSubtext}>
+                              Your candy is protected
+                            </Text>
+                          </View>
+                        </PixelBorder>
+                      )}
+                      {showMoneyLoss &&
+                        !currentEvent.protectedByMedievalShield && (
+                          <PixelBorder
+                            borderColor="rgb(161,215,106)"
+                            borderWidth={3}
+                            backgroundColor="rgba(0, 0, 0, 0.2)"
+                            innerPadding={12}
+                            style={{ marginTop: 12 }}
+                          >
+                            <View style={styles.moneyCountdownContainer}>
+                              <Text style={styles.moneyLabel}>
+                                ${startAmount.toFixed(2)} →
+                              </Text>
+                              <AnimatedMoneyCounter
+                                startValue={startAmount}
+                                endValue={finalAmount}
+                                duration={2000}
+                                moneyLoss={true}
+                                isActive={showMoneyLoss}
+                              />
+                            </View>
+                          </PixelBorder>
+                        )}
                       {showMoneyGain && (
                         <PixelBorder
                           borderColor="#86efac"
@@ -487,10 +533,14 @@ const EventModal = React.memo(function EventModal() {
                       <Text style={styles.dismissText}>
                         {!canDismiss
                           ? 'Please wait...'
-                          : currentEvent.dismissText ||
-                              currentEvent.category === 'bad'
-                            ? 'Ah Shucks!'
-                            : 'Noice!'}
+                          : currentEvent.protectedByMedievalShield ||
+                              currentEvent.protectedByCandyVault
+                            ? 'Noice!'
+                            : currentEvent.dismissText
+                              ? currentEvent.dismissText
+                              : currentEvent.category === 'bad'
+                                ? 'Ah Shucks!'
+                                : 'Noice!'}
                       </Text>
                     </TouchableOpacity>
                   </PixelBorder>
@@ -642,7 +692,7 @@ const styles = StyleSheet.create({
   },
   modalWithBackground: {
     width: '100%',
-    minHeight: 450,
+    height: 500,
     overflow: 'hidden',
     borderRadius: 20,
     backgroundColor: '#000', // Fallback color to see if container is working
@@ -651,9 +701,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   overlayContent: {
-    padding: 24,
+    padding: 16,
     justifyContent: 'space-between',
-    minHeight: 450,
+    flex: 1,
   },
   heading: {
     fontSize: 20,
@@ -663,20 +713,20 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginVertical: 12,
+    marginVertical: 8,
     fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   subtitleContainer: {
-    marginVertical: 8,
+    marginVertical: 4,
   },
   subtitle: {
     fontSize: 16,
@@ -707,6 +757,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  protectionContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  protectionEmoji: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
+  protectionText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  protectionSubtext: {
+    fontSize: 14,
+    color: '#fff',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   moneyLabel: {
     fontSize: 24,

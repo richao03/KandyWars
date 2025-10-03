@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
+import { useAppSelector } from '../store/hooks';
+import { selectComputedDroughtReliefBonus } from '../store/slices/jokerSlice';
 import { useGame } from './useGame';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
-import { useAppSelector } from '../store/hooks';
-import { selectComputedDroughtReliefBonus } from '../store/slices/jokerSlice';
-import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
 
 export const useDroughtRelief = () => {
   const { periodCount } = useGame();
@@ -21,7 +21,7 @@ export const useDroughtRelief = () => {
     if (periodCount !== lastPeriod) {
       // Check Drought Relief conditions for the previous period
       checkDroughtReliefBonus();
-      
+
       // Update for new period
       setLastPeriod(periodCount);
     }
@@ -38,21 +38,20 @@ export const useDroughtRelief = () => {
     // Check if the last 3 periods had no sales
     if (salesHistory.length >= 3) {
       const lastThreePeriods = salesHistory.slice(-3);
-      const hadNoSalesForThreePeriods = lastThreePeriods.every(hadSales => !hadSales);
-      
+      const hadNoSalesForThreePeriods = lastThreePeriods.every(
+        (hadSales) => !hadSales
+      );
+
       if (hadNoSalesForThreePeriods) {
         // Get the bonus amount from computed effects
         const bonusAmount = droughtReliefBonus;
 
         if (bonusAmount > 0) {
           addMoney(bonusAmount);
-          console.log(`🌧️ Drought Relief: +$${bonusAmount} for making no sales for 3 consecutive periods!`);
-          
-          // Show notification to user
-          setTimeout(() => {
-            alert(`🌧️ Drought Relief!\\n\\nYou made no sales for 3 consecutive periods and earned $${bonusAmount}!\\n\\n"Sometimes the best strategy is patience!"`);
-          }, 1000); // Delay to ensure period transition is complete
-          
+          console.log(
+            `🌧️ Drought Relief: +$${bonusAmount} for making no sales for 3 consecutive periods!`
+          );
+
           // Reset the sales history after awarding bonus to prevent multiple awards
           setSalesHistory([]);
         }
@@ -62,9 +61,9 @@ export const useDroughtRelief = () => {
 
   // Function to be called when player makes a sale
   const recordSale = () => {
-    setSalesHistory(prev => {
+    setSalesHistory((prev) => {
       const newHistory = [...prev];
-      
+
       // If this is a new period, add a new entry
       if (newHistory.length === 0 || newHistory.length < periodCount + 1) {
         // Fill in any missing periods with false (no sales)
@@ -77,7 +76,7 @@ export const useDroughtRelief = () => {
         // Update current period to true (has sales)
         newHistory[periodCount] = true;
       }
-      
+
       // Keep only the last 5 periods to avoid memory bloat
       return newHistory.slice(-5);
     });
@@ -85,17 +84,17 @@ export const useDroughtRelief = () => {
 
   // Function to mark end of period with no sales
   const markPeriodWithoutSales = () => {
-    setSalesHistory(prev => {
+    setSalesHistory((prev) => {
       const newHistory = [...prev];
-      
+
       // Fill in any missing periods and mark current period as no sales
       while (newHistory.length < periodCount + 1) {
         newHistory.push(false);
       }
-      
+
       // Ensure current period is marked as no sales
       newHistory[periodCount] = false;
-      
+
       // Keep only the last 5 periods
       return newHistory.slice(-5);
     });
@@ -105,16 +104,16 @@ export const useDroughtRelief = () => {
   useEffect(() => {
     if (periodCount > lastPeriod) {
       // Check if we need to mark the previous period as having no sales
-      setSalesHistory(prev => {
+      setSalesHistory((prev) => {
         const newHistory = [...prev];
-        
+
         // If the previous period wasn't recorded, mark it as no sales
         if (newHistory.length <= lastPeriod) {
           while (newHistory.length <= lastPeriod) {
             newHistory.push(false);
           }
         }
-        
+
         return newHistory.slice(-5);
       });
     }

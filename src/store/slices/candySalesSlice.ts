@@ -27,8 +27,13 @@ const candySalesSlice = createSlice({
   initialState,
   reducers: {
     addSale: (state, action: PayloadAction<SaleRecord>) => {
-      // NOTE: Disabled to prevent memory leak - sales array was growing unbounded
-      // state.sales.push(action.payload);
+      // Add the sale to the array
+      state.sales.push(action.payload);
+
+      // Keep only sales from the last 10 periods to prevent unbounded growth
+      const minPeriodToKeep = Math.max(0, action.payload.period - 10);
+      state.sales = state.sales.filter(sale => sale.period >= minPeriodToKeep);
+
       state.totalRevenue += action.payload.total;
       state.totalCandiesSold += action.payload.quantity;
     },

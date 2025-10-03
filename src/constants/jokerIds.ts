@@ -23,10 +23,10 @@ export const JOKER_IDS = {
   VACUUM_SEALER: 12,
   COACHING: 13,
   FRIDGE_ORGANIZER: 14,
-  DEEP_STORAGE: 15,
+  PERFECT_BAKE: 15,
   BAKE_SALE: 16,
   HOME_MADE: 17,
-  DECOY_CAKE: 18,
+  SLOW_COOKER: 18,
 
   // Economy Jokers
   MARKET_CRASH: 19,
@@ -53,7 +53,7 @@ export const JOKER_IDS = {
   // Logic Jokers
   MASTER_NEGOTIATOR: 27,
   THEREFORE: 28,
-  LOOPHOLE: 45,
+  MAKING_CENTS: 45,
   SOMETHING_FROM_NOTHING: 46,
   PURSUASION: 48,
 
@@ -69,6 +69,8 @@ export const JOKER_IDS = {
   CONTINENTAL_DRIFT: 40,
   MAP_MAKER: 53,
   ATLAS_BONUS: 43,
+  TIME_ZONE_ARBITRAGE: 42,
+  SUNSET_SURGE: 38,
 
   // Economy (Additional)
   DIAMOND_HAND: 50,
@@ -91,10 +93,10 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.VACUUM_SEALER]: 'Vacuum Sealer',
   [JOKER_IDS.COACHING]: 'Coaching',
   [JOKER_IDS.FRIDGE_ORGANIZER]: 'Fridge Organizer',
-  [JOKER_IDS.DEEP_STORAGE]: 'Deep Storage',
+  [JOKER_IDS.PERFECT_BAKE]: 'Perfect Bake',
   [JOKER_IDS.BAKE_SALE]: 'Bake Sale',
   [JOKER_IDS.HOME_MADE]: 'Home Made',
-  [JOKER_IDS.DECOY_CAKE]: 'Decoy Cake',
+  [JOKER_IDS.SLOW_COOKER]: 'Slow Cooker',
   [JOKER_IDS.MARKET_CRASH]: 'Market Crash',
   [JOKER_IDS.MARKET_MANIPULATION]: 'Market Manipulation',
   [JOKER_IDS.THE_BIG_SHORT]: 'The Big Short',
@@ -117,7 +119,7 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.CONTINENTAL_DRIFT]: 'Continental Drift',
   [JOKER_IDS.THE_BOUNCEBACK]: 'The Bounceback',
   [JOKER_IDS.ATLAS_BONUS]: 'Atlas Bonus',
-  [JOKER_IDS.LOOPHOLE]: 'Loophole',
+  [JOKER_IDS.MAKING_CENTS]: 'Making Cents',
   [JOKER_IDS.SOMETHING_FROM_NOTHING]: 'Something from Nothing',
   [JOKER_IDS.PURSUASION]: 'Pursuasion',
   [JOKER_IDS.DIAMOND_HAND]: 'Diamond Hand',
@@ -129,6 +131,8 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.TREASURE_CHEST]: 'Treasure Chest',
   [JOKER_IDS.MEDIEVAL_SHIELD]: 'Medieval Shield',
   [JOKER_IDS.CANDY_VAULT]: 'Candy Vault',
+  [JOKER_IDS.TIME_ZONE_ARBITRAGE]: 'Time Zone Arbitrage',
+  [JOKER_IDS.SUNSET_SURGE]: 'Sunset Surge',
 };
 
 // Helper function to check if a joker has a specific ID
