@@ -113,7 +113,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Game state
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'countdown', 'playing', 'result', 'jokerSelection', 'computerChoice', 'hint'
-  const [debugMode, setDebugMode] = useState(false); // DEBUG: Set to true to see all positions
   const [stage, setStage] = useState(1); // 1, 2, or 3
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [score, setScore] = useState(0);

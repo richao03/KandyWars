@@ -220,12 +220,6 @@ function AfterSchoolPage() {
     setSleepConfirmModalVisible(true);
   };
 
-  // DEBUG: Temporary button to test hasStudiedTonight state
-  const handleDebugReset = () => {
-    console.log('🔧 DEBUG: Manual reset of hasStudiedTonight state');
-    startAfterSchool(); // This should reset hasStudiedTonight to false
-  };
-
   const handleSleepConfirm = () => {
     console.log('🌙 AfterSchool: handleSleepConfirm called');
     console.log(

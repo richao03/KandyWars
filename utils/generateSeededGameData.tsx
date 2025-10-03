@@ -53,13 +53,13 @@ export type SpecialEventEffect = {
 
 // [minPrice, maxPrice, floorPrice]
 const candyBasePrices: Record<string, [number, number, number]> = {
-  Snickers: [1.5, 2.0, 1.25],
+  Snickers: [1.5, 2.0, 0.55],
   'M&Ms': [2.0, 3.5, 2.35],
   Skittles: [1, 2.25, 3.2],
   Warheads: [0.5, 1.0, 4.15],
   'Sour Patch Kids': [1.8, 3.0, 1.3],
   'Bubble Gum': [0.1, 0.5, 0.05],
-  'Jaw Breaker': [3, 5, 10.5],
+  'Jaw Breaker': [3, 5, 4.5],
 };
 
 const subjects = [
@@ -389,28 +389,9 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
 
   console.log(`📊 Total events generated: ${periodEvents.length}`);
 
-  // Joker drafts
-  const jokerDrafts: JokerDraft[] = [];
-  for (let day = 0; day < totalPeriods / 8; day++) {
-    const jokers = Array.from(
-      new Set(
-        Array.from(
-          { length: 3 },
-          () => allJokers[Math.floor(rng() * allJokers.length)]
-        )
-      )
-    );
-    jokerDrafts.push({
-      day: day + 1,
-      subject: subjects[Math.floor(rng() * subjects.length)],
-      jokers,
-    });
-  }
-
   return {
     candyPrices,
     periodEvents,
-    jokerDrafts,
     totalPeriods,
   };
 }

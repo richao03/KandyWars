@@ -42,7 +42,6 @@ function JokersPage() {
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
-  const [debugMode, setDebugMode] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -468,28 +467,10 @@ function JokersPage() {
     </View>
   );
 
-  const handleDebugAddJoker = (joker: any) => {
-    if (debugMode) {
-      jokerContext.addJoker(joker);
-      handleShowConfirmation(
-        'Debug: Joker Added!',
-        `${joker.emoji} ${joker.name} added to inventory`,
-        '🐛',
-        () => {},
-        'OK'
-      );
-    }
-  };
-
   const renderJokerRow = ({ item }: { item: any[] }) => (
     <View style={styles.row}>
       {item.map((joker) => (
-        <TouchableOpacity
-          key={joker.id}
-          style={styles.jokerCardContainer}
-          onPress={() => handleDebugAddJoker(joker)}
-          disabled={!debugMode}
-        >
+        <View key={joker.id} style={styles.jokerCardContainer}>
           <JokerCard
             joker={joker}
             isAfterSchool={isAfterSchool}
@@ -501,12 +482,7 @@ function JokersPage() {
             onShowJokerSelector={handleShowJokerSelector}
             onTriggerEvent={triggerEvent}
           />
-          {debugMode && (
-            <View style={styles.debugBadge}>
-              <Text style={styles.debugBadgeText}>🐛 TAP</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        </View>
       ))}
     </View>
   );
@@ -570,18 +546,6 @@ function JokersPage() {
           <TouchableOpacity
             style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
             onPress={() => setActiveTab('see-all')}
-            onLongPress={() => {
-              setDebugMode(!debugMode);
-              handleShowConfirmation(
-                debugMode ? 'Debug Mode OFF' : 'Debug Mode ON',
-                debugMode
-                  ? 'Tap jokers to add disabled'
-                  : 'Tap any joker to add it to inventory',
-                debugMode ? '✅' : '🐛',
-                () => {},
-                'OK'
-              );
-            }}
           >
             <Text
               style={[
@@ -589,7 +553,7 @@ function JokersPage() {
                 activeTab !== 'inventory' && styles.activeTabText,
               ]}
             >
-              📖 All ({allJokersCount}) {debugMode && '🐛'}
+              📖 All ({allJokersCount})
             </Text>
           </TouchableOpacity>
         </View>
@@ -946,23 +910,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginRight: 8,
     position: 'relative',
-  },
-  debugBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#FF6B00',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#FFD700',
-  },
-  debugBadgeText: {
-    color: '#FFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    fontFamily: 'PixeloidMono',
   },
   emptyContainer: {
     flex: 1,

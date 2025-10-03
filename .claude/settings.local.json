@@ -4,7 +4,9 @@
       "Bash(cat:*)",
       "Bash(npx ts-prune:*)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm run start:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
