@@ -2,12 +2,14 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ScrollView,
+  LayoutChangeEvent,
+  PanResponder,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useGame } from '../../src/hooks/useGame';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
@@ -162,15 +164,15 @@ function generatePuzzle(levelIndex: number): Puzzle {
   const chainItems: Item[] = [goal];
 
   // Build chain backwards: goal <- item(n-1) <- ... <- item1 <- startItem
-  // For config.steps trades, we need config.steps + 1 items in the chain
-  for (let i = 0; i < config.steps; i++) {
+  // For config.solutionSteps trades, we need config.solutionSteps + 1 items in the chain
+  for (let i = 0; i < config.solutionSteps; i++) {
     const nextItem = pick(rng, ALL_ITEMS, chainItems);
     chainItems.unshift(nextItem);
   }
 
   // Create the solution trades (always 1 for 1) with random IDs
   const solutionTrades: TradeTile[] = [];
-  for (let i = 0; i < config.steps; i++) {
+  for (let i = 0; i < config.solutionSteps; i++) {
     const giveItem = chainItems[i];
     const getItem = chainItems[i + 1];
     const randomId = Math.floor(Math.random() * 1000000); // Random ID to prevent sorting patterns
@@ -299,8 +301,6 @@ function generatePuzzle(levelIndex: number): Puzzle {
     }
   }
 
-  const totalSlots = config.steps + config.dummyTrades;
-
   // Debug: Log the generated puzzle details
   console.log(`🎲 Level ${levelIndex + 1} Puzzle Generated:`);
   console.log(
@@ -318,69 +318,257 @@ function generatePuzzle(levelIndex: number): Puzzle {
     startInventory,
     goal,
     tiles: allTrades,
-    steps: totalSlots,
+    steps: config.totalSlots, // Always 6 slots for 2 rows of 3
   };
 }
 
 /** =========================
- *  Tappable components (simplified tap-to-add/remove)
+ *  Draggable components
  *  ========================= */
-type TappablePaletteProps = {
-  tile: TradeTile;
-  onTap: (tile: TradeTile) => void;
+type DraggableTileProps = {
+  tile: TradeTile & { isUsed?: boolean };
+  onDragStart: (tile: TradeTile) => void;
+  onDragMove: (x: number, y: number) => void;
+  onDragEnd: () => void;
   style?: any;
 };
-function TappableFromPalette({ tile, onTap, style }: TappablePaletteProps) {
+
+function DraggableTile({
+  tile,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  style,
+}: DraggableTileProps) {
+  const isUsed = tile.isUsed || false;
+  const [isDragging, setIsDragging] = useState(false);
+  const tileRef = useRef(tile);
+  const startPosition = useRef({ x: 0, y: 0 });
+  const panResponderRef = useRef<any>(null);
+
+  // Keep tile ref updated
+  useEffect(() => {
+    tileRef.current = tile;
+  }, [tile]);
+
+  // Create PanResponder with useMemo for performance, store in ref for cleanup
+  const panResponder = useMemo(() => {
+    const responder = PanResponder.create({
+      onStartShouldSetPanResponder: () => !tileRef.current.isUsed,
+      onMoveShouldSetPanResponder: () => !tileRef.current.isUsed,
+      onPanResponderGrant: (evt) => {
+        if (!tileRef.current.isUsed) {
+          setIsDragging(true);
+          startPosition.current = {
+            x: evt.nativeEvent.pageX,
+            y: evt.nativeEvent.pageY,
+          };
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onDragStart(tileRef.current);
+        }
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (!tileRef.current.isUsed) {
+          onDragMove(gesture.moveX, gesture.moveY);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (!tileRef.current.isUsed) {
+          setIsDragging(false);
+          onDragEnd();
+        }
+      },
+    });
+    panResponderRef.current = responder;
+    return responder;
+  }, [onDragStart, onDragMove, onDragEnd]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Reset dragging state on unmount
+      setIsDragging(false);
+      panResponderRef.current = null;
+    };
+  }, []);
+
   return (
-    <PixelBorder
-      borderColor="#42a5f5"
-      borderWidth={3}
-      backgroundColor="#1565c0"
-      innerPadding={0}
-      style={style}
+    <View
+      style={[
+        style,
+        isDragging && { opacity: 0.3 },
+        isUsed && { opacity: 0.3 },
+      ]}
+      {...panResponder.panHandlers}
     >
-      <TouchableOpacity
-        style={styles.tileInner}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onTap(tile);
-        }}
-        activeOpacity={0.7}
+      <PixelBorder
+        borderColor={isUsed ? '#424242' : '#42a5f5'}
+        borderWidth={3}
+        backgroundColor={isUsed ? '#1a1a1a' : '#1565c0'}
+        innerPadding={0}
+        style={{ width: '100%', height: '100%' }}
       >
-        <TradeLabel label={tile.label} style={styles.tileLabel} />
-      </TouchableOpacity>
-    </PixelBorder>
+        <View style={styles.tileInner}>
+          <TradeLabel label={tile.label} style={styles.tileLabel} />
+        </View>
+      </PixelBorder>
+    </View>
   );
 }
 
-type TappableSlotProps = {
-  tile: TradeTile;
+type SlotProps = {
+  slot: TradeTile | null;
   slotIndex: number;
-  onTap: (slotIndex: number, tile: TradeTile) => void;
+  onMeasure: (
+    index: number,
+    layout: { x: number; y: number; width: number; height: number }
+  ) => void;
+  onRemove: (index: number) => void;
+  onDragFromSlot: (tile: TradeTile, fromIndex: number) => void;
+  onDragMove: (x: number, y: number) => void;
+  onDragEnd: () => void;
+  isHighlighted: boolean;
 };
-function TappableFromSlot({ tile, slotIndex, onTap }: TappableSlotProps) {
+
+function Slot({
+  slot,
+  slotIndex,
+  onMeasure,
+  onRemove,
+  onDragFromSlot,
+  onDragMove,
+  onDragEnd,
+  isHighlighted,
+}: SlotProps) {
+  const viewRef = useRef<View>(null);
+  const [layoutComplete, setLayoutComplete] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const slotRef = useRef(slot);
+  const panResponderRef = useRef<any>(null);
+
+  // Keep slot ref updated
+  useEffect(() => {
+    slotRef.current = slot;
+  }, [slot]);
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    // Mark layout as complete
+    setLayoutComplete(true);
+  };
+
+  useEffect(() => {
+    // Measure position after layout is complete
+    if (layoutComplete && viewRef.current) {
+      const measureSlot = () => {
+        viewRef.current?.measureInWindow((x, y, width, height) => {
+          onMeasure(slotIndex, { x, y, width, height });
+        });
+      };
+
+      // Small delay to ensure render is complete
+      const timer = setTimeout(measureSlot, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [layoutComplete, slotIndex, onMeasure]);
+
+  const dragStartTime = useRef(0);
+  const dragMoved = useRef(false);
+
+  // Create PanResponder with useMemo for performance, store in ref for cleanup
+  const panResponder = useMemo(() => {
+    const responder = PanResponder.create({
+      onStartShouldSetPanResponder: () => !!slotRef.current,
+      onMoveShouldSetPanResponder: () => !!slotRef.current,
+      onPanResponderGrant: () => {
+        if (slotRef.current) {
+          dragStartTime.current = Date.now();
+          dragMoved.current = false;
+          setIsDragging(true);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onDragFromSlot(slotRef.current, slotIndex);
+        }
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (slotRef.current) {
+          // Track if user moved more than 5 pixels
+          if (Math.abs(gesture.dx) > 5 || Math.abs(gesture.dy) > 5) {
+            dragMoved.current = true;
+          }
+          onDragMove(gesture.moveX, gesture.moveY);
+        }
+      },
+      onPanResponderRelease: () => {
+        if (slotRef.current) {
+          const dragDuration = Date.now() - dragStartTime.current;
+
+          // If it was a quick tap (< 200ms) and didn't move much, treat as a tap to remove
+          if (!dragMoved.current && dragDuration < 200) {
+            console.log(
+              '👆 Tap detected on slot',
+              slotIndex,
+              '- removing tile'
+            );
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onRemove(slotIndex);
+            setIsDragging(false);
+          } else {
+            // Otherwise, complete the drag
+            setIsDragging(false);
+            onDragEnd();
+          }
+        }
+      },
+    });
+    panResponderRef.current = responder;
+    return responder;
+  }, [slotIndex, onDragFromSlot, onDragMove, onDragEnd, onRemove]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Reset dragging state on unmount
+      setIsDragging(false);
+      panResponderRef.current = null;
+    };
+  }, []);
+
   return (
-    <TouchableOpacity
-      style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onTap(slotIndex, tile);
-      }}
-      activeOpacity={0.7}
+    <View
+      ref={viewRef}
+      style={styles.slotWrapper}
+      onLayout={handleLayout}
+      collapsable={false}
     >
-      <TradeLabel label={tile.label} style={styles.slotLabel} />
-    </TouchableOpacity>
+      <PixelBorder
+        borderColor={isHighlighted ? '#4caf50' : '#42a5f5'}
+        borderWidth={3}
+        backgroundColor={slot ? '#1565c0' : '#0d47a1'}
+        innerPadding={0}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <View
+          style={[styles.slotInner, isDragging && { opacity: 0.3 }]}
+          {...(slot ? panResponder.panHandlers : {})}
+        >
+          {slot ? (
+            <TradeLabel label={slot.label} style={styles.slotLabel} />
+          ) : (
+            <Text style={styles.slotPlaceholder}>{slotIndex + 1}</Text>
+          )}
+        </View>
+      </PixelBorder>
+    </View>
   );
 }
 
 /** =========================
  *  Component
  *  ========================= */
-// Level configuration: [steps, dummyTrades]
+// Level configuration
 const LEVEL_CONFIG = [
-  { steps: 3, dummyTrades: 0 }, // Level 1: 3 steps, no dummy trades
-  { steps: 4, dummyTrades: 4 }, // Level 2: 4 steps, 4 dummy trades
-  { steps: 5, dummyTrades: 7 }, // Level 3: 5 steps, 7 dummy trades
+  { solutionSteps: 3, dummyTrades: 0, totalSlots: 6 }, // Level 1: 3 solution steps, no dummy trades, 6 slots total
+  { solutionSteps: 4, dummyTrades: 4, totalSlots: 6 }, // Level 2: 4 solution steps, 4 dummy trades, 6 slots total
+  { solutionSteps: 5, dummyTrades: 7, totalSlots: 6 }, // Level 3: 5 solution steps, 7 dummy trades, 6 slots total
 ];
 
 export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
@@ -402,7 +590,16 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   );
   const [available, setAvailable] = useState<TradeTile[]>(puzzle.tiles);
 
-  // Timer effect
+  // Drag and drop state
+  const [draggingTile, setDraggingTile] = useState<TradeTile | null>(null);
+  const [dragSourceSlot, setDragSourceSlot] = useState<number | null>(null); // Track if dragging from a slot
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [slotLayouts, setSlotLayouts] = useState<
+    Array<{ x: number; y: number; width: number; height: number }>
+  >([]);
+  const [highlightedSlot, setHighlightedSlot] = useState<number | null>(null);
+
+  // Timer effect with proper cleanup
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
       timerRef.current = setTimeout(() => {
@@ -413,10 +610,24 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       handleGameOver('Time ran out!');
     }
 
+    // Cleanup function runs on every render and on unmount
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [gameState, timeLeft]);
+
+  // Additional cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   // Game over handler
   const handleGameOver = (reason: string) => {
@@ -470,38 +681,124 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     setAvailable(p.tiles);
   };
 
-  /** ---------- placement helpers ---------- */
-  const placeIntoSlot = (tile: TradeTile, idx: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const occupying = slots[idx];
-    setSlots((prev) => {
+  /** ---------- Drag handlers ---------- */
+  const handleDragStart = (tile: TradeTile) => {
+    console.log('🎯 Drag started:', tile.label);
+    setDragPosition({ x: 0, y: 0 }); // Reset position to prevent flash
+    setDraggingTile(tile);
+    setDragSourceSlot(null); // From palette
+  };
+
+  const handleDragFromSlot = (tile: TradeTile, fromIndex: number) => {
+    console.log('🎯 Drag started from slot:', fromIndex, tile.label);
+    setDragPosition({ x: 0, y: 0 }); // Reset position to prevent flash
+    setDraggingTile(tile);
+    setDragSourceSlot(fromIndex);
+  };
+
+  const handleDragMove = (x: number, y: number) => {
+    setDragPosition({ x, y });
+
+    // Check which slot is being hovered over
+    let targetSlot: number | null = null;
+    for (let i = 0; i < slotLayouts.length; i++) {
+      const layout = slotLayouts[i];
+      if (
+        layout &&
+        x >= layout.x &&
+        x <= layout.x + layout.width &&
+        y >= layout.y &&
+        y <= layout.y + layout.height
+      ) {
+        targetSlot = i;
+        break;
+      }
+    }
+
+    if (targetSlot !== highlightedSlot) {
+      console.log('🎯 Hovering over slot:', targetSlot, 'at position', {
+        x,
+        y,
+      });
+    }
+    setHighlightedSlot(targetSlot);
+  };
+
+  const handleDragEnd = () => {
+    console.log(
+      '🎯 Drag ended. Highlighted slot:',
+      highlightedSlot,
+      'Source slot:',
+      dragSourceSlot
+    );
+
+    if (draggingTile && highlightedSlot !== null) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      if (dragSourceSlot !== null) {
+        // Dragging from slot to slot - swap or move
+        console.log(
+          '✅ Moving/swapping tiles between slots',
+          dragSourceSlot,
+          '→',
+          highlightedSlot
+        );
+        setSlots((prev) => {
+          const copy = [...prev];
+          const targetTile = copy[highlightedSlot];
+
+          // Place dragged tile in target
+          copy[highlightedSlot] = { ...draggingTile, source: 'slot' };
+
+          // If target had a tile, swap it to source (or clear source if dragging to same slot)
+          if (dragSourceSlot !== highlightedSlot) {
+            copy[dragSourceSlot] = targetTile;
+          }
+
+          return copy;
+        });
+      } else {
+        // Dragging from palette to slot
+        console.log('✅ Placing tile from palette to slot', highlightedSlot);
+        setSlots((prev) => {
+          const copy = [...prev];
+          copy[highlightedSlot] = { ...draggingTile, source: 'slot' };
+          return copy;
+        });
+      }
+    } else {
+      console.log('❌ No valid drop target');
+    }
+
+    setDraggingTile(null);
+    setDragSourceSlot(null);
+    setHighlightedSlot(null);
+  };
+
+  const handleSlotMeasure = (
+    index: number,
+    layout: { x: number; y: number; width: number; height: number }
+  ) => {
+    setSlotLayouts((prev) => {
       const copy = [...prev];
-      copy[idx] = { ...tile, source: 'slot' };
+      copy[index] = layout;
       return copy;
-    });
-    setAvailable((prev) => {
-      const filtered = prev.filter((t) => t.id !== tile.id);
-      return occupying
-        ? [...filtered, { ...occupying, source: 'palette' }]
-        : filtered;
     });
   };
-  const removeFromSlot = (i: number) => {
-    const tile = slots[i];
-    if (!tile) return;
+
+  const handleRemoveFromSlot = (index: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSlots((prev) => {
       const copy = [...prev];
-      copy[i] = null;
+      copy[index] = null;
       return copy;
     });
-    setAvailable((prev) => [...prev, { ...tile, source: 'palette' }]);
   };
 
   /** ---------- Actions ---------- */
   const clearAll = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSlots(Array(puzzle.steps).fill(null));
-    setAvailable(puzzle.tiles);
   };
 
   const executePlan = () => {
@@ -580,24 +877,23 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     }
   };
 
-  /** ---------- Tap logic (simplified) ---------- */
-  const handlePaletteTap = (tile: TradeTile) => {
-    // Find first empty slot
-    const emptySlotIndex = slots.findIndex((s) => s === null);
-    if (emptySlotIndex >= 0) {
-      placeIntoSlot(tile, emptySlotIndex);
-    }
-  };
+  /** ---------- Render helpers ---------- */
+  // Track which tiles are currently used in slots
+  const usedTileIds = useMemo(
+    () => new Set(slots.filter(Boolean).map((t) => t!.id)),
+    [slots]
+  );
 
-  const handleSlotTap = (slotIndex: number, tile: TradeTile) => {
-    // Tapping a filled slot removes it
-    removeFromSlot(slotIndex);
-  };
-
-  /** ---------- Render ---------- */
+  // Show all tiles but mark which ones are used (don't filter them out)
   const paletteTiles = useMemo(
-    () => [...available].sort((a, b) => a.id.localeCompare(b.id)),
-    [available]
+    () =>
+      puzzle.tiles
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map((tile) => ({
+          ...tile,
+          isUsed: usedTileIds.has(tile.id),
+        })),
+    [puzzle.tiles, usedTileIds]
   );
 
   const navigateBackToContext = () => {
@@ -671,7 +967,8 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3. </Text>
               <Text style={styles.stepText}>
-                Tap tiles to slot in the correct order to execute your plan
+                Drag tiles from the palette into the slots to build your trading
+                chain
               </Text>
             </View>
           </PixelBorder>
@@ -703,189 +1000,174 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          padding: ResponsiveSpacing.containerPadding(),
-          paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-        },
-      ]}
-    >
-      {/* Header */}
-      <MinigameHUD
-        title="Barter Trading"
-        subtitle="Trade your way to the goal candy!"
-        leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
-        centerInfo={`Start: ${Object.keys(puzzle.startInventory)
-          .map((item) => CATALOG[item as Item])
-          .join('')}`}
-        rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
-        theme="economy"
-      />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View
+        style={[
+          styles.container,
+          {
+            padding: ResponsiveSpacing.containerPadding(),
+            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+          },
+        ]}
+      >
+        {/* Header */}
+        <MinigameHUD
+          title="Barter Trading"
+          subtitle="Trade your way to the goal candy!"
+          leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
+          centerInfo={`Start: ${Object.keys(puzzle.startInventory)
+            .map((item) => CATALOG[item as Item])
+            .join('')}`}
+          rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
+          theme="economy"
+        />
 
-      {/* Slots */}
-      <View style={styles.slotsWrapper}>
-        <Text style={styles.sectionTitle}>Arrange your plan</Text>
-        {levelIndex === 0 ? (
-          // Level 1: 3 slots, centered, no scroll
-          <View style={[styles.slotsRow, styles.slotsRowCentered]}>
-            {slots.map((slot, i) => (
-              <PixelBorder
-                key={`slot-${i}`}
-                borderColor="#42a5f5"
-                borderWidth={3}
-                backgroundColor={slot ? '#1565c0' : '#0d47a1'}
-                innerPadding={0}
-                style={styles.slotWrapper}
-              >
-                <View style={styles.slotInner}>
-                  {slot ? (
-                    <TappableFromSlot
-                      tile={slot}
-                      slotIndex={i}
-                      onTap={handleSlotTap}
-                    />
-                  ) : (
-                    <Text style={styles.slotPlaceholder}>{i + 1}</Text>
-                  )}
-                </View>
-              </PixelBorder>
+        {/* Slots - 2 rows of 3 */}
+        <View style={styles.paletteWrapper}>
+          <Text style={styles.sectionTitle}>Plan:</Text>
+          <View style={styles.paletteGrid}>
+            {slots.map((slot, index) => (
+              <Slot
+                key={`slot-${index}`}
+                slot={slot}
+                slotIndex={index}
+                onMeasure={handleSlotMeasure}
+                onRemove={handleRemoveFromSlot}
+                onDragFromSlot={handleDragFromSlot}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                isHighlighted={highlightedSlot === index}
+                style={styles.tile}
+              />
             ))}
           </View>
-        ) : (
-          // Level 2-3: Left aligned, swipeable
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.slotsScrollContent}
-          >
-            <View style={styles.slotsRow}>
-              {slots.map((slot, i) => (
-                <PixelBorder
-                  key={`slot-${i}`}
-                  borderColor="#42a5f5"
-                  borderWidth={3}
-                  backgroundColor={slot ? '#1565c0' : '#0d47a1'}
-                  innerPadding={0}
-                  style={styles.slotWrapper}
-                >
-                  <View style={styles.slotInner}>
-                    {slot ? (
-                      <TappableFromSlot
-                        tile={slot}
-                        slotIndex={i}
-                        onTap={handleSlotTap}
-                      />
-                    ) : (
-                      <Text style={styles.slotPlaceholder}>{i + 1}</Text>
-                    )}
-                  </View>
-                </PixelBorder>
-              ))}
-            </View>
-          </ScrollView>
-        )}
-      </View>
-
-      {/* Palette */}
-      <View style={styles.paletteWrapper}>
-        <Text style={styles.sectionTitle}>Available Trades</Text>
-        <View style={styles.paletteGrid}>
-          {paletteTiles.map((tile) => (
-            <TappableFromPalette
-              key={tile.id}
-              tile={tile}
-              onTap={handlePaletteTap}
-              style={styles.tile}
-            />
-          ))}
-          {paletteTiles.length === 0 && (
-            <View style={styles.emptyPaletteContainer}>
-              <Text style={styles.emptyPaletteText}>All tiles placed!</Text>
-              <Text style={styles.emptyPaletteSubtext}>
-                Tap tiles to remove them
-              </Text>
-            </View>
-          )}
         </View>
-      </View>
 
-      {/* Execute Button */}
-      <View
-        style={[
-          styles.footer,
-          {
-            gap: ResponsiveSpacing.buttonGap(),
-            paddingVertical: ResponsiveSpacing.buttonPadding(),
-          },
-        ]}
-      >
-        <PixelBorder
-          borderColor="#1976d2"
-          borderWidth={3}
-          backgroundColor="#2196f3"
-          innerPadding={0}
-          style={styles.footerBtn}
-        >
-          <TouchableOpacity style={styles.footerBtnInner} onPress={executePlan}>
-            <Text style={styles.footerPrimaryText}>Execute Trade</Text>
-          </TouchableOpacity>
-        </PixelBorder>
-        <PixelBorder
-          borderColor="#42a5f5"
-          borderWidth={3}
-          backgroundColor="#1565c0"
-          innerPadding={0}
-          style={styles.footerBtn}
-        >
-          <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
-            <TextWithEmojis style={styles.footerSecondaryText} imageSize={16}>
-              Clear
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </PixelBorder>
-      </View>
+        {/* Palette */}
+        <View style={styles.paletteWrapper}>
+          <Text style={styles.sectionTitle}>Available Trades:</Text>
+          <View style={styles.paletteGrid}>
+            {paletteTiles.map((tile) => (
+              <DraggableTile
+                key={tile.id}
+                tile={tile}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                style={styles.tile}
+              />
+            ))}
+          </View>
+        </View>
 
-      {/* Footer */}
-      <View
-        style={[
-          styles.footer,
-          {
-            gap: ResponsiveSpacing.buttonGap(),
-            paddingVertical: ResponsiveSpacing.buttonPadding(),
-          },
-        ]}
-      >
-        <PixelBorder
-          borderColor="#42a5f5"
-          borderWidth={3}
-          backgroundColor="#1565c0"
-          innerPadding={0}
-          style={styles.footerBtn}
+        {/* Execute Button */}
+        <View
+          style={[
+            styles.footer,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
         >
-          <TouchableOpacity
-            style={styles.footerBtnInner}
-            onPress={handleForfeit}
+          <PixelBorder
+            borderColor="#1976d2"
+            borderWidth={3}
+            backgroundColor="#2196f3"
+            innerPadding={0}
+            style={styles.footerBtn}
           >
-            <TextWithEmojis style={styles.footerBackText} imageSize={28}>
-              🚪 Leave
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </PixelBorder>
-      </View>
+            <TouchableOpacity
+              style={styles.footerBtnInner}
+              onPress={executePlan}
+            >
+              <Text style={styles.footerPrimaryText}>Execute Trade</Text>
+            </TouchableOpacity>
+          </PixelBorder>
+          <PixelBorder
+            borderColor="#42a5f5"
+            borderWidth={3}
+            backgroundColor="#1565c0"
+            innerPadding={0}
+            style={styles.footerBtn}
+          >
+            <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
+              <TextWithEmojis style={styles.footerSecondaryText} imageSize={16}>
+                Clear
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
+        </View>
 
-      <GameModal
-        visible={modal.visible}
-        title={modal.title}
-        message={modal.message}
-        emoji={modal.emoji}
-        onClose={hideModal}
-        onConfirm={modal.onConfirm}
-        showCancelButton={modal.showCancelButton}
-        theme="school"
-      />
-    </View>
+        {/* Footer */}
+        <View
+          style={[
+            styles.footer,
+            {
+              gap: ResponsiveSpacing.buttonGap(),
+              paddingVertical: ResponsiveSpacing.buttonPadding(),
+            },
+          ]}
+        >
+          <PixelBorder
+            borderColor="#42a5f5"
+            borderWidth={3}
+            backgroundColor="#1565c0"
+            innerPadding={0}
+            style={styles.footerBtn}
+          >
+            <TouchableOpacity
+              style={styles.footerBtnInner}
+              onPress={handleForfeit}
+            >
+              <TextWithEmojis style={styles.footerBackText} imageSize={28}>
+                🚪 Leave
+              </TextWithEmojis>
+            </TouchableOpacity>
+          </PixelBorder>
+        </View>
+
+        {/* Dragging overlay - centered on finger with slight upward offset */}
+        {draggingTile && dragPosition.x > 0 && dragPosition.y > 0 && (
+          <View
+            style={[
+              styles.dragOverlay,
+              {
+                left: dragPosition.x - 48, // Half of tile width (96/2)
+                top: dragPosition.y - 60, // Offset above finger so tile is visible
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <PixelBorder
+              borderColor="#4caf50"
+              borderWidth={3}
+              backgroundColor="#1565c0"
+              innerPadding={0}
+              style={{ width: 96, height: 48 }}
+            >
+              <View style={styles.tileInner}>
+                <TradeLabel
+                  label={draggingTile.label}
+                  style={styles.tileLabel}
+                />
+              </View>
+            </PixelBorder>
+          </View>
+        )}
+
+        <GameModal
+          visible={modal.visible}
+          title={modal.title}
+          message={modal.message}
+          emoji={modal.emoji}
+          onClose={hideModal}
+          onConfirm={modal.onConfirm}
+          showCancelButton={modal.showCancelButton}
+          theme="school"
+        />
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -985,16 +1267,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  slotsScrollContent: {
-    paddingHorizontal: 8,
-  },
-  slotsRow: {
+  slotsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-  },
-  slotsRowCentered: {
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    maxWidth: '100%',
   },
   slotWrapper: {
     width: 96,
@@ -1006,7 +1284,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 8,
+    padding: 0,
   },
   slotPlaceholder: {
     textAlign: 'center',
@@ -1038,7 +1316,7 @@ const styles = StyleSheet.create({
   paletteGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 1,
     justifyContent: 'center',
   },
   tile: {
@@ -1097,7 +1375,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     gap: 16,
-    paddingVertical: 8,
+    paddingBottom: 8,
   },
   footerRow: {
     flexDirection: 'row',
@@ -1131,6 +1409,14 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
+  },
+
+  // Drag overlay
+  dragOverlay: {
+    position: 'absolute',
+    zIndex: 9999,
+    opacity: 0.9,
+    transform: [{ scale: 1.1 }],
   },
 
   // Instructions Styles

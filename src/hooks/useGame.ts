@@ -17,6 +17,7 @@ import {
   setHasCompletedAfterSchoolTutorial,
   selectDay,
   selectPeriod,
+  selectGameResetSignal,
 } from '../store/slices/gameSlice';
 
 export const useGame = () => {
@@ -36,6 +37,7 @@ export const useGame = () => {
   const isAfterSchool = useAppSelector(state => state.game.isAfterSchool);
   const hasCompletedMarketTutorial = useAppSelector(state => state.game.hasCompletedMarketTutorial);
   const hasCompletedAfterSchoolTutorial = useAppSelector(state => state.game.hasCompletedAfterSchoolTutorial);
+  const gameResetSignal = useAppSelector(selectGameResetSignal);
 
   const incrementPeriodAction = useCallback((location: Parameters<typeof incrementPeriod>[0]) => {
     dispatch(incrementPeriod(location));
@@ -111,6 +113,7 @@ export const useGame = () => {
     isInitialized,
     hasCompletedMarketTutorial,
     hasCompletedAfterSchoolTutorial,
+    gameResetSignal,
     incrementPeriod: incrementPeriodAction,
     startAfterSchool: startAfterSchoolAction,
     startNewDay: startNewDayAction,
@@ -140,6 +143,7 @@ export const useGame = () => {
     isInitialized,
     hasCompletedMarketTutorial,
     hasCompletedAfterSchoolTutorial,
+    gameResetSignal,
     incrementPeriodAction,
     startAfterSchoolAction,
     startNewDayAction,

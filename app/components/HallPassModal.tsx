@@ -144,9 +144,20 @@ export default function HallPassModal({
           </Text>
 
           {
-            <Text style={styles.unlockRequirement}>
-              🔒 {pass.unlockRequirement}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image
+                source={require('../../assets/images/emojis/lock.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                  marginRight: 4,
+                }}
+              />
+              <Text style={styles.unlockRequirement}>
+                {pass.unlockRequirement}
+              </Text>
+            </View>
           }
 
           <View style={styles.effectsContainer}>

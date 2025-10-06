@@ -10,16 +10,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
-import { useGame } from '../../src/hooks/useGame';
-import { useInventory } from '../../src/hooks/useInventory';
-import { useJokers } from '../../src/hooks/useJokers';
-import { useSeed } from '../../src/hooks/useSeed';
-import { useWallet } from '../../src/hooks/useWallet';
-import GameHUD from '../components/GameHUD';
-import PixelBorder from '../components/PixelBorder';
-import TransactionModal from '../components/TransactionModal';
-import { Candy } from '../types';
+import { JOKER_IDS, findJokerById } from '../src/constants/jokerIds';
+import { useGame } from '../src/hooks/useGame';
+import { useInventory } from '../src/hooks/useInventory';
+import { useJokers } from '../src/hooks/useJokers';
+import { useSeed } from '../src/hooks/useSeed';
+import { useWallet } from '../src/hooks/useWallet';
+import GameHUD from './components/GameHUD';
+import PixelBorder from './components/PixelBorder';
+import TransactionModal from './components/TransactionModal';
+import { Candy } from './types';
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -37,10 +37,14 @@ const baseCandies = [
   { name: 'Jaw Breaker', baseMin: 3, baseMax: 50 },
 ];
 
-export default function Deli() {
+interface DeliPageProps {
+  onBack?: () => void;
+}
+
+export default function Deli({ onBack }: DeliPageProps = {}) {
   const { gameData } = useSeed();
   const { balance, spend, add } = useWallet();
-  const { addToInventory, removeFromInventory } = useInventory();
+  const { inventory, addToInventory, removeFromInventory } = useInventory();
   const { day } = useGame();
   const { jokers } = useJokers();
 
@@ -62,11 +66,14 @@ export default function Deli() {
         averageCost = averageCost * 0.5; // 50% discount
       }
 
+      // Get inventory information for this candy
+      const inventoryItem = inventory.find((item) => item.name === candy.name);
+
       return {
         ...candy,
         cost: parseFloat(averageCost.toFixed(2)),
-        quantityOwned: 0,
-        averagePrice: null,
+        quantityOwned: inventoryItem?.quantity || 0,
+        averagePrice: inventoryItem?.price || null,
       };
     })
   );
@@ -108,7 +115,7 @@ export default function Deli() {
     outputRange: [8, 16],
   });
 
-  // Update candy prices when jokers change
+  // Update candy prices when jokers or inventory changes
   useEffect(() => {
     const currentVendorKickbackJoker = findJokerById(
       jokers,
@@ -130,15 +137,18 @@ export default function Deli() {
           );
         }
 
+        // Get inventory information for this candy
+        const inventoryItem = inventory.find((item) => item.name === candy.name);
+
         return {
           ...candy,
           cost: parseFloat(averageCost.toFixed(2)),
-          quantityOwned: 0,
-          averagePrice: null,
+          quantityOwned: inventoryItem?.quantity || 0,
+          averagePrice: inventoryItem?.price || null,
         };
       })
     );
-  }, [jokers, gameData]);
+  }, [jokers, gameData, inventory]);
 
   const openModal = (index: number) => {
     setSelectedCandyIndex(index);
@@ -152,52 +162,40 @@ export default function Deli() {
   const handleTransaction = (quantity: number, mode: 'buy' | 'sell') => {
     if (selectedCandyIndex === null) return;
 
-    setCandies((prev) =>
-      prev.map((candy, i) => {
-        if (i !== selectedCandyIndex) return candy;
+    const candy = candies[selectedCandyIndex];
+    if (!candy) return;
 
-        if (mode === 'buy') {
-          const totalCost = candy.cost * quantity;
-          if (balance < totalCost) return candy;
+    if (mode === 'buy') {
+      const totalCost = candy.cost * quantity;
+      if (balance < totalCost) return;
 
-          spend(totalCost);
-          addToInventory(candy.name, quantity, candy.cost);
-
-          const newQty = candy.quantityOwned + quantity;
-          const newAvg =
-            candy.averagePrice === null
-              ? candy.cost
-              : (candy.averagePrice * candy.quantityOwned +
-                  candy.cost * quantity) /
-                newQty;
-
-          return {
-            ...candy,
-            quantityOwned: newQty,
-            averagePrice: newAvg,
-          };
-        } else {
-          const totalGain = candy.cost * quantity;
-          console.log(
-            '🍭 Deli: Selling candy:',
-            candy.name,
-            'quantity:',
-            quantity,
-            'price:',
-            candy.cost,
-            'totalGain:',
-            totalGain
-          );
-          add(totalGain);
-          removeFromInventory(candy.name, quantity);
-
-          return {
-            ...candy,
-            quantityOwned: candy.quantityOwned - quantity,
-          };
-        }
-      })
-    );
+      spend(totalCost);
+      addToInventory(candy.name, quantity, candy.cost);
+      console.log(
+        '🍭 Deli: Bought candy:',
+        candy.name,
+        'quantity:',
+        quantity,
+        'price:',
+        candy.cost,
+        'totalCost:',
+        totalCost
+      );
+    } else {
+      const totalGain = candy.cost * quantity;
+      console.log(
+        '🍭 Deli: Selling candy:',
+        candy.name,
+        'quantity:',
+        quantity,
+        'price:',
+        candy.cost,
+        'totalGain:',
+        totalGain
+      );
+      add(totalGain);
+      removeFromInventory(candy.name, quantity);
+    }
 
     closeModal();
   };
@@ -205,7 +203,11 @@ export default function Deli() {
   const handleReturnToAfterSchool = () => {
     // Trigger success haptic feedback when going back to after school
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.push('/(tabs)/after-school');
+    if (onBack) {
+      onBack();
+    } else {
+      router.replace('/(tabs)/after-school');
+    }
   };
 
   const selectedCandy =

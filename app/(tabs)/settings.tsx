@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
@@ -34,6 +35,7 @@ export default function Settings() {
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
+  const { resetPlaythrough } = useDailyStats();
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
@@ -82,7 +84,7 @@ export default function Settings() {
       title: 'Restart Game',
       message:
         'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
-      emoji: '🔄',
+      emoji: 'refresh',
       confirmText: 'Restart',
       cancelText: 'Cancel',
       onConfirm: async () => {
@@ -101,6 +103,7 @@ export default function Settings() {
           resetInventory();
           resetJokers();
           resetFlavorText();
+          resetPlaythrough();
 
           // Generate new seed for fresh game FIRST (this clears the seed context)
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -109,7 +112,11 @@ export default function Settings() {
           // Generate game data using the seed
           const gameData = generateSeededGameData(newSeed, 40);
           setGameData(gameData);
-          console.log('🎲 Generated game data with 40 periods:', gameData.periodEvents.length, 'events');
+          console.log(
+            '🎲 Generated game data with 40 periods:',
+            gameData.periodEvents.length,
+            'events'
+          );
 
           // Reset wallet completely (don't initialize with difficulty yet - let title screen handle it)
           resetWallet();
@@ -335,6 +342,7 @@ export default function Settings() {
           resetInventory();
           resetJokers();
           resetFlavorText();
+          resetPlaythrough();
 
           // Generate new seed
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -343,7 +351,11 @@ export default function Settings() {
           // Generate game data using the seed
           const gameData = generateSeededGameData(newSeed, 40);
           setGameData(gameData);
-          console.log('🎲 Generated game data with 40 periods:', gameData.periodEvents.length, 'events');
+          console.log(
+            '🎲 Generated game data with 40 periods:',
+            gameData.periodEvents.length,
+            'events'
+          );
 
           console.log('✅ All data cleared successfully');
 
@@ -389,91 +401,93 @@ export default function Settings() {
             <Text style={styles.sectionTitle}>Player Info</Text>
 
             <View style={styles.playerInfoContainer}>
-            <Text style={styles.playerInfoLabel}>Player Name:</Text>
-            {editingName ? (
-              <View style={styles.nameEditContainer}>
-                <TextInput
-                  style={[
-                    styles.nameInput,
-                    nameValidationError && styles.nameInputError,
-                  ]}
-                  value={newPlayerName}
-                  onChangeText={(text) => {
-                    setNewPlayerName(text);
-                    setNameValidationError(null); // Clear error when user types
-                  }}
-                  placeholder="Enter your name"
-                  placeholderTextColor="#999"
-                  maxLength={20}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSaveName}
-                  editable={!isValidatingName}
-                />
+              <Text style={styles.playerInfoLabel}>Player Name:</Text>
+              {editingName ? (
+                <View style={styles.nameEditContainer}>
+                  <TextInput
+                    style={[
+                      styles.nameInput,
+                      nameValidationError && styles.nameInputError,
+                    ]}
+                    value={newPlayerName}
+                    onChangeText={(text) => {
+                      setNewPlayerName(text);
+                      setNameValidationError(null); // Clear error when user types
+                    }}
+                    placeholder="Enter your name"
+                    placeholderTextColor="#999"
+                    maxLength={20}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveName}
+                    editable={!isValidatingName}
+                  />
 
-                {nameValidationError && (
-                  <Text style={styles.nameErrorText}>
-                    {nameValidationError}
-                  </Text>
-                )}
-                <View style={styles.nameButtonContainer}>
-                  <PixelBorder
-                    borderColor="#4a7c4a"
-                    borderWidth={2}
-                    backgroundColor="#d4f6d4"
-                    innerPadding={0}
-                    style={{ flex: 1 }}
-                  >
-                    <TouchableOpacity
-                      style={[
-                        styles.nameButton,
-                        isValidatingName && styles.disabledNameButton,
-                      ]}
-                      onPress={handleSaveName}
-                      disabled={isValidatingName}
+                  {nameValidationError && (
+                    <Text style={styles.nameErrorText}>
+                      {nameValidationError}
+                    </Text>
+                  )}
+                  <View style={styles.nameButtonContainer}>
+                    <PixelBorder
+                      borderColor="#4a7c4a"
+                      borderWidth={2}
+                      backgroundColor="#d4f6d4"
+                      innerPadding={0}
+                      style={{ flex: 1 }}
                     >
-                      {isValidatingName ? (
-                        <View style={styles.nameLoadingContainer}>
-                          <ActivityIndicator size="small" color="#2d5a2d" />
-                          <Text style={styles.saveButtonText}>Checking...</Text>
-                        </View>
-                      ) : (
-                        <Text style={styles.saveButtonText}>Save</Text>
-                      )}
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <TouchableOpacity
+                        style={[
+                          styles.nameButton,
+                          isValidatingName && styles.disabledNameButton,
+                        ]}
+                        onPress={handleSaveName}
+                        disabled={isValidatingName}
+                      >
+                        {isValidatingName ? (
+                          <View style={styles.nameLoadingContainer}>
+                            <ActivityIndicator size="small" color="#2d5a2d" />
+                            <Text style={styles.saveButtonText}>
+                              Checking...
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        )}
+                      </TouchableOpacity>
+                    </PixelBorder>
 
-                  <PixelBorder
-                    borderColor="#ef4444"
-                    borderWidth={2}
-                    backgroundColor="#fee2e2"
-                    innerPadding={0}
-                    style={{ flex: 1 }}
-                  >
-                    <TouchableOpacity
-                      style={styles.nameButton}
-                      onPress={handleCancelEditName}
+                    <PixelBorder
+                      borderColor="#ef4444"
+                      borderWidth={2}
+                      backgroundColor="#fee2e2"
+                      innerPadding={0}
+                      style={{ flex: 1 }}
                     >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <TouchableOpacity
+                        style={styles.nameButton}
+                        onPress={handleCancelEditName}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+                  </View>
                 </View>
-              </View>
-            ) : (
-              <View style={styles.nameDisplayContainer}>
-                <Text style={styles.playerNameText}>
-                  {currentPlayerName || 'Player'}
-                </Text>
-                <TouchableOpacity
-                  style={styles.editNameButton}
-                  onPress={handleEditName}
-                >
-                  <Text style={styles.editNameButtonText}>✏️ Edit</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+              ) : (
+                <View style={styles.nameDisplayContainer}>
+                  <Text style={styles.playerNameText}>
+                    {currentPlayerName || 'Player'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.editNameButton}
+                    onPress={handleEditName}
+                  >
+                    <Text style={styles.editNameButtonText}>✏️ Edit</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
         </PixelBorder>
 
@@ -487,73 +501,92 @@ export default function Settings() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Game Controls</Text>
 
-          <PixelBorder
-            borderColor="#3b82f6"
-            borderWidth={3}
-            backgroundColor="#dbeafe"
-            innerPadding={0}
-            style={styles.buttonWrapper}
-          >
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleReturnToTitleScreen}
+            <PixelBorder
+              borderColor="#3b82f6"
+              borderWidth={3}
+              backgroundColor="#dbeafe"
+              innerPadding={0}
+              style={styles.buttonWrapper}
             >
-              <View style={styles.titleScreenButtonRow}>
-                <Image
-                  source={require('../../assets/images/emojis/home.png')}
-                  style={styles.titleScreenButtonIcon}
-                />
-                <Text style={styles.titleScreenButtonText}>
-                  Return to Title Screen
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleReturnToTitleScreen}
+              >
+                <View style={styles.titleScreenButtonRow}>
+                  <Image
+                    source={require('../../assets/images/emojis/home.png')}
+                    style={styles.titleScreenButtonIcon}
+                  />
+                  <Text style={styles.titleScreenButtonText}>
+                    Return to Title Screen
+                  </Text>
+                </View>
+                <Text style={styles.buttonSubtext}>
+                  Go back to main menu (progress saved)
                 </Text>
-              </View>
-              <Text style={styles.buttonSubtext}>
-                Go back to main menu (progress saved)
-              </Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              </TouchableOpacity>
+            </PixelBorder>
 
-          <PixelBorder
-            borderColor="#ef4444"
-            borderWidth={3}
-            backgroundColor="#fee2e2"
-            innerPadding={0}
-            style={styles.buttonWrapper}
-          >
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleRestartGame}
-              disabled={isRestarting}
+            <PixelBorder
+              borderColor="#ef4444"
+              borderWidth={3}
+              backgroundColor="#fee2e2"
+              innerPadding={0}
+              style={styles.buttonWrapper}
             >
-              <Text style={styles.dangerButtonText}>
-                {isRestarting ? 'Restarting...' : '🔄 Restart Game'}
-              </Text>
-              <Text style={styles.buttonSubtext}>
-                Delete all progress and start fresh
-              </Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleRestartGame}
+                disabled={isRestarting}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {!isRestarting && (
+                    <Image
+                      source={require('../../assets/images/emojis/refresh.png')}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        resizeMode: 'contain',
+                        marginRight: 6,
+                      }}
+                    />
+                  )}
+                  <Text style={styles.dangerButtonText}>
+                    {isRestarting ? 'Restarting...' : 'Restart Game'}
+                  </Text>
+                </View>
+                <Text style={styles.buttonSubtext}>
+                  Delete all progress and start fresh
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
 
-          <PixelBorder
-            borderColor="#660000"
-            borderWidth={3}
-            backgroundColor="#8b0000"
-            innerPadding={0}
-            style={styles.buttonWrapper}
-          >
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleClearAllData}
-              disabled={isRestarting}
+            <PixelBorder
+              borderColor="#660000"
+              borderWidth={3}
+              backgroundColor="#8b0000"
+              innerPadding={0}
+              style={styles.buttonWrapper}
             >
-              <Text style={styles.clearDataButtonText}>
-                {isRestarting ? 'Clearing...' : '🗑️ Clear All Data'}
-              </Text>
-              <Text style={styles.buttonSubtext}>
-                Start as a completely new player
-              </Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleClearAllData}
+                disabled={isRestarting}
+              >
+                <Text style={styles.clearDataButtonText}>
+                  {isRestarting ? 'Clearing...' : '🗑️ Clear All Data'}
+                </Text>
+                <Text style={styles.buttonSubtext}>
+                  Start as a completely new player
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
         </PixelBorder>
 
@@ -566,25 +599,28 @@ export default function Settings() {
         >
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Beta Leaderboard</Text>
-          <PixelBorder
-            borderColor="#fbbf24"
-            borderWidth={3}
-            backgroundColor="#f3e8ff"
-            innerPadding={0}
-            style={styles.buttonWrapper}
-          >
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => router.push('/leaderboard')}
+            <PixelBorder
+              borderColor="#fbbf24"
+              borderWidth={3}
+              backgroundColor="#f3e8ff"
+              innerPadding={0}
+              style={styles.buttonWrapper}
             >
-              <TextWithEmojis style={styles.leaderboardButtonText}>
-                🏆 View Leaderboard
-              </TextWithEmojis>
-              <Text style={styles.buttonSubtext}>
-                See how you rank against other players
-              </Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => router.push('/leaderboard')}
+              >
+                <TextWithEmojis
+                  style={styles.leaderboardButtonText}
+                  imageSize={24}
+                >
+                  🏆 View Leaderboard
+                </TextWithEmojis>
+                <Text style={styles.buttonSubtext}>
+                  See how you rank against other players
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
         </PixelBorder>
 

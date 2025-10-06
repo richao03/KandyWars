@@ -138,6 +138,22 @@ export default function RootLayout() {
                       name="title-settings"
                       options={{ headerShown: false }}
                     />
+                    <Stack.Screen
+                      name="piggy-bank"
+                      options={{
+                        presentation: 'modal',
+                        headerShown: false,
+                        animation: 'none',
+                      }}
+                    />
+                    <Stack.Screen
+                      name="deli"
+                      options={{
+                        presentation: 'modal',
+                        headerShown: false,
+                        animation: 'none',
+                      }}
+                    />
                   </Stack>
                 )}
               </CopilotProvider>

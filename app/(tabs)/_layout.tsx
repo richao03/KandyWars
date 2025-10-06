@@ -3,7 +3,6 @@ import React from 'react';
 import { Image } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
-import FadeInWrapper from '../components/FadeInWrapper';
 
 export default function TabLayout() {
   const gameContext = useGame();
@@ -38,7 +37,6 @@ export default function TabLayout() {
   );
 
   return (
-    <FadeInWrapper>
       <Tabs screenOptions={screenOptions} initialRouteName="market">
         {/* Main visible tabs */}
         <Tabs.Screen
@@ -123,20 +121,6 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="deli"
-          options={{
-            title: 'Deli',
-            href: null, // Hide from tab bar
-          }}
-        />
-        <Tabs.Screen
-          name="piggy-bank"
-          options={{
-            title: 'Piggy Bank',
-            href: null, // Hide from tab bar
-          }}
-        />
-        <Tabs.Screen
           name="upgrades"
           options={{
             title: 'Upgrades',
@@ -144,6 +128,5 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </FadeInWrapper>
   );
 }

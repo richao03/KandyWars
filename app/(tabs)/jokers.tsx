@@ -15,7 +15,6 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
-import EventModal from '../components/EventModal';
 import FastModal from '../components/FastModal';
 import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
@@ -77,8 +76,13 @@ function JokersPage() {
     joker: null,
   });
 
+  // Debug mode state
+  const [debugMode, setDebugMode] = useState(false);
+
   // State for Master Negotiator candy conversion
-  const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(null);
+  const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(
+    null
+  );
   const [isModalTransitioning, setIsModalTransitioning] = useState(false);
 
   // Debug log for modal state changes
@@ -102,13 +106,28 @@ function JokersPage() {
     cancelText = 'Cancel',
     onCancelCallback?: () => void
   ) => {
-    console.log('📋 Opening confirmation modal:', title, '| Current visible:', confirmModal.visible, '| Transitioning:', isModalTransitioning);
+    console.log(
+      '📋 Opening confirmation modal:',
+      title,
+      '| Current visible:',
+      confirmModal.visible,
+      '| Transitioning:',
+      isModalTransitioning
+    );
 
     // If a modal is transitioning, queue the new modal
     if (isModalTransitioning) {
       console.log('📋 Modal is transitioning, queueing request...');
       setTimeout(() => {
-        handleShowConfirmation(title, message, emoji, onConfirmCallback, confirmText, cancelText, onCancelCallback);
+        handleShowConfirmation(
+          title,
+          message,
+          emoji,
+          onConfirmCallback,
+          confirmText,
+          cancelText,
+          onCancelCallback
+        );
       }, 100);
       return;
     }
@@ -120,12 +139,28 @@ function JokersPage() {
       setConfirmModal((prev) => ({ ...prev, visible: false }));
       setTimeout(() => {
         setIsModalTransitioning(false);
-        openConfirmModal(title, message, emoji, onConfirmCallback, confirmText, cancelText, onCancelCallback);
+        openConfirmModal(
+          title,
+          message,
+          emoji,
+          onConfirmCallback,
+          confirmText,
+          cancelText,
+          onCancelCallback
+        );
       }, 250);
       return;
     }
 
-    openConfirmModal(title, message, emoji, onConfirmCallback, confirmText, cancelText, onCancelCallback);
+    openConfirmModal(
+      title,
+      message,
+      emoji,
+      onConfirmCallback,
+      confirmText,
+      cancelText,
+      onCancelCallback
+    );
   };
 
   const openConfirmModal = (
@@ -218,7 +253,7 @@ function JokersPage() {
     handleShowConfirmation(
       'Glitch in the Matrix!',
       `Created a copy of ${selectedJoker.name}!`,
-      '🔄'
+      'refresh'
     );
   };
 
@@ -302,7 +337,10 @@ function JokersPage() {
         `${selectedCandy} price set to lowest market price: $${lowestPrice.toFixed(2)}`,
         '📉'
       );
-    } else if (joker.id === JOKER_IDS.DOUBLE_UP || joker.effect === 'double_candy_price') {
+    } else if (
+      joker.id === JOKER_IDS.DOUBLE_UP ||
+      joker.effect === 'double_candy_price'
+    ) {
       // Double Up joker - doubles candy price for current period
       const originalPrice =
         gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
@@ -372,7 +410,12 @@ function JokersPage() {
 
         // Remove source candy and add target candy with same quantity and price
         inventoryContext.removeFromInventory(selectedSourceCandy, quantity);
-        inventoryContext.addToInventory(targetCandy, quantity, originalPrice, periodCount);
+        inventoryContext.addToInventory(
+          targetCandy,
+          quantity,
+          originalPrice,
+          periodCount
+        );
         removeJoker(joker.id);
 
         handleShowConfirmation(
@@ -477,6 +520,7 @@ function JokersPage() {
             isCompact={true}
             showOwned={jokers.some((ownedJoker) => ownedJoker.id === joker.id)}
             disableActivation={true}
+            debugMode={debugMode && __DEV__}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
             onShowJokerSelector={handleShowJokerSelector}
@@ -507,7 +551,7 @@ function JokersPage() {
     <View style={containerStyles}>
       <GameHUD
         theme="evening"
-        customHeaderText={`School - Day ${day}`}
+        customHeaderText={`Jokers Collection`}
         customLocationText="Jokers Collection"
       />
 
@@ -546,6 +590,21 @@ function JokersPage() {
           <TouchableOpacity
             style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
             onPress={() => setActiveTab('see-all')}
+            onLongPress={
+              __DEV__
+                ? () => {
+                    // Debug mode: Toggle debug mode
+                    setDebugMode(!debugMode);
+                    handleShowConfirmation(
+                      'Debug Mode',
+                      debugMode
+                        ? 'Debug mode disabled'
+                        : 'Debug mode enabled! Tap any joker to add it to inventory',
+                      '🐛'
+                    );
+                  }
+                : undefined
+            }
           >
             <Text
               style={[
@@ -553,7 +612,7 @@ function JokersPage() {
                 activeTab !== 'inventory' && styles.activeTabText,
               ]}
             >
-              📖 All ({allJokersCount})
+              {debugMode && __DEV__ ? '🐛 ' : ''}📖 All ({allJokersCount})
             </Text>
           </TouchableOpacity>
         </View>
@@ -593,7 +652,12 @@ function JokersPage() {
 
       {/* Confirmation Modal - rendered at page level for full screen overlay */}
       {(() => {
-        console.log('📋 Rendering JokerConfirmationModal - visible:', confirmModal.visible, 'title:', confirmModal.title);
+        console.log(
+          '📋 Rendering JokerConfirmationModal - visible:',
+          confirmModal.visible,
+          'title:',
+          confirmModal.title
+        );
         return (
           <JokerConfirmationModal
             visible={confirmModal.visible}

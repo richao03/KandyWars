@@ -3,7 +3,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
-import { scoreboardService } from '../../src/services/firebase';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
 
@@ -24,7 +23,7 @@ interface Joker {
 
 interface JokerSelectionProps {
   jokers: Joker[];
-  theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy' | 'gym';
+  theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy' | 'gym' | 'art' | 'logic' | 'recess' | 'geography';
   subject: string;
   onComplete: () => void;
   rewardTier?: 1 | 2 | 3; // 1 = 1 joker no reroll, 2 = 2 jokers + 1 reroll, 3 = 3 jokers + 2 rerolls
@@ -86,16 +85,13 @@ export default function JokerSelection({
       () => Math.random() - 0.5
     );
 
-    // Reroll gives fewer jokers based on tier
-    let baseRerollJokerCount;
-    if (rewardTier === 2)
-      baseRerollJokerCount = 1; // Level 2: reroll for 1 joker
-    else if (rewardTier === 3)
-      baseRerollJokerCount = 2; // Level 3: reroll for 2 jokers
-    else baseRerollJokerCount = 0; // Level 1: no reroll
-
+    // Reroll gives 1 less joker than the original selection
+    // So if you have 2 jokers, reroll gives you 1 random joker
+    // If you have 3 jokers, reroll gives you 2 random jokers
+    const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
     const jokerBonus = getJokerBonus(); // +1 from valedictorian_vendor Hall Pass
-    const rerollJokerCount = baseRerollJokerCount + jokerBonus;
+    const originalCount = baseJokerCount + jokerBonus;
+    const rerollJokerCount = Math.max(1, originalCount - 1); // At least 1 joker on reroll
 
     setSelectedJokers(shuffled.slice(0, rerollJokerCount));
     setRerollsUsed((prev) => prev + 1);
@@ -210,6 +206,58 @@ export default function JokerSelection({
           skipButton: styles.gymSkipButton,
           skipButtonText: styles.gymSkipButtonText,
         };
+      case 'art':
+        return {
+          container: styles.artContainer,
+          title: styles.artTitle,
+          subtitle: styles.artSubtitle,
+          generateButton: styles.artGenerateButton,
+          generateButtonText: styles.artGenerateButtonText,
+          jokerCard: styles.artJokerCard,
+          jokerName: styles.artJokerName,
+          jokerDescription: styles.artJokerDescription,
+          skipButton: styles.artSkipButton,
+          skipButtonText: styles.artSkipButtonText,
+        };
+      case 'logic':
+        return {
+          container: styles.logicContainer,
+          title: styles.logicTitle,
+          subtitle: styles.logicSubtitle,
+          generateButton: styles.logicGenerateButton,
+          generateButtonText: styles.logicGenerateButtonText,
+          jokerCard: styles.logicJokerCard,
+          jokerName: styles.logicJokerName,
+          jokerDescription: styles.logicJokerDescription,
+          skipButton: styles.logicSkipButton,
+          skipButtonText: styles.logicSkipButtonText,
+        };
+      case 'recess':
+        return {
+          container: styles.recessContainer,
+          title: styles.recessTitle,
+          subtitle: styles.recessSubtitle,
+          generateButton: styles.recessGenerateButton,
+          generateButtonText: styles.recessGenerateButtonText,
+          jokerCard: styles.recessJokerCard,
+          jokerName: styles.recessJokerName,
+          jokerDescription: styles.recessJokerDescription,
+          skipButton: styles.recessSkipButton,
+          skipButtonText: styles.recessSkipButtonText,
+        };
+      case 'geography':
+        return {
+          container: styles.geographyContainer,
+          title: styles.geographyTitle,
+          subtitle: styles.geographySubtitle,
+          generateButton: styles.geographyGenerateButton,
+          generateButtonText: styles.geographyGenerateButtonText,
+          jokerCard: styles.geographyJokerCard,
+          jokerName: styles.geographyJokerName,
+          jokerDescription: styles.geographyJokerDescription,
+          skipButton: styles.geographySkipButton,
+          skipButtonText: styles.geographySkipButtonText,
+        };
       default: // candy
         return {
           container: styles.candyContainer,
@@ -263,6 +311,30 @@ export default function JokerSelection({
             Show {count} Fitness Joker{count > 1 ? 's' : ''}
           </TextWithEmojis>
         );
+      case 'art':
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Art Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
+      case 'logic':
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Logic Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
+      case 'recess':
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Recess Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
+      case 'geography':
+        return (
+          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
+            Show {count} Geography Joker{count > 1 ? 's' : ''}
+          </Text>
+        );
       default:
         return (
           <Text style={[styles.showButtonText, themeStyles.subtitle]}>
@@ -286,10 +358,10 @@ export default function JokerSelection({
 
   const getRerollDescription = () => {
     const remaining = getMaxRerolls() - rerollsUsed;
-    if (rewardTier === 2) return `${remaining} reroll left, 1 card`;
-    if (rewardTier === 3)
-      return `${remaining} reroll${remaining > 1 ? 's' : ''} left, 2 cards`;
-    return '';
+    const jokerBonus = getJokerBonus();
+    const originalCount = rewardTier + jokerBonus;
+    const rerollCards = Math.max(1, originalCount - 1);
+    return `${remaining} reroll${remaining > 1 ? 's' : ''} left, ${rerollCards} card${rerollCards > 1 ? 's' : ''}`;
   };
 
   const getRewardDescription = () => {
@@ -421,14 +493,30 @@ export default function JokerSelection({
               }}
               onPress={rerollJokers}
             >
-              <TextWithEmojis
-                style={[
-                  styles.rerollButtonText,
-                  themeStyles.generateButtonText,
-                ]}
+              <View
+                style={{
+                  marginLeft: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                🎲 Reroll ({getRerollDescription()})
-              </TextWithEmojis>
+                <TextWithEmojis
+                  style={[styles.rerollButtonIcon]}
+                  imageSize={36}
+                >
+                  🎲
+                </TextWithEmojis>
+                <TextWithEmojis
+                  style={[
+                    styles.rerollButtonText,
+                    themeStyles.generateButtonText,
+                  ]}
+                  imageSize={20}
+                >
+                  {`Reroll ${getRerollDescription()}`}
+                </TextWithEmojis>
+              </View>
             </TouchableOpacity>
           </PixelBorder>
         )}
@@ -593,6 +681,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   rerollButtonText: {
+    marginLeft: 8,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
@@ -839,5 +928,161 @@ const styles = StyleSheet.create({
   },
   gymSkipButtonText: {
     color: '#fff',
+  },
+
+  // Art Theme (Creative/Colorful)
+  artContainer: {
+    backgroundColor: '#fff8e1',
+  },
+  artTitle: {
+    color: '#ff6f00',
+    textShadowColor: '#ffb74d',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  artSubtitle: {
+    color: '#f57c00',
+  },
+  artGenerateButton: {
+    backgroundColor: '#ffcc80',
+    borderColor: '#ff9800',
+  },
+  artGenerateButtonText: {
+    color: '#e65100',
+  },
+  artJokerCard: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ffb74d',
+    shadowColor: '#ff9800',
+  },
+  artJokerName: {
+    color: '#f57c00',
+  },
+  artJokerDescription: {
+    color: '#ff6f00',
+  },
+  artSkipButton: {
+    backgroundColor: '#ffe0b2',
+    borderColor: '#ffb74d',
+  },
+  artSkipButtonText: {
+    color: '#e65100',
+  },
+
+  // Logic Theme (Puzzle/Brain)
+  logicContainer: {
+    backgroundColor: '#f3e5f5',
+  },
+  logicTitle: {
+    color: '#6a1b9a',
+    textShadowColor: '#ab47bc',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  logicSubtitle: {
+    color: '#8e24aa',
+  },
+  logicGenerateButton: {
+    backgroundColor: '#ce93d8',
+    borderColor: '#ab47bc',
+  },
+  logicGenerateButtonText: {
+    color: '#4a148c',
+  },
+  logicJokerCard: {
+    backgroundColor: '#fce4ec',
+    borderColor: '#ba68c8',
+    shadowColor: '#9c27b0',
+  },
+  logicJokerName: {
+    color: '#7b1fa2',
+  },
+  logicJokerDescription: {
+    color: '#8e24aa',
+  },
+  logicSkipButton: {
+    backgroundColor: '#e1bee7',
+    borderColor: '#ba68c8',
+  },
+  logicSkipButtonText: {
+    color: '#6a1b9a',
+  },
+
+  // Recess Theme (Playful/Fun)
+  recessContainer: {
+    backgroundColor: '#fff0f5',
+  },
+  recessTitle: {
+    color: '#c2185b',
+    textShadowColor: '#f06292',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  recessSubtitle: {
+    color: '#d81b60',
+  },
+  recessGenerateButton: {
+    backgroundColor: '#f8bbd0',
+    borderColor: '#ec407a',
+  },
+  recessGenerateButtonText: {
+    color: '#880e4f',
+  },
+  recessJokerCard: {
+    backgroundColor: '#fce4ec',
+    borderColor: '#f06292',
+    shadowColor: '#ec407a',
+  },
+  recessJokerName: {
+    color: '#c2185b',
+  },
+  recessJokerDescription: {
+    color: '#d81b60',
+  },
+  recessSkipButton: {
+    backgroundColor: '#f8bbd0',
+    borderColor: '#f06292',
+  },
+  recessSkipButtonText: {
+    color: '#ad1457',
+  },
+
+  // Geography Theme (Earth/Nature)
+  geographyContainer: {
+    backgroundColor: '#e0f2f1',
+  },
+  geographyTitle: {
+    color: '#00695c',
+    textShadowColor: '#4db6ac',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  geographySubtitle: {
+    color: '#00897b',
+  },
+  geographyGenerateButton: {
+    backgroundColor: '#80cbc4',
+    borderColor: '#26a69a',
+  },
+  geographyGenerateButtonText: {
+    color: '#004d40',
+  },
+  geographyJokerCard: {
+    backgroundColor: '#e0f2f1',
+    borderColor: '#4db6ac',
+    shadowColor: '#26a69a',
+  },
+  geographyJokerName: {
+    color: '#00796b',
+  },
+  geographyJokerDescription: {
+    color: '#00897b',
+  },
+  geographySkipButton: {
+    backgroundColor: '#b2dfdb',
+    borderColor: '#4db6ac',
+  },
+  geographySkipButtonText: {
+    color: '#00695c',
   },
 });

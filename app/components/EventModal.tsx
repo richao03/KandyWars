@@ -432,6 +432,22 @@ const EventModal = React.memo(function EventModal() {
                       >
                         {currentEvent.subtitle}
                       </Text>
+                      {currentEvent.bullyHasMercy && (
+                        <PixelBorder
+                          borderColor="#d4af37"
+                          borderWidth={3}
+                          backgroundColor="rgba(0, 0, 0, 0.2)"
+                          innerPadding={12}
+                          style={{ marginTop: 12 }}
+                        >
+                          <View style={styles.protectionContainer}>
+                            <Text style={styles.protectionEmoji}>🙏</Text>
+                            <Text style={styles.protectionText}>
+                              The bully has mercy on your poor wallet
+                            </Text>
+                          </View>
+                        </PixelBorder>
+                      )}
                       {currentEvent.protectedByMedievalShield && (
                         <PixelBorder
                           borderColor="#d4af37"
@@ -441,7 +457,10 @@ const EventModal = React.memo(function EventModal() {
                           style={{ marginTop: 12 }}
                         >
                           <View style={styles.protectionContainer}>
-                            <Text style={styles.protectionEmoji}>🛡️</Text>
+                            <Image
+                              source={require('../../assets/images/emojis/shield.png')}
+                              style={{ width: 48, height: 48, resizeMode: 'contain', marginBottom: 8 }}
+                            />
                             <Text style={styles.protectionText}>
                               Medieval Shield Activated!
                             </Text>
@@ -471,14 +490,18 @@ const EventModal = React.memo(function EventModal() {
                         </PixelBorder>
                       )}
                       {showMoneyLoss &&
-                        !currentEvent.protectedByMedievalShield && (
+                        !currentEvent.protectedByMedievalShield &&
+                        !currentEvent.bullyHasMercy && (
                           <PixelBorder
-                            borderColor="rgb(161,215,106)"
+                            borderColor="#ef4444"
                             borderWidth={3}
-                            backgroundColor="rgba(0, 0, 0, 0.2)"
+                            backgroundColor="rgba(239, 68, 68, 0.2)"
                             innerPadding={12}
                             style={{ marginTop: 12 }}
                           >
+                            <Text style={styles.moneyChangeLabel}>
+                              Lost: -${(startAmount - finalAmount).toFixed(2)}
+                            </Text>
                             <View style={styles.moneyCountdownContainer}>
                               <Text style={styles.moneyLabel}>
                                 ${startAmount.toFixed(2)} →
@@ -496,11 +519,14 @@ const EventModal = React.memo(function EventModal() {
                       {showMoneyGain && (
                         <PixelBorder
                           borderColor="#86efac"
-                          borderWidth={2}
-                          backgroundColor="rgba(0, 0, 0, 0.2)"
+                          borderWidth={3}
+                          backgroundColor="rgba(134, 239, 172, 0.2)"
                           innerPadding={12}
                           style={{ marginTop: 12 }}
                         >
+                          <Text style={styles.moneyGainLabel}>
+                            Gained: +${(finalAmount - startAmount).toFixed(2)}
+                          </Text>
                           <View style={styles.moneyGainContainer}>
                             <Text style={styles.moneyLabel}>
                               ${startAmount.toFixed(2)} →
@@ -591,11 +617,14 @@ const EventModal = React.memo(function EventModal() {
                   {showMoneyLoss && (
                     <PixelBorder
                       borderColor="#ef4444"
-                      borderWidth={2}
-                      backgroundColor="rgba(0, 0, 0, 0.2)"
+                      borderWidth={3}
+                      backgroundColor="rgba(239, 68, 68, 0.2)"
                       innerPadding={12}
                       style={{ marginTop: 12 }}
                     >
+                      <Text style={styles.moneyChangeLabel}>
+                        Lost: -${(startAmount - finalAmount).toFixed(2)}
+                      </Text>
                       <View style={styles.moneyCountdownContainer}>
                         <Text style={styles.moneyLabel}>
                           ${startAmount.toFixed(2)} →
@@ -612,11 +641,14 @@ const EventModal = React.memo(function EventModal() {
                   {showMoneyGain && (
                     <PixelBorder
                       borderColor="#86efac"
-                      borderWidth={2}
-                      backgroundColor="rgba(0, 0, 0, 0.2)"
+                      borderWidth={3}
+                      backgroundColor="rgba(134, 239, 172, 0.2)"
                       innerPadding={12}
                       style={{ marginTop: 12 }}
                     >
+                      <Text style={styles.moneyGainLabel}>
+                        Gained: +${(finalAmount - startAmount).toFixed(2)}
+                      </Text>
                       <View style={styles.moneyGainContainer}>
                         <Text style={styles.moneyLabel}>
                           ${startAmount.toFixed(2)} →
@@ -787,5 +819,27 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'CrayonPastel',
     marginRight: 5,
+  },
+  moneyChangeLabel: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginBottom: 8,
+    textShadowColor: 'rgba(239, 68, 68, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  moneyGainLabel: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginBottom: 8,
+    textShadowColor: 'rgba(34, 197, 94, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });

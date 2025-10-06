@@ -20,11 +20,19 @@ interface DayStats {
   allowance: number;
 }
 
+interface PlaythroughStats {
+  totalProfit: number;
+  totalSpentOnCandy: number;
+  totalAllowance: number;
+  totalCandiesSold: number;
+}
+
 interface DailyStatsState {
   dailyStats: DayStats[];
   currentDayStats: DayStats | null;
   bestSale: BestSale | null;
   candySoldCounts: CandySoldCount;
+  playthroughStats: PlaythroughStats;
 }
 
 const initialState: DailyStatsState = {
@@ -39,6 +47,12 @@ const initialState: DailyStatsState = {
   },
   bestSale: null,
   candySoldCounts: {},
+  playthroughStats: {
+    totalProfit: 0,
+    totalSpentOnCandy: 0,
+    totalAllowance: 0,
+    totalCandiesSold: 0,
+  },
 };
 
 const dailyStatsSlice = createSlice({
@@ -88,6 +102,24 @@ const dailyStatsSlice = createSlice({
 
       // Track candy sold counts
       state.candySoldCounts[candyName] = (state.candySoldCounts[candyName] || 0) + quantity;
+
+      // Update playthrough stats
+      state.playthroughStats.totalProfit += profit;
+      state.playthroughStats.totalCandiesSold += quantity;
+    },
+    recordPurchase: (state, action: PayloadAction<{ amount: number }>) => {
+      state.playthroughStats.totalSpentOnCandy += action.payload.amount;
+    },
+    recordAllowance: (state, action: PayloadAction<{ amount: number }>) => {
+      state.playthroughStats.totalAllowance += action.payload.amount;
+    },
+    resetPlaythroughStats: (state) => {
+      state.playthroughStats = {
+        totalProfit: 0,
+        totalSpentOnCandy: 0,
+        totalAllowance: 0,
+        totalCandiesSold: 0,
+      };
     },
     resetDailyStats: () => initialState,
   },
@@ -100,6 +132,9 @@ export const {
   updateCurrentDayStats,
   clearDailyStats,
   recordSale,
+  recordPurchase,
+  recordAllowance,
+  resetPlaythroughStats,
   resetDailyStats,
 } = dailyStatsSlice.actions;
 

@@ -351,8 +351,7 @@ export class JokerService {
     }>;
     finalPrice: number;
   } {
-    console.log(`💰 getPriceBreakdown called with ${jokers.length} jokers:`, jokers.map(j => j.name));
-
+    // console.log(`💰 getPriceBreakdown called with ${jokers.length} jokers`); // Removed for performance
     const breakdown = {
       basePrice,
       jokerEffects: [] as Array<{
@@ -376,22 +375,22 @@ export class JokerService {
       );
 
       if (!standardizedJoker) {
-        console.log(`💰 No standardized joker found for: ${jokerName}`);
+        // console.log(`💰 No standardized joker found for: ${jokerName}`); // Removed for performance
         return;
       }
 
-      if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum' || jokerName === 'Jump Rope Rhythm') {
-        console.log(`💰 Processing ${jokerName}:`, standardizedJoker);
-      }
+      // if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum' || jokerName === 'Jump Rope Rhythm') {
+      //   console.log(`💰 Processing ${jokerName}:`, standardizedJoker);
+      // }
 
       // Check if this joker affects candy prices, sell multipliers, escalating price increases, morning purchase discounts, afternoon sale bonuses, even period bonuses, consecutive sale bonuses, or every third sale bonuses
       const priceEffects = standardizedJoker.effects.filter(
         (effect) => effect.target === 'candy_price' || effect.target === 'sell_multiplier' || effect.target === 'escalating_price_increase' || effect.target === 'morning_purchase_discount' || effect.target === 'afternoon_sale_bonus' || effect.target === 'even_period_sale_bonus' || effect.target === 'consecutive_sale_bonus' || effect.target === 'every_third_sale_bonus'
       );
 
-      if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum' || jokerName === 'Jump Rope Rhythm') {
-        console.log(`💰 ${jokerName} price effects:`, priceEffects);
-      }
+      // if (jokerName === 'Hopscotch Bonus' || jokerName === 'Swingset Momentum' || jokerName === 'Jump Rope Rhythm') {
+      //   console.log(`💰 ${jokerName} price effects:`, priceEffects);
+      // }
 
       priceEffects.forEach((effect) => {
         let shouldApply = true;

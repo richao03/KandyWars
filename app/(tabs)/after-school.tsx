@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ImageBackground,
   StyleSheet,
@@ -25,18 +25,23 @@ import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useWallet } from '../../src/hooks/useWallet';
 import { forceSave } from '../../src/store/store';
+import { scoreboardService } from '../../src/services/firebase';
+import { useAppDispatch } from '../../src/store/hooks';
+import { setTotalCompletions } from '../../src/store/slices/gameSlice';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import PixelBorder from '../components/PixelBorder';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
+import PiggyBankPage from '../piggy-bank';
+import DeliPage from '../deli';
 
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
 function AfterSchoolPage() {
-  // Check if this tab is currently focused to prevent unnecessary renders
   const isFocused = useIsFocused();
+  const dispatch = useAppDispatch();
 
   const {
     day,
@@ -70,7 +75,10 @@ function AfterSchoolPage() {
   const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
   const [allowanceAmount, setAllowanceAmount] = useState(0);
   const [showStudySubjects, setShowStudySubjects] = useState(false);
+  const [showStash, setShowStash] = useState(false);
+  const [showDeli, setShowDeli] = useState(false);
   const [unlockedHallPasses, setUnlockedHallPasses] = useState<string[]>([]);
+  const [totalCompletionsForModal, setTotalCompletionsForModal] = useState(0);
 
   // Set afternoon flavor text when component loads and track active view
   useEffect(() => {
@@ -82,65 +90,82 @@ function AfterSchoolPage() {
   // Check if game should end (when entering after-school on day 5)
   useEffect(() => {
     if (day === 5 && !gameEndModalVisible) {
-      console.log('🎯 Game End: Entered after-school on day 5');
+      const handleGameEnd = async () => {
+        console.log('🎯 Game End: Entered after-school on day 5');
 
-      // Calculate final score
-      const finalScore = balance + stashedAmount;
-      const targetScore = adoptionFee;
+        // Calculate final score
+        const finalScore = balance + stashedAmount;
+        const targetScore = adoptionFee;
 
-      console.log('🎯 Final Score:', finalScore, 'Target:', targetScore);
+        console.log('🎯 Final Score:', finalScore, 'Target:', targetScore);
 
-      // Determine win/lose
-      if (finalScore >= targetScore) {
-        console.log('🎉 Player WON! Score exceeds adoption fee');
-        setGameResult('won');
-      } else {
-        console.log('😢 Player LOST! Score below adoption fee');
-        setGameResult('lost');
-      }
+        // Determine win/lose
+        const hasWon = finalScore >= targetScore;
+        if (hasWon) {
+          console.log('🎉 Player WON! Score exceeds adoption fee');
+          setGameResult('won');
+        } else {
+          console.log('😢 Player LOST! Score below adoption fee');
+          setGameResult('lost');
+        }
 
-      // Check for newly unlocked Hall Passes
-      try {
-        // Construct game stats for Hall Pass unlock checking
-        const gameStats = {
-          completions: 1, // This is the first completion (can be tracked in future with Firebase)
-          finalProfit: finalScore, // Total profit from this game
-          difficulty: difficultyLevel,
-          completionTime: periodCount, // Number of periods played
-          perfectAttendance: periodCount >= 40, // 5 days * 8 periods
-          totalCandySold: totalCandiesSold,
-          // These could be calculated if needed:
-          // studyStreak: hasStudiedEveryNight,
-          // noJokers: jokers.length === 0,
-        };
+        // Track game completion and get total completions count (only if won)
+        let totalCompletions = 0;
+        if (hasWon) {
+          try {
+            console.log('🏆 Player won - incrementing game completions in Firebase...');
+            totalCompletions = await scoreboardService.incrementGameCompletions();
+            dispatch(setTotalCompletions(totalCompletions));
+            setTotalCompletionsForModal(totalCompletions);
+            console.log('🏆 Total completions:', totalCompletions);
+          } catch (error) {
+            console.error('❌ Error tracking game completion:', error);
+          }
+        }
 
-        const minigameTrackingData = {
-          hasPlayedAllMinigames,
-        };
+        // Check for newly unlocked Hall Passes
+        try {
+          // Construct game stats for Hall Pass unlock checking
+          const gameStats = {
+            completions: totalCompletions, // Use actual total from Firebase
+            finalProfit: finalScore, // Total profit from this game
+            difficulty: difficultyLevel,
+            completionTime: periodCount, // Number of periods played
+            perfectAttendance: periodCount >= 40, // 5 days * 8 periods
+            totalCandySold: totalCandiesSold,
+            noJokers: jokers.length === 0, // For minimalist_master
+          };
 
-        const unlocked = checkUnlockRequirements(gameStats, minigameTrackingData);
-        console.log('🎓 Newly unlocked Hall Passes:', unlocked);
-        setUnlockedHallPasses(unlocked);
-      } catch (error) {
-        console.error('❌ Error checking Hall Pass unlocks:', error);
-        setUnlockedHallPasses([]);
-      }
+          const minigameTrackingData = {
+            hasPlayedAllMinigames,
+          };
 
-      // Track game completion in leaderboard
-      try {
-        trackGameCompleted(finalScore, difficultyLevel, totalCandiesSold);
-      } catch (error) {
-        console.error('❌ Error tracking game completion:', error);
-      }
+          const unlocked = checkUnlockRequirements(gameStats, minigameTrackingData);
+          console.log('🎓 Newly unlocked Hall Passes:', unlocked);
+          setUnlockedHallPasses(unlocked);
+        } catch (error) {
+          console.error('❌ Error checking Hall Pass unlocks:', error);
+          setUnlockedHallPasses([]);
+        }
 
-      // Show game end modal
-      setGameEndModalVisible(true);
+        // Track game completion in leaderboard
+        try {
+          trackGameCompleted(finalScore, difficultyLevel, totalCandiesSold);
+        } catch (error) {
+          console.error('❌ Error tracking game completion:', error);
+        }
 
-      // Clear game state so there's no continue option available after game ends
-      setIsInitialized(false);
-      console.log('🎯 Game state cleared - no continue option will be available');
+        // Show game end modal
+        setGameEndModalVisible(true);
+
+        // Clear game state so there's no continue option available after game ends
+        setIsInitialized(false);
+        console.log('🎯 Game state cleared - no continue option will be available');
+      };
+
+      handleGameEnd();
     }
-  }, [day, gameEndModalVisible, balance, stashedAmount, adoptionFee, checkUnlockRequirements, trackGameCompleted, difficultyLevel, totalCandiesSold, setIsInitialized]);
+  }, [day, gameEndModalVisible, balance, stashedAmount, adoptionFee, checkUnlockRequirements, trackGameCompleted, difficultyLevel, totalCandiesSold, jokers.length, hasPlayedAllMinigames, dispatch, setIsInitialized]);
 
   // Start copilot tutorial on first after-school visit (only if not already completed)
   useEffect(() => {
@@ -208,11 +233,11 @@ function AfterSchoolPage() {
   );
 
   const handleStashMoney = () => {
-    router.push('/(tabs)/piggy-bank');
+    setShowStash(true);
   };
 
   const handleGoDeli = () => {
-    router.push('/(tabs)/deli');
+    setShowDeli(true);
   };
 
   const handleGoToSleep = () => {
@@ -267,7 +292,7 @@ function AfterSchoolPage() {
     startNewDay();
     console.log('🌙 AfterSchool: startNewDay completed, navigating to market');
     // Navigate back to market (school)
-    router.push('/(tabs)/market');
+    router.replace('/(tabs)/market');
   }, [
     balance,
     day,
@@ -447,32 +472,38 @@ function AfterSchoolPage() {
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor="#2a1845" />
 
-      <ImageBackground
-        source={require('../../assets/images/evening-street.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <GameHUD
-          theme="evening"
-          customHeaderText={`After School - Day ${day}`}
-          customLocationText="Peaceful Evening"
-        />
+      {showStash ? (
+        <PiggyBankPage onBack={() => setShowStash(false)} />
+      ) : showDeli ? (
+        <DeliPage onBack={() => setShowDeli(false)} />
+      ) : (
+        <ImageBackground
+          source={require('../../assets/images/evening-street.png')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        >
+          <GameHUD
+            theme="evening"
+            customHeaderText={`After School - Day ${day}`}
+            customLocationText="Peaceful Evening"
+          />
 
-        <View style={styles.optionsContainer}>
-          {showStudySubjects ? (
-            isFocused && (
-              <StudySubjectSelector
-                onBack={handleBackToOptions}
-                disabled={hasStudiedTonight}
-                disabledMessage="You've already studied tonight! Rest up for tomorrow."
-              />
-            )
-          ) : (
-            // Main options view
-            <View style={styles.optionsGrid}>{renderMainOptions}</View>
-          )}
-        </View>
-      </ImageBackground>
+          <View style={styles.optionsContainer}>
+            {showStudySubjects ? (
+              isFocused && (
+                <StudySubjectSelector
+                  onBack={handleBackToOptions}
+                  disabled={hasStudiedTonight}
+                  disabledMessage="You've already studied tonight! Rest up for tomorrow."
+                />
+              )
+            ) : (
+              // Main options view
+              <View style={styles.optionsGrid}>{renderMainOptions}</View>
+            )}
+          </View>
+        </ImageBackground>
+      )}
 
       <SleepConfirmModal
         visible={sleepConfirmModalVisible}
@@ -496,6 +527,8 @@ function AfterSchoolPage() {
         adoptionFee={adoptionFee}
         difficultyLevel={difficultyLevel || 1}
         unlockedHallPasses={unlockedHallPasses}
+        totalCompletions={totalCompletionsForModal}
+        totalCandiesSold={totalCandiesSold}
         onRestart={handleGameRestart}
         onClose={handleGameEndModalClose}
       />

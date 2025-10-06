@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 interface GameData {
   periodEvents: any[];
   candyPrices?: { [candyName: string]: number[] };
+  eventPrices?: Record<number, Record<string, Record<string, number>>>; // period -> location -> candyName -> price
   [key: string]: any;
 }
 
@@ -17,6 +18,7 @@ const initialState: SeedState = {
   gameData: {
     periodEvents: [],
     candyPrices: {},
+    eventPrices: {},
   },
   isLoaded: false,
 };
@@ -51,6 +53,20 @@ const seedSlice = createSlice({
       state.gameData.candyPrices[action.payload.candyId][period] =
         action.payload.price;
     },
+    batchModifyCandyPrices: (
+      state,
+      action: PayloadAction<Array<{ candyId: string; price: number; period: number }>>
+    ) => {
+      if (!state.gameData.candyPrices) {
+        state.gameData.candyPrices = {};
+      }
+      action.payload.forEach(({ candyId, price, period }) => {
+        if (!state.gameData.candyPrices![candyId]) {
+          state.gameData.candyPrices![candyId] = [];
+        }
+        state.gameData.candyPrices![candyId][period] = price;
+      });
+    },
     resetSeed: () => initialState,
   },
 });
@@ -61,6 +77,7 @@ export const {
   updateGameData,
   setIsLoaded,
   modifyCandyPrice,
+  batchModifyCandyPrices,
   resetSeed,
 } = seedSlice.actions;
 

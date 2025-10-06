@@ -16,18 +16,23 @@ import { useWallet } from './useWallet';
 export const useEventHandler = () => {
   const dispatch = useAppDispatch();
   const eventHandlerState = useAppSelector((state) => state.eventHandler);
-  const { balance, spend, add } = useWallet();
+  const wallet = useWallet();
   const { clearInventory } = useInventory();
   const { jokers } = useJokers();
 
   const handleEvent = useCallback(
     (eventData: any) => {
-      console.log(
-        '🎯 EVENT: Processing event effect:',
-        eventData.effect,
-        'for event:',
-        eventData.title
-      );
+      // Create a unique ID for this event based on period and effect
+      const eventId = `${eventData.period}_${eventData.effect}_${eventData.title}`;
+
+      // Check if this exact event has already been processed
+      if (eventHandlerState.processedEventIds?.includes(eventId)) {
+        console.log('⏭️ EVENT: Already processed event', eventId, '- skipping duplicate');
+        return;
+      }
+
+      console.log('🎯 EVENT: Processing event:', eventId);
+      console.log('🎯 EVENT: Processed IDs so far:', eventHandlerState.processedEventIds);
       console.log(
         '🎯 EVENT: Received backgroundImage ID:',
         eventData.backgroundImage
@@ -55,33 +60,44 @@ export const useEventHandler = () => {
           // Add protection flag to event data
           processedEventData.protectedByMedievalShield = true;
         } else {
+          // Get CURRENT balance at time of execution, not stale closure value
+          const currentBalance = wallet.balance;
+
           // Bully steals 50% of money (or specific amount)
           const amountToSteal =
-            eventData.dollarAmount || Math.floor(balance * 0.5);
-          const actualSteal = Math.min(amountToSteal, balance);
-          console.log(
-            '💸 EVENT: Bully stealing $',
-            actualSteal,
-            'from balance of $',
-            balance
-          );
-          // Store the original balance and amount stolen for countdown animation
-          processedEventData.originalBalance = balance;
-          processedEventData.amountStolen = actualSteal;
-          spend(actualSteal);
+            eventData.dollarAmount || Math.round(currentBalance * 0.5 * 100) / 100;
+          const actualSteal = Math.min(amountToSteal, currentBalance);
+
+          // Check if player has less than $1
+          if (currentBalance < 1) {
+            processedEventData.bullyHasMercy = true;
+            console.log('💸 EVENT: Bully has mercy - player has less than $1');
+          } else {
+            console.log(
+              '💸 EVENT: Bully stealing $' + actualSteal.toFixed(2),
+              'from balance of $' + currentBalance.toFixed(2),
+              '(amount calculated: $' + amountToSteal.toFixed(2) + ')'
+            );
+            // Store the original balance and amount stolen for countdown animation
+            processedEventData.originalBalance = currentBalance;
+            processedEventData.amountStolen = actualSteal;
+            wallet.spend(actualSteal);
+          }
         }
       } else if (eventData.effect === 'FOUND_MONEY') {
         // Found money event
-        let amountFound = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
+        let amountFound = eventData.dollarAmount || Math.floor(Math.random() * (500 - 100 + 1)) + 100;
         console.log('💰 EVENT: Found $', amountFound);
         if (hasHideAndSeek) {
           amountFound = amountFound * 3;
-          add(amountFound);
         }
+        // Store the actual amount found (after joker multiplier) in the processed event
+        processedEventData.dollarAmount = amountFound;
+        wallet.add(amountFound);
       } else if (eventData.effect === 'STASH_LOCKED') {
         // Check for Candy Vault protection
         if (hasCandyVault) {
-          console.log('🏦 Candy Vault: Protected from confiscation!');
+          console.log('🔒 Candy Vault: Protected from confiscation!');
           // Add protection flag to event data
           processedEventData.protectedByCandyVault = true;
         } else {
@@ -98,7 +114,7 @@ export const useEventHandler = () => {
       dispatch(setCurrentEvent(processedEventData));
       console.log('🔄 EVENT: Stored in Redux successfully');
     },
-    [dispatch, balance, spend, add, clearInventory, jokers]
+    [dispatch, wallet, clearInventory, jokers]
   );
 
   const clearEvent = useCallback(() => {

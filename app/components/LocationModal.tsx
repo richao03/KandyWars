@@ -51,10 +51,6 @@ function LocationModal({
   const { jokers } = useJokers();
   const { periodCount } = useGame();
 
-  React.useEffect(() => {
-    console.log('🟡 LocationModal - visible prop changed to:', visible);
-  }, [visible]);
-
   // Check if Map Maker joker is active (id: 53)
   const hasMapMaker = jokers.some((joker: any) => joker.id === 53);
 

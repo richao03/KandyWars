@@ -20,7 +20,7 @@ import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { ART_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -571,6 +571,14 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
     if (row === currentPosition.row && col === currentPosition.col) return; // Same tile
 
+    // Check if tile is adjacent (up, down, left, right only)
+    const rowDiff = Math.abs(row - currentPosition.row);
+    const colDiff = Math.abs(col - currentPosition.col);
+    const isAdjacent = (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+
+    // Only respond to adjacent tiles
+    if (!isAdjacent) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (isValidMove(currentPosition.row, currentPosition.col, row, col)) {
@@ -684,9 +692,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={HOME_EC_JOKERS}
+        jokers={ART_JOKERS}
         theme="art"
-        subject="Home Economics"
+        subject="Art"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}

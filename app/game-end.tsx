@@ -20,11 +20,12 @@ import TextWithEmojis from './components/TextWithEmojis';
 export default function GameEndScreen() {
   const { balance, stashedAmount, adoptionFee, difficultyLevel } = useWallet();
   const { jokers } = useJokers();
-  const { getTotalStats, getBestSale, getMostSoldCandy } = useDailyStats();
+  const { getTotalStats, getPlaythroughStats, getBestSale, getMostSoldCandy, resetPlaythrough } = useDailyStats();
   const { resetGame } = useGame();
   const { newlyUnlockedPasses, clearNewlyUnlocked } = useHallPass();
 
   const totalStats = getTotalStats();
+  const playthroughStats = getPlaythroughStats();
   const bestSale = getBestSale();
   const mostSoldCandy = getMostSoldCandy();
   const finalScore = balance + stashedAmount;
@@ -114,7 +115,11 @@ export default function GameEndScreen() {
 
   const handlePlayAgain = () => {
     clearNewlyUnlocked(); // Clear the newly unlocked list for next playthrough
+    resetPlaythrough(); // Clear playthrough stats for next game
     resetGame();
+
+    // Navigate to index which will redirect to title-screen, ensuring tabs are unmounted
+    // Use replace to clear the navigation stack
     router.replace('/');
   };
 
@@ -209,7 +214,7 @@ export default function GameEndScreen() {
                 <Text style={styles.statValue}>
                   {gameResult === 'won'
                     ? 'All debt paid off!'
-                    : `$${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
+                    : `$${(Math.abs(stashedAmount) - balance).toFixed(2)} debt remaining`}
                 </Text>
               </View>
             </PixelBorder>
@@ -249,7 +254,7 @@ export default function GameEndScreen() {
                   💰 Total Allowance:
                 </TextWithEmojis>
                 <Text style={styles.statValue}>
-                  ${totalStats?.allowance?.toFixed(2) || '0.00'}
+                  ${playthroughStats?.totalAllowance?.toFixed(2) || '0.00'}
                 </Text>
               </View>
 
@@ -484,12 +489,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginBottom: 8,
+    flexWrap: 'wrap', // Allow wrapping if content is too long
   },
   statLabel: {
     fontSize: 14,
     color: '#6B9B3F',
     fontFamily: 'PixeloidMono',
     flexShrink: 1,
+    flex: 1, // Take available space but can shrink
   },
   statValue: {
     fontSize: 14,
@@ -497,7 +504,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     marginLeft: 8,
-    flexShrink: 0,
+    flexShrink: 1, // Allow shrinking to prevent overflow
+    textAlign: 'right', // Keep right-aligned even when shrinking
   },
   hallPassGrid: {
     flexDirection: 'row',

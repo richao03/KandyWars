@@ -79,7 +79,7 @@ interface GameHUDProps {
   onInventoryPress?: () => void;
 }
 
-export default function GameHUD({
+function GameHUD({
   isModalOpening = false,
   isModalOpen = false,
   theme = 'school',
@@ -278,6 +278,8 @@ export default function GameHUD({
     </View>
   );
 }
+
+export default React.memo(GameHUD);
 
 const styles = StyleSheet.create({
   container: {

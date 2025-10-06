@@ -24,9 +24,10 @@ import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MathGameProps {
   onComplete: () => void;
+  onBack?: () => void;
 }
 
-export default function MathGame({ onComplete }: MathGameProps) {
+export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const { modal, showModal, hideModal } = useGameModal();
   const { width: screenWidth } = Dimensions.get('window');
   const { trackMinigamePlayed } = useScoreboard();
@@ -177,12 +178,13 @@ export default function MathGame({ onComplete }: MathGameProps) {
     }, 16); // ~60fps
   };
 
-  // Stop scrolling animation
+  // Stop scrolling animation - ensure cleanup is complete
   const stopScrollAnimation = () => {
     if (animationRef.current) {
       clearInterval(animationRef.current);
       animationRef.current = null;
     }
+    gameActiveRef.current = false;
   };
 
   // Handle game over
@@ -433,13 +435,21 @@ export default function MathGame({ onComplete }: MathGameProps) {
     }, 500);
   };
 
-  // Cleanup
+  // Cleanup - ensure all timers/intervals are cleared on unmount
   useEffect(() => {
     return () => {
-      stopScrollAnimation();
+      // Stop scroll animation interval
+      if (animationRef.current) {
+        clearInterval(animationRef.current);
+        animationRef.current = null;
+      }
+      // Stop game timer interval
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
+      // Reset active flag
+      gameActiveRef.current = false;
     };
   }, []);
 
@@ -509,7 +519,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
 
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={onBack || (() => router.back())}
           >
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
@@ -600,7 +610,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
       {/* Bottom numbers */}
       <View style={styles.bottomContainer}>
         <View style={styles.bottomRow}>
-          {[0, 1, 2, 3, 4].map((num) => (
+          {[1, 2, 3, 4, 5].map((num) => (
             <PixelBorder
               key={num}
               borderColor="#f5f5dc"
@@ -620,7 +630,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
           ))}
         </View>
         <View style={styles.bottomRow}>
-          {[5, 6, 7, 8, 9].map((num) => (
+          {[6, 7, 8, 9, 0].map((num) => (
             <PixelBorder
               key={num}
               borderColor="#f5f5dc"
@@ -656,7 +666,7 @@ export default function MathGame({ onComplete }: MathGameProps) {
               'Leave Math Study?',
               "You'll lose your progress!",
               '🚪',
-              () => router.back(),
+              onBack || (() => router.back()),
               false,
               true
             );

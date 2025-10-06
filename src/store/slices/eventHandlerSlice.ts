@@ -10,12 +10,14 @@ interface EventHandlerState {
   currentEvent: EventData | null;
   eventHistory: EventData[];
   isProcessing: boolean;
+  processedEventIds: string[];
 }
 
 const initialState: EventHandlerState = {
   currentEvent: null,
   eventHistory: [],
   isProcessing: false,
+  processedEventIds: [],
 };
 
 const eventHandlerSlice = createSlice({
@@ -34,6 +36,15 @@ const eventHandlerSlice = createSlice({
         if (state.eventHistory.length > 10) {
           state.eventHistory = state.eventHistory.slice(-10);
         }
+
+        // Track this event as processed
+        const eventData = action.payload as any;
+        if (eventData.period && eventData.effect && eventData.title) {
+          const eventId = `${eventData.period}_${eventData.effect}_${eventData.title}`;
+          if (!state.processedEventIds.includes(eventId)) {
+            state.processedEventIds.push(eventId);
+          }
+        }
       }
     },
     clearCurrentEvent: (state) => {
@@ -50,6 +61,7 @@ const eventHandlerSlice = createSlice({
     },
     clearEventHistory: (state) => {
       state.eventHistory = [];
+      state.processedEventIds = [];
     },
     resetEventHandler: () => initialState,
   },

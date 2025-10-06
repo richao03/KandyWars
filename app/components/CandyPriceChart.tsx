@@ -11,7 +11,7 @@ interface CandyPriceChartProps {
   currentPeriod: number;
 }
 
-export default function CandyPriceChart({
+function CandyPriceChart({
   candyName,
   prices,
   currentPeriod,
@@ -55,6 +55,7 @@ export default function CandyPriceChart({
 
   const minPrice = Math.min(...relevantPrices);
   const maxPrice = Math.max(...relevantPrices);
+  const averagePrice = relevantPrices.reduce((sum, price) => sum + price, 0) / relevantPrices.length;
   const currentPrice = relevantPrices[relevantPrices.length - 1];
   const previousPrice =
     relevantPrices.length > 1
@@ -172,7 +173,7 @@ export default function CandyPriceChart({
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Average</Text>
             <Text style={styles.statValue}>
-              ${maxPrice / (currentPeriod - startPeriod).toFixed(2)}
+              ${averagePrice.toFixed(2)}
             </Text>
           </View>
         </View>
@@ -400,3 +401,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+export default CandyPriceChart;

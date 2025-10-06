@@ -25,15 +25,21 @@ export const useJokers = () => {
   const activeEffects = useAppSelector(state => state.joker.activeEffects);
   const [onFirstJokerCallbacks] = useState<(() => void)[]>([]);
 
-  const addJokerAction = useCallback((joker: any, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
+  const addJokerAction = useCallback(async (joker: any, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
     dispatch(addJoker(joker));
 
     // Track analytics when joker is added from minigame
     if (source === 'minigame' && minigameType && joker.name && joker.id) {
-      console.log('🃏 Tracking joker from minigame:', joker.name, 'ID:', joker.id, 'from', minigameType);
-      scoreboardService.trackJokerFromMinigame(joker.name, joker.id, minigameType).catch(error => {
-        console.error('Failed to track joker from minigame:', error);
-      });
+      console.log('🃏 Attempting to track joker from minigame:', joker.name, 'ID:', joker.id, 'from', minigameType);
+
+      try {
+        await scoreboardService.trackJokerFromMinigame(joker.name, joker.id, minigameType);
+        console.log('✅ Successfully tracked joker to Firebase:', joker.name);
+      } catch (error) {
+        console.error('❌ Failed to track joker from minigame:', error);
+      }
+    } else {
+      console.log('🃏 Joker not tracked - source:', source, 'minigameType:', minigameType, 'hasName:', !!joker.name, 'hasId:', !!joker.id);
     }
   }, [dispatch]);
 

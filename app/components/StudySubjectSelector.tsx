@@ -55,6 +55,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     }
 
     // Navigate to specific minigame based on subject
+    // Use push so we can navigate back to the tab
     switch (subject) {
       case 'Math':
         router.push('/math-game');
@@ -92,7 +93,13 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     <View style={styles.studyContainer}>
       <View style={styles.studyHeader}>
         {disabled && (
-          <Text style={styles.alreadyStudiedText}>📚 {disabledMessage}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Image
+              source={require('../../assets/images/emojis/book.png')}
+              style={{ width: 14, height: 14, resizeMode: 'contain', marginRight: 4 }}
+            />
+            <Text style={styles.alreadyStudiedText}>{disabledMessage}</Text>
+          </View>
         )}
       </View>
 

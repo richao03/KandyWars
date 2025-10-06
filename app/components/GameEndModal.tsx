@@ -14,6 +14,8 @@ interface GameEndModalProps {
   adoptionFee: number;
   difficultyLevel: number;
   unlockedHallPasses?: string[];
+  totalCompletions?: number;
+  totalCandiesSold?: number;
   onRestart: () => void;
   onClose?: () => void;
 }
@@ -27,6 +29,8 @@ export default function GameEndModal({
   adoptionFee,
   difficultyLevel,
   unlockedHallPasses = [],
+  totalCompletions = 0,
+  totalCandiesSold = 0,
   onRestart,
   onClose,
 }: GameEndModalProps) {
@@ -156,6 +160,29 @@ export default function GameEndModal({
                   {gameResult === 'won'
                     ? '✅ All debt paid off!'
                     : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
+                </TextWithEmojis>
+              </View>
+            </View>
+          </PixelBorder>
+
+          <PixelBorder
+            borderColor="#4CAF50"
+            borderWidth={3}
+            backgroundColor="rgba(76, 175, 80, 0.1)"
+            innerPadding={12}
+            style={styles.statsContainerBorder}
+          >
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsTitle}>GAME STATISTICS</Text>
+              <View style={styles.statsRow}>
+                <TextWithEmojis style={styles.statsText} imageSize={14}>
+                  🏆 Total Wins: {totalCompletions}
+                </TextWithEmojis>
+                <TextWithEmojis style={styles.statsText} imageSize={14}>
+                  💵 Total Profit: ${finalScore.toFixed(2)}
+                </TextWithEmojis>
+                <TextWithEmojis style={styles.statsText} imageSize={14}>
+                  🍬 Candies Sold: {totalCandiesSold}
                 </TextWithEmojis>
               </View>
             </View>
@@ -292,6 +319,32 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   breakdownText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 4,
+    fontFamily: 'PixeloidMono',
+  },
+  statsContainerBorder: {
+    width: '100%',
+    marginBottom: 16,
+  },
+  statsContainer: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginBottom: 8,
+    fontFamily: 'PixeloidMono',
+  },
+  statsRow: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  statsText: {
     fontSize: 14,
     color: '#FFFFFF',
     textAlign: 'center',

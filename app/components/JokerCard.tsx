@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -40,6 +41,7 @@ interface JokerCardProps {
   isCompact?: boolean;
   showOwned?: boolean;
   disableActivation?: boolean;
+  debugMode?: boolean;
   onShowConfirmation?: (
     title: string,
     message: string,
@@ -72,6 +74,7 @@ function JokerCard({
   isCompact,
   showOwned,
   disableActivation = false,
+  debugMode = false,
   onShowConfirmation,
   onShowCandySelector,
   onShowJokerSelector,
@@ -417,7 +420,7 @@ function JokerCard({
     showAlert(
       'Glitch Activated!',
       `Successfully created a copy of "${selectedJoker.name}". The glitch has been consumed.`,
-      '🔄'
+      'refresh'
     );
 
     setShowJokerSelector(false);
@@ -483,7 +486,7 @@ function JokerCard({
     showAlert(
       'Trade Completed!',
       `Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} into ${sourceInventoryItem.quantity} ${targetCandyType}!`,
-      '🔄'
+      'refresh'
     );
 
     // Reset state
@@ -764,7 +767,22 @@ function JokerCard({
     return standardizedJoker?.flavorText || 'Mysterious power awaits...';
   }, [joker.id, joker.flavorText]);
 
-  const CardWrapper = onLongPress ? TouchableOpacity : View;
+  const CardWrapper = onLongPress || debugMode ? TouchableOpacity : View;
+
+  const handleDebugAdd = useCallback(() => {
+    if (debugMode && !showOwned) {
+      addJoker(joker);
+      if (onShowConfirmation) {
+        onShowConfirmation(
+          'Debug: Joker Added',
+          `Added ${joker.name} to inventory!`,
+          '🐛',
+          () => {}
+        );
+      }
+    }
+  }, [debugMode, showOwned, joker, addJoker, onShowConfirmation]);
+
   const handleContinentalDrift = async () => {
     console.log(
       '🌍 Continental Drift: Starting activation - shuffling candy prices'
@@ -913,7 +931,9 @@ function JokerCard({
 
   const cardWrapperProps = onLongPress
     ? { onLongPress, activeOpacity: 0.8 }
-    : {};
+    : debugMode
+      ? { onPress: handleDebugAdd, activeOpacity: 0.8 }
+      : {};
 
   return (
     <>
@@ -1013,9 +1033,10 @@ function JokerCard({
       >
         <>
           <View style={{ alignItems: 'center' }}>
-            <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
-              🔄
-            </TextWithEmojis>
+            <Image
+              source={require('../../assets/images/emojis/refresh.png')}
+              style={{ width: 54, height: 54, resizeMode: 'contain', marginBottom: 12 }}
+            />
           </View>
           <TextWithEmojis style={styles.modalTitle} imageSize={24}>
             Choose Joker to Copy
@@ -1028,10 +1049,19 @@ function JokerCard({
                 style={styles.jokerSelectButton}
                 onPress={() => handleJokerSelection(availableJoker)}
               >
-                <Text style={styles.jokerSelectButtonText}>
-                  {availableJoker.name}{' '}
-                  {availableJoker.type === 'persistent' ? '🔄' : '⚡'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.jokerSelectButtonText}>
+                    {availableJoker.name}{' '}
+                  </Text>
+                  {availableJoker.type === 'persistent' ? (
+                    <Image
+                      source={require('../../assets/images/emojis/refresh.png')}
+                      style={{ width: 14, height: 14, resizeMode: 'contain', marginLeft: 4 }}
+                    />
+                  ) : (
+                    <Text style={styles.jokerSelectButtonText}>⚡</Text>
+                  )}
+                </View>
               </TouchableOpacity>
             ))
           ) : (
@@ -1140,7 +1170,13 @@ function JokerCard({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>🔄 Convert to Which Candy?</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+              <Image
+                source={require('../../assets/images/emojis/refresh.png')}
+                style={{ width: 20, height: 20, resizeMode: 'contain', marginRight: 8 }}
+              />
+              <Text style={styles.modalTitle}>Convert to Which Candy?</Text>
+            </View>
 
             {selectedSourceCandy && (
               <Text style={styles.conversionSummary}>

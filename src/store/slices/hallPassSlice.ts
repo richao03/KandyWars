@@ -158,7 +158,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     id: 'high_roller',
     name: 'High Roller',
     description: 'Big sales, bigger rewards.',
-    unlockRequirement: 'Win the game and sell over 300 units of candy',
+    unlockRequirement: 'Win the game and sell over 1000 units of candy',
     effects: [
       {
         type: 'sale_price_bonus',
@@ -297,7 +297,8 @@ export const selectUnlockedHallPasses = createSelector(
 // Selector for newly unlocked passes in current playthrough
 export const selectNewlyUnlockedHallPasses = createSelector(
   [
-    (state: { hallPass: HallPassState }) => state.hallPass.newlyUnlockedPassIds || [],
+    (state: { hallPass: HallPassState }) =>
+      state.hallPass.newlyUnlockedPassIds || [],
     selectAllHallPasses,
   ],
   (newlyUnlockedIds, passes) => {

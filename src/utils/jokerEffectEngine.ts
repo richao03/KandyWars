@@ -545,11 +545,11 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
 
-  // HISTORY JOKERS
+  // ART JOKERS
   {
     id: 66,
     name: 'Treasure Chest',
-    subject: 'History',
+    subject: 'Art',
     type: 'persistent',
     flavorText: 'Found a chest, but its empty... fill it with candy!',
     description: 'Inventory limit +15',
@@ -565,7 +565,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 35,
     name: 'Temporary Emperor',
-    subject: 'History',
+    subject: 'Art',
     type: 'one-time',
     flavorText: '3 of everything, NOW!',
     description:
@@ -583,7 +583,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 37,
     name: 'Roman Coin',
-    subject: 'History',
+    subject: 'Art',
     type: 'one-time',
     flavorText: "Mo' money mo' problems, but I'll take the coin",
     description: 'Instantly gain $2000',
@@ -599,7 +599,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 67,
     name: 'Medieval Shield',
-    subject: 'History',
+    subject: 'Art',
     type: 'persistent',
     flavorText: 'This shield belonged to one Captain Rogers, of Brooklyn',
     description: 'Protect against money loss from negative events',
@@ -765,7 +765,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 74,
     name: 'Candy Vault',
-    subject: 'History',
+    subject: 'Art',
     type: 'persistent',
     flavorText: 'Never let no one know, how much dough you hold',
     description: 'Protect stash from confiscation permanently',
@@ -863,7 +863,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 24,
     name: 'The Good Old Days',
-    subject: 'History',
+    subject: 'Art',
     type: 'persistent',
     flavorText: 'OG stories for OG prices -- half off from the bodega plug',
     description: 'All candy at the afterschool deli costs half price',
@@ -1165,7 +1165,7 @@ export const MATH_JOKERS = getJokersBySubject('Math');
 export const COMPUTER_JOKERS = getJokersBySubject('Computer');
 export const HOME_EC_JOKERS = getJokersBySubject('Home Economics');
 export const ECONOMY_JOKERS = getJokersBySubject('Economy');
-export const HISTORY_JOKERS = getJokersBySubject('History');
+export const ART_JOKERS = getJokersBySubject('Art');
 export const LOGIC_JOKERS = getJokersBySubject('Logic');
 export const GYM_JOKERS = getJokersBySubject('Gym');
 export const RECESS_JOKERS = getJokersBySubject('Recess');
@@ -1176,7 +1176,7 @@ export const ALL_JOKERS = {
   Computer: COMPUTER_JOKERS,
   'Home Economics': HOME_EC_JOKERS,
   Economy: ECONOMY_JOKERS,
-  History: HISTORY_JOKERS,
+  Art: ART_JOKERS,
   Logic: LOGIC_JOKERS,
   Gym: GYM_JOKERS,
   Recess: RECESS_JOKERS,

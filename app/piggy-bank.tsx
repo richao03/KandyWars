@@ -9,17 +9,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
-import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/hooks/useGame';
-import { useJokers } from '../../src/hooks/useJokers';
-import { useWallet } from '../../src/hooks/useWallet';
-import ConfirmationModal from '../components/ConfirmationModal';
-import GameHUD from '../components/GameHUD';
-import PixelBorder from '../components/PixelBorder';
-import TextWithEmojis from '../components/TextWithEmojis';
+import { JOKER_IDS, findJokerById } from '../src/constants/jokerIds';
+import { useFlavorText } from '../src/context/FlavorTextContext';
+import { useGame } from '../src/hooks/useGame';
+import { useJokers } from '../src/hooks/useJokers';
+import { useWallet } from '../src/hooks/useWallet';
+import ConfirmationModal from './components/ConfirmationModal';
+import GameHUD from './components/GameHUD';
+import PixelBorder from './components/PixelBorder';
+import TextWithEmojis from './components/TextWithEmojis';
 
-export default function PiggyBankPage() {
+interface PiggyBankPageProps {
+  onBack?: () => void;
+}
+
+export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
   const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } =
     useWallet();
   const { day, period } = useGame();
@@ -132,7 +136,7 @@ export default function PiggyBankPage() {
     <>
       <View style={styles.container}>
         <ImageBackground
-          source={require('../../assets/images/piggy-bank.png')}
+          source={require('../assets/images/piggy-bank.png')}
           style={styles.backgroundImage}
           resizeMode="cover"
         >
@@ -293,7 +297,11 @@ export default function PiggyBankPage() {
                   Haptics.notificationAsync(
                     Haptics.NotificationFeedbackType.Success
                   );
-                  router.push('/after-school');
+                  if (onBack) {
+                    onBack();
+                  } else {
+                    router.replace('/(tabs)/after-school');
+                  }
                 }}
               >
                 <Text style={styles.backButtonText}>← Back</Text>

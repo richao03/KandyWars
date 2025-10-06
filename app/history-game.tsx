@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useGame } from '../src/hooks/useGame';
 import GymGame from './minigames/GymGame';
 
-export default function GymGameScreen() {
+export default function HistoryGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
 
   const handleGameComplete = () => {
@@ -18,14 +18,14 @@ export default function GymGameScreen() {
       console.log('Lunch minigame finished.');
     }
 
-    // Clear context and navigate to appropriate view
+    // Clear context and navigate to appropriate screen
     setMinigameContext(null);
 
-    // Navigate based on context
+    // Use navigate() to go to the tab without creating new instances
     if (minigameContext === 'lunch') {
-      router.push('/(tabs)/market');
+      router.navigate('/(tabs)/market');
     } else {
-      router.push('/(tabs)/after-school');
+      router.navigate('/(tabs)/after-school');
     }
   };
 

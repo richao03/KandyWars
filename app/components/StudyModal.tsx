@@ -11,7 +11,7 @@ interface StudyModalProps {
 
 const subjectColors: Record<string, { bg: string; border: string }> = {
   Math: { bg: '#e6f7ff', border: '#1890ff' }, // Light blue
-  History: { bg: '#fff2e8', border: '#fa8c16' }, // Light orange
+  Art: { bg: '#fff2e8', border: '#fa8c16' }, // Light orange
   'Home Ec': { bg: '#f6ffed', border: '#52c41a' }, // Light green
   Economy: { bg: '#fff1f0', border: '#f5222d' }, // Light red
   Logic: { bg: '#f9f0ff', border: '#722ed1' }, // Light purple
@@ -35,7 +35,7 @@ export default function StudyModal({
     // TODO: Navigate to minigame screen based on subject
     // Each subject will have its own minigame:
     // - Math: Number/equation solving
-    // - History: Timeline/fact matching
+    // - Art: Drawing/pattern matching
     // - Home Ec: Recipe/cooking simulation
     // - Social Studies: Geography/civics quiz
     // - Logic: Pattern/puzzle solving

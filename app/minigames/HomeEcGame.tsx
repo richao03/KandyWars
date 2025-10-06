@@ -333,11 +333,17 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     }
   }, [gameState, centerCandy, startNewCandy]);
 
-  // Cleanup
+  // Cleanup - ensure all timers are properly cleared on unmount
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+        feedbackTimeoutRef.current = null;
+      }
     };
   }, []);
 

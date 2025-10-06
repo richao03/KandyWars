@@ -25,6 +25,8 @@ export default function TitleScreenPage() {
     try {
       console.log('📱 TitleScreen: handleNewGame called with difficulty:', difficulty);
       console.log('📱 TitleScreen: Navigating to market...');
+
+      // Just replace current screen - the gameResetSignal will handle unmounting old tabs
       router.replace('/(tabs)/market');
       console.log('📱 TitleScreen: Navigation command sent');
     } catch (error) {

@@ -40,7 +40,9 @@ import { useAppDispatch } from '../../src/store/hooks';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { forceSave } from '../../src/store/store';
 import { JokerService } from '../../src/utils/jokerService';
+import CandyListItem from '../components/CandyListItem';
 import ConfirmationModal from '../components/ConfirmationModal';
+import MarketList from '../components/MarketList';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EventModal from '../components/EventModal';
@@ -97,7 +99,6 @@ function Market(props) {
     rng,
     seed,
     gameData,
-    modifyCandyPrice,
     getOriginalCandyPrice,
     restoreCandyPrice,
   } = useSeed();
@@ -123,14 +124,12 @@ function Market(props) {
   }, [setLastActiveView]);
 
   // Handle returning from lunch minigame separately
-  useFocusEffect(
-    useCallback(() => {
-      if (isLunchPeriod && hasPlayedLunchMinigame && showLunchMinigames) {
-        setShowLunchMinigames(false);
-      }
-    }, [isLunchPeriod, hasPlayedLunchMinigame])
-    // Removed showLunchMinigames from dependencies to prevent loop
-  );
+  // When user returns from minigame (hasPlayedLunchMinigame = true), hide lunch view
+  useEffect(() => {
+    if (hasPlayedLunchMinigame && showLunchMinigames) {
+      setShowLunchMinigames(false);
+    }
+  }, [hasPlayedLunchMinigame, showLunchMinigames]);
   const {
     inventory,
     addToInventory,
@@ -161,7 +160,8 @@ function Market(props) {
     recordSale: recordDailyStatsSale,
   } = useDailyStats();
   const { setEvent, setFlavorText, setHint } = useFlavorText();
-  const { addSale, resetSales, consecutivePeriodSales, totalCandiesSold } = useCandySales();
+  const { addSale, resetSales, consecutivePeriodSales, totalCandiesSold } =
+    useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
   const [localPricesUpdating, setLocalPricesUpdating] = useState(false);
 
@@ -350,6 +350,7 @@ function Market(props) {
 
   // Track the last event period to prevent duplicate triggers
   const lastEventPeriodRef = useRef<number>(-1);
+  const lastHintPeriodRef = useRef<number>(-1);
 
   // Log all events once when game is initialized
   const hasLoggedEventsRef = useRef(false);
@@ -367,10 +368,10 @@ function Market(props) {
 
   // Update flavor text when period changes
   useEffect(() => {
-    console.log(
-      `🔍 Checking events for period ${periodCount}, location: ${currentLocation}`
-    );
-    console.log(`📋 Total events in gameData:`, gameData.periodEvents.length);
+    // Only process events if this instance is focused (prevents duplicate event processing from zombie instances)
+    if (!isFocused) {
+      return;
+    }
 
     // Check for current event at current location
     // Events without a location field trigger at any location
@@ -381,17 +382,6 @@ function Market(props) {
         (!e.location || e.location === currentLocation)
     );
 
-    if (currentEvent) {
-      console.log(`✅ Found current event:`, {
-        effect: currentEvent.effect,
-        candy: currentEvent.candy,
-        location: currentEvent.location,
-        multiplier: currentEvent.multiplier,
-      });
-    } else {
-      console.log(`❌ No event found for current period/location`);
-    }
-
     // Check if there's an upcoming event at current location
     // Events without a location field can show hints at any location
     // Note: periodCount is 0-indexed, event periods are 1-indexed, so +2 for next period
@@ -401,19 +391,6 @@ function Market(props) {
         (!e.location || e.location === currentLocation)
     );
 
-    if (nextPeriodEvent) {
-      console.log(`🔮 Found upcoming event:`, {
-        effect: nextPeriodEvent.effect,
-        candy: nextPeriodEvent.candy,
-        location: nextPeriodEvent.location,
-        hint: nextPeriodEvent.hint,
-        hasHint: !!nextPeriodEvent.hint,
-      });
-    } else {
-      console.log(
-        `🔮 No upcoming event found for next period (${periodCount + 2})`
-      );
-    }
     let periodOfTheDay = (periodCount % 8) + 1;
     if (periodOfTheDay === 0) {
       setEvent('NEW_DAY');
@@ -454,38 +431,43 @@ function Market(props) {
         );
       }
     } else if (nextPeriodEvent && nextPeriodEvent.hint) {
-      // Check if jokers affect hint chance
-      const baseHintChance = 0.7; // 70% base chance
-      const effectiveHintChance = jokerService.applyJokerEffects(
-        baseHintChance,
-        'hint_chance',
-        jokers,
-        periodCount,
-        baseHintChance,
-        undefined,
-        activeEffects
-      );
+      // Only check hint once per period to avoid re-rolling on tab switches
+      if (lastHintPeriodRef.current !== periodCount) {
+        lastHintPeriodRef.current = periodCount;
 
-      console.log(
-        `💡 Hint check - baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}, hint: "${nextPeriodEvent.hint}"`
-      );
+        // Check if jokers affect hint chance
+        const baseHintChance = 0.7; // 70% base chance
+        const effectiveHintChance = jokerService.applyJokerEffects(
+          baseHintChance,
+          'hint_chance',
+          jokers,
+          periodCount,
+          baseHintChance,
+          undefined,
+          activeEffects
+        );
 
-      if (Math.random() < effectiveHintChance) {
-        // Use the actual hint from the event template
-        console.log(`💡 Showing hint: "${nextPeriodEvent.hint}"`);
-        setHint(nextPeriodEvent.hint);
-      } else {
-        console.log(`💡 Random check failed, showing flavor text instead`);
+        console.log(
+          `💡 Hint check - baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}, hint: "${nextPeriodEvent.hint}"`
+        );
 
-        // Show period-specific flavor text instead of hint
-        if (periodOfTheDay <= 2) {
-          setEvent('MORNING_TRADE');
-        } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
-          setEvent('LUNCH_RUSH');
-        } else if (periodOfTheDay >= 7) {
-          setEvent('FINAL_PERIOD');
+        if (Math.random() < effectiveHintChance) {
+          // Use the actual hint from the event template
+          console.log(`💡 Showing hint: "${nextPeriodEvent.hint}"`);
+          setHint(nextPeriodEvent.hint);
         } else {
-          setEvent('PERIOD_CHANGE');
+          console.log(`💡 Random check failed, showing flavor text instead`);
+
+          // Show period-specific flavor text instead of hint
+          if (periodOfTheDay <= 2) {
+            setEvent('MORNING_TRADE');
+          } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
+            setEvent('LUNCH_RUSH');
+          } else if (periodOfTheDay >= 7) {
+            setEvent('FINAL_PERIOD');
+          } else {
+            setEvent('PERIOD_CHANGE');
+          }
         }
       }
     } else if (nextPeriodEvent) {
@@ -512,6 +494,7 @@ function Market(props) {
       }
     }
   }, [
+    isFocused,
     periodCount,
     currentLocation,
     gameData.periodEvents,
@@ -539,92 +522,68 @@ function Market(props) {
     [getInventoryLimit]
   );
 
-  // Update candies when prices change
-  useEffect(() => {
+  // Memoize joker service computation to avoid recalculating for each candy
+  const jokerServiceComputed = useMemo(() => {
+    if (!jokers || jokers.length === 0) return null;
+
+    const service = JokerService.getInstance();
+    service.initializeEngineForComputation(
+      jokers,
+      periodCount,
+      inventoryLimit,
+      activeEffects
+    );
+    return service;
+  }, [jokers, periodCount, inventoryLimit, activeEffects]);
+
+  // Memoize candy calculations to prevent excessive re-renders
+  // Extract stable values from gameData to prevent unnecessary recalculations
+  const periodEvents = useMemo(() => gameData.periodEvents, [gameData.periodEvents]);
+  const candyPrices = useMemo(() => gameData.candyPrices, [gameData.candyPrices]);
+
+  const calculatedCandies = useMemo(() => {
+    console.log('🔄 Recalculating candies | period:', periodCount, 'location:', currentLocation, 'jokers:', jokerCount, 'activeEffects:', activeEffects.length);
+    // No need to check isFocused anymore - Stack navigation properly unmounts
     const currentInventoryLimit = inventoryLimit;
+    // Calculate once for all candies instead of per-candy
+    const consecutiveSalesCount = consecutivePeriodSales(periodCount);
 
-    setCandies((prev) =>
-      prev.map((candy) => {
-        // Check for current location-specific events with price overrides or multipliers
-        // Events without a location field apply at any location
-        // Note: periodCount is 0-indexed, event periods are 1-indexed
-        const currentEvent = gameData.periodEvents.find(
-          (e) =>
-            e.period === periodCount + 1 &&
-            (!e.location || e.location === currentLocation) &&
-            e.candy === candy.name &&
-            (e.priceOverride !== undefined || e.multiplier !== undefined)
-        );
+    return baseCandies.map((candy) => {
+        // Hybrid price lookup (Option 3):
+        // 1. Check if there's a pre-calculated event price for this period/location/candy
+        // 2. Fall back to base price from gameData
+        const eventPrices = gameData.eventPrices || {};
 
-        // Get the TRUE base price (before any modifications) for accurate breakdown
-        // Use a consistent fallback price based on the candy name and period
-        const seed = candy.name.charCodeAt(0) + periodCount;
-        const random = Math.sin(seed) * 10000;
-        const normalizedRandom = random - Math.floor(random);
-        const trueBasePrice =
-          candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
+        let finalCost: number;
 
-        // Get the current modified price from game data (includes Trojan Horse, etc.)
-        let currentPrice = gameData.candyPrices[candy.name]?.[periodCount];
-        if (currentPrice === undefined || currentPrice === null) {
-          currentPrice = trueBasePrice;
+        // First check location-specific event price
+        if (eventPrices[periodCount]?.[currentLocation]?.[candy.name]) {
+          finalCost = eventPrices[periodCount][currentLocation][candy.name];
+        }
+        // Then check 'any' location event price
+        else if (eventPrices[periodCount]?.['any']?.[candy.name]) {
+          finalCost = eventPrices[periodCount]['any'][candy.name];
+        }
+        // Finally fall back to base price
+        else {
+          finalCost = candyPrices[candy.name]?.[periodCount] || 0;
         }
 
         // Get price breakdown showing base price and joker effects
-        if (candy.name === 'Skittles') {
-          console.log('💰 Calculating priceBreakdown for Skittles');
-          console.log('💰 activeEffects:', JSON.stringify(activeEffects));
-          console.log('💰 periodCount:', periodCount);
-        }
-        const consecutiveSalesCount = consecutivePeriodSales(periodCount);
-        console.log(`💰 Debug values: consecutiveSalesCount=${consecutiveSalesCount}, totalCandiesSold=${totalCandiesSold}, typeof=${typeof totalCandiesSold}`);
-        console.log(`💰 Price comparison: candy.cost=${candy.cost}, trueBasePrice=${trueBasePrice}, currentPrice=${currentPrice}`);
+        // (consecutiveSalesCount already calculated once above)
 
-        const priceBreakdown = jokerService.getPriceBreakdown(
-          candy.cost, // Use the actual displayed price, not trueBasePrice
-          jokers,
-          periodCount,
-          currentInventoryLimit,
-          activeEffects,
-          consecutiveSalesCount, // Pass the count which includes current period if continuing streak
-          totalCandiesSold // Total sales for Jump Rope Rhythm
-        );
-
-        console.log(`💰 PriceBreakdown for ${candy.name}:`, {
-          basePrice: priceBreakdown.basePrice,
-          finalPrice: priceBreakdown.finalPrice,
-          effects: priceBreakdown.jokerEffects,
-        });
-
-        if (
-          candy.name === 'Skittles' &&
-          priceBreakdown.jokerEffects.length > 0
-        ) {
-          console.log(
-            '💰 Skittles priceBreakdown:',
-            JSON.stringify(priceBreakdown.jokerEffects)
-          );
-        }
-
-        let finalCost = currentPrice;
-        if (currentEvent?.priceOverride !== undefined) {
-          finalCost = currentEvent.priceOverride;
-        } else if (currentEvent?.multiplier !== undefined) {
-          // Use base price to avoid double-spiking (gameData.candyPrices already has spikes)
-          const calculatedPrice = trueBasePrice * currentEvent.multiplier;
-
-          // Apply caps based on event type
-          if (
-            currentEvent.effect === 'PRICE_SPIKE' ||
-            currentEvent.effect === 'PRICE_HIKE'
-          ) {
-            finalCost = Math.min(calculatedPrice, 100);
-          } else if (currentEvent.effect === 'PRICE_DROP') {
-            finalCost = Math.max(calculatedPrice, 0.01);
-          } else {
-            finalCost = calculatedPrice;
-          }
-        }
+        // Use pre-computed joker service if available, otherwise fall back to regular calculation
+        const priceBreakdown = jokerServiceComputed
+          ? jokerService.getPriceBreakdown(
+              finalCost,
+              jokers,
+              periodCount,
+              currentInventoryLimit,
+              activeEffects,
+              consecutiveSalesCount,
+              totalCandiesSold
+            )
+          : { basePrice: finalCost, jokerEffects: [], finalPrice: finalCost };
 
         // Note: Price storage moved to separate useEffect to avoid setState during render
 
@@ -635,104 +594,31 @@ function Market(props) {
 
         return {
           ...candy,
-          basePrice: trueBasePrice, // Update basePrice for accurate comparison
+          basePrice: finalCost, // Use finalCost as basePrice
           cost: finalCost,
           quantityOwned: inventoryItem?.quantity || 0,
           averagePrice: inventoryItem?.price || null,
-          priceBreakdown:
-            currentEvent?.priceOverride === undefined &&
-            currentEvent?.multiplier === undefined
-              ? priceBreakdown
-              : undefined, // Only show breakdown if not overridden by events
+          priceBreakdown,
         };
-      })
-    );
+      });
   }, [
     periodCount,
     currentLocation,
     inventory,
-    gameData.periodEvents,
+    candyPrices,
+    gameData.eventPrices,
     jokerCount,
     activeEffects,
     inventoryLimit,
     jokers,
-    jokerService,
+    jokerServiceComputed,
+    totalCandiesSold,
   ]);
 
-  // Track last processed period to prevent duplicate processing
-  const lastPriceProcessedPeriodRef = useRef<number>(-1);
-
-  // Separate effect to store candy prices to avoid setState during render
+  // Sync memoized candies to state only when they change
   useEffect(() => {
-    // Skip if we've already processed this period
-    if (lastPriceProcessedPeriodRef.current === periodCount) {
-      return;
-    }
-    lastPriceProcessedPeriodRef.current = periodCount;
-
-    baseCandies.forEach((candy) => {
-      if (gameData.candyPrices[candy.name]?.[periodCount]) {
-        // Calculate the same price as in the candies state update
-        const seed = candy.name.charCodeAt(0) + periodCount;
-        const random = Math.sin(seed) * 10000;
-        const normalizedRandom = random - Math.floor(random);
-        const trueBasePrice =
-          candy.baseMin + normalizedRandom * (candy.baseMax - candy.baseMin);
-
-        // Check for current location-specific events with price overrides or multipliers
-        // Events without a location field apply at any location
-        // Note: periodCount is 0-indexed, event periods are 1-indexed
-        const currentEvent = gameData.periodEvents.find(
-          (e) =>
-            e.period === periodCount + 1 &&
-            (!e.location || e.location === currentLocation) &&
-            e.candy === candy.name &&
-            (e.priceOverride !== undefined || e.multiplier !== undefined)
-        );
-
-        // Get the previous period's price to apply multiplier
-        const previousPeriod = periodCount - 1;
-        const previousPrice =
-          previousPeriod >= 0
-            ? gameData.candyPrices[candy.name]?.[previousPeriod] ||
-              trueBasePrice
-            : trueBasePrice;
-
-        let finalCost =
-          gameData.candyPrices[candy.name]?.[periodCount] || trueBasePrice;
-        if (currentEvent?.priceOverride !== undefined) {
-          finalCost = currentEvent.priceOverride;
-        } else if (currentEvent?.multiplier !== undefined) {
-          // For event-based price changes, use the base price (not the pre-generated spike)
-          // This prevents double-spiking when candyPrices already has spikes built in
-          const calculatedPrice = trueBasePrice * currentEvent.multiplier;
-
-          // Apply caps based on event type
-          if (
-            currentEvent.effect === 'PRICE_SPIKE' ||
-            currentEvent.effect === 'PRICE_HIKE'
-          ) {
-            // For price spikes/hikes: cap at $100
-            finalCost = Math.min(calculatedPrice, 100);
-          } else if (currentEvent.effect === 'PRICE_DROP') {
-            // For price drops: floor at $0.01
-            finalCost = Math.max(calculatedPrice, 0.01);
-          } else {
-            // Default: use calculated price
-            finalCost = calculatedPrice;
-          }
-        }
-
-        modifyCandyPrice(candy.name, finalCost, periodCount);
-      }
-    });
-  }, [
-    periodCount,
-    currentLocation,
-    gameData.periodEvents,
-    gameData.candyPrices,
-    modifyCandyPrice,
-  ]);
+    setCandies(calculatedCandies);
+  }, [calculatedCandies]);
 
   const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
     null
@@ -1329,7 +1215,7 @@ function Market(props) {
     // Now navigate to after school
     console.log('🏫 Navigating to after school');
     startAfterSchool();
-    router.push('/(tabs)/after-school');
+    router.replace('/(tabs)/after-school');
   };
 
   const handleSleepConfirm = () => {
@@ -1423,72 +1309,15 @@ function Market(props) {
             name="market_list"
           >
             <CopilotView style={styles.listContainer}>
-              {/* Only render StudySubjectSelector when tab is focused and conditions are met */}
-              {isFocused && isLunchPeriod && showLunchMinigames && (
-                <View style={{ flex: 1 }}>
-                  <StudySubjectSelector
-                    onBack={handleLunchBack}
-                    disabled={false}
-                    disabledMessage=""
-                    isLunchPeriod={true}
-                  />
-                </View>
-              )}
-
-              {/* Always render FlatList to maintain consistent hook calls */}
-              <View
-                style={{
-                  display:
-                    isLunchPeriod && showLunchMinigames ? 'none' : 'flex',
-                  flex: 1,
-                }}
-              >
-                <FlatList
-                  data={candies}
-                  keyExtractor={(item) => item.name}
-                  contentContainerStyle={styles.list}
-                  showsVerticalScrollIndicator={true}
-                  overScrollMode="never"
-                  renderItem={useCallback(
-                    ({ item, index }) => (
-                      <View style={{ marginBottom: 6 }}>
-                        <PixelBorder
-                          borderColor="#d4a574"
-                          borderWidth={3}
-                          backgroundColor="rgba(255, 255, 255, 0.7)"
-                          innerPadding={8}
-                        >
-                          <TouchableOpacity
-                            onPress={() => openModal(index)}
-                            style={{ backgroundColor: 'transparent' }}
-                          >
-                            <View style={styles.candyInfo}>
-                              <View style={styles.candyNameRow}>
-                                <Text style={styles.name}>{item.name}</Text>
-                                {item.quantityOwned > 0 && (
-                                  <View style={styles.ownedBadge}>
-                                    <Text style={styles.ownedText}>
-                                      {item.quantityOwned}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-                              <View style={styles.candyPriceRow}>
-                                <Text style={styles.price}>
-                                  {localPricesUpdating
-                                    ? '$-.--'
-                                    : `$${item.cost.toFixed(2)}`}
-                                </Text>
-                              </View>
-                            </View>
-                          </TouchableOpacity>
-                        </PixelBorder>
-                      </View>
-                    ),
-                    [openModal, localPricesUpdating]
-                  )}
-                />
-              </View>
+              <MarketList
+                candies={candies}
+                localPricesUpdating={localPricesUpdating}
+                isFocused={isFocused}
+                isLunchPeriod={isLunchPeriod}
+                showLunchMinigames={showLunchMinigames}
+                onCandyPress={openModal}
+                onLunchBack={handleLunchBack}
+              />
             </CopilotView>
           </CopilotStep>
 
@@ -1690,14 +1519,9 @@ function Market(props) {
         </View>
       </ImageBackground>
 
-      {console.log(
-        '🔵 Rendering LocationModal with visible:',
-        locationModalVisible
-      )}
       <LocationModal
         visible={locationModalVisible}
         onClose={() => {
-          console.log('🔵 LocationModal onClose called');
           setLocationModalVisible(false);
         }}
         onSelectLocation={handleLocationSelect}
@@ -1753,7 +1577,7 @@ function Market(props) {
         onCancel={() =>
           setConfirmationModal((prev) => ({ ...prev, visible: false }))
         }
-        theme="market"
+        theme={"market" as const}
       />
 
       <ConfirmationModal
@@ -1827,10 +1651,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
-  list: {
-    padding: 16,
-    flexGrow: 1,
-  },
   item: {
     marginBottom: 6,
     padding: 8,
@@ -1844,56 +1664,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  candyInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  candyNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  candyPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  name: {
-    fontWeight: '700',
-    fontSize: 19,
-    color: '#6b4423', // Dark brown crayon
-    textShadow: '0.5px 0.5px 0px #d4a574',
-    fontFamily: 'PixeloidMono',
-  },
-  ownedBadge: {
-    backgroundColor: '#4ade80',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#22c55e',
-  },
-  ownedText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-    fontFamily: 'PixeloidMono',
-  },
   priceSection: {
     alignItems: 'flex-end',
-  },
-  price: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#8b0000', // Dark red crayon
-    backgroundColor: '#ffe6e6', // Light red background
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ffb3b3',
-    fontFamily: 'PixeloidMono',
   },
   priceChange: {
     fontSize: 16,

@@ -387,6 +387,40 @@ class ScoreboardService {
     }
   }
 
+  async getPlayedMinigames(): Promise<string[]> {
+    console.log('🎮 Fetching played minigames...');
+
+    if (!this.isInitialized || !this.currentUser) {
+      console.log('❌ Cannot fetch played minigames - not initialized or no user');
+      return [];
+    }
+
+    try {
+      const q = query(
+        collection(db, 'player_stats'),
+        where('playerId', '==', this.currentUser.uid),
+        where('action', '==', 'minigame_played')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const minigames = new Set<string>();
+
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.minigameType) {
+          minigames.add(data.minigameType);
+        }
+      });
+
+      const uniqueMinigames = Array.from(minigames);
+      console.log('✅ Played minigames:', uniqueMinigames);
+      return uniqueMinigames;
+    } catch (error) {
+      console.error('❌ Failed to fetch played minigames:', error);
+      return [];
+    }
+  }
+
   async trackJokerFromMinigame(jokerName: string, jokerId: number, minigameType: string): Promise<void> {
     if (!this.isInitialized || !this.currentUser) return;
 
@@ -419,6 +453,57 @@ class ScoreboardService {
       console.log('📚 Daily periods tracked:', periodsCount);
     } catch (error) {
       console.error('Failed to track daily periods:', error);
+    }
+  }
+
+  async incrementGameCompletions(): Promise<number> {
+    console.log('🏆 Incrementing game completions...');
+
+    if (!this.isInitialized || !this.currentUser) {
+      console.log('❌ Cannot increment completions - not initialized or no user');
+      return 0;
+    }
+
+    try {
+      // Add a completion record
+      await addDoc(collection(db, 'player_stats'), {
+        playerId: this.currentUser.uid,
+        action: 'game_completed',
+        timestamp: serverTimestamp(),
+      });
+
+      // Fetch and return total completions
+      const totalCompletions = await this.getTotalCompletions();
+      console.log('✅ Game completion incremented! Total:', totalCompletions);
+      return totalCompletions;
+    } catch (error) {
+      console.error('❌ Failed to increment game completions:', error);
+      return 0;
+    }
+  }
+
+  async getTotalCompletions(): Promise<number> {
+    console.log('🏆 Fetching total game completions...');
+
+    if (!this.isInitialized || !this.currentUser) {
+      console.log('❌ Cannot fetch completions - not initialized or no user');
+      return 0;
+    }
+
+    try {
+      const q = query(
+        collection(db, 'player_stats'),
+        where('playerId', '==', this.currentUser.uid),
+        where('action', '==', 'game_completed')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const count = querySnapshot.size;
+      console.log('✅ Total completions:', count);
+      return count;
+    } catch (error) {
+      console.error('❌ Failed to fetch total completions:', error);
+      return 0;
     }
   }
 

@@ -177,10 +177,13 @@ const getStoryLines = (breed: string, cost: string) => {
   story.push({
     highlights: [
       {
-        text: 'The hallways are buzzing, the cafeteria is whispering, and ',
+        text: 'But you only have',
       },
-      { text: 'jokers', color: '#ffe135' },
-      { text: ' are yearning to be found in your studybooks.' },
+      { text: ' 5 days', color: '#ff6b35' },
+      {
+        text: " to get the money together, before someone else takes 'em home!",
+      },
+      // The hallways are buzzing, the cafeteria is whispering, and '
     ],
   });
 
@@ -195,7 +198,7 @@ const getStoryLines = (breed: string, cost: string) => {
       { text: 'The Candy King ', color: '#7851A9' },
       { text: 'for nothing, ' },
       {
-        text: "it's time to embrace the hallway and hug the block. It's time to run the school!",
+        text: "it's time to embrace the halls and hug the block. It's time make a legendary run.",
       },
     ],
   });
@@ -255,7 +258,7 @@ export default function StoryScreen() {
     return () => clearTimeout(initTimer);
   }, []);
 
-  // Typewriter effect
+  // Typewriter effect with proper cleanup
   useEffect(() => {
     if (!isReady) return; // Don't start until ready
 
@@ -305,20 +308,27 @@ export default function StoryScreen() {
         ? currentLine.highlights.map((h) => h.text).join('')
         : currentLine.text || '';
 
-    const typeInterval = setInterval(() => {
+    let typeInterval: NodeJS.Timeout | null = null;
+    let lineDelayTimeout: NodeJS.Timeout | null = null;
+
+    typeInterval = setInterval(() => {
       if (charIndex <= fullText.length) {
         setDisplayedText(fullText.substring(0, charIndex));
         charIndex++;
       } else {
-        clearInterval(typeInterval);
+        if (typeInterval) clearInterval(typeInterval);
         // Wait before starting next line
-        setTimeout(() => {
+        lineDelayTimeout = setTimeout(() => {
           setCurrentLineIndex((prev) => prev + 1);
         }, lineDelay);
       }
     }, typewriterSpeed);
 
-    return () => clearInterval(typeInterval);
+    // Cleanup function - clear both interval and timeout
+    return () => {
+      if (typeInterval) clearInterval(typeInterval);
+      if (lineDelayTimeout) clearTimeout(lineDelayTimeout);
+    };
   }, [currentLineIndex, isReady, storyLines.length]);
 
   // Cursor blink animation
@@ -348,18 +358,25 @@ export default function StoryScreen() {
     return () => blinkAnimation.stop();
   }, [isTyping]);
 
-  // Show skip button after a few seconds
+  // Show skip button after a few seconds with cleanup
   useEffect(() => {
+    let animationHandle: any = null;
     const timer = setTimeout(() => {
       setShowSkip(true);
-      Animated.timing(fadeAnim, {
+      animationHandle = Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 1000,
         useNativeDriver: true,
-      }).start();
+      });
+      animationHandle.start();
     }, 3000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (animationHandle) {
+        animationHandle.stop();
+      }
+    };
   }, []);
 
   // Floating heart animations
@@ -475,6 +492,8 @@ export default function StoryScreen() {
     // Add all previous completed lines
     for (let i = 0; i < currentLineIndex; i++) {
       const line = storyLines[i];
+      if (!line) continue; // Safety check for undefined lines
+
       if (line.highlights && line.highlights.length > 0) {
         // Render highlighted text
         line.highlights.forEach((highlight, idx) => {
@@ -510,6 +529,8 @@ export default function StoryScreen() {
     // Add current line being typed
     if (currentLineIndex < storyLines.length && displayedText) {
       const currentLine = storyLines[currentLineIndex];
+      if (!currentLine) return result; // Safety check for undefined line
+
       if (currentLine.highlights && currentLine.highlights.length > 0) {
         // For highlighted lines, we need to figure out which parts to show
         let charCount = 0;

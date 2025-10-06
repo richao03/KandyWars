@@ -191,14 +191,20 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const handleMove = (direction: string) => {
     if (!gameActive) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     // Calculate new player position
     const delta = DIRECTIONS[direction as keyof typeof DIRECTIONS];
     const newPos = {
       x: Math.max(0, Math.min(GRID_SIZE - 1, playerPos.x + delta.x)),
       y: Math.max(0, Math.min(GRID_SIZE - 1, playerPos.y + delta.y)),
     };
+
+    // Check if player actually moved (not hitting a wall)
+    if (newPos.x === playerPos.x && newPos.y === playerPos.y) {
+      // Player didn't move (hit wall), don't count as a move and don't move monitors
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     // Move all hall monitors to adjacent cells
     const newHallMonitors = hallMonitors.map((monitor) =>

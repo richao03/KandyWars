@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   ScrollView,
   StyleSheet,
   Switch,
@@ -16,7 +17,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Image,
 } from 'react-native';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { scoreboardService } from '../../src/services/firebase';
@@ -171,7 +171,9 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
         </View>
 
         <View style={styles.leaderboardSection}>
-          <TextWithEmojis style={styles.sectionTitle}>💰 Top Money Earners</TextWithEmojis>
+          <TextWithEmojis style={styles.sectionTitle}>
+            💰 Top Money Earners
+          </TextWithEmojis>
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -287,7 +289,9 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
     const renderMinigamesLeaderboard = () => (
       <ScrollView style={styles.tabContent}>
         <View style={styles.leaderboardSection}>
-          <TextWithEmojis style={styles.sectionTitle}>🎮 Most Played Minigames</TextWithEmojis>
+          <TextWithEmojis style={styles.sectionTitle}>
+            🎮 Most Played Minigames
+          </TextWithEmojis>
           <Text style={styles.sectionSubtitle}>
             Shows which minigames are played most often (no player info)
           </Text>
@@ -334,7 +338,13 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
     const renderPeriodsLeaderboard = () => (
       <ScrollView style={styles.tabContent}>
         <View style={styles.leaderboardSection}>
-          <Text style={styles.sectionTitle}>📚 Lifetime Periods Played</Text>
+          <View style={styles.sectionTitleRow}>
+            <Image
+              source={require('../../assets/images/emojis/book.png')}
+              style={styles.sectionTitleIcon}
+            />
+            <Text style={styles.sectionTitle}>Lifetime Periods Played</Text>
+          </View>
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
@@ -400,7 +410,13 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
 
     const renderPrivacy = () => (
       <ScrollView style={styles.tabContent}>
-        <Text style={styles.sectionTitle}>🔒 Privacy Settings</Text>
+        <View style={styles.sectionTitleRow}>
+          <Image
+            source={require('../../assets/images/emojis/lock.png')}
+            style={styles.sectionTitleIcon}
+          />
+          <Text style={styles.sectionTitle}>Privacy Settings</Text>
+        </View>
 
         <View style={styles.playerNameSection}>
           <Text style={styles.inputLabel}>Player Name</Text>
@@ -517,10 +533,12 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
                   source={require('../../assets/images/emojis/joker.png')}
                   style={styles.tabIcon}
                 />
-                <Text style={[
-                  styles.tabText,
-                  activeTab === 'jokers' && styles.activeTabText,
-                ]}>
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'jokers' && styles.activeTabText,
+                  ]}
+                >
                   Jokers
                 </Text>
               </View>
@@ -547,28 +565,40 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
               style={[styles.tab, activeTab === 'periods' && styles.activeTab]}
               onPress={() => setActiveTab('periods')}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'periods' && styles.activeTabText,
-                ]}
-              >
-                📚 Periods
-              </Text>
+              <View style={styles.tabTextRow}>
+                <Image
+                  source={require('../../assets/images/emojis/book.png')}
+                  style={styles.tabIcon}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'periods' && styles.activeTabText,
+                  ]}
+                >
+                  Periods
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.tab, activeTab === 'privacy' && styles.activeTab]}
               onPress={() => setActiveTab('privacy')}
             >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === 'privacy' && styles.activeTabText,
-                ]}
-              >
-                🔒 Privacy
-              </Text>
+              <View style={styles.tabTextRow}>
+                <Image
+                  source={require('../../assets/images/emojis/lock.png')}
+                  style={styles.tabIcon}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'privacy' && styles.activeTabText,
+                  ]}
+                >
+                  Privacy
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -703,8 +733,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitleIcon: {
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     resizeMode: 'contain',
     marginRight: 8,
   },
@@ -713,8 +743,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabIcon: {
-    width: 16,
-    height: 16,
+    width: 24,
+    height: 24,
     resizeMode: 'contain',
     marginRight: 6,
   },

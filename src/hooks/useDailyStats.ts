@@ -7,7 +7,10 @@ import {
   updateCurrentDayStats,
   clearDailyStats,
   recordSale,
+  recordPurchase,
+  recordAllowance,
   resetDailyStats,
+  resetPlaythroughStats,
   selectTotalProfit,
 } from '../store/slices/dailyStatsSlice';
 
@@ -73,6 +76,7 @@ export const useDailyStats = () => {
 
   const addSpent = useCallback((amount: number) => {
     dispatch(updateCurrentDayStats({ expenses: (dailyStatsState.currentDayStats?.expenses || 0) + amount }));
+    dispatch(recordPurchase({ amount }));
   }, [dispatch, dailyStatsState.currentDayStats]);
 
   const addCandySold = useCallback((quantity: number) => {
@@ -81,6 +85,7 @@ export const useDailyStats = () => {
 
   const addAllowance = useCallback((amount: number) => {
     dispatch(updateCurrentDayStats({ allowance: (dailyStatsState.currentDayStats?.allowance || 0) + amount }));
+    dispatch(recordAllowance({ amount }));
   }, [dispatch, dailyStatsState.currentDayStats]);
 
   const setStartingMoney = useCallback((amount: number) => {
@@ -111,12 +116,21 @@ export const useDailyStats = () => {
     return mostSold.count > 0 ? mostSold : null;
   }, [dailyStatsState.candySoldCounts]);
 
+  const getPlaythroughStats = useCallback(() => {
+    return dailyStatsState.playthroughStats;
+  }, [dailyStatsState.playthroughStats]);
+
+  const resetPlaythrough = useCallback(() => {
+    dispatch(resetPlaythroughStats());
+  }, [dispatch]);
+
   return {
     dailyStats: dailyStatsState.dailyStats,
     currentDayStats: dailyStatsState.currentDayStats,
     totalProfit,
     bestSale: dailyStatsState.bestSale,
     candySoldCounts: dailyStatsState.candySoldCounts,
+    playthroughStats: dailyStatsState.playthroughStats,
     updateDailyStats,
     addDayStatsEntry,
     updateCurrentDay,
@@ -124,6 +138,7 @@ export const useDailyStats = () => {
     clearStats,
     reset,
     resetDailyStats: resetDailyStatsAction,
+    resetPlaythrough,
     getTotalStats,
     addProfit,
     addSpent,
@@ -134,5 +149,6 @@ export const useDailyStats = () => {
     recordSale: recordSaleAction,
     getBestSale,
     getMostSoldCandy,
+    getPlaythroughStats,
   };
 };

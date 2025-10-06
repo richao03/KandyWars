@@ -18,14 +18,14 @@ export default function ArtGameScreen() {
       console.log('Lunch minigame finished.');
     }
 
-    // Clear context and navigate to appropriate view
+    // Clear context and navigate to appropriate screen
     setMinigameContext(null);
 
-    // Navigate based on context
+    // Use navigate() to go to the tab without creating new instances
     if (minigameContext === 'lunch') {
-      router.push('/(tabs)/market');
+      router.navigate('/(tabs)/market');
     } else {
-      router.push('/(tabs)/after-school');
+      router.navigate('/(tabs)/after-school');
     }
   };
 

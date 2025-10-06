@@ -287,12 +287,12 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
       description: 'Principal checks lockers during lunch!',
       effect: 'STASH_LOCKED',
       category: 'bad',
-      heading: '🔒 Locker Check!',
+      heading: 'Locker Check!',
       title: 'Your stash is confiscated',
       subtitle: 'Your stash was in the wrong place at the wrong time.',
       backgroundImage: 'confiscate',
       dismissText: '😩 Busted again!',
-      hint: '👀 Principal’s patrolling lockers this lunch period... 👀',
+      hint: '👀 Principal\'s patrolling lockers this lunch period... 👀',
     }),
     () => ({
       description: 'Library study group wants brain food!',
@@ -389,9 +389,55 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
 
   console.log(`📊 Total events generated: ${periodEvents.length}`);
 
+  // Pre-calculate event prices for hybrid lookup (Option 3)
+  // Structure: eventPrices[period][location][candyName] = finalPrice
+  const eventPrices: Record<number, Record<string, Record<string, number>>> = {};
+
+  periodEvents.forEach((event) => {
+    // Only pre-calculate for price events with candy specified
+    if (event.candy && (event.priceOverride !== undefined || event.multiplier !== undefined)) {
+      const period = event.period - 1; // Convert to 0-indexed
+      const location = event.location || 'any'; // 'any' means applies to all locations
+
+      // Initialize nested objects if they don't exist
+      if (!eventPrices[period]) {
+        eventPrices[period] = {};
+      }
+      if (!eventPrices[period][location]) {
+        eventPrices[period][location] = {};
+      }
+
+      // Calculate the final event price
+      let finalPrice: number;
+      const basePrice = candyPrices[event.candy][period];
+
+      if (event.priceOverride !== undefined) {
+        finalPrice = event.priceOverride;
+      } else if (event.multiplier !== undefined) {
+        const calculatedPrice = basePrice * event.multiplier;
+
+        // Apply caps based on event type
+        if (event.effect === 'PRICE_SPIKE' || event.effect === 'PRICE_HIKE') {
+          finalPrice = Math.min(calculatedPrice, 100);
+        } else if (event.effect === 'PRICE_DROP') {
+          finalPrice = Math.max(calculatedPrice, 0.01);
+        } else {
+          finalPrice = calculatedPrice;
+        }
+      } else {
+        finalPrice = basePrice;
+      }
+
+      eventPrices[period][location][event.candy] = parseFloat(finalPrice.toFixed(2));
+
+      console.log(`💰 Pre-calculated event price: Period ${event.period}, Location: ${location}, ${event.candy}: $${finalPrice.toFixed(2)} (base: $${basePrice.toFixed(2)})`);
+    }
+  });
+
   return {
     candyPrices,
     periodEvents,
+    eventPrices, // Add pre-calculated event prices
     totalPeriods,
   };
 }

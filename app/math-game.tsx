@@ -6,6 +6,11 @@ import MathGame from './minigames/MathGame';
 export default function MathGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
 
+  const navigateBack = () => {
+    // Since we use router.push() to get here, we can use router.back() to return
+    router.back();
+  };
+
   const handleGameComplete = () => {
     console.log('Math game completed! Context:', minigameContext);
 
@@ -18,16 +23,16 @@ export default function MathGameScreen() {
       console.log('Lunch minigame finished.');
     }
 
-    // Clear context and navigate to appropriate view
+    // Clear context and navigate back
     setMinigameContext(null);
-
-    // Navigate based on context
-    if (minigameContext === 'lunch') {
-      router.push('/(tabs)/market');
-    } else {
-      router.push('/(tabs)/after-school');
-    }
+    navigateBack();
   };
 
-  return <MathGame onComplete={handleGameComplete} />;
+  const handleBack = () => {
+    // Clear context when going back
+    setMinigameContext(null);
+    navigateBack();
+  };
+
+  return <MathGame onComplete={handleGameComplete} onBack={handleBack} />;
 }

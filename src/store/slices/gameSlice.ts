@@ -29,6 +29,8 @@ interface GameState {
   pricesUpdating: boolean;
   hasCompletedMarketTutorial: boolean;
   hasCompletedAfterSchoolTutorial: boolean;
+  totalCompletions: number;
+  gameResetSignal: number; // Increments on each game reset to signal zombie cleanup
 }
 
 const initialState: GameState = {
@@ -46,6 +48,8 @@ const initialState: GameState = {
   pricesUpdating: false,
   hasCompletedMarketTutorial: false,
   hasCompletedAfterSchoolTutorial: false,
+  totalCompletions: 0,
+  gameResetSignal: 0,
 };
 
 const gameSlice = createSlice({
@@ -97,6 +101,12 @@ const gameSlice = createSlice({
     setHasCompletedAfterSchoolTutorial: (state, action: PayloadAction<boolean>) => {
       state.hasCompletedAfterSchoolTutorial = action.payload;
     },
+    setTotalCompletions: (state, action: PayloadAction<number>) => {
+      state.totalCompletions = action.payload;
+    },
+    incrementTotalCompletions: (state) => {
+      state.totalCompletions++;
+    },
     incrementPeriod: (state, action: PayloadAction<Location>) => {
       state.periodCount++;
       state.currentLocation = action.payload;
@@ -133,13 +143,18 @@ const gameSlice = createSlice({
       console.log('💾 New day started, period:', newPeriodCount, '- Auto-save triggered');
     },
     resetGame: (state) => {
-      // Preserve tutorial completion flags across game resets
+      // Preserve tutorial completion flags and totalCompletions across game resets
       const hasCompletedMarketTutorial = state.hasCompletedMarketTutorial;
       const hasCompletedAfterSchoolTutorial = state.hasCompletedAfterSchoolTutorial;
+      const totalCompletions = state.totalCompletions;
+      const gameResetSignal = state.gameResetSignal + 1; // Increment to signal cleanup
+      console.log(`🔄 Game reset signal: ${gameResetSignal} - This will trigger zombie cleanup`);
       return {
         ...initialState,
         hasCompletedMarketTutorial,
         hasCompletedAfterSchoolTutorial,
+        totalCompletions,
+        gameResetSignal,
       };
     },
     revertToPreviousPeriod: (state) => {
@@ -191,6 +206,8 @@ export const {
   setPricesUpdating,
   setHasCompletedMarketTutorial,
   setHasCompletedAfterSchoolTutorial,
+  setTotalCompletions,
+  incrementTotalCompletions,
   incrementPeriod,
   startAfterSchool,
   startNewDay,
@@ -209,3 +226,6 @@ export const selectDay = (state: { game: GameState }) =>
 
 export const selectPeriod = (state: { game: GameState }) =>
   Math.max(1, (state.game.periodCount % 8) + 1);
+
+export const selectGameResetSignal = (state: { game: GameState }) =>
+  state.game.gameResetSignal;

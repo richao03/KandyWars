@@ -39,7 +39,7 @@ type Props = {
   availableInventorySpace?: number;
 };
 
-export default function TransactionModal({
+function TransactionModal({
   visible,
   onClose,
   onConfirm,
@@ -346,7 +346,10 @@ export default function TransactionModal({
             minimumValue={0}
             maximumValue={maxQuantity > 0 ? maxQuantity : 1}
             step={1}
-            value={Math.max(0, Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0))}
+            value={Math.max(
+              0,
+              Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0)
+            )}
             onValueChange={handleSliderChange}
             minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
             maximumTrackTintColor="#ccc"
@@ -468,6 +471,9 @@ export default function TransactionModal({
     </FastModal>
   );
 }
+
+const MemoizedTransactionModal = React.memo(TransactionModal);
+export default MemoizedTransactionModal;
 
 const styles = StyleSheet.create({
   container: {

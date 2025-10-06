@@ -182,10 +182,12 @@ export const useHallPass = () => {
               newUnlocks.push(pass.id);
             break;
           case 'minimalist_master':
-            if (gameStats.noJokers) newUnlocks.push(pass.id);
+            // Unlock if player won with no jokers in inventory
+            if (gameStats.noJokers && gameStats.completions > 0) newUnlocks.push(pass.id);
             break;
           case 'high_roller':
-            if (gameStats.totalCandySold && gameStats.totalCandySold > 300)
+            // Unlock if player sold over 1000 units of candies
+            if (gameStats.totalCandySold && gameStats.totalCandySold > 1000)
               newUnlocks.push(pass.id);
             break;
           case 'perfect_scholar':

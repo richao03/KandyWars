@@ -696,6 +696,24 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     isProcessingRoundRef.current = isProcessingRound;
   }, [isProcessingRound]);
 
+  // CRITICAL: Cleanup all timers on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+      if (playerTimeoutRef.current) {
+        clearTimeout(playerTimeoutRef.current);
+        playerTimeoutRef.current = null;
+      }
+      if (resultTimeoutRef.current) {
+        clearTimeout(resultTimeoutRef.current);
+        resultTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // Log hint modal display
   useEffect(() => {
     if (gameState === 'hint' && hintGesture) {

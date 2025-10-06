@@ -5,6 +5,7 @@ import {
   setGameData,
   updateGameData,
   modifyCandyPrice,
+  batchModifyCandyPrices,
   resetSeed,
 } from '../store/slices/seedSlice';
 
@@ -26,6 +27,10 @@ export const useSeed = () => {
 
   const modifyCandyPriceAction = useCallback((candyId: string, price: number, period?: number) => {
     dispatch(modifyCandyPrice({ candyId, price, period }));
+  }, [dispatch]);
+
+  const batchModifyCandyPricesAction = useCallback((updates: Array<{ candyId: string; price: number; period: number }>) => {
+    dispatch(batchModifyCandyPrices(updates));
   }, [dispatch]);
 
   const getOriginalCandyPrice = useCallback((candyId: string, period?: number): number => {
@@ -54,6 +59,7 @@ export const useSeed = () => {
     setGameData: setGameDataAction,
     updateGameData: updateGameDataAction,
     modifyCandyPrice: modifyCandyPriceAction,
+    batchModifyCandyPrices: batchModifyCandyPricesAction,
     getOriginalCandyPrice,
     restoreCandyPrice,
     resetSeed: resetSeedAction,
