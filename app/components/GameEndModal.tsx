@@ -149,18 +149,29 @@ export default function GameEndModal({
               <Text style={styles.finalScore}>${finalScore.toFixed(2)}</Text>
 
               <View style={styles.breakdown}>
-                <TextWithEmojis style={styles.breakdownText} imageSize={14}>
-                  💰 Balance: ${balance.toFixed(2)}
-                </TextWithEmojis>
-                <TextWithEmojis style={styles.breakdownText} imageSize={14}>
-                  🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}: $
-                  {Math.abs(stashedAmount).toFixed(2)}
-                </TextWithEmojis>
-                <TextWithEmojis style={styles.breakdownText} imageSize={14}>
-                  {gameResult === 'won'
-                    ? '✅ All debt paid off!'
-                    : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
-                </TextWithEmojis>
+                <View style={styles.breakdownItem}>
+                  <TextWithEmojis style={styles.breakdownLabel} imageSize={12}>
+                    💰 Balance
+                  </TextWithEmojis>
+                  <Text style={styles.breakdownValue}>
+                    ${balance.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.breakdownItem}>
+                  <TextWithEmojis style={styles.breakdownLabel} imageSize={12}>
+                    🏦 {stashedAmount >= 0 ? 'Savings' : 'Debt'}
+                  </TextWithEmojis>
+                  <Text style={styles.breakdownValue}>
+                    ${Math.abs(stashedAmount).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.breakdownItem}>
+                  <TextWithEmojis style={styles.breakdownStatus} imageSize={12}>
+                    {gameResult === 'won'
+                      ? '✅ All debt paid off!'
+                      : `❌ $${Math.abs(stashedAmount).toFixed(2)} debt remaining`}
+                  </TextWithEmojis>
+                </View>
               </View>
             </View>
           </PixelBorder>
@@ -175,15 +186,24 @@ export default function GameEndModal({
             <View style={styles.statsContainer}>
               <Text style={styles.statsTitle}>GAME STATISTICS</Text>
               <View style={styles.statsRow}>
-                <TextWithEmojis style={styles.statsText} imageSize={14}>
-                  🏆 Total Wins: {totalCompletions}
-                </TextWithEmojis>
-                <TextWithEmojis style={styles.statsText} imageSize={14}>
-                  💵 Total Profit: ${finalScore.toFixed(2)}
-                </TextWithEmojis>
-                <TextWithEmojis style={styles.statsText} imageSize={14}>
-                  🍬 Candies Sold: {totalCandiesSold}
-                </TextWithEmojis>
+                <View style={styles.statItem}>
+                  <TextWithEmojis style={styles.statLabel} imageSize={12}>
+                    🏆 Total Wins
+                  </TextWithEmojis>
+                  <Text style={styles.statValue}>{totalCompletions}</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <TextWithEmojis style={styles.statLabel} imageSize={12}>
+                    💵 Total Profit
+                  </TextWithEmojis>
+                  <Text style={styles.statValue}>${finalScore.toFixed(2)}</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <TextWithEmojis style={styles.statLabel} imageSize={12}>
+                    🍬 Candies Sold
+                  </TextWithEmojis>
+                  <Text style={styles.statValue}>{totalCandiesSold}</Text>
+                </View>
               </View>
             </View>
           </PixelBorder>
@@ -253,8 +273,8 @@ export default function GameEndModal({
 
 const styles = StyleSheet.create({
   modalContent: {
-    width: '90%',
-    maxWidth: 400,
+    width: '95%',
+    maxWidth: 450,
     overflow: 'hidden',
   },
   container: {
@@ -318,12 +338,31 @@ const styles = StyleSheet.create({
   breakdown: {
     width: '100%',
   },
-  breakdownText: {
-    fontSize: 14,
+  breakdownItem: {
+    width: '100%',
+    marginBottom: 8,
+  },
+  breakdownLabel: {
+    fontSize: 13,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 4,
     fontFamily: 'PixeloidMono',
+    marginBottom: 4,
+  },
+  breakdownValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#00FF00',
+    textAlign: 'right',
+    fontFamily: 'PixeloidMono',
+    paddingRight: 20,
+  },
+  breakdownStatus: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontFamily: 'PixeloidMono',
+    marginTop: 4,
   },
   statsContainerBorder: {
     width: '100%',
@@ -342,13 +381,26 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
+  },
+  statItem: {
+    flex: 1,
     alignItems: 'center',
   },
-  statsText: {
-    fontSize: 14,
+  statLabel: {
+    fontSize: 11,
     color: '#FFFFFF',
     textAlign: 'center',
+    fontFamily: 'PixeloidMono',
     marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
   scoreboardText: {

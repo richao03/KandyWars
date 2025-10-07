@@ -1,8 +1,9 @@
-import { router, useFocusEffect } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Image,
   ImageBackground,
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import {
   useCopilot,
   walkthroughable,
 } from 'react-native-copilot';
+import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
@@ -24,22 +26,28 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useWallet } from '../../src/hooks/useWallet';
-import { forceSave } from '../../src/store/store';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch } from '../../src/store/hooks';
 import { setTotalCompletions } from '../../src/store/slices/gameSlice';
+import { forceSave } from '../../src/store/store';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import PixelBorder from '../components/PixelBorder';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
-import PiggyBankPage from '../piggy-bank';
 import DeliPage from '../deli';
-import colors from '../../src/constants/colors';
-
+import PiggyBankPage from '../piggy-bank';
 
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
+
+// Image mapping for after-school activities
+const ACTIVITY_IMAGES = {
+  study: require('../../assets/images/emojis/study.png'),
+  stash: require('../../assets/images/emojis/piggyBank.png'),
+  deli: require('../../assets/images/emojis/deli.png'),
+  sleep: require('../../assets/images/emojis/sleep.png'),
+};
 
 function AfterSchoolPage() {
   const isFocused = useIsFocused();
@@ -58,7 +66,8 @@ function AfterSchoolPage() {
     hasCompletedAfterSchoolTutorial,
     setHasCompletedAfterSchoolTutorial,
   } = useGame();
-  const { resetDailyStats, addAllowance: addAllowanceToStats } = useDailyStats();
+  const { resetDailyStats, addAllowance: addAllowanceToStats } =
+    useDailyStats();
   const { balance, stashedAmount, adoptionFee, addAllowance, difficultyLevel } =
     useWallet();
   const { jokers } = useJokers();
@@ -115,8 +124,11 @@ function AfterSchoolPage() {
         let totalCompletions = 0;
         if (hasWon) {
           try {
-            console.log('🏆 Player won - incrementing game completions in Firebase...');
-            totalCompletions = await scoreboardService.incrementGameCompletions();
+            console.log(
+              '🏆 Player won - incrementing game completions in Firebase...'
+            );
+            totalCompletions =
+              await scoreboardService.incrementGameCompletions();
             dispatch(setTotalCompletions(totalCompletions));
             setTotalCompletionsForModal(totalCompletions);
             console.log('🏆 Total completions:', totalCompletions);
@@ -142,7 +154,10 @@ function AfterSchoolPage() {
             hasPlayedAllMinigames,
           };
 
-          const unlocked = checkUnlockRequirements(gameStats, minigameTrackingData);
+          const unlocked = checkUnlockRequirements(
+            gameStats,
+            minigameTrackingData
+          );
           console.log('🎓 Newly unlocked Hall Passes:', unlocked);
           setUnlockedHallPasses(unlocked);
         } catch (error) {
@@ -162,12 +177,28 @@ function AfterSchoolPage() {
 
         // Clear game state so there's no continue option available after game ends
         setIsInitialized(false);
-        console.log('🎯 Game state cleared - no continue option will be available');
+        console.log(
+          '🎯 Game state cleared - no continue option will be available'
+        );
       };
 
       handleGameEnd();
     }
-  }, [day, gameEndModalVisible, balance, stashedAmount, adoptionFee, checkUnlockRequirements, trackGameCompleted, difficultyLevel, totalCandiesSold, jokers.length, hasPlayedAllMinigames, dispatch, setIsInitialized]);
+  }, [
+    day,
+    gameEndModalVisible,
+    balance,
+    stashedAmount,
+    adoptionFee,
+    checkUnlockRequirements,
+    trackGameCompleted,
+    difficultyLevel,
+    totalCandiesSold,
+    jokers.length,
+    hasPlayedAllMinigames,
+    dispatch,
+    setIsInitialized,
+  ]);
 
   // Start copilot tutorial on first after-school visit (only if not already completed)
   useEffect(() => {
@@ -283,7 +314,9 @@ function AfterSchoolPage() {
     // Game end is now handled when entering after-school on day 5
     // This function should never be called on day 5 anymore
     if (day >= 5) {
-      console.log('🎯 Game already ended - sleep button should not be accessible on day 5');
+      console.log(
+        '🎯 Game already ended - sleep button should not be accessible on day 5'
+      );
       return;
     }
 
@@ -342,47 +375,44 @@ function AfterSchoolPage() {
     console.log('🔄 Game state cleared after closing game end modal');
   };
 
-  const options = useMemo(
-    () => {
-      const allOptions = [
-        {
-          id: 'study',
-          title: 'Study at Home',
-          desc: hasStudiedTonight
-            ? "You've already studied tonight. Rest up!"
-            : 'Cozy up with your books by the warm lamplight',
-          onPress: () => handleStudy(),
-          disabled: hasStudiedTonight,
-        },
-        {
-          id: 'stash',
-          title: 'Go to Your Stash',
-          desc: 'Make sure no one is following you',
-          onPress: () => handleStashMoney(),
-        },
-        {
-          id: 'deli',
-          title: 'Visit the Corner Deli',
-          desc: 'Walk to the neighborhood store',
-          onPress: () => handleGoDeli(),
-        },
-        {
-          id: 'sleep',
-          title: 'Go to Sleep',
-          desc: 'Rest up and start a new day at school tomorrow',
-          onPress: () => handleGoToSleep(),
-        },
-      ];
+  const options = useMemo(() => {
+    const allOptions = [
+      {
+        id: 'study',
+        title: 'Study',
+        desc: hasStudiedTonight
+          ? "You've already studied tonight. Rest up!"
+          : 'Cozy up with your books by the warm lamplight',
+        onPress: () => handleStudy(),
+        disabled: hasStudiedTonight,
+      },
+      {
+        id: 'stash',
+        title: 'Stash',
+        desc: 'Make sure no one is following you',
+        onPress: () => handleStashMoney(),
+      },
+      {
+        id: 'deli',
+        title: 'Deli',
+        desc: 'Walk to the neighborhood store',
+        onPress: () => handleGoDeli(),
+      },
+      {
+        id: 'sleep',
+        title: 'Sleep',
+        desc: 'Rest up and start a new day at school tomorrow',
+        onPress: () => handleGoToSleep(),
+      },
+    ];
 
-      // Don't show sleep button on day 5 (game ends when entering after-school)
-      if (day >= 5) {
-        return allOptions.filter(opt => opt.id !== 'sleep');
-      }
+    // Don't show sleep button on day 5 (game ends when entering after-school)
+    if (day >= 5) {
+      return allOptions.filter((opt) => opt.id !== 'sleep');
+    }
 
-      return allOptions;
-    },
-    [hasStudiedTonight, handleStudy, day]
-  );
+    return allOptions;
+  }, [hasStudiedTonight, handleStudy, day]);
 
   const renderMainOptions = useMemo(() => {
     const shouldShowTutorial = day === 1;
@@ -435,6 +465,11 @@ function AfterSchoolPage() {
             onPress={item.disabled ? undefined : item.onPress}
             disabled={item.disabled}
           >
+            <Image
+              source={ACTIVITY_IMAGES[item.id as keyof typeof ACTIVITY_IMAGES]}
+              style={[styles.buttonIcon, item.disabled && styles.disabledIcon]}
+              resizeMode="contain"
+            />
             <Text
               style={[styles.buttonTitle, item.disabled && styles.disabledText]}
             >
@@ -581,7 +616,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   buttonTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.gold.light,
     textAlign: 'center',
@@ -589,10 +624,10 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-    marginBottom: 12,
+    marginBottom: 4,
   },
   buttonSubtext: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '400',
     color: colors.white,
     textAlign: 'center',
@@ -600,7 +635,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-    lineHeight: 12,
+    lineHeight: 11,
   },
   disabledButton: {
     opacity: 0.5,
@@ -638,6 +673,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: '100%',
     padding: 8,
+  },
+  buttonIcon: {
+    width: 40,
+    height: 40,
+    marginBottom: 8,
+  },
+  disabledIcon: {
+    opacity: 0.3,
   },
 });
 

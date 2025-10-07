@@ -1,6 +1,14 @@
 import { Marquee } from '@animatereactnative/marquee';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
@@ -94,6 +102,69 @@ function GameHUD({
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { text, isHint, eventType } = useFlavorText();
 
+  // Animation state for money change indicator
+  const [moneyChange, setMoneyChange] = useState<number | null>(null);
+  const previousBalance = useRef<number | null>(null);
+  const isInitialized = useRef(false);
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.8);
+
+  // Initialize previous balance on first render
+  useEffect(() => {
+    if (!isInitialized.current) {
+      previousBalance.current = balance;
+      isInitialized.current = true;
+    }
+  }, []);
+
+  // Detect balance changes and trigger animation
+  useEffect(() => {
+    if (!isInitialized.current || previousBalance.current === null) {
+      return;
+    }
+
+    const change = balance - previousBalance.current;
+
+    if (change !== 0) {
+      // Set the change amount
+      setMoneyChange(change);
+
+      // Start animation sequence
+      translateY.value = 0;
+      opacity.value = 0;
+      scale.value = 0.8;
+
+      // Animate in, hold, then fade out
+      translateY.value = withSequence(
+        withSpring(-40, { damping: 15, stiffness: 200 }),
+        withTiming(-50, { duration: 1000 }),
+        withTiming(-60, { duration: 300 })
+      );
+
+      opacity.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(1, { duration: 1000 }),
+        withTiming(0, { duration: 300 }, () => {
+          runOnJS(setMoneyChange)(null);
+        })
+      );
+
+      scale.value = withSequence(
+        withSpring(1.2, { damping: 12, stiffness: 200 }),
+        withSpring(1, { damping: 15, stiffness: 150 })
+      );
+    }
+
+    previousBalance.current = balance;
+  }, [balance]);
+
+  // Animated style for money change indicator
+  const animatedMoneyChangeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = useMemo(
     () => getInventoryLimit(),
@@ -161,18 +232,37 @@ function GameHUD({
 
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
-        <PixelBorder
-          borderColor="#4a7c4a"
-          borderWidth={3}
-          backgroundColor="#d4f6d4"
-          innerPadding={0}
-          style={{ flex: 1 }}
-        >
-          <View style={[styles.statBox, styles.cashBox]}>
-            <Text style={statTitleStyle}>Wallet</Text>
-            <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
-          </View>
-        </PixelBorder>
+        <View style={{ flex: 1, overflow: 'visible' }}>
+          <PixelBorder
+            borderColor="#4a7c4a"
+            borderWidth={3}
+            backgroundColor="#d4f6d4"
+            innerPadding={0}
+            style={{ overflow: 'visible' }}
+          >
+            <View style={[styles.statBox, styles.cashBox]}>
+              <Text style={statTitleStyle}>Wallet</Text>
+              <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
+
+              {/* Animated money change indicator */}
+              {moneyChange !== null && (
+                <Animated.View
+                  style={[styles.moneyChangeIndicator, animatedMoneyChangeStyle]}
+                >
+                  <Text
+                    style={[
+                      styles.moneyChangeText,
+                      moneyChange > 0 ? styles.moneyGain : styles.moneyLoss,
+                    ]}
+                  >
+                    {moneyChange > 0 ? '+' : '-'}$
+                    {Math.abs(moneyChange).toFixed(2)}
+                  </Text>
+                </Animated.View>
+              )}
+            </View>
+          </PixelBorder>
+        </View>
 
         <PixelBorder
           borderColor="#b85c8a"
@@ -322,6 +412,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
     gap: 8,
+    overflow: 'visible',
   },
   statBox: {
     paddingVertical: 10,
@@ -333,6 +424,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    overflow: 'visible',
   },
   cashBox: {
     fontFamily: 'PixeloidMono',
@@ -432,5 +524,36 @@ const styles = StyleSheet.create({
     height: 30,
     paddingHorizontal: 2,
     marginTop: -8,
+  },
+  moneyChangeIndicator: {
+    position: 'absolute',
+    top: 8,
+    left: -20, // Allow text to extend left
+    right: -20, // Allow text to extend right
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+    pointerEvents: 'none',
+  },
+  moneyChangeText: {
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'PixeloidMono',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 10,
+    flexShrink: 0, // Prevent text from shrinking
+  },
+  moneyGain: {
+    color: '#22c55e',
+    textShadowColor: '#22c55e',
+  },
+  moneyLoss: {
+    color: '#dc2626',
+    textShadowColor: '#dc2626',
   },
 });

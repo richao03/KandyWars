@@ -1,4 +1,5 @@
-import { router, Stack } from 'expo-router';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import { Stack, router } from 'expo-router';
 import React from 'react';
 import {
   Image,
@@ -9,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import colors from '../src/constants/colors';
 import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useGame } from '../src/hooks/useGame';
 import { useHallPass } from '../src/hooks/useHallPass';
@@ -17,13 +18,17 @@ import { useJokers } from '../src/hooks/useJokers';
 import { useWallet } from '../src/hooks/useWallet';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
-import colors from '../src/constants/colors';
-
 
 export default function GameEndScreen() {
   const { balance, stashedAmount, adoptionFee, difficultyLevel } = useWallet();
   const { jokers } = useJokers();
-  const { getTotalStats, getPlaythroughStats, getBestSale, getMostSoldCandy, resetPlaythrough } = useDailyStats();
+  const {
+    getTotalStats,
+    getPlaythroughStats,
+    getBestSale,
+    getMostSoldCandy,
+    resetPlaythrough,
+  } = useDailyStats();
   const { resetGame } = useGame();
   const { newlyUnlockedPasses, clearNewlyUnlocked } = useHallPass();
   const navigation = useNavigation();
@@ -198,34 +203,34 @@ export default function GameEndScreen() {
               innerPadding={16}
               style={styles.section}
             >
-              <TextWithEmojis style={styles.sectionTitle} imageSize={20}>
+              <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
                 📊 TLDR:
               </TextWithEmojis>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={28}>
-                  {`💰 Balance:`}
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  💰 Balance
                 </TextWithEmojis>
-                <Text style={styles.statValue}>${balance.toFixed(2)}</Text>
+                <Text style={styles.statValueRight}>${balance.toFixed(2)}</Text>
               </View>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={28}>
-                  {`⚖️ ${stashedAmount >= 0 ? 'Savings' : 'Debt'}:`}
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  {stashedAmount >= 0 ? '⚖️ Savings' : '⚖️ Debt'}
                 </TextWithEmojis>
-                <Text style={styles.statValue}>
+                <Text style={styles.statValueRight}>
                   ${Math.abs(stashedAmount).toFixed(2) || '0.00'}
                 </Text>
               </View>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={28}>
-                  {gameResult === 'won' ? '🎉' : `❌`}
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  {gameResult === 'won' ? '🎉 Status' : '❌ Status'}
                 </TextWithEmojis>
-                <Text style={styles.statValue}>
+                <Text style={styles.statValueRight}>
                   {gameResult === 'won'
                     ? 'All debt paid off!'
-                    : `$${(Math.abs(stashedAmount) - balance).toFixed(2)} debt remaining`}
+                    : `$${(Math.abs(stashedAmount) - balance).toFixed(2)} remaining`}
                 </Text>
               </View>
             </PixelBorder>
@@ -238,63 +243,63 @@ export default function GameEndScreen() {
               innerPadding={16}
               style={styles.section}
             >
-              <TextWithEmojis style={styles.sectionTitle} imageSize={20}>
-                📊 Playthrough Stats
+              <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
+                🎮 Playthrough Stats
               </TextWithEmojis>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={22}>
-                  💵 Total Profit:
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  💰 Total Profit
                 </TextWithEmojis>
-                <Text style={styles.statValue}>
+                <Text style={styles.statValueRight}>
                   ${totalStats?.profit?.toFixed(2) || '0.00'}
                 </Text>
               </View>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={22}>
-                  💸 Spent on Candy:
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  💸 Spent on Candy
                 </TextWithEmojis>
-                <Text style={styles.statValue}>
+                <Text style={styles.statValueRight}>
                   ${totalStats?.spent?.toFixed(2) || '0.00'}
                 </Text>
               </View>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={22}>
-                  💰 Total Allowance:
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  💰 Total Allowance
                 </TextWithEmojis>
-                <Text style={styles.statValue}>
+                <Text style={styles.statValueRight}>
                   ${playthroughStats?.totalAllowance?.toFixed(2) || '0.00'}
                 </Text>
               </View>
 
-              <View style={styles.statRow}>
-                <TextWithEmojis style={styles.statLabel} imageSize={22}>
-                  🍬 Candies Sold:
+              <View style={styles.statItemRow}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  🍬 Candies Sold
                 </TextWithEmojis>
-                <Text style={styles.statValue}>
+                <Text style={styles.statValueRight}>
                   {totalStats?.candiesSold || 0}
                 </Text>
               </View>
 
               {mostSoldCandy && (
-                <View style={styles.statRow}>
-                  <TextWithEmojis style={styles.statLabel} imageSize={22}>
-                    🏆 Most Sold Candy:
+                <View style={styles.statItemRow}>
+                  <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                    🏆 Most Sold Candy
                   </TextWithEmojis>
-                  <Text style={styles.statValue}>
+                  <Text style={styles.statValueRight}>
                     {mostSoldCandy.candy} ({mostSoldCandy.count})
                   </Text>
                 </View>
               )}
 
               {bestSale && (
-                <View style={styles.statRow}>
-                  <TextWithEmojis style={styles.statLabel} imageSize={14}>
-                    💎 Best Single Sale:
+                <View style={styles.statItemRow}>
+                  <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                    💎 Best Single Sale
                   </TextWithEmojis>
-                  <Text style={styles.statValue}>
+                  <Text style={styles.statValueRight}>
                     {bestSale.candyName} (+${bestSale.profit.toFixed(2)})
                   </Text>
                 </View>
@@ -310,7 +315,7 @@ export default function GameEndScreen() {
                 innerPadding={16}
                 style={styles.section}
               >
-                <TextWithEmojis style={styles.sectionTitle} imageSize={20}>
+                <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
                   🎖️ Hall Passes Unlocked ({newlyUnlockedPasses.length})
                 </TextWithEmojis>
 
@@ -345,7 +350,7 @@ export default function GameEndScreen() {
                 innerPadding={30}
                 style={styles.section}
               >
-                <TextWithEmojis style={styles.sectionTitle} imageSize={20}>
+                <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
                   🃏 Jokers Collected ({jokers.length})
                 </TextWithEmojis>
 
@@ -359,7 +364,7 @@ export default function GameEndScreen() {
                       innerPadding={8}
                       style={styles.jokerItem}
                     >
-                      <TextWithEmojis style={styles.jokerText} imageSize={12}>
+                      <TextWithEmojis style={styles.jokerText} imageSize={20}>
                         {joker.emoji} {joker.name}
                       </TextWithEmojis>
                     </PixelBorder>
@@ -502,12 +507,31 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexWrap: 'wrap', // Allow wrapping if content is too long
   },
+  statItem: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  statItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
   statLabel: {
     fontSize: 14,
     color: '#6B9B3F',
     fontFamily: 'PixeloidMono',
     flexShrink: 1,
     flex: 1, // Take available space but can shrink
+  },
+  statLabelLeft: {
+    fontSize: 13,
+    color: '#6B9B3F',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'left',
+    flexShrink: 1,
   },
   statValue: {
     fontSize: 14,
@@ -517,6 +541,15 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flexShrink: 1, // Allow shrinking to prevent overflow
     textAlign: 'right', // Keep right-aligned even when shrinking
+  },
+  statValueRight: {
+    fontSize: 15,
+    color: '#D9A83F',
+    fontWeight: 'bold',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'right',
+    marginLeft: 8,
+    flexShrink: 0,
   },
   hallPassGrid: {
     flexDirection: 'row',
