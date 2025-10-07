@@ -3,6 +3,8 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface SleepConfirmModalProps {
   visible: boolean;
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#ffffff',
+    color: colors.white,
     borderRadius: 20,
     fontFamily: 'PixeloidMono',
     textShadowColor: '#4a90e2',
@@ -133,7 +135,7 @@ const styles = StyleSheet.create({
   warningText: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#ffd700',
+    color: colors.gold.medium,
     marginBottom: 16,
     fontStyle: 'italic',
     fontFamily: 'PixeloidMono',
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.white,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },

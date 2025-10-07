@@ -28,6 +28,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface Tile {
   id: string;
@@ -485,8 +487,17 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     if (completedLevel > 0) {
-      // Player completed at least one stage, award jokers based on completion
-      setGameState('jokerSelection');
+      // Player completed at least one stage, show success modal before joker selection
+      const jokerCount = completedLevel;
+      const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+      showModal(
+        'Great Effort!',
+        `You ran out of chances but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,
+        '🎨',
+        () => {
+          setGameState('jokerSelection');
+        }
+      );
     } else {
       // Player didn't complete any stage, show restart option
       showModal(
@@ -1022,11 +1033,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: '#ff6b35',
+    textShadowColor: colors.orange.primary,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
@@ -1038,7 +1049,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 8,
@@ -1060,7 +1071,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#ff6b35',
+    borderColor: colors.orange.primary,
     marginBottom: 8,
   },
   colorKeyContainer: {
@@ -1070,7 +1081,7 @@ const styles = StyleSheet.create({
   colorKeyTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 8,
     textAlign: 'center',
@@ -1094,8 +1105,8 @@ const styles = StyleSheet.create({
   },
   startSwatch: {
     borderWidth: 3,
-    borderColor: '#00ff41',
-    shadowColor: '#00ff41',
+    borderColor: colors.green.neon,
+    shadowColor: colors.green.neon,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -1103,8 +1114,8 @@ const styles = StyleSheet.create({
   },
   goalSwatch: {
     borderWidth: 3,
-    borderColor: '#ff6b35',
-    shadowColor: '#ff6b35',
+    borderColor: colors.orange.primary,
+    shadowColor: colors.orange.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -1113,9 +1124,9 @@ const styles = StyleSheet.create({
   colorKeyNumber: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#000',
+    textShadowColor: colors.black,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -1169,7 +1180,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 9,
     fontWeight: '900',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 4,
@@ -1184,16 +1195,16 @@ const styles = StyleSheet.create({
     marginTop: -10,
   },
   infoContainer: {
-    backgroundColor: '#2d4a3e',
+    backgroundColor: colors.green.darkBg,
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#ff6b35',
+    borderColor: colors.orange.primary,
   },
   infoText: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 4,
@@ -1210,16 +1221,16 @@ const styles = StyleSheet.create({
   },
   footerBtn: {
     flex: 1,
-    backgroundColor: '#2d4a3e',
+    backgroundColor: colors.green.darkBg,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#ff6b35',
+    borderColor: colors.orange.primary,
     alignItems: 'center',
     marginBottom: 8,
   },
   leaveBtn: {
-    backgroundColor: '#8b4513',
+    backgroundColor: colors.brown.secondary,
     borderColor: '#daa520',
   },
   leaveBtnInner: {
@@ -1229,7 +1240,7 @@ const styles = StyleSheet.create({
   footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   // Instructions Styles
@@ -1242,22 +1253,22 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#ff6b35',
+    textShadowColor: colors.orange.primary,
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
   instructionsCard: {
-    backgroundColor: '#2d4a3e',
+    backgroundColor: colors.green.darkBg,
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#ff6b35',
+    borderColor: colors.orange.primary,
     marginBottom: 20,
-    shadowColor: '#ff6b35',
+    shadowColor: colors.orange.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1265,7 +1276,7 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#ff6b35',
+    color: colors.orange.primary,
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
@@ -1278,7 +1289,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ff6b35',
+    color: colors.orange.primary,
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
@@ -1286,13 +1297,13 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     flex: 1,
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#ff6b35',
+    backgroundColor: colors.orange.primary,
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
@@ -1300,7 +1311,7 @@ const styles = StyleSheet.create({
     borderColor: '#e55a2b',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#ff6b35',
+    shadowColor: colors.orange.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -1308,7 +1319,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {

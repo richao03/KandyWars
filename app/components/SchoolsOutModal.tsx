@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { useTabBar } from '../../src/hooks/useTabBar';
+import colors from '../../src/constants/colors';
+
 
 interface SchoolsOutModalProps {
   visible: boolean;
@@ -75,7 +77,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF', // White text for good contrast on orange
+    color: colors.white, // White text for good contrast on orange
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
@@ -85,7 +87,7 @@ const styles = StyleSheet.create({
   },
   tapText: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     opacity: 0.8,

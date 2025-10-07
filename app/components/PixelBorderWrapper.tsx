@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
 import { GamePixelBorder, GamePixelButton, GamePixelCard } from './GamePixelBorder';
+import colors from '../../src/constants/colors';
+
 
 /**
  * Helper components to make migration easier
@@ -172,7 +174,7 @@ export const PixelTabButton: React.FC<{
 const sectionTitleStyle: TextStyle = {
   fontSize: 20,
   fontWeight: '700',
-  color: '#6b4423',
+  color: colors.brown.primary,
   marginBottom: 15,
   fontFamily: 'PixeloidMono',
 };

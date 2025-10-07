@@ -77,10 +77,13 @@ export const useWallet = () => {
   }, [dispatch, hallPassEffects]);
 
   const stashMoneyAction = useCallback((amount: number, jokers?: any[]): boolean => {
-    if (balance >= amount) {
+    // Use small epsilon to handle floating point precision issues
+    const epsilon = 0.001;
+    if (balance >= amount - epsilon) {
       dispatch(stashMoney(amount));
       return true;
     }
+    console.log(`❌ Stash failed - balance: ${balance}, amount: ${amount}, difference: ${balance - amount}`);
     return false;
   }, [dispatch, balance]);
 

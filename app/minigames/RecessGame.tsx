@@ -27,6 +27,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface RecessGameProps {
   onComplete: () => void;
@@ -449,7 +451,17 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           // Game over - check if player completed any stage
           if (completedLevel > 0) {
             // Player completed at least one stage, award jokers based on completion
-            setGameState('jokerSelection');
+            const jokerCount = completedLevel;
+            const jokerText = jokerCount > 1 ? `${jokerCount} stages` : '1 stage';
+
+            showModal(
+              'Nice Effort!',
+              `You lost but completed ${jokerText}!\n\nYou'll receive ${completedLevel} joker${completedLevel > 1 ? 's' : ''}!`,
+              '✊',
+              () => {
+                setGameState('jokerSelection');
+              }
+            );
           } else {
             // Player didn't complete any stage, show restart option
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -557,7 +569,17 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           console.log(`💀 Showing game over modal after result animation`);
           if (completedLevel > 0) {
             // Player completed at least one stage, award jokers based on completion
-            setGameState('jokerSelection');
+            const jokerCount = completedLevel;
+            const jokerText = jokerCount > 1 ? `${jokerCount} stages` : '1 stage';
+
+            showModal(
+              'Nice Effort!',
+              `You lost but completed ${jokerText}!\n\nYou'll receive ${completedLevel} joker${completedLevel > 1 ? 's' : ''}!`,
+              '✊',
+              () => {
+                setGameState('jokerSelection');
+              }
+            );
           } else {
             // Player didn't complete any stage, show restart option
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -620,7 +642,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
       showModal(
         `${stageNames[stage]} Stage Complete!`,
-        `Score: ${score}\nYou got 4 wins in a row!\nReady for ${nextStageNames[stage + 1]} Stage?`,
+        `You got 4 wins in a row!\nReady for ${nextStageNames[stage + 1]} Stage?`,
         '🎉',
         () => {
           let newStage: number;
@@ -653,7 +675,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     } else {
       showModal(
         'Rock Paper Scissors Master!',
-        `Final Score: ${score}\nYou've mastered all stages!`,
+        `You've mastered all stages!`,
         '🏆',
         () => {
           setGameState('jokerSelection');
@@ -1255,7 +1277,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 8,
   },
@@ -1267,22 +1289,22 @@ const styles = StyleSheet.create({
   },
   level: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   score: {
     fontSize: 16,
-    color: '#FFD700',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
   },
   timer: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   rounds: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   gameArea: {
@@ -1305,9 +1327,9 @@ const styles = StyleSheet.create({
   countdownText: {
     fontSize: 120,
     fontWeight: '900',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#000',
+    textShadowColor: colors.black,
     textShadowOffset: { width: 3, height: 3 },
     textShadowRadius: 8,
   },
@@ -1334,7 +1356,7 @@ const styles = StyleSheet.create({
   gestureLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 8,
   },
@@ -1347,7 +1369,7 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '900',
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#000',
+    textShadowColor: colors.black,
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
     position: 'absolute',
@@ -1359,7 +1381,7 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -24 }], // Half of font size to center vertically
   },
   winText: {
-    color: '#4CAF50',
+    color: colors.green.success,
   },
   loseText: {
     color: '#F44336',
@@ -1376,18 +1398,18 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 20,
     borderWidth: 3,
-    borderColor: '#4CAF50',
+    borderColor: colors.green.success,
   },
   previewTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 10,
     textAlign: 'center',
   },
   previewGestureContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 15,
     padding: 10,
     marginBottom: 10,
@@ -1420,13 +1442,13 @@ const styles = StyleSheet.create({
   hintTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 10,
     textAlign: 'center',
   },
   hintGestureContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     borderRadius: 15,
     padding: 10,
     marginBottom: 10,
@@ -1457,14 +1479,14 @@ const styles = StyleSheet.create({
   },
   choiceButton: {
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     padding: 10, // Reduced from 12
     borderRadius: 12,
     borderWidth: 3,
     borderColor: '#4A90C1',
   },
   selectedChoice: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.gold.medium,
     borderColor: '#FFA500',
   },
   choiceImage: {
@@ -1494,7 +1516,7 @@ const styles = StyleSheet.create({
   bottomButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   // Instructions styles
@@ -1507,7 +1529,7 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
@@ -1526,7 +1548,7 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
@@ -1539,7 +1561,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFD700',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
@@ -1547,13 +1569,13 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     flex: 1,
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.green.success,
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
@@ -1565,7 +1587,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
@@ -1588,7 +1610,7 @@ const styles = StyleSheet.create({
   debugTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
@@ -1604,7 +1626,7 @@ const styles = StyleSheet.create({
   },
   debugLabel: {
     fontSize: 12,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 10,
   },
@@ -1615,7 +1637,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#00ff00',
+    borderColor: colors.green.neon,
     borderRadius: 20,
     backgroundColor: 'rgba(0, 255, 0, 0.2)',
   },
@@ -1626,7 +1648,7 @@ const styles = StyleSheet.create({
   },
   debugText: {
     fontSize: 8,
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
     position: 'absolute',
     bottom: -12,
@@ -1641,7 +1663,7 @@ const styles = StyleSheet.create({
   debugToggleText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   // Timer line styles

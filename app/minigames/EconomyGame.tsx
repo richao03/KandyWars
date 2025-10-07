@@ -20,6 +20,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 /** =========================
  *  Types
@@ -1216,7 +1218,7 @@ const styles = StyleSheet.create({
   steps: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#90caf9',
+    color: colors.blue.lightBg,
     fontFamily: 'PixeloidMono',
   },
 
@@ -1226,10 +1228,10 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#1e3a8a',
     borderWidth: 3,
-    borderColor: '#2196f3',
+    borderColor: colors.blue.primary,
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: '#2196f3',
+    shadowColor: colors.blue.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1241,7 +1243,7 @@ const styles = StyleSheet.create({
   },
   hudLabel: {
     fontSize: 12,
-    color: '#90caf9',
+    color: colors.blue.lightBg,
     fontFamily: 'PixeloidMono',
     marginBottom: 4,
     fontWeight: '600',
@@ -1249,9 +1251,9 @@ const styles = StyleSheet.create({
   hudValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#2196f3',
+    textShadowColor: colors.blue.primary,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
@@ -1260,7 +1262,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196f3',
+    color: colors.blue.primary,
     fontFamily: 'PixeloidMono',
     marginBottom: 12,
     textShadowColor: '#1976d2',
@@ -1288,7 +1290,7 @@ const styles = StyleSheet.create({
   },
   slotPlaceholder: {
     textAlign: 'center',
-    color: '#90caf9',
+    color: colors.blue.lightBg,
     fontFamily: 'PixeloidMono',
     fontSize: 12,
     fontStyle: 'italic',
@@ -1296,7 +1298,7 @@ const styles = StyleSheet.create({
   },
   slotLabel: {
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontSize: 13,
@@ -1306,7 +1308,7 @@ const styles = StyleSheet.create({
   },
   slotHint: {
     fontSize: 8,
-    color: '#90caf9',
+    color: colors.blue.lightBg,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 2,
@@ -1333,7 +1335,7 @@ const styles = StyleSheet.create({
   },
   tileLabel: {
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontSize: 13,
@@ -1343,7 +1345,7 @@ const styles = StyleSheet.create({
   },
   tileHint: {
     fontSize: 8,
-    color: '#90caf9',
+    color: colors.blue.lightBg,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 2,
@@ -1366,7 +1368,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   emptyPaletteSubtext: {
-    color: '#90caf9',
+    color: colors.blue.lightBg,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontSize: 12,
@@ -1392,7 +1394,7 @@ const styles = StyleSheet.create({
   },
   footerPrimaryText: {
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textShadowColor: '#1976d2',
     textShadowOffset: { width: 1, height: 1 },
@@ -1400,13 +1402,13 @@ const styles = StyleSheet.create({
   },
   footerSecondaryText: {
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   footerBackText: {
     fontWeight: '600',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
@@ -1429,7 +1431,7 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2196f3',
+    color: colors.blue.primary,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
@@ -1444,7 +1446,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#42a5f5',
     marginBottom: 20,
-    shadowColor: '#2196f3',
+    shadowColor: colors.blue.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -1456,7 +1458,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
-    textShadowColor: '#2196f3',
+    textShadowColor: colors.blue.primary,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
@@ -1476,13 +1478,13 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     flex: 1,
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#2196f3',
+    backgroundColor: colors.blue.primary,
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
@@ -1490,7 +1492,7 @@ const styles = StyleSheet.create({
     borderColor: '#1976d2',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#2196f3',
+    shadowColor: colors.blue.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -1498,7 +1500,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textShadowColor: '#1976d2',
     textShadowOffset: { width: 1, height: 1 },

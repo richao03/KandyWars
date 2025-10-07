@@ -5,10 +5,13 @@ import {
   Image,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import { loadPlayerId } from '../../src/utils/persistence';
+import colors from '../../src/constants/colors';
+
 
 // Module-level flags to track session state
 let firebaseSessionCompleted = false;
@@ -159,8 +162,25 @@ export default function StudioTitleScreen({
     }
   }, [firebaseComplete, minimumTimeComplete, onComplete]);
 
+  // Handle tap to skip
+  const handleTapToSkip = () => {
+    if (studioSessionCompleted) {
+      return;
+    }
+
+    console.log('👆 DEBUG: Screen tapped - skipping to game title screen');
+    // Immediately set both conditions to true
+    setFirebaseComplete(true);
+    setMinimumTimeComplete(true);
+    firebaseSessionCompleted = true; // Also set module flag
+  };
+
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={handleTapToSkip}
+      activeOpacity={1}
+    >
       <Animated.View style={[styles.studioContainer, { opacity: fadeAnim }]}>
         <Image
           source={require('../../assets/images/studioLogo.png')}
@@ -169,14 +189,14 @@ export default function StudioTitleScreen({
         />
         <Text style={styles.studioName}>Ricksonian Institute</Text>
       </Animated.View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.black,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -193,7 +213,7 @@ const styles = StyleSheet.create({
   studioName: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     marginLeft: -45,
     fontFamily: 'La Machine Company 2',
     textShadowColor: 'rgba(255, 255, 255, 0.3)',

@@ -10,6 +10,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { batch } from 'react-redux';
 import {
   FlatList,
   ImageBackground,
@@ -57,6 +58,8 @@ import StudySubjectSelector from '../components/StudySubjectSelector';
 import TextWithEmojis from '../components/TextWithEmojis';
 import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';
+import colors from '../../src/constants/colors';
+
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -95,6 +98,15 @@ function Market(props) {
   // Check if this tab is currently focused to prevent unnecessary renders
   const isFocused = useIsFocused();
 
+  // Debug: Log mount/unmount
+  const instanceIdRef = useRef(Math.random().toString(36).substring(7));
+  useEffect(() => {
+    console.log(`🟢 Market component MOUNTED - Instance: ${instanceIdRef.current}`);
+    return () => {
+      console.log(`🔴 Market component UNMOUNTED - Instance: ${instanceIdRef.current}`);
+    };
+  }, []);
+
   const {
     rng,
     seed,
@@ -126,10 +138,22 @@ function Market(props) {
   // Handle returning from lunch minigame separately
   // When user returns from minigame (hasPlayedLunchMinigame = true), hide lunch view
   useEffect(() => {
-    if (hasPlayedLunchMinigame && showLunchMinigames) {
+    if (hasPlayedLunchMinigame) {
+      console.log('🎮 Lunch minigame completed, ensuring lunch view is hidden');
       setShowLunchMinigames(false);
     }
-  }, [hasPlayedLunchMinigame, showLunchMinigames]);
+  }, [hasPlayedLunchMinigame]);
+
+  // Also hide lunch minigames when screen is focused and minigame was already played
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🎮 Market focused - hasPlayedLunchMinigame:', hasPlayedLunchMinigame, 'showLunchMinigames:', showLunchMinigames);
+      if (hasPlayedLunchMinigame) {
+        console.log('🎮 Returning to market after lunch minigame, hiding lunch view');
+        setShowLunchMinigames(false);
+      }
+    }, [hasPlayedLunchMinigame, showLunchMinigames])
+  );
   const {
     inventory,
     addToInventory,
@@ -150,6 +174,10 @@ function Market(props) {
     hasPlayedLunchMinigame,
     markLunchMinigamePlayed,
   } = useGame();
+
+  // Log every render to see how many instances are active
+  console.log(`📊 Market RENDER - Instance: ${instanceIdRef.current}, Period: ${period}, PeriodCount: ${periodCount}, Day: ${day}`);
+
   const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
   const {
@@ -195,13 +223,15 @@ function Market(props) {
     // Skip entirely if not day 1
     if (day !== 1) return;
 
-    console.log('🎓 Tutorial check:', {
-      day,
-      periodCount,
-      hasCompletedMarketTutorial,
-      shouldShowTutorial,
-      tutorialStarted: tutorialStarted.current,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎓 Tutorial check:', {
+        day,
+        periodCount,
+        hasCompletedMarketTutorial,
+        shouldShowTutorial,
+        tutorialStarted: tutorialStarted.current,
+      });
+    }
 
     if (shouldShowTutorial && !tutorialStarted.current) {
       console.log('🎓 Auto-starting market tutorial');
@@ -542,13 +572,16 @@ function Market(props) {
   const candyPrices = useMemo(() => gameData.candyPrices, [gameData.candyPrices]);
 
   const calculatedCandies = useMemo(() => {
-    console.log('🔄 Recalculating candies | period:', periodCount, 'location:', currentLocation, 'jokers:', jokerCount, 'activeEffects:', activeEffects.length);
+    const startTime = performance.now();
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Recalculating candies | period:', periodCount, 'location:', currentLocation, 'jokers:', jokerCount, 'activeEffects:', activeEffects.length, 'inventory items:', inventory.length);
+    }
     // No need to check isFocused anymore - Stack navigation properly unmounts
     const currentInventoryLimit = inventoryLimit;
     // Calculate once for all candies instead of per-candy
     const consecutiveSalesCount = consecutivePeriodSales(periodCount);
 
-    return baseCandies.map((candy) => {
+    const result = baseCandies.map((candy) => {
         // Hybrid price lookup (Option 3):
         // 1. Check if there's a pre-calculated event price for this period/location/candy
         // 2. Fall back to base price from gameData
@@ -601,6 +634,11 @@ function Market(props) {
           priceBreakdown,
         };
       });
+    const endTime = performance.now();
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`⏱️ Candy calculation took ${(endTime - startTime).toFixed(2)}ms`);
+    }
+    return result;
   }, [
     periodCount,
     currentLocation,
@@ -1315,6 +1353,7 @@ function Market(props) {
                 isFocused={isFocused}
                 isLunchPeriod={isLunchPeriod}
                 showLunchMinigames={showLunchMinigames}
+                hasPlayedLunchMinigame={hasPlayedLunchMinigame}
                 onCandyPress={openModal}
                 onLunchBack={handleLunchBack}
               />
@@ -1329,8 +1368,7 @@ function Market(props) {
             <CopilotView>
               <View style={styles.buttonContainer}>
                 {isLunchPeriod &&
-                !hasPlayedLunchMinigame &&
-                !showLunchMinigames ? (
+                !hasPlayedLunchMinigame ? (
                   // Lunch period before playing minigame: Show play minigames button and end day
                   <View style={styles.buttonRow}>
                     <PixelBorder
@@ -1377,8 +1415,8 @@ function Market(props) {
                       </TouchableOpacity>
                     </PixelBorder>
                   </View>
-                ) : isLunchPeriod && showLunchMinigames ? (
-                  // In StudySubjectSelector: Show Leave Lunch button and end day
+                ) : isLunchPeriod && !hasPlayedLunchMinigame && showLunchMinigames ? (
+                  // In StudySubjectSelector: Show Leave Lunch button and end day (only if not played yet)
                   <View style={styles.buttonRow}>
                     <PixelBorder
                       borderColor="rgba(250,204,21,1)"
@@ -1658,7 +1696,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
-    shadowColor: '#8b4513',
+    shadowColor: colors.brown.secondary,
     shadowOffset: { width: 2, height: 3 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -1734,7 +1772,7 @@ const styles = StyleSheet.create({
   nextPeriodButtonText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: '#166534',
@@ -1757,7 +1795,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: 'rgba(185,28,28,1)',
-    shadowColor: '#991b1b',
+    shadowColor: colors.red.dark,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -1767,10 +1805,10 @@ const styles = StyleSheet.create({
   endDayButtonText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-    textShadowColor: '#991b1b',
+    textShadowColor: colors.red.dark,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -1792,7 +1830,7 @@ const styles = StyleSheet.create({
   lunchButtonText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: '#b45309',
@@ -1810,5 +1848,5 @@ const styles = StyleSheet.create({
   },
 });
 
-// Export Market directly without wrapper
-export default memo(Market);
+// Export Market directly - the Tabs parent component handles remounting via gameResetSignal key
+export default Market;

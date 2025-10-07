@@ -24,6 +24,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface Position {
   x: number;
@@ -241,8 +243,18 @@ export default function GymGame({ onComplete }: GymGameProps) {
         setCaughtPosition(null);
 
         if (completedLevel > 0) {
-          // Player completed at least one level, award jokers based on completion
-          setGameState('jokerSelection');
+          // Player completed at least one level, show success modal before joker selection
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          const jokerCount = completedLevel;
+          const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+          showModal(
+            'Caught - But Not Out!',
+            `You were caught but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,
+            '🎯',
+            () => {
+              setGameState('jokerSelection');
+            }
+          );
         } else {
           // Player didn't complete any level, show restart option
           showModal(
@@ -586,7 +598,7 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#e74c3c', // Gym red
+    color: colors.red.error, // Gym red
     marginBottom: 20,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
@@ -596,7 +608,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#e74c3c', // Gym red border
+    borderColor: colors.red.error, // Gym red border
     marginBottom: 20,
     width: '90%',
   },
@@ -616,7 +628,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#e74c3c', // Gym red
+    color: colors.red.error, // Gym red
     marginRight: 10,
     fontFamily: 'PixeloidMono',
     lineHeight: 22,
@@ -628,7 +640,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   startButton: {
-    backgroundColor: '#e74c3c', // Gym red
+    backgroundColor: colors.red.error, // Gym red
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 12,
@@ -639,7 +651,7 @@ const styles = StyleSheet.create({
   startButtonText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   backButton: {
@@ -648,7 +660,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 18,
-    color: '#e74c3c', // Gym red
+    color: colors.red.error, // Gym red
     fontFamily: 'PixeloidMono',
   },
   contentContainer: {
@@ -664,7 +676,7 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     borderWidth: 2,
-    borderColor: '#e74c3c', // Gym red border
+    borderColor: colors.red.error, // Gym red border
     borderRadius: 8,
     backgroundColor: '#34495e', // Dark gym floor
     alignSelf: 'stretch',
@@ -695,7 +707,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   patternCell: {
-    backgroundColor: '#ffd700',
+    backgroundColor: colors.gold.medium,
     width: 26,
     height: 26,
   },
@@ -733,7 +745,7 @@ const styles = StyleSheet.create({
   },
   swipeInfo: {
     marginTop: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#4169e1',
@@ -749,7 +761,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#34495e', // Dark gym background
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#e74c3c', // Gym red border
+    borderColor: colors.red.error, // Gym red border
     padding: 10,
     marginHorizontal: 20,
   },
@@ -784,7 +796,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }],
   },
   patternItemLost: {
-    borderColor: '#e74c3c', // Gym red for loss
+    borderColor: colors.red.error, // Gym red for loss
     borderWidth: 4,
     backgroundColor: '#c0392b', // Darker red background
     transform: [{ scale: 1.2 }],
@@ -804,7 +816,7 @@ const styles = StyleSheet.create({
   leaveButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {

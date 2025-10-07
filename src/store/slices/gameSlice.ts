@@ -221,11 +221,11 @@ export const {
 export default gameSlice.reducer;
 
 // Selectors
-export const selectDay = (state: { game: GameState }) =>
-  Math.max(1, Math.floor(state.game.periodCount / 8) + 1);
+export const selectDay = (state: any) =>
+  Math.max(1, Math.floor(state.game?.periodCount / 8) + 1);
 
-export const selectPeriod = (state: { game: GameState }) =>
-  Math.max(1, (state.game.periodCount % 8) + 1);
+export const selectPeriod = (state: any) =>
+  Math.max(1, (state.game?.periodCount % 8) + 1);
 
-export const selectGameResetSignal = (state: { game: GameState }) =>
-  state.game.gameResetSignal;
+export const selectGameResetSignal = (state: any) =>
+  state.game?.gameResetSignal;

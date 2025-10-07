@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 interface ModifiedPrice {
   candyType: string;
@@ -50,6 +51,9 @@ const priceDoublingSlice = createSlice({
       state.modifiedPrices = [];
     },
     resetPriceDoubling: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
   },
 });
 

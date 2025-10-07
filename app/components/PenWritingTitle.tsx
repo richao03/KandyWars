@@ -1,5 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import colors from '../../src/constants/colors';
+
 
 interface PenWritingTitleProps {
   onComplete?: () => void;
@@ -30,7 +32,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#8B4513',
+    color: colors.brown.secondary,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(255, 255, 255, 0.8)',

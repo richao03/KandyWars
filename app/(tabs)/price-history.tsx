@@ -6,6 +6,8 @@ import { useGame } from '../../src/hooks/useGame';
 import { useSeed } from '../../src/hooks/useSeed';
 import CandyPriceChart from '../components/CandyPriceChart';
 import GameHUD from '../components/GameHUD';
+import colors from '../../src/constants/colors';
+
 
 // Memoized chart component to prevent unnecessary re-renders
 const MemoizedCandyPriceChart = React.memo(CandyPriceChart);
@@ -86,7 +88,7 @@ export default function PriceHistory() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a', // Warm paper background
+    backgroundColor: colors.darkGray1, // Warm paper background
   },
   scrollView: {
     flex: 1,
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
   noDataTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 16,

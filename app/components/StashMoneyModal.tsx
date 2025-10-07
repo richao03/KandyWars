@@ -10,6 +10,8 @@ import {
 import { useWallet } from '../../src/hooks/useWallet';
 import FastModal from './FastModal';
 import TextWithEmojis from './TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface StashMoneyModalProps {
   visible: boolean;
@@ -147,15 +149,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
-    color: '#333',
+    color: colors.gray.dark,
   },
   storyContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.offWhite,
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
     borderLeftWidth: 4,
-    borderLeftColor: '#28a745',
+    borderLeftColor: colors.green.success,
   },
   flavorText: {
     fontSize: 15,
@@ -167,7 +169,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   confirmButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: colors.green.success,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -185,20 +187,20 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.gray.medium,
   },
   inputContainer: {
     marginBottom: 20,
   },
   balanceText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.gray.dark,
     marginBottom: 10,
     textAlign: 'center',
   },
   inputLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray.medium,
     marginBottom: 8,
   },
   input: {
@@ -207,9 +209,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.offWhite,
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.gray.border,
   },
 });

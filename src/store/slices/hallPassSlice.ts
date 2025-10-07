@@ -1,4 +1,5 @@
 import { PayloadAction, createSelector, createSlice } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 export interface HallPassEffect {
   type:
@@ -272,6 +273,9 @@ const hallPassSlice = createSlice({
       state.newlyUnlockedPassIds = [];
     },
     resetHallPasses: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
   },
 });
 

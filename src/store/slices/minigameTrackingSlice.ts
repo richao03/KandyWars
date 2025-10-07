@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 // List of all available minigames in the game
 export const ALL_MINIGAMES = [
@@ -52,6 +53,9 @@ const minigameTrackingSlice = createSlice({
       state.minigameCompletions[minigame] = (state.minigameCompletions[minigame] || 0) + 1;
     },
     resetMinigameTracking: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
   },
 });
 

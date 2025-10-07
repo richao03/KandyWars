@@ -14,6 +14,8 @@ import {
 import { useScoreboard } from '../src/hooks/useScoreboard';
 import { scoreboardService } from '../src/services/firebase';
 import TextWithEmojis from './components/TextWithEmojis';
+import colors from '../src/constants/colors';
+
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -319,7 +321,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
   },
   header: {
     flexDirection: 'row',
@@ -328,7 +330,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     borderBottomWidth: 1,
     borderBottomColor: '#3a3a3a',
   },
@@ -336,14 +338,14 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   backButtonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     textAlign: 'center',
   },
   refreshButton: {
@@ -354,7 +356,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     borderBottomWidth: 1,
     borderBottomColor: '#3a3a3a',
   },
@@ -366,7 +368,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#3b82f6',
+    borderBottomColor: colors.blue.primary,
   },
   tabText: {
     fontSize: 16,
@@ -374,14 +376,14 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   activeTabText: {
-    color: '#3b82f6',
+    color: colors.blue.primary,
   },
   tabContent: {
     flex: 1,
   },
   infoSection: {
     padding: 20,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     margin: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -389,7 +391,7 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#22c55e',
+    color: colors.green.success,
     marginBottom: 8,
   },
   infoSubtitle: {
@@ -399,13 +401,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rankBadge: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: colors.blue.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   rankText: {
-    color: '#ffffff',
+    color: colors.white,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -456,7 +458,7 @@ const styles = StyleSheet.create({
   },
   leaderboardItem: {
     flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     marginBottom: 12,
     borderRadius: 12,
     padding: 16,
@@ -481,7 +483,7 @@ const styles = StyleSheet.create({
   playerName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: 4,
   },
   scoreDetails: {
@@ -492,7 +494,7 @@ const styles = StyleSheet.create({
   finalBalance: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#22c55e',
+    color: colors.green.success,
     marginRight: 12,
   },
   difficultyBadge: {
@@ -503,7 +505,7 @@ const styles = StyleSheet.create({
   difficultyText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
   },
   gameStats: {
     fontSize: 12,
@@ -511,7 +513,7 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     padding: 16,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     margin: 16,
     borderRadius: 12,
   },
@@ -525,7 +527,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#3b82f6',
+    color: colors.blue.primary,
   },
   statLabel: {
     fontSize: 12,
@@ -537,7 +539,7 @@ const styles = StyleSheet.create({
   },
   analyticsItem: {
     flexDirection: 'row',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     marginBottom: 8,
     borderRadius: 8,
     padding: 12,
@@ -553,7 +555,7 @@ const styles = StyleSheet.create({
   analyticsName: {
     flex: 1,
     fontSize: 16,
-    color: '#ffffff',
+    color: colors.white,
   },
   analyticsCount: {
     fontSize: 14,

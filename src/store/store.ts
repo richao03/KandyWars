@@ -82,9 +82,11 @@ export const persistor = persistStore(store);
 
 // Manual save function for critical game state changes
 export const forceSave = () => {
+  const startTime = performance.now();
   try {
     persistor.flush();
-    console.log('💾 Manual save triggered successfully');
+    const endTime = performance.now();
+    console.log(`💾 Manual save triggered successfully - took ${(endTime - startTime).toFixed(2)}ms`);
   } catch (error) {
     console.error('❌ Manual save failed:', error);
   }

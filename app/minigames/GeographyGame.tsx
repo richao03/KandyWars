@@ -17,6 +17,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface GeographyGameProps {
   onComplete: () => void;
@@ -305,10 +307,13 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
     if (completedLevel > 0) {
+      const jokerCount = completedLevel;
+      const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+
       showModal(
-        "Time's Up!",
-        `You completed ${completedLevel} level${completedLevel !== 1 ? 's' : ''}! You've earned ${completedLevel} joker${completedLevel !== 1 ? 's' : ''}!`,
-        '⚠️',
+        'Nice Try!',
+        `You ran out of time but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,
+        '🧩',
         () => {
           setGameState('jokerSelection');
         }
@@ -607,7 +612,7 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
@@ -647,7 +652,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
@@ -707,7 +712,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },

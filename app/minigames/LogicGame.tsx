@@ -18,6 +18,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface Attempt {
   candies: string[];
@@ -226,7 +228,17 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       // Game over - too many attempts
       if (completedLevel > 0) {
         // Player completed at least one level, award jokers based on completion
-        setGameState('jokerSelection');
+        const jokerCount = completedLevel;
+        const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+
+        showModal(
+          'Good Try!',
+          `You ran out of attempts but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,
+          '🧠',
+          () => {
+            setGameState('jokerSelection');
+          }
+        );
       } else {
         // Player didn't complete any level - game over, no reward
         showModal(
@@ -631,15 +643,15 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2c2c2c',
+    backgroundColor: colors.darkGray2,
   },
   headerContainer: {
-    backgroundColor: '#2c2c2c',
+    backgroundColor: colors.darkGray2,
     paddingBottom: 0,
   },
   gameContent: {
     flex: 1,
-    backgroundColor: '#2c2c2c',
+    backgroundColor: colors.darkGray2,
   },
   contentScrollView: {
     flex: 1,
@@ -691,13 +703,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#404040',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     padding: 12,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 12,
     textAlign: 'center',
@@ -718,9 +730,9 @@ const styles = StyleSheet.create({
   guessSlot: {
     width: 50,
     height: 50,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -736,14 +748,14 @@ const styles = StyleSheet.create({
   },
   guessSlotText: {
     fontSize: 25,
-    color: '#fff',
+    color: colors.white,
   },
   candyPalette: {
     marginBottom: 12,
   },
   paletteLabel: {
     fontSize: 14,
-    color: '#ccc',
+    color: colors.gray.border,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 12,
@@ -765,7 +777,7 @@ const styles = StyleSheet.create({
     height: 45,
     backgroundColor: '#404040',
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -793,19 +805,19 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     backgroundColor: '#555',
-    borderColor: '#333',
+    borderColor: colors.gray.dark,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   attemptsContainer: {
     backgroundColor: '#404040',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     padding: 12,
     marginBottom: 20,
     height: 200, // Prevent growing too tall
@@ -816,13 +828,13 @@ const styles = StyleSheet.create({
   attemptsTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 4,
   },
   noAttempts: {
     fontSize: 14,
-    color: '#ccc',
+    color: colors.gray.border,
     fontFamily: 'PixeloidMono',
     fontStyle: 'italic',
     textAlign: 'center',
@@ -836,7 +848,7 @@ const styles = StyleSheet.create({
   attemptNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#ccc',
+    color: colors.gray.border,
     fontFamily: 'PixeloidMono',
     width: 20,
   },
@@ -872,14 +884,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#404040',
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     padding: 20,
     marginBottom: 20,
   },
   legendTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     marginBottom: 12,
   },
@@ -897,7 +909,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 14,
-    color: '#ccc',
+    color: colors.gray.border,
     fontFamily: 'PixeloidMono',
   },
   bottomButtons: {
@@ -905,7 +917,7 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#2c2c2c',
+    backgroundColor: colors.darkGray2,
   },
   backButton: {
     flex: 1,
@@ -919,7 +931,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   // Instructions Styles (Matching Math game exactly)
@@ -927,12 +939,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#2c2c2c',
+    backgroundColor: colors.darkGray2,
   },
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
@@ -945,7 +957,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     marginBottom: 20,
     shadowColor: '#ff6ec7',
     shadowOffset: { width: 0, height: 4 },
@@ -976,7 +988,7 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     flex: 1,
     lineHeight: 22,
@@ -998,7 +1010,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
@@ -1013,7 +1025,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: colors.gray.medium,
     alignItems: 'center',
   },
   instructionsButtonInner: {
@@ -1023,7 +1035,7 @@ const styles = StyleSheet.create({
   instructionsButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
 });

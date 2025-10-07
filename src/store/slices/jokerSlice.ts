@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { JokerService } from '../../utils/jokerService';
+import { resetGame } from './gameSlice';
 
 interface Joker {
   id: string;
@@ -160,6 +161,9 @@ const jokerSlice = createSlice({
       state.activeEffects = [];
     },
     resetJokers: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
   },
 });
 

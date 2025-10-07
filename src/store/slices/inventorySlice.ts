@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 interface CandyType {
   id: string;
@@ -56,6 +57,9 @@ const inventorySlice = createSlice({
       console.log(`📦 Max inventory increased by ${action.payload} to ${state.maxInventory}`);
     },
     resetInventory: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
   },
 });
 

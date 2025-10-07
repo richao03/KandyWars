@@ -5,6 +5,8 @@ import { useJokers } from '../../src/hooks/useJokers';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 export type Location =
   | 'gym'
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
-    shadowColor: '#8b4513',
+    shadowColor: colors.brown.secondary,
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -184,7 +186,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 20,
-    color: '#6b4423', // Dark brown
+    color: colors.brown.primary, // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
     fontFamily: 'PixeloidMono',
   },
@@ -219,7 +221,7 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: colors.gray.medium,
     fontFamily: 'PixeloidMono',
   },
   highlightedLocation: {
@@ -232,9 +234,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
-    color: '#FFD700',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#000',
+    textShadowColor: colors.black,
     textShadowOffset: { width: 0.5, height: 0.5 },
     textShadowRadius: 1,
   },
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#FF0000',
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#000',
+    textShadowColor: colors.black,
     textShadowOffset: { width: 0.5, height: 0.5 },
     textShadowRadius: 1,
   },

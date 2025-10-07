@@ -14,7 +14,8 @@ export default function MathGameScreen() {
   const handleGameComplete = () => {
     console.log('Math game completed! Context:', minigameContext);
 
-    // Mark study as completed based on context
+    // Mark study as completed based on context BEFORE navigating
+    // This ensures the state is updated before Market re-renders
     if (minigameContext === 'after-school') {
       markStudiedTonight();
       console.log('After-school study session finished.');
@@ -23,9 +24,14 @@ export default function MathGameScreen() {
       console.log('Lunch minigame finished.');
     }
 
-    // Clear context and navigate back
+    // Clear context
     setMinigameContext(null);
-    navigateBack();
+
+    // Use setTimeout to ensure state updates are flushed before navigation
+    // Increased delay to give Redux time to propagate the state change
+    setTimeout(() => {
+      navigateBack();
+    }, 100);
   };
 
   const handleBack = () => {

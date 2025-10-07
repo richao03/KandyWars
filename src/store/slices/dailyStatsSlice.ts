@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 interface BestSale {
   candyName: string;
@@ -122,6 +123,9 @@ const dailyStatsSlice = createSlice({
       };
     },
     resetDailyStats: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
   },
 });
 

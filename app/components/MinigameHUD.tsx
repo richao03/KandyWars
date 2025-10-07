@@ -140,7 +140,7 @@ export default function MinigameHUD({
             {centerInfo && (
               <View style={{ width: '30%' }}>
                 <TextWithEmojis
-                  imageSize={30}
+                  imageSize={18}
                   style={[
                     styles.infoText,
                     { color: colors.info, fontSize: 14 },

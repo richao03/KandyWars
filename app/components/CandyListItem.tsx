@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PixelBorder from './PixelBorder';
 import type { Candy } from '../../src/types/candy';
+import colors from '../../src/constants/colors';
+
 
 export type CandyForMarket = Candy & {
   cost: number;
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: '700',
     fontSize: 19,
-    color: '#6b4423', // Dark brown crayon
+    color: colors.brown.primary, // Dark brown crayon
     textShadow: '0.5px 0.5px 0px #d4a574',
     fontFamily: 'PixeloidMono',
   },
@@ -90,12 +92,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#22c55e',
+    borderColor: colors.green.success,
   },
   ownedText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   price: {

@@ -2,6 +2,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 import GameHUD from '../components/GameHUD';
 import { useGame } from '../../src/hooks/useGame';
+import colors from '../../src/constants/colors';
+
 
 export default function Upgrades() {
   const { isAfterSchool, day } = useGame();
@@ -33,7 +35,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fefaf5',
   },
   containerAfterSchool: {
-    backgroundColor: '#2a1845',
+    backgroundColor: colors.purple.darkBg,
   },
   content: {
     flex: 1,
@@ -43,11 +45,11 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
   },
   textAfterSchool: {
-    color: '#f7e98e',
+    color: colors.gold.light,
     textShadowColor: 'rgba(247,233,142,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,

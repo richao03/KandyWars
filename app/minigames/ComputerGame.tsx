@@ -12,6 +12,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface MemoryCard {
   id: string;
@@ -98,12 +100,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     setShowingAllCards(true);
     setIsGameActive(false); // Don't allow clicks yet
 
-    // After 2.5 seconds, flip all cards back and activate game
+    // Peek time increases with level: 3s, 4s, 5s
+    const peekTime = 2000 + levelNum * 1000; // Level 1: 3s, Level 2: 4s, Level 3: 5s
     setTimeout(() => {
       setCards((prev) => prev.map((c) => ({ ...c, isFlipped: false })));
       setShowingAllCards(false);
       setIsGameActive(true);
-    }, 2500);
+    }, peekTime);
   };
 
   useEffect(() => {
@@ -144,7 +147,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       const secondCard = cards.find((c) => c.id === secondCardId);
 
       if (firstCard && secondCard && firstCard.emoji === secondCard.emoji) {
-        // Match found! Allow new clicks immediately
+        // Match found! Don't increment turns for correct guesses
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setFlippedCards([]);
 
@@ -160,9 +163,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           // Win condition check is now handled by useEffect
         }, 1000);
       } else {
-        // No match, clear flipped cards immediately but flip back after delay
+        // No match - increment turns only for wrong guesses
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setFlippedCards([]); // Allow new clicks immediately
+
+        const newTurns = turns + 1;
+        setTurns(newTurns);
+
         setTimeout(() => {
           setCards((prev) =>
             prev.map((c) =>
@@ -171,32 +178,45 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                 : c
             )
           );
-        }, 400); // Set back to 400ms but allow immediate new clicks
-      }
+        }, 400);
 
-      setTurns((prev) => prev + 1);
+        // Check if out of turns (only for wrong guesses)
+        if (newTurns >= maxTurns) {
+          setTimeout(() => {
+            setIsGameActive(false);
 
-      // Check if out of turns
-      if (turns + 1 >= maxTurns) {
-        setTimeout(() => {
-          setIsGameActive(false);
-
-          if (completedLevel > 0) {
-            // Player completed at least one level, award jokers based on completion
-            setGameState('jokerSelection');
-          } else {
-            // Player didn't complete any level, show restart option
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            showModal(
-              'System Breach Failed!',
-              'You ran out of turns! Try again?',
-              '💥',
-              () => {
-                setGameState('instructions');
-              }
-            );
-          }
-        }, 2000);
+            if (completedLevel > 0) {
+              // Player completed at least one level, show success modal before joker selection
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success
+              );
+              const jokerCount = completedLevel;
+              const jokerText =
+                jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+              showModal(
+                'Breach Partial Success!',
+                `You ran out of errors but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,
+                '🎯',
+                () => {
+                  setGameState('jokerSelection');
+                }
+              );
+            } else {
+              // Player didn't complete any level, show restart option
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Warning
+              );
+              showModal(
+                'System Breach Failed!',
+                'You ran out of turns! Try again?',
+                '💥',
+                () => {
+                  setGameState('instructions');
+                }
+              );
+            }
+          }, 2000);
+        }
       }
     }
   };
@@ -569,19 +589,19 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#00ff41',
+    borderColor: colors.green.neon,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#00d4ff',
+    color: colors.blue.cyan,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 16,
@@ -593,7 +613,7 @@ const styles = StyleSheet.create({
   level: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
   },
   turns: {
@@ -660,10 +680,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a2e',
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#00d4ff',
+    borderColor: colors.blue.cyan,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00d4ff',
+    shadowColor: colors.blue.cyan,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
@@ -671,18 +691,18 @@ const styles = StyleSheet.create({
   },
   cardBackText: {
     fontSize: 24,
-    color: '#00d4ff',
+    color: colors.blue.cyan,
   },
   cardFront: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#16213e',
+    backgroundColor: colors.blue.darkBg,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#00ff41',
+    borderColor: colors.green.neon,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00ff41',
+    shadowColor: colors.green.neon,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.8,
     shadowRadius: 6,
@@ -690,8 +710,8 @@ const styles = StyleSheet.create({
   },
   cardMatched: {
     backgroundColor: '#0d1b2a',
-    borderColor: '#00ff41',
-    shadowColor: '#00ff41',
+    borderColor: colors.green.neon,
+    shadowColor: colors.green.neon,
     shadowOpacity: 1.0,
   },
   cardEmoji: {
@@ -721,30 +741,30 @@ const styles = StyleSheet.create({
   jokerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: '#00ff41',
+    textShadowColor: colors.green.neon,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   jokerSubtitle: {
     fontSize: 16,
-    color: '#00d4ff',
+    color: colors.blue.cyan,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 24,
   },
   generateButton: {
-    backgroundColor: '#16213e',
+    backgroundColor: colors.blue.darkBg,
     padding: 16,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: '#00d4ff',
+    borderColor: colors.blue.cyan,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#00d4ff',
+    shadowColor: colors.blue.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
@@ -753,17 +773,17 @@ const styles = StyleSheet.create({
   generateButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#00d4ff',
+    color: colors.blue.cyan,
     fontFamily: 'PixeloidMono',
   },
   jokerCard: {
-    backgroundColor: '#16213e',
+    backgroundColor: colors.blue.darkBg,
     padding: 16,
     borderRadius: 16,
     borderWidth: 3,
-    borderColor: '#00d4ff',
+    borderColor: colors.blue.cyan,
     marginBottom: 12,
-    shadowColor: '#00d4ff',
+    shadowColor: colors.blue.cyan,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.8,
     shadowRadius: 8,
@@ -772,7 +792,7 @@ const styles = StyleSheet.create({
   jokerName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     marginBottom: 4,
   },
@@ -807,22 +827,22 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#00ff41',
+    textShadowColor: colors.green.neon,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   instructionsCard: {
-    backgroundColor: '#16213e',
+    backgroundColor: colors.blue.darkBg,
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#00d4ff',
+    borderColor: colors.blue.cyan,
     marginBottom: 20,
-    shadowColor: '#00d4ff',
+    shadowColor: colors.blue.cyan,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -830,7 +850,7 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
@@ -843,7 +863,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
@@ -857,15 +877,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#16213e',
+    backgroundColor: colors.blue.darkBg,
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#00ff41',
+    borderColor: colors.green.neon,
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#00ff41',
+    shadowColor: colors.green.neon,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.8,
     shadowRadius: 8,
@@ -873,7 +893,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
@@ -884,11 +904,11 @@ const styles = StyleSheet.create({
   },
   instructionsButton: {
     flex: 1,
-    backgroundColor: '#16213e',
+    backgroundColor: colors.blue.darkBg,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#00d4ff',
+    borderColor: colors.blue.cyan,
     alignItems: 'center',
   },
   instructionsButtonInner: {
@@ -898,7 +918,7 @@ const styles = StyleSheet.create({
   instructionsButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#00d4ff',
+    color: colors.blue.cyan,
     fontFamily: 'PixeloidMono',
   },
 });

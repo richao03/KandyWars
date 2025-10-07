@@ -18,6 +18,8 @@ import ConfirmationModal from './components/ConfirmationModal';
 import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
+import colors from '../src/constants/colors';
+
 
 interface PiggyBankPageProps {
   onBack?: () => void;
@@ -331,7 +333,7 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2a1845',
+    backgroundColor: colors.purple.darkBg,
   },
   backgroundImage: {
     flex: 1,
@@ -351,14 +353,14 @@ const styles = StyleSheet.create({
   },
   piggyBankLabel: {
     fontSize: 16,
-    color: '#b8a9c9',
+    color: colors.purple.light,
     fontFamily: 'PixeloidMono',
     marginBottom: 5,
   },
   piggyBankAmount: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#f7e98e',
+    color: colors.gold.light,
     fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(247, 233, 142, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
@@ -371,18 +373,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#b8a9c9',
+    borderColor: colors.purple.light,
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#b8a9c9',
+    color: colors.purple.light,
     fontFamily: 'PixeloidMono',
     marginBottom: 5,
   },
   balanceAmount: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   tabContainer: {
@@ -404,11 +406,11 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#b8a9c9',
+    color: colors.purple.light,
     fontFamily: 'PixeloidMono',
   },
   tabTextActive: {
-    color: '#f7e98e',
+    color: colors.gold.light,
   },
   amountSection: {
     borderRadius: 15,
@@ -417,7 +419,7 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 16,
-    color: '#f7e98e',
+    color: colors.gold.light,
     fontFamily: 'PixeloidMono',
     marginBottom: 10,
     textAlign: 'center',
@@ -435,7 +437,7 @@ const styles = StyleSheet.create({
   },
   maxAmount: {
     fontSize: 14,
-    color: '#b8a9c9',
+    color: colors.purple.light,
     fontFamily: 'PixeloidMono',
   },
   slider: {
@@ -454,7 +456,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -469,21 +471,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
     elevation: 4,
   },
   actionButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
   },
   infoText: {
     fontSize: 14,
-    color: '#b8a9c9',
+    color: colors.purple.light,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -496,7 +498,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#f7e98e',
+    color: colors.gold.light,
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',

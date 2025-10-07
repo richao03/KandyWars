@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { View } from 'react-native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import StudioTitleScreen from './components/StudioTitleScreen';
 import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
 import { useGame } from '../src/hooks/useGame';
+import colors from '../src/constants/colors';
+
 
 export default function TitleScreenPage() {
   const { lastActiveView, periodCount, isInitialized } = useGame();
   const [refreshKey, setRefreshKey] = useState(0);
   const [showStudioScreen, setShowStudioScreen] = useState(true);
+  const navigation = useNavigation();
 
   // Force component refresh when screen comes into focus
   useFocusEffect(
@@ -24,11 +28,17 @@ export default function TitleScreenPage() {
   const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
     try {
       console.log('📱 TitleScreen: handleNewGame called with difficulty:', difficulty);
-      console.log('📱 TitleScreen: Navigating to market...');
+      console.log('📱 TitleScreen: Resetting navigation stack and navigating to market...');
 
-      // Just replace current screen - the gameResetSignal will handle unmounting old tabs
-      router.replace('/(tabs)/market');
-      console.log('📱 TitleScreen: Navigation command sent');
+      // Reset the entire navigation state to only have (tabs)/market
+      // This ensures all old screen instances are unmounted
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: '(tabs)', params: { screen: 'market' } }],
+        })
+      );
+      console.log('📱 TitleScreen: Navigation stack reset complete');
     } catch (error) {
       console.error('❌ TitleScreen: Error in handleNewGame:', error);
     }
@@ -40,18 +50,24 @@ export default function TitleScreenPage() {
     // If this is a newly created game (difficulty selected but not started)
     if (isInitialized && periodCount === 0) {
       console.log('🎮 Continuing newly created game - going to story screen');
-      router.replace('/story-screen');
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'story-screen' }],
+        })
+      );
       return;
     }
 
     // Navigate to the last active view for games in progress
-    if (lastActiveView === 'after-school') {
-      console.log('🎮 Continuing game in progress - going to after-school');
-      router.replace('/(tabs)/after-school');
-    } else {
-      console.log('🎮 Continuing game in progress - going to market');
-      router.replace('/(tabs)/market');
-    }
+    const targetScreen = lastActiveView === 'after-school' ? 'after-school' : 'market';
+    console.log('🎮 Continuing game in progress - going to', targetScreen);
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: '(tabs)', params: { screen: targetScreen } }],
+      })
+    );
   };
 
   const handleSettings = () => {
@@ -64,7 +80,7 @@ export default function TitleScreenPage() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+    <View style={{ flex: 1, backgroundColor: colors.black }}>
       {/* Always render both screens, control visibility */}
       {showStudioScreen && (
         <StudioTitleScreen

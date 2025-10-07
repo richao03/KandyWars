@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useGame } from '../src/hooks/useGame';
 import { useHallPass } from '../src/hooks/useHallPass';
@@ -16,6 +17,8 @@ import { useJokers } from '../src/hooks/useJokers';
 import { useWallet } from '../src/hooks/useWallet';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
+import colors from '../src/constants/colors';
+
 
 export default function GameEndScreen() {
   const { balance, stashedAmount, adoptionFee, difficultyLevel } = useWallet();
@@ -23,6 +26,7 @@ export default function GameEndScreen() {
   const { getTotalStats, getPlaythroughStats, getBestSale, getMostSoldCandy, resetPlaythrough } = useDailyStats();
   const { resetGame } = useGame();
   const { newlyUnlockedPasses, clearNewlyUnlocked } = useHallPass();
+  const navigation = useNavigation();
 
   const totalStats = getTotalStats();
   const playthroughStats = getPlaythroughStats();
@@ -118,9 +122,16 @@ export default function GameEndScreen() {
     resetPlaythrough(); // Clear playthrough stats for next game
     resetGame();
 
-    // Navigate to index which will redirect to title-screen, ensuring tabs are unmounted
-    // Use replace to clear the navigation stack
-    router.replace('/');
+    console.log('🎮 Play Again: Resetting navigation stack to title screen');
+
+    // Reset the entire navigation stack to only have title-screen
+    // This ensures all old screen instances (including all Market instances) are unmounted
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'title-screen' }],
+      })
+    );
   };
 
   return (
@@ -469,7 +480,7 @@ const styles = StyleSheet.create({
   finalScore: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#00FF00',
+    color: colors.green.neon,
     marginBottom: 12,
     fontFamily: 'PixeloidMono',
   },

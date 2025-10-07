@@ -2,6 +2,8 @@ import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import PixelBorder from './PixelBorder';
+import colors from '../../src/constants/colors';
+
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -230,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: colors.gray.dark,
   },
   tickerInfo: {
     flexDirection: 'row',
@@ -246,7 +248,7 @@ const styles = StyleSheet.create({
   tickerSymbol: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     letterSpacing: 1,
   },
@@ -255,7 +257,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ff073a',
     fontFamily: 'PixeloidMono',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 2,
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: colors.gray.dark,
   },
   currentPriceRow: {
     flexDirection: 'row',
@@ -312,7 +314,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     paddingVertical: 8,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     borderRadius: 4,
   },
   statItem: {
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#333333',
+    backgroundColor: colors.gray.dark,
   },
   statLabel: {
     fontSize: 10,
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#cccccc',
+    color: colors.gray.border,
     fontFamily: 'PixeloidMono',
   },
   chartHeader: {
@@ -343,12 +345,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     marginBottom: 8,
   },
   chartTitle: {
     fontSize: 10,
-    color: '#00ff41',
+    color: colors.green.neon,
     fontFamily: 'PixeloidMono',
     letterSpacing: 1,
   },
@@ -357,6 +359,9 @@ const styles = StyleSheet.create({
     color: '#888888',
     fontFamily: 'PixeloidMono',
   },
+  chartTerminal: {
+    marginHorizontal: 0,
+  },
   chart: {
     borderWidth: 2,
     alignSelf: 'center',
@@ -364,12 +369,12 @@ const styles = StyleSheet.create({
   chartFooter: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     marginTop: 8,
   },
   volumeText: {
     fontSize: 9,
-    color: '#666666',
+    color: colors.gray.medium,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
@@ -378,10 +383,10 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: colors.gray.dark,
     marginTop: 12,
   },
   placeholderText: {

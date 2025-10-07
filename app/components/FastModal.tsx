@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import colors from '../../src/constants/colors';
+
 import {
   Dimensions,
   StyleSheet,
@@ -183,7 +185,7 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: 'white',
     borderRadius: 25,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,

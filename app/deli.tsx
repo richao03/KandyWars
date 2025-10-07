@@ -20,6 +20,8 @@ import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
 import TransactionModal from './components/TransactionModal';
 import { Candy } from './types';
+import colors from '../src/constants/colors';
+
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -282,7 +284,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
         <View style={styles.buttonContainer}>
           <Animated.View
             style={{
-              shadowColor: '#ff6b35',
+              shadowColor: colors.orange.primary,
               shadowOffset: { width: 0, height: 6 },
               shadowOpacity: shadowOpacity,
               shadowRadius: shadowRadius,
@@ -365,7 +367,7 @@ const styles = StyleSheet.create({
   storeNumber: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#ff6b35',
+    color: colors.orange.primary,
     fontFamily: 'PixeloidMono',
     textShadowColor: '#ffaa66',
     textShadowOffset: { width: 2, height: 2 },
@@ -375,13 +377,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#ff6b35',
+    borderColor: colors.orange.primary,
   },
   separatorLine: {
     width: 20,
     height: 3,
-    backgroundColor: '#ff6b35',
-    shadowColor: '#ff6b35',
+    backgroundColor: colors.orange.primary,
+    shadowColor: colors.orange.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 6,
@@ -402,9 +404,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#ff6b35',
+    textShadowColor: colors.orange.primary,
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 6,
     textAlign: 'center',
@@ -449,7 +451,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 18,
-    color: '#ff6b35', // Orange pricing
+    color: colors.orange.primary, // Orange pricing
     fontWeight: '800',
     fontFamily: 'PixeloidMono',
     textShadowColor: '#cc5529',
@@ -458,23 +460,23 @@ const styles = StyleSheet.create({
   },
   owned: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray.medium,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
   },
   avgPrice: {
     fontSize: 14,
-    color: '#666',
+    color: colors.gray.medium,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
-    borderTopColor: '#ff6b35',
+    borderTopColor: colors.orange.primary,
     borderTopWidth: 3,
     alignItems: 'center',
   },
   backButton: {
-    shadowColor: '#991b1b',
+    shadowColor: colors.red.dark,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -486,11 +488,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '800',
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#991b1b',
+    textShadowColor: colors.red.dark,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -503,7 +505,7 @@ const styles = StyleSheet.create({
   },
   discountBanner: {
     marginBottom: 12,
-    shadowColor: '#22c55e',
+    shadowColor: colors.green.success,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -512,7 +514,7 @@ const styles = StyleSheet.create({
   discountText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: '#166534',

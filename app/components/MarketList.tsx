@@ -9,6 +9,7 @@ interface MarketListProps {
   isFocused: boolean;
   isLunchPeriod: boolean;
   showLunchMinigames: boolean;
+  hasPlayedLunchMinigame: boolean;
   onCandyPress: (index: number) => void;
   onLunchBack: () => void;
 }
@@ -19,6 +20,7 @@ const MarketList = React.memo(function MarketList({
   isFocused,
   isLunchPeriod,
   showLunchMinigames,
+  hasPlayedLunchMinigame,
   onCandyPress,
   onLunchBack,
 }: MarketListProps) {
@@ -37,7 +39,8 @@ const MarketList = React.memo(function MarketList({
   return (
     <View style={styles.container}>
       {/* Only render StudySubjectSelector when tab is focused and conditions are met */}
-      {isFocused && isLunchPeriod && showLunchMinigames && (
+      {console.log('🎮 MarketList render - isFocused:', isFocused, 'isLunchPeriod:', isLunchPeriod, 'showLunchMinigames:', showLunchMinigames, 'hasPlayedLunchMinigame:', hasPlayedLunchMinigame)}
+      {isFocused && isLunchPeriod && !hasPlayedLunchMinigame && showLunchMinigames && (
         <View style={{ flex: 1 }}>
           <StudySubjectSelector
             onBack={onLunchBack}
@@ -51,7 +54,7 @@ const MarketList = React.memo(function MarketList({
       {/* Always render FlatList to maintain consistent hook calls */}
       <View
         style={{
-          display: isLunchPeriod && showLunchMinigames ? 'none' : 'flex',
+          display: isLunchPeriod && !hasPlayedLunchMinigame && showLunchMinigames ? 'none' : 'flex',
           flex: 1,
         }}
       >

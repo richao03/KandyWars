@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -208,6 +209,7 @@ const getStoryLines = (breed: string, cost: string) => {
 
 export default function StoryScreen() {
   const wallet = useWallet();
+  const navigation = useNavigation();
   const currentLevel = wallet?.difficultyLevel || 1;
   const dogBreed = getDogBreed(currentLevel);
   const adoptionFee = wallet?.adoptionFee || 5000;
@@ -427,7 +429,13 @@ export default function StoryScreen() {
     if (!wallet?.playerName || wallet.playerName.trim() === '') {
       setShowNameModal(true);
     } else {
-      router.replace('/(tabs)/market');
+      // Reset navigation stack to only have (tabs)/market
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: '(tabs)', params: { screen: 'market' } }],
+        })
+      );
     }
   };
 
@@ -438,18 +446,53 @@ export default function StoryScreen() {
     if (!wallet?.playerName || wallet.playerName.trim() === '') {
       setShowNameModal(true);
     } else {
-      router.replace('/(tabs)/market');
+      // Reset navigation stack to only have (tabs)/market
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: '(tabs)', params: { screen: 'market' } }],
+        })
+      );
     }
   };
 
   const handleTapToSkip = () => {
     setUserHasInteracted(true);
+    // Always show buttons immediately on tap, even if animation isn't complete
+    setShowSkip(true);
+    setShowContinue(true);
+
     if (currentLineIndex < storyLines.length - 1) {
-      // Skip to end
+      // Skip to end of typing animation
       setCurrentLineIndex(storyLines.length);
       setDisplayedText('Time to become a candy mogul...');
       setIsTyping(false);
-      setShowContinue(true);
+    }
+
+    // Start pulsating glow animation for Start Day 1 button if not already started
+    if (glowScale.value === 1) {
+      glowScale.value = withRepeat(
+        withSequence(
+          withTiming(1.08, {
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
+      glowOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.9, {
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          withTiming(0.5, { duration: 1200, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      );
     }
   };
 
@@ -465,7 +508,13 @@ export default function StoryScreen() {
       wallet?.initializeWallet(wallet.difficultyLevel, name);
     }
 
-    router.replace('/(tabs)/market');
+    // Reset navigation stack to only have (tabs)/market
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: '(tabs)', params: { screen: 'market' } }],
+      })
+    );
   };
 
   const handleNameSkip = () => {
@@ -477,7 +526,13 @@ export default function StoryScreen() {
       wallet?.setPlayerName('Player');
     }
 
-    router.replace('/(tabs)/market');
+    // Reset navigation stack to only have (tabs)/market
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: '(tabs)', params: { screen: 'market' } }],
+      })
+    );
   };
 
   const glowAnimatedStyle = useAnimatedStyle(() => ({

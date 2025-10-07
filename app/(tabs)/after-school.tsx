@@ -36,6 +36,8 @@ import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
 import PiggyBankPage from '../piggy-bank';
 import DeliPage from '../deli';
+import colors from '../../src/constants/colors';
+
 
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
@@ -539,7 +541,7 @@ function AfterSchoolPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2a1845', // Fallback color
+    backgroundColor: colors.purple.darkBg, // Fallback color
   },
   backgroundImage: {
     flex: 1,
@@ -566,7 +568,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(90,99,127, 0.8)',
     borderWidth: 3,
-    borderColor: '#f7e98e',
+    borderColor: colors.gold.light,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -581,7 +583,7 @@ const styles = StyleSheet.create({
   buttonTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#f7e98e',
+    color: colors.gold.light,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(0,0,0,0.3)',
@@ -592,7 +594,7 @@ const styles = StyleSheet.create({
   buttonSubtext: {
     fontSize: 12,
     fontWeight: '400',
-    color: '#ffffff',
+    color: colors.white,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
     textShadowColor: 'rgba(0,0,0,0.3)',
@@ -610,7 +612,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   disabledText: {
-    color: '#666',
+    color: colors.gray.medium,
   },
   debugButton: {
     backgroundColor: 'rgba(255, 0, 0, 0.7)',
@@ -620,7 +622,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   debugButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',

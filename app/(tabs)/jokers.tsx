@@ -20,6 +20,8 @@ import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
 import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 const CANDY_TYPES = [
   'Snickers',
@@ -831,17 +833,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#00512C',
   },
   containerAfterSchool: {
-    backgroundColor: '#2a1845',
+    backgroundColor: colors.purple.darkBg,
   },
   header: {
     paddingTop: 6,
     paddingBottom: 4,
     backgroundColor: '#00512C',
     borderBottomWidth: 2,
-    borderBottomColor: '#d4af37',
+    borderBottomColor: colors.gold.medium,
   },
   headerAfterSchool: {
-    backgroundColor: '#2a1845',
+    backgroundColor: colors.purple.darkBg,
     borderBottomColor: '#8a7ca8',
   },
   headerTop: {
@@ -863,37 +865,37 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#d4af37',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadowColor: '#000',
+    textShadowColor: colors.black,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   titleAfterSchool: {
-    color: '#f7e98e',
+    color: colors.gold.light,
     textShadowColor: 'rgba(247,233,142,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   countBadge: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.red.error,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginLeft: 8,
     borderWidth: 1,
-    borderColor: '#991b1b',
+    borderColor: colors.red.dark,
   },
   countText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
   },
   countTextAfterSchool: {
-    color: '#f7e98e',
+    color: colors.gold.light,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -908,14 +910,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 8,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#3a3a3a',
   },
   activeTab: {
-    backgroundColor: '#dc2626',
-    borderColor: '#991b1b',
+    backgroundColor: colors.red.error,
+    borderColor: colors.red.dark,
   },
   activeTabAfterSchool: {
     backgroundColor: '#8a7ca8',
@@ -923,26 +925,26 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#d4af37',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   tabTextAfterSchool: {
-    color: '#b8a9c9',
+    color: colors.purple.light,
   },
   activeTabText: {
-    color: '#fff',
-    textShadowColor: '#000',
+    color: colors.white,
+    textShadowColor: colors.black,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   activeTabTextAfterSchool: {
-    color: '#f7e98e',
+    color: colors.gold.light,
   },
   dragHint: {
     fontSize: 11,
-    color: '#8b4513',
+    color: colors.brown.secondary,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 8,
@@ -950,7 +952,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   dragHintAfterSchool: {
-    color: '#b8a9c9',
+    color: colors.purple.light,
   },
   list: {
     padding: 16,
@@ -991,13 +993,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#d4af37',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptyTextAfterSchool: {
-    color: '#f7e98e',
+    color: colors.gold.light,
     textShadowColor: 'rgba(247,233,142,0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -1009,14 +1011,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySubtextAfterSchool: {
-    color: '#b8a9c9',
+    color: colors.purple.light,
   },
   sectionHeader: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#d4af37',
+    borderBottomColor: colors.gold.medium,
     marginTop: 0,
     marginBottom: 8,
   },
@@ -1027,27 +1029,27 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#d4af37',
+    color: colors.gold.medium,
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   sectionTitleAfterSchool: {
-    color: '#f7e98e',
+    color: colors.gold.light,
   },
   // Candy Selector Modal styles
   modalContent: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.darkGray1,
     borderRadius: 8,
     padding: 20,
     width: '80%',
     borderWidth: 2,
-    borderColor: '#d4af37',
+    borderColor: colors.gold.medium,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#d4af37',
+    color: colors.gold.medium,
     textAlign: 'center',
     marginBottom: 20,
     fontFamily: 'PixeloidMono',
@@ -1055,7 +1057,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   candyButton: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: colors.darkGray2,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -1065,29 +1067,29 @@ const styles = StyleSheet.create({
     borderColor: '#3a3a3a',
   },
   candyButtonText: {
-    color: '#d4af37',
+    color: colors.gold.medium,
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
     letterSpacing: 0.5,
   },
   cancelButton: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.red.error,
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#991b1b',
+    borderColor: colors.red.dark,
   },
   cancelButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
   },
 });
 
-// Removed memo to fix tab styling issue
+// Removed memo to fix tab styling issue (Settings tab disappears)
 export default JokersPage;

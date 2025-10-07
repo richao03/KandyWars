@@ -199,26 +199,42 @@ export default function CandyWarsTitleScreen({
     }
   };
 
+  const handleTapToSkip = () => {
+    // Skip animation and immediately show buttons
+    if (!showButtons && !buttonsShown.current) {
+      console.log('👆 Screen tapped - skipping to buttons');
+      buttonsShown.current = true;
+      setShowButtons(true);
+      setAnimationComplete(true);
+      buttonOpacity.setValue(1); // Show buttons immediately without animation
+    }
+  };
+
   return (
     <Animated.View style={[styles.container, { opacity: screenOpacity }]}>
       <Animated.View
         style={[styles.backgroundWrapper, { opacity: backgroundOpacity }]}
       >
-        <ImageBackground
-          source={require('../../assets/images/titleScreen.png')}
-          style={styles.backgroundContainer}
-          resizeMode="cover"
-          onLoad={() => console.log('🖼️ Background image loaded successfully')}
-          onError={(error) =>
-            console.error('❌ Background image failed to load:', error)
-          }
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={handleTapToSkip}
+          activeOpacity={1}
         >
-          <View style={styles.titleWrapper}>
-            <ExactFontHandwriting
-              onAnimationComplete={handleAnimationComplete}
-              onCandyComplete={handleCandyComplete}
-            />
-          </View>
+          <ImageBackground
+            source={require('../../assets/images/titleScreen.png')}
+            style={styles.backgroundContainer}
+            resizeMode="cover"
+            onLoad={() => console.log('🖼️ Background image loaded successfully')}
+            onError={(error) =>
+              console.error('❌ Background image failed to load:', error)
+            }
+          >
+            <View style={styles.titleWrapper}>
+              <ExactFontHandwriting
+                onAnimationComplete={handleAnimationComplete}
+                onCandyComplete={handleCandyComplete}
+              />
+            </View>
 
           {showButtons && (
             <Animated.View
@@ -300,7 +316,8 @@ export default function CandyWarsTitleScreen({
               </PixelBorder>
             </Animated.View>
           )}
-        </ImageBackground>
+          </ImageBackground>
+        </TouchableOpacity>
       </Animated.View>
 
       <DifficultySelectionModal

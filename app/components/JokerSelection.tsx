@@ -5,6 +5,8 @@ import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface Joker {
   id: number;
@@ -689,10 +691,10 @@ const styles = StyleSheet.create({
 
   // Math Theme (Chalkboard)
   mathContainer: {
-    backgroundColor: '#2d4a3e',
+    backgroundColor: colors.green.darkBg,
   },
   mathTitle: {
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     textShadowColor: '#8fbc8f',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
@@ -705,7 +707,7 @@ const styles = StyleSheet.create({
     borderColor: '#ffff99',
   },
   mathGenerateButtonText: {
-    color: '#f5f5dc',
+    color: colors.gold.beige,
   },
   mathJokerCard: {
     backgroundColor: '#1a2f23',
@@ -716,14 +718,14 @@ const styles = StyleSheet.create({
     color: '#ffff99',
   },
   mathJokerDescription: {
-    color: '#f5f5dc',
+    color: colors.gold.beige,
   },
   mathSkipButton: {
-    backgroundColor: '#8b4513',
+    backgroundColor: colors.brown.secondary,
     borderColor: '#daa520',
   },
   mathSkipButtonText: {
-    color: '#f5f5dc',
+    color: colors.gold.beige,
   },
 
   // Computer Theme (Hacker)
@@ -731,34 +733,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0e1a',
   },
   computerTitle: {
-    color: '#00ff41',
-    textShadowColor: '#00ff41',
+    color: colors.green.neon,
+    textShadowColor: colors.green.neon,
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   computerSubtitle: {
-    color: '#00d4ff',
+    color: colors.blue.cyan,
   },
   computerGenerateButton: {
-    backgroundColor: '#16213e',
-    borderColor: '#00d4ff',
-    shadowColor: '#00d4ff',
+    backgroundColor: colors.blue.darkBg,
+    borderColor: colors.blue.cyan,
+    shadowColor: colors.blue.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 8,
   },
   computerGenerateButtonText: {
-    color: '#00d4ff',
+    color: colors.blue.cyan,
   },
   computerJokerCard: {
-    backgroundColor: '#16213e',
-    borderColor: '#00d4ff',
-    shadowColor: '#00d4ff',
+    backgroundColor: colors.blue.darkBg,
+    borderColor: colors.blue.cyan,
+    shadowColor: colors.blue.cyan,
     shadowOpacity: 0.8,
   },
   computerJokerName: {
-    color: '#00ff41',
+    color: colors.green.neon,
   },
   computerJokerDescription: {
     color: '#a0a0ff',
@@ -782,20 +784,20 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   homeecSubtitle: {
-    color: '#8B4513',
+    color: colors.brown.secondary,
   },
   homeecGenerateButton: {
     backgroundColor: '#F4A460',
     borderColor: '#D2691E',
   },
   homeecGenerateButtonText: {
-    color: '#FFFFFF',
-    textShadowColor: '#8B4513',
+    color: colors.white,
+    textShadowColor: colors.brown.secondary,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   homeecJokerCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderColor: '#F4A460',
     shadowColor: '#D2691E',
   },
@@ -803,22 +805,22 @@ const styles = StyleSheet.create({
     color: '#D2691E',
   },
   homeecJokerDescription: {
-    color: '#8B4513',
+    color: colors.brown.secondary,
   },
   homeecSkipButton: {
     backgroundColor: '#E9ECEF',
-    borderColor: '#CCC',
+    borderColor: colors.gray.border,
   },
   homeecSkipButtonText: {
-    color: '#666',
+    color: colors.gray.medium,
   },
 
   // Social Studies Theme (Trading Post)
   socialContainer: {
-    backgroundColor: '#F5F5DC',
+    backgroundColor: colors.gold.beige,
   },
   socialTitle: {
-    color: '#8B4513',
+    color: colors.brown.secondary,
     textShadowColor: '#DEB887',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 3,
@@ -831,15 +833,15 @@ const styles = StyleSheet.create({
     borderColor: '#CD853F',
   },
   socialGenerateButtonText: {
-    color: '#8B4513',
+    color: colors.brown.secondary,
   },
   socialJokerCard: {
-    backgroundColor: '#FFF',
+    backgroundColor: colors.white,
     borderColor: '#DEB887',
-    shadowColor: '#8B4513',
+    shadowColor: colors.brown.secondary,
   },
   socialJokerName: {
-    color: '#8B4513',
+    color: colors.brown.secondary,
   },
   socialJokerDescription: {
     color: '#A0522D',
@@ -849,7 +851,7 @@ const styles = StyleSheet.create({
     borderColor: '#DEB887',
   },
   socialSkipButtonText: {
-    color: '#8B4513',
+    color: colors.brown.secondary,
   },
 
   // Candy Theme (Default)
@@ -863,25 +865,25 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   candySubtitle: {
-    color: '#ec4899',
+    color: colors.purple.hotPink,
   },
   candyGenerateButton: {
     backgroundColor: '#f9a8d4',
-    borderColor: '#ec4899',
+    borderColor: colors.purple.hotPink,
   },
   candyGenerateButtonText: {
     color: '#be185d',
   },
   candyJokerCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderColor: '#f9a8d4',
-    shadowColor: '#ec4899',
+    shadowColor: colors.purple.hotPink,
   },
   candyJokerName: {
     color: '#be185d',
   },
   candyJokerDescription: {
-    color: '#ec4899',
+    color: colors.purple.hotPink,
   },
   candySkipButton: {
     backgroundColor: '#f3e8ff',
@@ -896,38 +898,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a2332',
   },
   gymTitle: {
-    color: '#fff',
-    textShadowColor: '#ff6b35',
+    color: colors.white,
+    textShadowColor: colors.orange.primary,
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
   gymSubtitle: {
-    color: '#fff',
+    color: colors.white,
   },
   gymGenerateButton: {
-    backgroundColor: '#2d4a3e',
-    borderColor: '#ff6b35',
+    backgroundColor: colors.green.darkBg,
+    borderColor: colors.orange.primary,
   },
   gymGenerateButtonText: {
-    color: '#fff',
+    color: colors.white,
   },
   gymJokerCard: {
     backgroundColor: '#0f1419',
-    borderColor: '#ff6b35',
-    shadowColor: '#ff6b35',
+    borderColor: colors.orange.primary,
+    shadowColor: colors.orange.primary,
   },
   gymJokerName: {
-    color: '#ff6b35',
+    color: colors.orange.primary,
   },
   gymJokerDescription: {
-    color: '#fff',
+    color: colors.white,
   },
   gymSkipButton: {
-    backgroundColor: '#8b4513',
+    backgroundColor: colors.brown.secondary,
     borderColor: '#daa520',
   },
   gymSkipButtonText: {
-    color: '#fff',
+    color: colors.white,
   },
 
   // Art Theme (Creative/Colorful)

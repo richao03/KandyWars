@@ -21,6 +21,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface MathGameProps {
   onComplete: () => void;
@@ -705,7 +707,7 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     marginBottom: 20,
     fontFamily: 'PixeloidMono',
   },
@@ -714,14 +716,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#f5f5dc',
+    borderColor: colors.gold.beige,
     marginBottom: 20,
     width: '90%',
   },
   instructionsHeader: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     marginBottom: 15,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
@@ -734,29 +736,29 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffd700',
+    color: colors.gold.medium,
     marginRight: 10,
     fontFamily: 'PixeloidMono',
   },
   stepText: {
     fontSize: 16,
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     flex: 1,
     fontFamily: 'PixeloidMono',
   },
   startButton: {
-    backgroundColor: '#2d4a3e',
+    backgroundColor: colors.green.darkBg,
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#f5f5dc',
+    borderColor: colors.gold.beige,
     marginBottom: 10,
   },
   startButtonText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     fontFamily: 'PixeloidMono',
   },
   backButton: {
@@ -765,7 +767,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 18,
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     fontFamily: 'PixeloidMono',
   },
   scrollContainer: {
@@ -773,13 +775,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d2818',
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#f5f5dc',
+    borderColor: colors.gold.beige,
     padding: 16,
   },
   rowLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     marginBottom: 12,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
@@ -797,26 +799,26 @@ const styles = StyleSheet.create({
   numberBox: {
     width: 60,
     height: 60,
-    backgroundColor: '#000',
+    backgroundColor: colors.black,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#f5f5dc',
+    borderColor: colors.gold.beige,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rightmostBox: {
-    borderColor: '#ffd700',
+    borderColor: colors.gold.medium,
     borderWidth: 3,
     backgroundColor: '#1a1000',
   },
   numberText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     fontFamily: 'PixeloidMono',
   },
   rightmostText: {
-    color: '#ff6b35',
+    color: colors.orange.primary,
   },
   bottomContainer: {
     marginTop: 0,
@@ -831,10 +833,10 @@ const styles = StyleSheet.create({
   bottomNumberBox: {
     width: 60,
     height: 60,
-    backgroundColor: '#000',
+    backgroundColor: colors.black,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#f5f5dc',
+    borderColor: colors.gold.beige,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -844,13 +846,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#f5f5dc',
+    borderColor: colors.gold.beige,
     alignItems: 'center',
   },
   leaveButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#f5f5dc',
+    color: colors.gold.beige,
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {

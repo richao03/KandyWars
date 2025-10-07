@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   incrementPeriod,
@@ -97,8 +97,8 @@ export const useGame = () => {
     dispatch(setHasCompletedAfterSchoolTutorial(completed));
   }, [dispatch]);
 
-  // Memoize the return object to prevent unnecessary re-renders in consuming components
-  return useMemo(() => ({
+  // Return object directly - useAppSelector calls are already optimized
+  return {
     day,
     period,
     periodCount,
@@ -128,35 +128,5 @@ export const useGame = () => {
     setMinigameContext: setMinigameContextAction,
     setHasCompletedMarketTutorial: setHasCompletedMarketTutorialAction,
     setHasCompletedAfterSchoolTutorial: setHasCompletedAfterSchoolTutorialAction,
-  }), [
-    day,
-    period,
-    periodCount,
-    currentLocation,
-    locationHistory,
-    isAfterSchool,
-    hasStudiedTonight,
-    hasPlayedLunchMinigame,
-    minigameContext,
-    lastActiveView,
-    pricesUpdating,
-    isInitialized,
-    hasCompletedMarketTutorial,
-    hasCompletedAfterSchoolTutorial,
-    gameResetSignal,
-    incrementPeriodAction,
-    startAfterSchoolAction,
-    startNewDayAction,
-    resetGameAction,
-    revertToPreviousPeriodAction,
-    jumpToPeriodAction,
-    markStudiedTonightAction,
-    markLunchMinigamePlayedAction,
-    setLastActiveViewAction,
-    setPricesUpdatingAction,
-    setIsInitializedAction,
-    setMinigameContextAction,
-    setHasCompletedMarketTutorialAction,
-    setHasCompletedAfterSchoolTutorialAction,
-  ]);
+  };
 };

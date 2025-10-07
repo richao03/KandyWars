@@ -27,9 +27,11 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
 
-export default function Settings() {
-  const { resetGame } = useGame();
+
+function Settings() {
+  const { resetGame, jumpToPeriod } = useGame();
   const { setSeed, setGameData } = useSeed();
   const walletContext = useWallet();
   const { resetInventory } = useInventory();
@@ -567,6 +569,31 @@ export default function Settings() {
               </TouchableOpacity>
             </PixelBorder>
 
+            {__DEV__ && (
+              <PixelBorder
+                borderColor="#ff9800"
+                borderWidth={3}
+                backgroundColor="#ffa726"
+                innerPadding={0}
+                style={styles.buttonWrapper}
+              >
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => {
+                    jumpToPeriod(32); // Day 5, Period 1 (32 = 4 days * 8 periods)
+                    router.push('/(tabs)/market');
+                  }}
+                >
+                  <Text style={styles.dangerButtonText}>
+                    🐛 DEBUG: Jump to Day 5
+                  </Text>
+                  <Text style={styles.buttonSubtext}>
+                    Skip to day 5 for testing
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+            )}
+
             <PixelBorder
               borderColor="#660000"
               borderWidth={3}
@@ -678,7 +705,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#6b4423', // Dark brown
+    color: colors.brown.primary, // Dark brown
     marginBottom: 15,
     fontFamily: 'PixeloidMono',
   },
@@ -709,7 +736,7 @@ const styles = StyleSheet.create({
   dangerButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#dc2626', // Dark red text
+    color: colors.red.error, // Dark red text
     marginBottom: 4,
     fontFamily: 'PixeloidMono',
   },
@@ -737,7 +764,7 @@ const styles = StyleSheet.create({
   clearDataButtonText: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
   },
   // Player info styles
@@ -747,7 +774,7 @@ const styles = StyleSheet.create({
   playerInfoLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6b4423',
+    color: colors.brown.primary,
     marginBottom: 10,
     fontFamily: 'PixeloidMono',
   },
@@ -763,7 +790,7 @@ const styles = StyleSheet.create({
   playerNameText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
     flex: 1,
   },
@@ -791,7 +818,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     fontFamily: 'PixeloidMono',
-    color: '#6b4423',
+    color: colors.brown.primary,
   },
   nameButtonContainer: {
     flexDirection: 'row',
@@ -811,15 +838,15 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#dc2626',
+    color: colors.red.error,
     fontFamily: 'PixeloidMono',
   },
   nameInputError: {
-    borderColor: '#ef4444',
+    borderColor: colors.red.error,
     borderWidth: 3,
   },
   nameErrorText: {
-    color: '#dc2626',
+    color: colors.red.error,
     fontSize: 12,
     fontFamily: 'PixeloidMono',
     marginTop: 5,
@@ -834,3 +861,5 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 });
+
+export default React.memo(Settings);

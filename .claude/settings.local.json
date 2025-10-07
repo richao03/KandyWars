@@ -25,7 +25,11 @@
       "Bash(if grep -q \"React.memo\" \"$path\")",
       "Bash(else)",
       "Bash(fi)",
-      "Bash(do echo \"=== $file ===\" awk '/^export default|^const.*= React.memo|^function.*{$/ {print NR\"\"\"\": \"\"\"\"$0}' \"$file\")"
+      "Bash(do echo \"=== $file ===\" awk '/^export default|^const.*= React.memo|^function.*{$/ {print NR\"\"\"\": \"\"\"\"$0}' \"$file\")",
+      "Bash(do echo \"=== $gameGame.tsx ===\")",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

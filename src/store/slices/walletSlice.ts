@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 interface WalletState {
   balance: number;
@@ -44,10 +45,14 @@ const walletSlice = createSlice({
       state.adoptionFee = action.payload;
     },
     stashMoney: (state, action: PayloadAction<number>) => {
-      if (state.balance >= action.payload) {
+      // Use small epsilon to handle floating point precision issues
+      const epsilon = 0.001;
+      if (state.balance >= action.payload - epsilon) {
         state.balance -= action.payload;
         state.stashedAmount += action.payload;
         console.log('💾 Money stashed:', action.payload, 'New stashed amount:', state.stashedAmount, '- Auto-save triggered');
+      } else {
+        console.log(`❌ Stash rejected in reducer - balance: ${state.balance}, amount: ${action.payload}`);
       }
     },
     withdrawFromStash: (state, action: PayloadAction<number>) => {
@@ -102,6 +107,17 @@ const walletSlice = createSlice({
         state.playerName = action.payload.playerName;
       }
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, (state) => {
+      // Preserve playerName and playerId across game resets
+      const { playerName, playerId } = state;
+      return {
+        ...initialState,
+        playerName,
+        playerId,
+      };
+    });
   },
 });
 

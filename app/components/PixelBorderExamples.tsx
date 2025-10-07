@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { GamePixelBorder, GamePixelButton, GamePixelCard } from './GamePixelBorder';
 import PixelBorder from './PixelBorder';
 import SimplePixelBorder from './SimplePixelBorder';
+import colors from '../../src/constants/colors';
+
 
 /**
  * Examples of how to use the pixel border components
@@ -105,7 +107,7 @@ const PixelBorderExamples = () => {
   borderWidth: 2,
   borderColor: '#4a6c82',
   borderRadius: 8,
-  backgroundColor: '#fff',
+  backgroundColor: colors.white,
   padding: 12
 }}>
   <Text>Old Button</Text>
@@ -128,7 +130,7 @@ const PixelBorderExamples = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.gray.bg,
     padding: 16,
   },
   title: {
@@ -158,8 +160,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   code: {
-    backgroundColor: '#1a1a1a',
-    color: '#22c55e',
+    backgroundColor: colors.darkGray1,
+    color: colors.green.success,
     padding: 12,
     borderRadius: 4,
     fontSize: 12,

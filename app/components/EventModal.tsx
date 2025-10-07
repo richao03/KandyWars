@@ -19,6 +19,8 @@ import ReAnimated, {
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useWallet } from '../../src/hooks/useWallet';
 import PixelBorder from './PixelBorder';
+import colors from '../../src/constants/colors';
+
 
 // Image resolver to handle cached image IDs and string references
 const getResolvedImage = (backgroundImage: any, eventEffect?: string) => {
@@ -100,7 +102,7 @@ const AnimatedMoneyCounter = ({
       style={{
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#ffffff',
+        color: colors.white,
         textAlign: 'center',
         fontFamily: 'CrayonPastel',
         textShadowColor: moneyLoss ? 'red' : '#00ff00',
@@ -608,7 +610,7 @@ const EventModal = React.memo(function EventModal() {
                 innerPadding={16}
               >
                 <View style={styles.subtitleContainer}>
-                  <Text style={[styles.title, { color: '#333' }]}>
+                  <Text style={[styles.title, { color: colors.gray.dark }]}>
                     {currentEvent.title}
                   </Text>
                   <Text style={[styles.subtitle, { color: '#444' }]}>
@@ -727,7 +729,7 @@ const styles = StyleSheet.create({
     height: 500,
     overflow: 'hidden',
     borderRadius: 20,
-    backgroundColor: '#000', // Fallback color to see if container is working
+    backgroundColor: colors.black, // Fallback color to see if container is working
   },
   backgroundImage: {
     borderRadius: 20,
@@ -802,28 +804,28 @@ const styles = StyleSheet.create({
   protectionText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 4,
   },
   protectionSubtext: {
     fontSize: 14,
-    color: '#fff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
   moneyLabel: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'CrayonPastel',
     marginRight: 5,
   },
   moneyChangeLabel: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
@@ -834,7 +836,7 @@ const styles = StyleSheet.create({
   moneyGainLabel: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,

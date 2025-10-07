@@ -9,6 +9,8 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
 import FastModal from './FastModal';
 import TextWithEmojis from './TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 type PriceBreakdown = {
   basePrice: number;
@@ -483,7 +485,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     borderWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
-    shadowColor: '#8b4513',
+    shadowColor: colors.brown.secondary,
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
@@ -497,7 +499,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 12,
     textAlign: 'center',
-    color: '#6b4423', // Dark brown
+    color: colors.brown.primary, // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
     fontFamily: 'PixeloidMono',
   },
@@ -517,13 +519,13 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 16,
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
   },
   priceValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#8b4513',
+    color: colors.brown.secondary,
     fontFamily: 'PixeloidMono',
   },
   sliderSection: {
@@ -534,7 +536,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     alignSelf: 'center',
-    color: '#8b4513',
+    color: colors.brown.secondary,
     backgroundColor: '#fff9e6',
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -558,7 +560,7 @@ const styles = StyleSheet.create({
   totalValueLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
     marginRight: 10,
   },
@@ -581,7 +583,7 @@ const styles = StyleSheet.create({
   profitLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
     marginRight: 8,
   },
@@ -609,14 +611,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderColor: '#cc7a00',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
   activeTab: {
     backgroundColor: '#ffcc99', // Orange crayon
     borderColor: '#cc7a00',
   },
   tabText: {
-    color: '#8b4513',
+    color: colors.brown.secondary,
     fontWeight: '700',
     fontSize: 16,
     fontFamily: 'PixeloidMono',
@@ -632,7 +634,7 @@ const styles = StyleSheet.create({
   slowCookerText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.green.success,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
@@ -652,14 +654,14 @@ const styles = StyleSheet.create({
   },
   breakdownLabel: {
     fontSize: 14,
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
     fontWeight: '600',
   },
   breakdownValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8b4513',
+    color: colors.brown.secondary,
     fontFamily: 'PixeloidMono',
   },
   jokerEffectLabel: {
@@ -676,14 +678,14 @@ const styles = StyleSheet.create({
   },
   finalPriceLabel: {
     fontSize: 16,
-    color: '#6b4423',
+    color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
     fontWeight: '700',
   },
   finalPriceValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.green.success,
     fontFamily: 'PixeloidMono',
   },
   divider: {
@@ -792,28 +794,28 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   inactiveEffectText: {
-    color: '#999',
+    color: colors.gray.light,
     fontStyle: 'italic',
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.red.error,
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#dc2626',
+    borderColor: colors.red.error,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.green.success,
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 12,
@@ -822,7 +824,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmButtonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',

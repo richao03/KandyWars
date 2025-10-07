@@ -339,13 +339,13 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
     const dayStartPeriod = day * 8 + 1; // Start at period 1 for day 0, period 9 for day 1, etc.
     const dayEndPeriod = dayStartPeriod + 8;
 
-    // Get available periods for this day (exclude lunch period which is period 5 of each day)
+    // Get available periods for this day (exclude first period and lunch period of each day)
     const availablePeriodsThisDay = Array.from(
       { length: 8 },
       (_, i) => dayStartPeriod + i
     ).filter(
       (period) =>
-        period !== 1 && // Exclude period 1 (first period of day 1)
+        (period - 1) % 8 !== 0 && // Exclude period 1 of each day (first period)
         (period - 1) % 8 !== 4 && // Exclude lunch period (5th period of each day)
         !periodEvents.some((e) => e.period === period) // Exclude already used periods
     );

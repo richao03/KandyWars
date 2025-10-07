@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { resetGame } from './gameSlice';
 
 interface GameData {
   periodEvents: any[];
@@ -68,6 +69,10 @@ const seedSlice = createSlice({
       });
     },
     resetSeed: () => initialState,
+  },
+  extraReducers: (builder) => {
+    // Don't reset seed data when game resets - seed is managed separately in title screen
+    // Title screen sets new seed/gameData, then calls resetGame for other slices
   },
 });
 

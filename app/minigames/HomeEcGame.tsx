@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   Gesture,
   GestureDetector,
@@ -21,7 +21,36 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
-import TextWithEmojis from '../components/TextWithEmojis';
+import colors from '../../src/constants/colors';
+
+
+// Candy emoji to image mapping
+const getCandyImage = (emoji: string) => {
+  switch (emoji) {
+    case '🍭':
+      return require('../../assets/images/emojis/lollipop.png');
+    case '🍬':
+      return require('../../assets/images/emojis/candy.png');
+    case '🧁':
+      return require('../../assets/images/emojis/cupcake.png');
+    case '🍫':
+      return require('../../assets/images/emojis/chocolate.png');
+    default:
+      return require('../../assets/images/emojis/candy.png');
+  }
+};
+
+// Component that displays a candy image
+const CandyImage = React.memo(({ candy }: { candy: string }) => {
+  if (!candy) return null;
+
+  return (
+    <Image
+      source={getCandyImage(candy)}
+      style={{ width: 50, height: 50 }}
+    />
+  );
+});
 
 interface HomeEcGameProps {
   onComplete: () => void;
@@ -47,23 +76,29 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
-  const [centerCandy, setCenterCandy] = useState('');
-  const [nextCandy, setNextCandy] = useState('');
   const [feedback, setFeedback] = useState('');
   const [feedbackPosition, setFeedbackPosition] = useState<{
     x: string;
     y: string;
   } | null>(null);
-  const [isFlying, setIsFlying] = useState(false);
+
+  // Store candy values in state but control visibility with animation
+  const [candyA, setCandyA] = useState('');
+  const [candyB, setCandyB] = useState('');
+  const [nextCandy, setNextCandy] = useState('');
 
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isSwipingRef = useRef(false);
+  const levelCompleteRef = useRef(false);
+  const completedLevelRef = useRef(0); // Track with ref to avoid stale closures
 
-  // Animation values
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const opacity = useSharedValue(1);
+  // Animation values - A is static center, B is flying
+  const candyAOpacity = useSharedValue(1);
+  const candyBOpacity = useSharedValue(0);
+  const candyBTranslateX = useSharedValue(0);
+  const candyBTranslateY = useSharedValue(0);
 
   // Level configurations
   const getLevelConfig = (levelNum: number) => {
@@ -83,35 +118,52 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const generateCandy = () =>
     CANDY_TYPES[Math.floor(Math.random() * CANDY_TYPES.length)];
 
-  // Start new candy
+  // Initialize candies
   const startNewCandy = useCallback(() => {
-    if (nextCandy) {
-      setCenterCandy(nextCandy);
-    } else {
-      setCenterCandy(generateCandy());
-    }
-    setNextCandy(generateCandy());
+    const newCandy = nextCandy || generateCandy();
+    setCandyA(newCandy);
+    candyAOpacity.value = 1;
+    candyBOpacity.value = 0;
+    candyBTranslateX.value = 0;
+    candyBTranslateY.value = 0;
 
-    // Reset animation values
-    translateX.value = 0;
-    translateY.value = 0;
-    opacity.value = 1;
-    setIsFlying(false);
-  }, [nextCandy, translateX, translateY, opacity]);
+    // Generate next candy for preview
+    const nextGen = generateCandy();
+    setNextCandy(nextGen);
+
+    isSwipingRef.current = false;
+  }, [nextCandy, candyAOpacity, candyBOpacity, candyBTranslateX, candyBTranslateY]);
 
   // Handle swipe
   const handleSwipe = useCallback(
     (direction: 'up' | 'down' | 'left' | 'right') => {
-      if (isFlying || !centerCandy || gameState !== 'playing') return;
+      if (isSwipingRef.current || !candyA || gameState !== 'playing' || levelCompleteRef.current) return;
 
+      isSwipingRef.current = true;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const correctDirection =
-        TARGET_POSITIONS[centerCandy as keyof typeof TARGET_POSITIONS];
+
+      const currentCandy = candyA;
+      const correctDirection = TARGET_POSITIONS[currentCandy as keyof typeof TARGET_POSITIONS];
       const isCorrect = direction === correctDirection;
 
-      setIsFlying(true);
+      // Step 1: Hide candyA first
+      candyAOpacity.value = 0;
 
-      // Animate candy flying to edge and set feedback position
+      // Step 2: Move candyA to candyB and make it visible
+      setCandyB(currentCandy);
+      candyBTranslateX.value = 0;
+      candyBTranslateY.value = 0;
+      candyBOpacity.value = 1;
+
+      // Step 3: Load next candy into candyA and show it
+      console.log('🍬 Swipe - current:', currentCandy, 'next preview:', nextCandy);
+      setCandyA(nextCandy);
+      const nextGen = generateCandy();
+      console.log('🍬 New next candy generated:', nextGen);
+      setNextCandy(nextGen);
+      candyAOpacity.value = withTiming(1, { duration: 100 });
+
+      // Determine animation target and feedback position
       let targetX = 0;
       let targetY = 0;
 
@@ -134,9 +186,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           break;
       }
 
-      translateX.value = withTiming(targetX, { duration: 250 });
-      translateY.value = withTiming(targetY, { duration: 250 });
-      opacity.value = withTiming(0, { duration: 250 });
+      // Step 3: Animate candyB flying away
+      candyBTranslateX.value = withTiming(targetX, { duration: 250 });
+      candyBTranslateY.value = withTiming(targetY, { duration: 250 });
+      candyBOpacity.value = withTiming(0, { duration: 250 });
 
       // Show feedback and update score
       if (isCorrect) {
@@ -146,11 +199,16 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           const levelConfig = getLevelConfig(level);
 
           if (newScore >= levelConfig.matches) {
-            // Level complete
-            if (timerRef.current) clearInterval(timerRef.current);
+            // Level complete - stop game immediately
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
 
-            // Mark this level as completed
+            // Mark this level as completed and stop accepting swipes
             setCompletedLevel(level);
+            completedLevelRef.current = level; // Also update ref to avoid stale closures
+            levelCompleteRef.current = true; // Stop accepting swipes but keep UI visible
 
             if (level < 3) {
               setTimeout(() => {
@@ -161,6 +219,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                   '🎉',
                   () => {
                     console.log(`Starting level ${level + 1}...`);
+                    levelCompleteRef.current = false; // Re-enable swipes for next level
                     setLevel(level + 1);
                     initializeLevel(level + 1);
                   }
@@ -191,18 +250,14 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         setFeedback('❌ -1');
       }
 
-      // Start new candy after brief delay to let first candy fly
-      setTimeout(() => {
-        startNewCandy();
-      }, 200);
-
-      // Clear feedback after candy flies away
+      // Clear feedback and allow next swipe after animation
       setTimeout(() => {
         setFeedback('');
         setFeedbackPosition(null);
+        isSwipingRef.current = false;
       }, 400);
     },
-    [isFlying, centerCandy, gameState, level, startNewCandy, showModal]
+    [candyA, nextCandy, gameState, level, candyAOpacity, candyBOpacity, candyBTranslateX, candyBTranslateY, showModal]
   );
 
   // Gesture handler
@@ -237,6 +292,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     setScore(0);
     setTimeLeft(15);
     setFeedback('');
+    setCompletedLevel(0); // Reset completed level
+    completedLevelRef.current = 0; // Reset ref
+    levelCompleteRef.current = false; // Reset flag
     startNewCandy();
 
     // Start timer
@@ -301,10 +359,21 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   // Handle game end (time up or failure)
   const handleGameEnd = useCallback(() => {
-    if (completedLevel > 0) {
+    const currentCompletedLevel = completedLevelRef.current; // Use ref to get current value
+    if (currentCompletedLevel > 0) {
       // Player completed at least one level, award jokers based on completion
-      console.log(`Game ended after completing level ${completedLevel}`);
-      setGameState('jokerSelection');
+      console.log(`Game ended after completing level ${currentCompletedLevel}`);
+      const jokerCount = currentCompletedLevel;
+      const jokerText = jokerCount === 1 ? '1 joker' : `${jokerCount} jokers`;
+
+      showModal(
+        'Great Effort!',
+        `You ran out of time but completed Level ${currentCompletedLevel}!\n\nYou'll receive ${jokerText}!`,
+        '⏱️',
+        () => {
+          setGameState('jokerSelection');
+        }
+      );
     } else {
       // Player didn't complete any level, show restart option
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -312,7 +381,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         setGameState('instructions');
       });
     }
-  }, [completedLevel, showModal]);
+  }, [showModal]);
 
   // Restart game
   const restartGame = useCallback(() => {
@@ -323,15 +392,16 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     setFeedback('');
     setFeedbackPosition(null);
     setCompletedLevel(0);
+    completedLevelRef.current = 0; // Reset ref
     if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
   // Initialize first candies
   useEffect(() => {
-    if (gameState === 'playing' && !centerCandy) {
+    if (gameState === 'playing' && !candyA) {
       startNewCandy();
     }
-  }, [gameState, centerCandy, startNewCandy]);
+  }, [gameState, candyA, startNewCandy]);
 
   // Cleanup - ensure all timers are properly cleared on unmount
   useEffect(() => {
@@ -347,13 +417,17 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     };
   }, []);
 
-  // Animated style for center candy
-  const animatedStyle = useAnimatedStyle(() => ({
+  // Animated styles
+  const candyAStyle = useAnimatedStyle(() => ({
+    opacity: candyAOpacity.value,
+  }));
+
+  const candyBStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
+      { translateX: candyBTranslateX.value },
+      { translateY: candyBTranslateY.value },
     ],
-    opacity: opacity.value,
+    opacity: candyBOpacity.value,
   }));
 
   // Handle forfeit
@@ -411,18 +485,34 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           <View style={styles.instructionStep}>
             <Text style={styles.stepNumber}>2.</Text>
             <View>
-              <TextWithEmojis style={styles.stepText} imageSize={28}>
-                🍭 UP
-              </TextWithEmojis>
-              <TextWithEmojis style={styles.stepText} imageSize={28}>
-                🍬 RIGHT
-              </TextWithEmojis>
-              <TextWithEmojis style={styles.stepText} imageSize={28}>
-                🧁 DOWN
-              </TextWithEmojis>
-              <TextWithEmojis style={styles.stepText} imageSize={28}>
-                🍫 LEFT
-              </TextWithEmojis>
+              <View style={styles.instructionRow}>
+                <Image
+                  source={getCandyImage('🍭')}
+                  style={styles.instructionEmoji}
+                />
+                <Text style={styles.stepText}>UP</Text>
+              </View>
+              <View style={styles.instructionRow}>
+                <Image
+                  source={getCandyImage('🍬')}
+                  style={styles.instructionEmoji}
+                />
+                <Text style={styles.stepText}>RIGHT</Text>
+              </View>
+              <View style={styles.instructionRow}>
+                <Image
+                  source={getCandyImage('🧁')}
+                  style={styles.instructionEmoji}
+                />
+                <Text style={styles.stepText}>DOWN</Text>
+              </View>
+              <View style={styles.instructionRow}>
+                <Image
+                  source={getCandyImage('🍫')}
+                  style={styles.instructionEmoji}
+                />
+                <Text style={styles.stepText}>LEFT</Text>
+              </View>
             </View>
           </View>
           <View style={styles.instructionStep}>
@@ -482,19 +572,31 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             <View style={styles.gameArea}>
               {/* Edge candies - Kitchen Stations */}
               <View style={[styles.edgeCandy, styles.topCandy]}>
-                <TextWithEmojis style={styles.edgeCandyText}>🍭</TextWithEmojis>
+                <Image
+                  source={getCandyImage('🍭')}
+                  style={styles.edgeCandyImage}
+                />
                 <Text style={styles.stationLabel}>PREP</Text>
               </View>
               <View style={[styles.edgeCandy, styles.rightCandy]}>
-                <TextWithEmojis style={styles.edgeCandyText}>🍬</TextWithEmojis>
+                <Image
+                  source={getCandyImage('🍬')}
+                  style={styles.edgeCandyImage}
+                />
                 <Text style={styles.stationLabel}>GRILL</Text>
               </View>
               <View style={[styles.edgeCandy, styles.bottomCandy]}>
-                <TextWithEmojis style={styles.edgeCandyText}>🧁</TextWithEmojis>
+                <Image
+                  source={getCandyImage('🧁')}
+                  style={styles.edgeCandyImage}
+                />
                 <Text style={styles.stationLabel}>OVEN</Text>
               </View>
               <View style={[styles.edgeCandy, styles.leftCandy]}>
-                <TextWithEmojis style={styles.edgeCandyText}>🍫</TextWithEmojis>
+                <Image
+                  source={getCandyImage('🍫')}
+                  style={styles.edgeCandyImage}
+                />
                 <Text style={styles.stationLabel}>COOL</Text>
               </View>
 
@@ -502,27 +604,22 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               {nextCandy && (
                 <View style={styles.previewPanel}>
                   <Text style={styles.previewLabel}>NEXT:</Text>
-                  <TextWithEmojis style={styles.previewCandy}>
-                    {nextCandy}
-                  </TextWithEmojis>
+                  <Image
+                    source={getCandyImage(nextCandy)}
+                    style={styles.previewCandyImage}
+                  />
                 </View>
               )}
 
-              {/* Center candy */}
-              {centerCandy && !isFlying && (
-                <Animated.View style={[styles.centerCandy, animatedStyle]}>
-                  <TextWithEmojis style={styles.centerCandyText}>
-                    {centerCandy}
-                  </TextWithEmojis>
-                </Animated.View>
-              )}
+              {/* Candy A - Static center candy */}
+              <Animated.View style={[styles.centerCandy, candyAStyle]}>
+                <CandyImage candy={candyA} />
+              </Animated.View>
 
-              {/* Flying candy */}
-              {centerCandy && isFlying && (
-                <Animated.View style={[styles.centerCandy, animatedStyle]}>
-                  <Text style={styles.centerCandyText}>{centerCandy}</Text>
-                </Animated.View>
-              )}
+              {/* Candy B - Flying candy */}
+              <Animated.View style={[styles.centerCandy, candyBStyle]}>
+                <CandyImage candy={candyB} />
+              </Animated.View>
 
               {/* Feedback */}
               {feedback && feedbackPosition && (
@@ -563,9 +660,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                 style={styles.leaveBtnInner}
                 onPress={handleForfeit}
               >
-                <TextWithEmojis style={styles.footerBtnText} imageSize={28}>
-                  🚪 Leave
-                </TextWithEmojis>
+                <Text style={styles.footerBtnText}>🚪 Leave</Text>
               </TouchableOpacity>
             </PixelBorder>
           </View>
@@ -603,7 +698,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#495057', // Steel border
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -612,7 +707,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#f8f9fa', // Light text
+    color: colors.offWhite, // Light text
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
@@ -636,7 +731,7 @@ const styles = StyleSheet.create({
   scoreText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#28a745', // Success green
+    color: colors.green.success, // Success green
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 4,
@@ -660,7 +755,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 3,
     borderColor: '#495057', // Steel border
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -677,7 +772,7 @@ const styles = StyleSheet.create({
     borderColor: '#adb5bd', // Light steel border
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -688,7 +783,7 @@ const styles = StyleSheet.create({
     bottom: -18,
     fontSize: 8,
     fontWeight: '700',
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     backgroundColor: 'rgba(52, 58, 64, 0.8)',
@@ -716,9 +811,6 @@ const styles = StyleSheet.create({
     top: '50%',
     marginTop: -35,
   },
-  edgeCandyText: {
-    fontSize: 40,
-  },
   previewPanel: {
     position: 'absolute',
     top: 20,
@@ -729,7 +821,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#6c757d',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -738,12 +830,9 @@ const styles = StyleSheet.create({
   previewLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     marginBottom: 2,
-  },
-  previewCandy: {
-    fontSize: 32,
   },
   centerCandy: {
     position: 'absolute',
@@ -753,20 +842,17 @@ const styles = StyleSheet.create({
     marginLeft: -40,
     width: 80,
     height: 80,
-    backgroundColor: '#f8f9fa', // Light metallic
+    backgroundColor: colors.offWhite, // Light metallic
     borderRadius: 12,
     borderWidth: 4,
     borderColor: '#dee2e6',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-  },
-  centerCandyText: {
-    fontSize: 40,
   },
   feedbackContainer: {
     position: 'absolute',
@@ -775,7 +861,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderWidth: 2,
     borderColor: '#adb5bd',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 0.4,
     shadowRadius: 6,
@@ -784,7 +870,7 @@ const styles = StyleSheet.create({
   feedbackText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
@@ -796,7 +882,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderWidth: 2,
     borderColor: '#495057',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -822,7 +908,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#6c757d',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -839,7 +925,7 @@ const styles = StyleSheet.create({
   footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
   },
   // Instructions styles
@@ -852,7 +938,7 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
@@ -867,7 +953,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#495057',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -900,7 +986,7 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     lineHeight: 22,
   },
@@ -913,7 +999,7 @@ const styles = StyleSheet.create({
     borderColor: '#6c757d',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -922,7 +1008,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#f8f9fa',
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     textShadowColor: '#343a40',
     textShadowOffset: { width: 1, height: 1 },
@@ -933,5 +1019,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  instructionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  instructionEmoji: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+  },
+  edgeCandyImage: {
+    width: 40,
+    height: 40,
+  },
+  previewCandyImage: {
+    width: 32,
+    height: 32,
+  },
+  centerCandyImage: {
+    width: 50,
+    height: 50,
   },
 });

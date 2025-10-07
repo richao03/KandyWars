@@ -22,6 +22,8 @@ import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { scoreboardService } from '../../src/services/firebase';
 import FastModal from './FastModal';
 import TextWithEmojis from './TextWithEmojis';
+import colors from '../../src/constants/colors';
+
 
 interface ScoreboardModalProps {
   visible: boolean;
@@ -617,7 +619,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = React.memo(
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '85%',
@@ -660,14 +662,14 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: '#3b82f6',
+    borderBottomColor: colors.blue.primary,
   },
   tabText: {
     fontSize: 16,
     color: '#6b7280',
   },
   activeTabText: {
-    color: '#3b82f6',
+    color: colors.blue.primary,
     fontWeight: '600',
   },
   content: {
@@ -707,7 +709,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: colors.blue.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -717,7 +719,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9ca3af',
   },
   submitButtonText: {
-    color: '#ffffff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -820,7 +822,7 @@ const styles = StyleSheet.create({
   },
   difficultyText: {
     fontSize: 12,
-    color: '#ffffff',
+    color: colors.white,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
@@ -866,7 +868,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9ff',
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#3b82f6',
+    borderLeftColor: colors.blue.primary,
   },
   betaTitle: {
     fontSize: 16,
