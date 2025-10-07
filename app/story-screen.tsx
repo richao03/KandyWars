@@ -1,6 +1,5 @@
-import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import { CommonActions, useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -28,46 +27,78 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const getDogImage = (level: number) => {
   switch (level) {
     case 1:
-      return require('../assets/images/doggs/pug.png');
+      return require('../assets/images/doggs/rock.png');
     case 2:
-      return require('../assets/images/doggs/brussleGriffon.png');
-    case 3:
-      return require('../assets/images/doggs/evee.png');
-    case 4:
-      return require('../assets/images/doggs/byul.png');
-    case 5:
-      return require('../assets/images/doggs/caneCorso.png');
-    case 6:
-      return require('../assets/images/doggs/pitbull.png');
-    case 7:
-      return require('../assets/images/doggs/afghan.png');
-    case 8:
-      return require('../assets/images/doggs/germanShepard.png');
-    default:
       return require('../assets/images/doggs/pug.png');
+    case 3:
+      return require('../assets/images/doggs/hamster.png');
+    case 4:
+      return require('../assets/images/doggs/brussleGriffon.png');
+    case 5:
+      return require('../assets/images/doggs/clownfish.png');
+    case 6:
+      return require('../assets/images/doggs/evee.png');
+    case 7:
+      return require('../assets/images/doggs/chicken.png');
+    case 8:
+      return require('../assets/images/doggs/byul.png');
+    case 9:
+      return require('../assets/images/doggs/parrot.png');
+    case 10:
+      return require('../assets/images/doggs/caneCorso.png');
+    case 11:
+      return require('../assets/images/doggs/beardedDragon.png');
+    case 12:
+      return require('../assets/images/doggs/pitbull.png');
+    case 13:
+      return require('../assets/images/doggs/petHorse.png');
+    case 14:
+      return require('../assets/images/doggs/afghan.png');
+    case 15:
+      return require('../assets/images/doggs/germanShepard.png');
+    case 16:
+      return require('../assets/images/doggs/dragon.png');
+    default:
+      return require('../assets/images/doggs/rock.png');
   }
 };
 
 const getDogBreed = (level: number) => {
   switch (level) {
     case 1:
-      return 'Peg the Pug';
+      return 'Pet Rock';
     case 2:
-      return 'Brussels Griffon';
+      return 'Peg the Pug';
     case 3:
-      return 'Evee Cat';
+      return 'Hamster';
     case 4:
-      return 'Byul Terrier';
+      return 'Brussels Griffon';
     case 5:
-      return 'Cane Corso';
+      return 'Clownfish';
     case 6:
-      return 'Pitbull';
+      return 'Evee Cat';
     case 7:
-      return 'Afghan Hound';
+      return 'Chicken';
     case 8:
+      return 'Byul Terrier';
+    case 9:
+      return 'Parrot';
+    case 10:
+      return 'Cane Corso';
+    case 11:
+      return 'Bearded Dragon';
+    case 12:
+      return 'Pitbull';
+    case 13:
+      return 'Horse';
+    case 14:
+      return 'Afghan Hound';
+    case 15:
       return 'German Shepherd';
+    case 16:
+      return 'Dragon';
     default:
-      return 'Pug';
+      return 'Pet Rock';
   }
 };
 
@@ -76,13 +107,52 @@ const getStoryLines = (breed: string, cost: string) => {
 
   // First line with breed and cost highlights
   switch (breed) {
+    case 'Pet Rock':
+      story.push({
+        highlights: [
+          { text: `A ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: `. Stoic and simply perferct. It's the perfect starter companion! Just `,
+          },
+          { text: `$${cost}`, color: '#85BB65' },
+          { text: ` and it's yours.` },
+        ],
+      });
+      break;
+    case 'Hamster':
+      story.push({
+        highlights: [
+          { text: `A tiny, fuzzy ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` made direct eye contact with you at the pet store. The adoption fee is `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
+        ],
+      });
+      break;
     case 'Brussels Griffon':
       story.push({
         highlights: [
-          { text: `There's an adorable ` },
+          { text: `There's a biker looking ` },
           { text: breed, color: '#6b4423' },
           {
             text: ` at the pet rescue that needs a home. The adoption costs total `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
+        ],
+      });
+      break;
+    case 'Clownfish':
+      story.push({
+        highlights: [
+          { text: `A lost ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` is swimming in circles at the aquarium. With the tank setup, it's `,
           },
           { text: `$${cost}`, color: '#4a7c4a' },
           { text: `.` },
@@ -100,6 +170,19 @@ const getStoryLines = (breed: string, cost: string) => {
         ],
       });
       break;
+    case 'Chicken':
+      story.push({
+        highlights: [
+          { text: `A friendly, and surpsingly cuddly ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` at the farm needs a home. With the coop setup, it costs `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
+        ],
+      });
+      break;
     case 'Byul Terrier':
       story.push({
         highlights: [
@@ -111,14 +194,40 @@ const getStoryLines = (breed: string, cost: string) => {
         ],
       });
       break;
+    case 'Parrot':
+      story.push({
+        highlights: [
+          { text: `A colorful ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` literally spoke to you and demanded to be adopted! The adoption fee is `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
+        ],
+      });
+      break;
     case 'Cane Corso':
       story.push({
         highlights: [
-          { text: `A very serious looking ` },
+          { text: `A very serious looking, but goofy` },
           { text: breed, color: '#6b4423' },
           { text: ` at the specialized rescue needs ` },
           { text: `$${cost}`, color: '#4a7c4a' },
           { text: ` for adoption plus specialized training.` },
+        ],
+      });
+      break;
+    case 'Bearded Dragon':
+      story.push({
+        highlights: [
+          { text: `A majestic ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` is basking at the reptile rescue. With terrarium and setup, it's `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
         ],
       });
       break;
@@ -135,10 +244,23 @@ const getStoryLines = (breed: string, cost: string) => {
         ],
       });
       break;
+    case 'Horse':
+      story.push({
+        highlights: [
+          { text: `A dashing ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` at the equestrian center needs a new owner. With boarding and care, it costs `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
+        ],
+      });
+      break;
     case 'Afghan Hound':
       story.push({
         highlights: [
-          { text: `An elengant ` },
+          { text: `An elegant ` },
           { text: breed, color: '#6b4423' },
           { text: ` from a championship bloodline needs ` },
           { text: `$${cost}`, color: '#4a7c4a' },
@@ -157,15 +279,28 @@ const getStoryLines = (breed: string, cost: string) => {
         ],
       });
       break;
+    case 'Dragon':
+      story.push({
+        highlights: [
+          { text: `A legendary ` },
+          { text: breed, color: '#6b4423' },
+          {
+            text: ` has appeared at the mythical creatures sanctuary! The adoption cost is an epic `,
+          },
+          { text: `$${cost}`, color: '#4a7c4a' },
+          { text: `.` },
+        ],
+      });
+      break;
     case 'Peg the Pug':
     default:
       story.push({
         highlights: [
           { text: `There it was, the most perfect ` },
           { text: breed, color: '#6b4423' },
-          { text: ` you ever did see. You have one week to stack up ` },
+          { text: ` you ever did see. The dog is free, but it'll cost you ` },
           { text: `$${cost}`, color: '#85BB65' },
-          { text: ` needed to bring it home.` },
+          { text: ` to fill out the paper work` },
         ],
       });
       break;

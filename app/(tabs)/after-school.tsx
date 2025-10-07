@@ -20,6 +20,7 @@ import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
+import { useInventory } from '../../src/hooks/useInventory';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { useJokers } from '../../src/hooks/useJokers';
@@ -33,6 +34,7 @@ import { forceSave } from '../../src/store/store';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
+import InventoryModal from '../components/InventoryModal';
 import PixelBorder from '../components/PixelBorder';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
@@ -71,6 +73,7 @@ function AfterSchoolPage() {
   const { balance, stashedAmount, adoptionFee, addAllowance, difficultyLevel } =
     useWallet();
   const { jokers } = useJokers();
+  const { inventory, getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { setEvent } = useFlavorText();
   const { trackGameCompleted } = useScoreboard();
   const { checkUnlockRequirements } = useHallPass();
@@ -88,6 +91,7 @@ function AfterSchoolPage() {
   const [showStudySubjects, setShowStudySubjects] = useState(false);
   const [showStash, setShowStash] = useState(false);
   const [showDeli, setShowDeli] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
   const [unlockedHallPasses, setUnlockedHallPasses] = useState<string[]>([]);
   const [totalCompletionsForModal, setTotalCompletionsForModal] = useState(0);
 
@@ -523,6 +527,7 @@ function AfterSchoolPage() {
             theme="evening"
             customHeaderText={`After School - Day ${day}`}
             customLocationText="Peaceful Evening"
+            onInventoryPress={() => setShowInventory(true)}
           />
 
           <View style={styles.optionsContainer}>
@@ -568,6 +573,14 @@ function AfterSchoolPage() {
         totalCandiesSold={totalCandiesSold}
         onRestart={handleGameRestart}
         onClose={handleGameEndModalClose}
+      />
+
+      <InventoryModal
+        visible={showInventory}
+        onClose={() => setShowInventory(false)}
+        inventory={inventory}
+        totalCount={getTotalInventoryCount()}
+        capacity={getInventoryLimit()}
       />
     </View>
   );

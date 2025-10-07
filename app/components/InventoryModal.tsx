@@ -1,11 +1,10 @@
 import React from 'react';
 import {
+  ScrollView,
   StyleSheet,
   Text,
   TouchableHighlight,
   View,
-  ScrollView,
-  Alert,
 } from 'react-native';
 import FastModal from './FastModal';
 import TextWithEmojis from './TextWithEmojis';
@@ -34,13 +33,18 @@ function InventoryModal({
 }: Props) {
   console.log('🔴 InventoryModal render - visible:', visible);
   console.log('🔴 InventoryModal inventory data:', inventory);
-  console.log('🔴 InventoryModal totalCount:', totalCount, 'capacity:', capacity);
+  console.log(
+    '🔴 InventoryModal totalCount:',
+    totalCount,
+    'capacity:',
+    capacity
+  );
 
-  const inventoryItems = inventory.filter(item => (item.quantity || 0) > 0);
+  const inventoryItems = inventory.filter((item) => (item.quantity || 0) > 0);
   console.log('🔴 InventoryModal filtered inventoryItems:', inventoryItems);
 
   const totalValue = inventoryItems.reduce((sum, item) => {
-    return sum + ((item.quantity || 0) * item.price);
+    return sum + (item.quantity || 0) * item.price;
   }, 0);
 
   return (
@@ -51,59 +55,60 @@ function InventoryModal({
       backdropOpacity={0.6}
       modalStyle={styles.modal}
     >
-      <Text style={styles.title}>🍬 Candy Stash</Text>
+      <View style={styles.titleContainer}>
+        <TextWithEmojis style={styles.title} imageSize={50}>
+          🍬
+        </TextWithEmojis>
+      </View>
+      <TextWithEmojis style={styles.title} imageSize={30}>
+        Candy Stash
+      </TextWithEmojis>
       <Text style={styles.subtitle}>
         {totalCount} / {capacity} items in your stash
       </Text>
 
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {inventoryItems.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Your stash is empty!</Text>
-              <Text style={styles.emptySubtext}>Buy some candy from the market</Text>
-            </View>
-          ) : (
-            <View style={styles.itemsContainer}>
-              {inventoryItems.map((item) => (
-                <View key={item.id} style={styles.itemRow}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <View style={styles.quantityBadge}>
-                      <Text style={styles.itemQuantity}>x{item.quantity || 0}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.itemValue}>
-                    <Text style={styles.avgPrice}>
-                      Price: ${item.price.toFixed(2)}
-                    </Text>
-                    <Text style={styles.totalPrice}>
-                      Total: ${((item.quantity || 0) * item.price).toFixed(2)}
-                    </Text>
-                  </View>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {inventoryItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Your stash is empty!</Text>
+            <Text style={styles.emptySubtext}>
+              Buy some candy from the market
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.itemsContainer}>
+            {inventoryItems.map((item) => (
+              <View key={item.id} style={styles.itemRow}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <View style={styles.quantityBadge}>
+                  <Text style={styles.itemQuantity}>x{item.quantity || 0}</Text>
                 </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-
-        {inventoryItems.length > 0 && (
-          <View style={styles.totalRow}>
-            <TextWithEmojis style={styles.totalLabel}>📈 Total Stash Value:</TextWithEmojis>
-            <Text style={styles.totalValue}>${totalValue.toFixed(2)}</Text>
+              </View>
+            ))}
           </View>
         )}
+      </ScrollView>
 
-        <TouchableHighlight
-          style={styles.closeButton}
-          onPress={onClose}
-          underlayColor="rgba(53,122,189,1)"
-        >
-          <Text style={styles.closeButtonText}>🌟 Close</Text>
-        </TouchableHighlight>
+      {inventoryItems.length > 0 && (
+        <View style={styles.totalRow}>
+          <TextWithEmojis style={styles.totalLabel}>
+            Total Stash Value:
+          </TextWithEmojis>
+          <Text style={styles.totalValue}>${totalValue.toFixed(2)}</Text>
+        </View>
+      )}
+
+      <TouchableHighlight
+        style={styles.closeButton}
+        onPress={onClose}
+        underlayColor="rgba(53,122,189,1)"
+      >
+        <Text style={styles.closeButtonText}> Close</Text>
+      </TouchableHighlight>
     </FastModal>
   );
 }
@@ -135,6 +140,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
+  titleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -142,7 +153,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#4a90e2',
     fontFamily: 'PixeloidMono',
-    textShadow: '1px 1px 0px #e6d4b7',
   },
   subtitle: {
     fontSize: 16,
@@ -233,7 +243,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     marginTop: 8,
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
@@ -241,17 +251,19 @@ const styles = StyleSheet.create({
     borderColor: '#4a90e2',
   },
   totalLabel: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#4a90e2',
     fontFamily: 'PixeloidMono',
     fontWeight: '700',
-    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
   },
   totalValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#4a90e2',
     fontFamily: 'PixeloidMono',
+    flexShrink: 0,
   },
   closeButton: {
     backgroundColor: 'rgba(74,144,226,1)',

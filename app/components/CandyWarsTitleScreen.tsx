@@ -37,7 +37,7 @@ export default function CandyWarsTitleScreen({
   onSettings,
 }: CandyWarsTitleScreenProps) {
   const wallet = useWallet();
-  const { resetGame, periodCount, isInitialized, setIsInitialized } = useGame();
+  const { resetGame, periodCount, isInitialized, setIsInitialized, setHasCompletedMarketTutorial, setHasCompletedAfterSchoolTutorial } = useGame();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
@@ -314,6 +314,29 @@ export default function CandyWarsTitleScreen({
                   </Text>
                 </TouchableOpacity>
               </PixelBorder>
+
+              {__DEV__ && (
+                <PixelBorder
+                  borderColor="#ff6b6b"
+                  borderWidth={3}
+                  backgroundColor="#ffe8e8"
+                  style={{ width: '80%' }}
+                  innerPadding={0}
+                >
+                  <TouchableOpacity
+                    style={[styles.button, styles.debugButton]}
+                    onPress={() => {
+                      setHasCompletedMarketTutorial(false);
+                      setHasCompletedAfterSchoolTutorial(false);
+                      console.log('🔧 DEBUG: Tutorial flags reset');
+                    }}
+                  >
+                    <Text style={[styles.buttonText, styles.debugText]}>
+                      Reset Tutorial
+                    </Text>
+                  </TouchableOpacity>
+                </PixelBorder>
+              )}
             </Animated.View>
           )}
           </ImageBackground>
@@ -387,6 +410,9 @@ const styles = StyleSheet.create({
   settingsButton: {
     fontFamily: 'PixeloidMono',
   },
+  debugButton: {
+    fontFamily: 'PixeloidMono',
+  },
   buttonText: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -407,6 +433,9 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     color: '#4a5a8a', // Dark blue
+  },
+  debugText: {
+    color: '#8a2d2d', // Dark red
   },
   disabledText: {
     color: '#999',

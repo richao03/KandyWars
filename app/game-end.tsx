@@ -46,46 +46,78 @@ export default function GameEndScreen() {
   const getDogBreed = (level: number) => {
     switch (level) {
       case 1:
-        return 'Peg the Pug';
+        return 'Rock';
       case 2:
-        return 'Brussels Griffon';
+        return 'Peg the Pug';
       case 3:
-        return 'Evee Cat';
+        return 'Hamster';
       case 4:
-        return 'Byul Terrier';
+        return 'Brussels Griffon';
       case 5:
-        return 'Cane Corso';
+        return 'Clownfish';
       case 6:
-        return 'Pitbull';
+        return 'Evee Cat';
       case 7:
-        return 'Afghan Hound';
+        return 'Chicken';
       case 8:
+        return 'Byul Terrier';
+      case 9:
+        return 'Parrot';
+      case 10:
+        return 'Cane Corso';
+      case 11:
+        return 'Bearded Dragon';
+      case 12:
+        return 'Pitbull';
+      case 13:
+        return 'Pet Horse';
+      case 14:
+        return 'Afghan Hound';
+      case 15:
         return 'German Shepherd';
+      case 16:
+        return 'Dragon';
       default:
-        return 'Pug';
+        return 'Rock';
     }
   };
 
   const getDogImage = (level: number) => {
     switch (level) {
       case 1:
-        return require('../assets/images/doggs/pug.png');
+        return require('../assets/images/doggs/rock.png');
       case 2:
-        return require('../assets/images/doggs/brussleGriffon.png');
-      case 3:
-        return require('../assets/images/doggs/evee.png');
-      case 4:
-        return require('../assets/images/doggs/byul.png');
-      case 5:
-        return require('../assets/images/doggs/caneCorso.png');
-      case 6:
-        return require('../assets/images/doggs/pitbull.png');
-      case 7:
-        return require('../assets/images/doggs/afghan.png');
-      case 8:
-        return require('../assets/images/doggs/germanShepard.png');
-      default:
         return require('../assets/images/doggs/pug.png');
+      case 3:
+        return require('../assets/images/doggs/hamster.png');
+      case 4:
+        return require('../assets/images/doggs/brussleGriffon.png');
+      case 5:
+        return require('../assets/images/doggs/clownfish.png');
+      case 6:
+        return require('../assets/images/doggs/evee.png');
+      case 7:
+        return require('../assets/images/doggs/chicken.png');
+      case 8:
+        return require('../assets/images/doggs/byul.png');
+      case 9:
+        return require('../assets/images/doggs/parrot.png');
+      case 10:
+        return require('../assets/images/doggs/caneCorso.png');
+      case 11:
+        return require('../assets/images/doggs/beardedDragon.png');
+      case 12:
+        return require('../assets/images/doggs/pitbull.png');
+      case 13:
+        return require('../assets/images/doggs/petHorse.png');
+      case 14:
+        return require('../assets/images/doggs/afghan.png');
+      case 15:
+        return require('../assets/images/doggs/germanShepard.png');
+      case 16:
+        return require('../assets/images/doggs/dragon.png');
+      default:
+        return require('../assets/images/doggs/rock.png');
     }
   };
 
@@ -96,20 +128,36 @@ export default function GameEndScreen() {
   const getDifficultyName = (level: number) => {
     switch (level) {
       case 1:
-        return 'Easy';
+        return 'Tutorial';
       case 2:
-        return 'Normal';
+        return 'Easy';
       case 3:
-        return 'Hard';
+        return 'Simple';
       case 4:
-        return 'Expert';
+        return 'Normal';
       case 5:
-        return 'Master';
+        return 'Medium';
       case 6:
-        return 'Insane';
+        return 'Hard';
       case 7:
-        return 'Nightmare';
+        return 'Challenging';
       case 8:
+        return 'Expert';
+      case 9:
+        return 'Difficult';
+      case 10:
+        return 'Master';
+      case 11:
+        return 'Extreme';
+      case 12:
+        return 'Insane';
+      case 13:
+        return 'Brutal';
+      case 14:
+        return 'Nightmare';
+      case 15:
+        return 'Hell';
+      case 16:
         return 'Impossible';
       default:
         return 'Unknown';

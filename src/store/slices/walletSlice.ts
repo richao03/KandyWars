@@ -30,7 +30,13 @@ const walletSlice = createSlice({
     },
     addBalance: (state, action: PayloadAction<number>) => {
       state.balance += action.payload;
-      console.log('💾 Balance added:', action.payload, 'New balance:', state.balance, '- Auto-save triggered');
+      console.log(
+        '💾 Balance added:',
+        action.payload,
+        'New balance:',
+        state.balance,
+        '- Auto-save triggered'
+      );
     },
     spendBalance: (state, action: PayloadAction<number>) => {
       if (state.balance >= action.payload) {
@@ -50,9 +56,17 @@ const walletSlice = createSlice({
       if (state.balance >= action.payload - epsilon) {
         state.balance -= action.payload;
         state.stashedAmount += action.payload;
-        console.log('💾 Money stashed:', action.payload, 'New stashed amount:', state.stashedAmount, '- Auto-save triggered');
+        console.log(
+          '💾 Money stashed:',
+          action.payload,
+          'New stashed amount:',
+          state.stashedAmount,
+          '- Auto-save triggered'
+        );
       } else {
-        console.log(`❌ Stash rejected in reducer - balance: ${state.balance}, amount: ${action.payload}`);
+        console.log(
+          `❌ Stash rejected in reducer - balance: ${state.balance}, amount: ${action.payload}`
+        );
       }
     },
     withdrawFromStash: (state, action: PayloadAction<number>) => {
@@ -70,7 +84,10 @@ const walletSlice = createSlice({
     setPlayerId: (state, action: PayloadAction<string | null>) => {
       state.playerId = action.payload;
     },
-    setIsFirstTimeDifficultySelection: (state, action: PayloadAction<boolean>) => {
+    setIsFirstTimeDifficultySelection: (
+      state,
+      action: PayloadAction<boolean>
+    ) => {
       state.isFirstTimeDifficultySelection = action.payload;
     },
     resetWallet: (state) => {
@@ -79,7 +96,10 @@ const walletSlice = createSlice({
       state.stashedAmount = -state.adoptionFee;
     },
     completeReset: () => initialState,
-    initializeWallet: (state, action: PayloadAction<{ level?: number; playerName?: string }>) => {
+    initializeWallet: (
+      state,
+      action: PayloadAction<{ level?: number; playerName?: string }>
+    ) => {
       if (action.payload.level !== undefined) {
         state.difficultyLevel = action.payload.level;
         state.isFirstTimeDifficultySelection = false;
@@ -89,14 +109,22 @@ const walletSlice = createSlice({
 
         // Set adoption fee based on difficulty level
         const adoptionFees: Record<number, number> = {
-          1: 5000,   // Pug
-          2: 10000,  // Brussels Griffon
-          3: 15000,  // Eevee
-          4: 20000,  // Byul
-          5: 25000,  // Cane Corso
-          6: 30000,  // Pitbull
-          7: 35000,  // Afghan Hound
-          8: 40000,  // German Shepherd
+          1: 5000, // Rock
+          2: 10000, // Peg the Pug
+          3: 20000, // Hamster
+          4: 25000, // Brussels Griffon
+          5: 35000, // Clownfish
+          6: 45000, // Evee Cat
+          7: 55000, // Chicken
+          8: 60000, // Byul Terrier
+          9: 75000, // Parrot
+          10: 100000, // Cane Corso
+          11: 250000, // Bearded Dragon
+          12: 450000, // Pitbull
+          13: 500000, // Horse
+          14: 600000, // Afghan Hound
+          15: 750000, // German Shepherd
+          16: 1000000, // Dragon
         };
 
         state.adoptionFee = adoptionFees[action.payload.level] || 5000;
