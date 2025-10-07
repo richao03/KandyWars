@@ -18,7 +18,7 @@ export default function TabLayout() {
       animation: 'none', // Disable animations for instant switching
       tabBarStyle: isTabBarVisible
         ? {
-            backgroundColor: isAfterSchool ? '#000000' : undefined,
+            backgroundColor: '#000000',
             height: 49, // Standard iOS tab bar height
             paddingBottom: 0,
           }
@@ -26,7 +26,7 @@ export default function TabLayout() {
             display: 'none',
           },
       tabBarLabelStyle: {
-        color: isAfterSchool ? '#ffffff' : undefined,
+        color: '#fafafa',
         fontFamily: 'PixeloidMono',
       },
       tabBarIconStyle: {

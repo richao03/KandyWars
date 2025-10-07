@@ -8,6 +8,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { persistor, store } from '../src/store/store';
+import CustomCopilotTooltip from './components/CustomCopilotTooltip';
 import StudioTitleScreen from './components/StudioTitleScreen';
 
 // Keep the splash screen visible while we fetch resources
@@ -60,10 +61,10 @@ export default function RootLayout() {
                   skip: 'Skip',
                   finish: 'Got it!',
                 }}
-                tooltipStyle={{
-                  fontSize: 16,
-                }}
-                stopOnOutsideClick={true}
+                tooltipComponent={CustomCopilotTooltip}
+                stopOnOutsideClick={false}
+                arrowSize={{ width: 0, height: 0 }}
+                maskOffset={8}
               >
                 {showStudioScreen ? (
                   <StudioTitleScreen

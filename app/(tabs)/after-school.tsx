@@ -20,9 +20,9 @@ import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
-import { useInventory } from '../../src/hooks/useInventory';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
+import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
@@ -31,6 +31,7 @@ import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch } from '../../src/store/hooks';
 import { setTotalCompletions } from '../../src/store/slices/gameSlice';
 import { forceSave } from '../../src/store/store';
+import CustomCopilotTooltip from '../components/CustomCopilotTooltip';
 import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
@@ -73,7 +74,8 @@ function AfterSchoolPage() {
   const { balance, stashedAmount, adoptionFee, addAllowance, difficultyLevel } =
     useWallet();
   const { jokers } = useJokers();
-  const { inventory, getTotalInventoryCount, getInventoryLimit } = useInventory();
+  const { inventory, getTotalInventoryCount, getInventoryLimit } =
+    useInventory();
   const { setEvent } = useFlavorText();
   const { trackGameCompleted } = useScoreboard();
   const { checkUnlockRequirements } = useHallPass();
@@ -219,7 +221,7 @@ function AfterSchoolPage() {
           console.log('🎯 Starting after-school copilot tutorial');
           setTutorialStarted(true);
           start();
-        }, 1000);
+        }, 300);
 
         return () => clearTimeout(timeoutId);
       }
@@ -419,7 +421,7 @@ function AfterSchoolPage() {
   }, [hasStudiedTonight, handleStudy, day]);
 
   const renderMainOptions = useMemo(() => {
-    const shouldShowTutorial = day === 1;
+    const shouldShowTutorial = day === 1 && !hasCompletedAfterSchoolTutorial;
 
     const stepConfigs: Record<
       string,
@@ -428,22 +430,34 @@ function AfterSchoolPage() {
       study: {
         order: 1,
         name: 'study_step',
-        text: 'Study at Home: play mini-games to win jokers with auras or instant abilities, knowledge is power!',
+        text: `Study to get better:
+• Play mini-games to win jokers
+• Jokers have auras or instant abilities
+• Knowledge is power!`,
       },
       stash: {
         order: 2,
         name: 'stash_step',
-        text: 'Go to Your Stash: stash your money away for the pet fund, a dollar saved is a dollar earned',
+        text: `Go to Your Stash:
+• Stash money for the pet fund
+• A dollar saved is a dollar earned
+`,
       },
       deli: {
         order: 3,
         name: 'deli_step',
-        text: 'Visit the Corner Deli: come shoot the breeze and hang out, you can always find fair priced candy around the corner!',
+        text: `Visit the Corner Deli:
+• Shoot the breeze and hang out
+• Find fair priced candy around the corner
+`,
       },
       sleep: {
         order: 4,
         name: 'sleep_step',
-        text: 'Go to Sleep: End the day, get your daily allowance, and start fresh tomorrow at school. We rest to travel further!',
+        text: `Get some rest for tomorrow
+• End the day and get your allowance
+• Start fresh tomorrow at school
+• We rest to travel further!`,
       },
     };
 
@@ -493,6 +507,7 @@ function AfterSchoolPage() {
 
       // Wrap with CopilotStep only if tutorial should show
       if (shouldShowTutorial && stepConfig) {
+        const WalkthroughableView = walkthroughable(View);
         return (
           <CopilotStep
             key={`step-${item.id}`}
@@ -500,14 +515,18 @@ function AfterSchoolPage() {
             order={stepConfig.order}
             name={stepConfig.name}
           >
-            {button}
+            <WalkthroughableView
+              style={{ width: '100%', alignItems: 'center' }}
+            >
+              {button}
+            </WalkthroughableView>
           </CopilotStep>
         );
       }
 
       return button;
     });
-  }, [options, day]);
+  }, [options, day, hasCompletedAfterSchoolTutorial]);
 
   return (
     <View style={styles.container}>
@@ -634,7 +653,7 @@ const styles = StyleSheet.create({
     color: colors.gold.light,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowColor: 'rgba(0,0,0,1)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
     marginBottom: 4,
@@ -697,22 +716,23 @@ const styles = StyleSheet.create({
   },
 });
 
-// Wrap with CopilotProvider
+// Wrap with CopilotProvider using CustomCopilotTooltip
 function AfterSchoolPageWithCopilot() {
   return (
     <CopilotProvider
       overlay="svg"
-      androidStatusBarVisible={false}
-      backdropColor="rgba(0, 0, 0, 0.4)"
-      animated={false}
-      animationDuration={100}
+      animated={true}
+      backdropColor="rgba(0, 0, 0, 0.9)"
       labels={{
-        previous: 'Previous',
+        previous: 'Back',
         next: 'Next',
         skip: 'Skip',
-        finish: 'Finish',
+        finish: 'Got it!',
       }}
-      stepNumberComponent={() => null}
+      tooltipComponent={CustomCopilotTooltip}
+      stopOnOutsideClick={false}
+      arrowSize={{ width: 0, height: 0 }}
+      maskOffset={8}
     >
       <AfterSchoolPage />
     </CopilotProvider>

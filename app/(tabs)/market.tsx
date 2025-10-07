@@ -2,7 +2,6 @@ import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
 import React, {
-  memo,
   startTransition,
   useCallback,
   useEffect,
@@ -10,9 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { batch } from 'react-redux';
 import {
-  FlatList,
   ImageBackground,
   StyleSheet,
   Text,
@@ -20,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
+import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
@@ -41,25 +39,21 @@ import { useAppDispatch } from '../../src/store/hooks';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { forceSave } from '../../src/store/store';
 import { JokerService } from '../../src/utils/jokerService';
-import CandyListItem from '../components/CandyListItem';
 import ConfirmationModal from '../components/ConfirmationModal';
-import MarketList from '../components/MarketList';
 import DayStatsModal from '../components/DayStatsModal';
 import DeliModal from '../components/DeliModal';
 import EventModal from '../components/EventModal';
 import GameHUD from '../components/GameHUD';
 import InventoryModal from '../components/InventoryModal';
 import LocationModal, { Location } from '../components/LocationModal';
+import MarketList from '../components/MarketList';
 import PixelBorder from '../components/PixelBorder';
 import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
-import StudySubjectSelector from '../components/StudySubjectSelector';
 import TextWithEmojis from '../components/TextWithEmojis';
 import TransactionModal from '../components/TransactionModal';
 import { Candy } from '../types';
-import colors from '../../src/constants/colors';
-
 
 const CopilotView = walkthroughable(View);
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
@@ -101,19 +95,18 @@ function Market(props) {
   // Debug: Log mount/unmount
   const instanceIdRef = useRef(Math.random().toString(36).substring(7));
   useEffect(() => {
-    console.log(`🟢 Market component MOUNTED - Instance: ${instanceIdRef.current}`);
+    console.log(
+      `🟢 Market component MOUNTED - Instance: ${instanceIdRef.current}`
+    );
     return () => {
-      console.log(`🔴 Market component UNMOUNTED - Instance: ${instanceIdRef.current}`);
+      console.log(
+        `🔴 Market component UNMOUNTED - Instance: ${instanceIdRef.current}`
+      );
     };
   }, []);
 
-  const {
-    rng,
-    seed,
-    gameData,
-    getOriginalCandyPrice,
-    restoreCandyPrice,
-  } = useSeed();
+  const { rng, seed, gameData, getOriginalCandyPrice, restoreCandyPrice } =
+    useSeed();
 
   const { balance, spend, add } = useWallet();
 
@@ -147,9 +140,16 @@ function Market(props) {
   // Also hide lunch minigames when screen is focused and minigame was already played
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🎮 Market focused - hasPlayedLunchMinigame:', hasPlayedLunchMinigame, 'showLunchMinigames:', showLunchMinigames);
+      console.log(
+        '🎮 Market focused - hasPlayedLunchMinigame:',
+        hasPlayedLunchMinigame,
+        'showLunchMinigames:',
+        showLunchMinigames
+      );
       if (hasPlayedLunchMinigame) {
-        console.log('🎮 Returning to market after lunch minigame, hiding lunch view');
+        console.log(
+          '🎮 Returning to market after lunch minigame, hiding lunch view'
+        );
         setShowLunchMinigames(false);
       }
     }, [hasPlayedLunchMinigame, showLunchMinigames])
@@ -176,7 +176,9 @@ function Market(props) {
   } = useGame();
 
   // Log every render to see how many instances are active
-  console.log(`📊 Market RENDER - Instance: ${instanceIdRef.current}, Period: ${period}, PeriodCount: ${periodCount}, Day: ${day}`);
+  console.log(
+    `📊 Market RENDER - Instance: ${instanceIdRef.current}, Period: ${period}, PeriodCount: ${periodCount}, Day: ${day}`
+  );
 
   const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
@@ -241,7 +243,7 @@ function Market(props) {
         console.log('🎯 Starting market copilot tutorial');
         tutorialStarted.current = true;
         start();
-      }, 1000);
+      }, 300);
 
       return () => clearTimeout(timeoutId);
     }
@@ -568,13 +570,30 @@ function Market(props) {
 
   // Memoize candy calculations to prevent excessive re-renders
   // Extract stable values from gameData to prevent unnecessary recalculations
-  const periodEvents = useMemo(() => gameData.periodEvents, [gameData.periodEvents]);
-  const candyPrices = useMemo(() => gameData.candyPrices, [gameData.candyPrices]);
+  const periodEvents = useMemo(
+    () => gameData.periodEvents,
+    [gameData.periodEvents]
+  );
+  const candyPrices = useMemo(
+    () => gameData.candyPrices,
+    [gameData.candyPrices]
+  );
 
   const calculatedCandies = useMemo(() => {
     const startTime = performance.now();
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 Recalculating candies | period:', periodCount, 'location:', currentLocation, 'jokers:', jokerCount, 'activeEffects:', activeEffects.length, 'inventory items:', inventory.length);
+      console.log(
+        '🔄 Recalculating candies | period:',
+        periodCount,
+        'location:',
+        currentLocation,
+        'jokers:',
+        jokerCount,
+        'activeEffects:',
+        activeEffects.length,
+        'inventory items:',
+        inventory.length
+      );
     }
     // No need to check isFocused anymore - Stack navigation properly unmounts
     const currentInventoryLimit = inventoryLimit;
@@ -582,61 +601,61 @@ function Market(props) {
     const consecutiveSalesCount = consecutivePeriodSales(periodCount);
 
     const result = baseCandies.map((candy) => {
-        // Hybrid price lookup (Option 3):
-        // 1. Check if there's a pre-calculated event price for this period/location/candy
-        // 2. Fall back to base price from gameData
-        const eventPrices = gameData.eventPrices || {};
+      // Hybrid price lookup (Option 3):
+      // 1. Check if there's a pre-calculated event price for this period/location/candy
+      // 2. Fall back to base price from gameData
+      const eventPrices = gameData.eventPrices || {};
 
-        let finalCost: number;
+      let finalCost: number;
 
-        // First check location-specific event price
-        if (eventPrices[periodCount]?.[currentLocation]?.[candy.name]) {
-          finalCost = eventPrices[periodCount][currentLocation][candy.name];
-        }
-        // Then check 'any' location event price
-        else if (eventPrices[periodCount]?.['any']?.[candy.name]) {
-          finalCost = eventPrices[periodCount]['any'][candy.name];
-        }
-        // Finally fall back to base price
-        else {
-          finalCost = candyPrices[candy.name]?.[periodCount] || 0;
-        }
+      // First check location-specific event price
+      if (eventPrices[periodCount]?.[currentLocation]?.[candy.name]) {
+        finalCost = eventPrices[periodCount][currentLocation][candy.name];
+      }
+      // Then check 'any' location event price
+      else if (eventPrices[periodCount]?.['any']?.[candy.name]) {
+        finalCost = eventPrices[periodCount]['any'][candy.name];
+      }
+      // Finally fall back to base price
+      else {
+        finalCost = candyPrices[candy.name]?.[periodCount] || 0;
+      }
 
-        // Get price breakdown showing base price and joker effects
-        // (consecutiveSalesCount already calculated once above)
+      // Get price breakdown showing base price and joker effects
+      // (consecutiveSalesCount already calculated once above)
 
-        // Use pre-computed joker service if available, otherwise fall back to regular calculation
-        const priceBreakdown = jokerServiceComputed
-          ? jokerService.getPriceBreakdown(
-              finalCost,
-              jokers,
-              periodCount,
-              currentInventoryLimit,
-              activeEffects,
-              consecutiveSalesCount,
-              totalCandiesSold
-            )
-          : { basePrice: finalCost, jokerEffects: [], finalPrice: finalCost };
+      // Use pre-computed joker service if available, otherwise fall back to regular calculation
+      const priceBreakdown = jokerServiceComputed
+        ? jokerService.getPriceBreakdown(
+            finalCost,
+            jokers,
+            periodCount,
+            currentInventoryLimit,
+            activeEffects,
+            consecutiveSalesCount,
+            totalCandiesSold
+          )
+        : { basePrice: finalCost, jokerEffects: [], finalPrice: finalCost };
 
-        // Note: Price storage moved to separate useEffect to avoid setState during render
+      // Note: Price storage moved to separate useEffect to avoid setState during render
 
-        // Get inventory information for this candy
-        const inventoryItem = inventory.find(
-          (item) => item.name === candy.name
-        );
+      // Get inventory information for this candy
+      const inventoryItem = inventory.find((item) => item.name === candy.name);
 
-        return {
-          ...candy,
-          basePrice: finalCost, // Use finalCost as basePrice
-          cost: finalCost,
-          quantityOwned: inventoryItem?.quantity || 0,
-          averagePrice: inventoryItem?.price || null,
-          priceBreakdown,
-        };
-      });
+      return {
+        ...candy,
+        basePrice: finalCost, // Use finalCost as basePrice
+        cost: finalCost,
+        quantityOwned: inventoryItem?.quantity || 0,
+        averagePrice: inventoryItem?.price || null,
+        priceBreakdown,
+      };
+    });
     const endTime = performance.now();
     if (process.env.NODE_ENV === 'development') {
-      console.log(`⏱️ Candy calculation took ${(endTime - startTime).toFixed(2)}ms`);
+      console.log(
+        `⏱️ Candy calculation took ${(endTime - startTime).toFixed(2)}ms`
+      );
     }
     return result;
   }, [
@@ -1310,6 +1329,9 @@ function Market(props) {
     setShowLunchMinigames(false);
   };
 
+  // Check if we should show copilot tutorial wrappers
+  const showCopilotWrappers = day === 1 && periodCount === 0;
+
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -1318,35 +1340,70 @@ function Market(props) {
         resizeMode="cover"
       >
         <View style={styles.contentContainer}>
-          <CopilotStep
-            text="🎒 Welcome to Candy Wars! This is your HUD showing your wallet balance, piggy bank savings, and inventory. Let's learn how to become the school's candy mogul!"
-            order={1}
-            name="market_hud"
-          >
-            <CopilotView>
-              <GameHUD
-                isModalOpening={isTransactionModalOpening}
-                isModalOpen={selectedCandyIndex !== null}
-                onInventoryPress={() => setInventoryModalVisible(true)}
-                flavorTextWrapper={(children) => (
-                  <CopilotStep
-                    text="The Rumor Mill shows important information and hints! Keep an eye on these scrolling messages - they might reveal price trends, special events, or valuable tips from other students."
-                    order={2}
-                    name="market_rumor_mill"
-                  >
-                    <CopilotView>{children}</CopilotView>
-                  </CopilotStep>
-                )}
-              />
-            </CopilotView>
-          </CopilotStep>
+          {showCopilotWrappers ? (
+            <CopilotStep
+              text={`Welcome to Candy Wars! Here is your HUD:
+• You can see your cash on hand
+• Savings in your piggy bank
+• Current inventory count`}
+              order={1}
+              name="market_hud"
+            >
+              <CopilotView>
+                <GameHUD
+                  isModalOpening={isTransactionModalOpening}
+                  isModalOpen={selectedCandyIndex !== null}
+                  onInventoryPress={() => setInventoryModalVisible(true)}
+                  flavorTextWrapper={(children) => (
+                    <CopilotStep
+                      text={`Keep an eye on the rumor mill, it can:
+• Hint at the next special event
+• Provide useful tips
+`}
+                      order={2}
+                      name="market_rumor_mill"
+                    >
+                      <CopilotView>{children}</CopilotView>
+                    </CopilotStep>
+                  )}
+                />
+              </CopilotView>
+            </CopilotStep>
+          ) : (
+            <GameHUD
+              isModalOpening={isTransactionModalOpening}
+              isModalOpen={selectedCandyIndex !== null}
+              onInventoryPress={() => setInventoryModalVisible(true)}
+            />
+          )}
 
-          <CopilotStep
-            text="Here's the candy market! Each candy has a different price. Tap on any candy to buy or sell it. Prices change throughout the day!"
-            order={3}
-            name="market_list"
-          >
-            <CopilotView style={styles.listContainer}>
+          {showCopilotWrappers ? (
+            <CopilotStep
+              // text={`Here's the candy market!
+              // • Tap on any candy to buy or sell it
+              // • Prices change every period!`}
+              text={`Heres the current candy market:
+• Click on a candy to buy or sell
+• Candy prices change every period
+`}
+              order={3}
+              name="market_list"
+            >
+              <CopilotView style={[styles.listContainer]}>
+                <MarketList
+                  candies={candies}
+                  localPricesUpdating={localPricesUpdating}
+                  isFocused={isFocused}
+                  isLunchPeriod={isLunchPeriod}
+                  showLunchMinigames={showLunchMinigames}
+                  hasPlayedLunchMinigame={hasPlayedLunchMinigame}
+                  onCandyPress={openModal}
+                  onLunchBack={handleLunchBack}
+                />
+              </CopilotView>
+            </CopilotStep>
+          ) : (
+            <View style={styles.listContainer}>
               <MarketList
                 candies={candies}
                 localPricesUpdating={localPricesUpdating}
@@ -1357,203 +1414,388 @@ function Market(props) {
                 onCandyPress={openModal}
                 onLunchBack={handleLunchBack}
               />
-            </CopilotView>
-          </CopilotStep>
+            </View>
+          )}
 
-          <CopilotStep
-            text="Use these buttons to advance time. 'Next Period' moves to the next class, and 'End Day' skips straight to after school!"
-            order={4}
-            name="market_buttons"
-          >
-            <CopilotView>
-              <View style={styles.buttonContainer}>
-                {isLunchPeriod &&
-                !hasPlayedLunchMinigame ? (
-                  // Lunch period before playing minigame: Show play minigames button and end day
-                  <View style={styles.buttonRow}>
-                    <PixelBorder
-                      borderColor="rgba(250,204,21,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(253,224,71,1)"
-                      innerPadding={0}
-                      style={styles.bigButton}
-                    >
-                      <TouchableOpacity
-                        style={styles.pixelButtonInner}
-                        onPress={() => setShowLunchMinigames(true)}
-                        activeOpacity={0.8}
+          {showCopilotWrappers ? (
+            <CopilotStep
+              text="Use these buttons to advance periods or end the day to skip straight to after school!"
+              order={4}
+              name="market_buttons"
+            >
+              <CopilotView>
+                <View style={styles.buttonContainer}>
+                  {isLunchPeriod && !hasPlayedLunchMinigame ? (
+                    // Lunch period before playing minigame: Show play minigames button and end day
+                    <View style={styles.buttonRow}>
+                      <PixelBorder
+                        borderColor="rgba(250,204,21,1)"
+                        borderWidth={3}
+                        backgroundColor="rgba(253,224,71,1)"
+                        innerPadding={0}
+                        style={styles.bigButton}
                       >
-                        <Text style={styles.lunchButtonText}>
-                          🎮 Play Minigames
-                        </Text>
-                        <Text style={styles.lunchSubtext}>
-                          Earn a joker during lunch!
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
+                        <TouchableOpacity
+                          style={styles.pixelButtonInner}
+                          onPress={() => setShowLunchMinigames(true)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.lunchButtonText}>
+                            🎮 Play Minigames
+                          </Text>
+                          <Text style={styles.lunchSubtext}>
+                            Earn a joker during lunch!
+                          </Text>
+                        </TouchableOpacity>
+                      </PixelBorder>
 
-                    <PixelBorder
-                      borderColor="rgba(185,28,28,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(239,68,68,1)"
-                      innerPadding={0}
-                      style={styles.smallButton}
-                    >
-                      <TouchableOpacity
-                        style={styles.pixelButtonInner}
-                        onPress={handleEndDay}
-                        activeOpacity={0.8}
+                      <PixelBorder
+                        borderColor="rgba(185,28,28,1)"
+                        borderWidth={3}
+                        backgroundColor="rgba(239,68,68,1)"
+                        innerPadding={0}
+                        style={styles.smallButton}
                       >
-                        <Text style={styles.endDayButtonText}>
-                          {day === 5 ? 'Game End' : 'End Day'}
-                        </Text>
-                        <Text style={styles.endDaySubtext}>
-                          {day === 5
-                            ? 'Finish the game'
-                            : 'Skip to after school'}
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  </View>
-                ) : isLunchPeriod && !hasPlayedLunchMinigame && showLunchMinigames ? (
-                  // In StudySubjectSelector: Show Leave Lunch button and end day (only if not played yet)
-                  <View style={styles.buttonRow}>
-                    <PixelBorder
-                      borderColor="rgba(250,204,21,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(253,224,71,1)"
-                      innerPadding={0}
-                      style={styles.bigButton}
-                    >
-                      <TouchableOpacity
-                        style={styles.pixelButtonInner}
-                        onPress={handleLunchBack}
-                        activeOpacity={0.8}
+                        <TouchableOpacity
+                          style={styles.pixelButtonInner}
+                          onPress={handleEndDay}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.endDayButtonText}>
+                            {day === 5 ? 'Game End' : 'End Day'}
+                          </Text>
+                          <Text style={styles.endDaySubtext}>
+                            {day === 5
+                              ? 'Finish the game'
+                              : 'Skip to after school'}
+                          </Text>
+                        </TouchableOpacity>
+                      </PixelBorder>
+                    </View>
+                  ) : isLunchPeriod &&
+                    !hasPlayedLunchMinigame &&
+                    showLunchMinigames ? (
+                    // In StudySubjectSelector: Show Leave Lunch button and end day (only if not played yet)
+                    <View style={styles.buttonRow}>
+                      <PixelBorder
+                        borderColor="rgba(250,204,21,1)"
+                        borderWidth={3}
+                        backgroundColor="rgba(253,224,71,1)"
+                        innerPadding={0}
+                        style={styles.bigButton}
                       >
-                        <Text style={styles.lunchButtonText}>
-                          🚪 Leave Lunch
-                        </Text>
-                        <Text style={styles.lunchSubtext}>Back to market</Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
+                        <TouchableOpacity
+                          style={styles.pixelButtonInner}
+                          onPress={handleLunchBack}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.lunchButtonText}>
+                            🚪 Leave Lunch
+                          </Text>
+                          <Text style={styles.lunchSubtext}>
+                            Back to market
+                          </Text>
+                        </TouchableOpacity>
+                      </PixelBorder>
 
+                      <PixelBorder
+                        borderColor="rgba(185,28,28,1)"
+                        borderWidth={3}
+                        backgroundColor="rgba(239,68,68,1)"
+                        innerPadding={0}
+                        style={styles.smallButton}
+                      >
+                        <TouchableOpacity
+                          style={styles.pixelButtonInner}
+                          onPress={handleEndDay}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.endDayButtonText}>
+                            {day === 5 ? 'Game End' : 'End Day'}
+                          </Text>
+                          <Text style={styles.endDaySubtext}>
+                            {day === 5
+                              ? 'Finish the game'
+                              : 'Skip to after school'}
+                          </Text>
+                        </TouchableOpacity>
+                      </PixelBorder>
+                    </View>
+                  ) : period === 8 && day === 5 ? (
+                    // Period 8 on Day 5: Show end game button
                     <PixelBorder
-                      borderColor="rgba(185,28,28,1)"
+                      borderColor="rgba(101,181,101,1)"
                       borderWidth={3}
-                      backgroundColor="rgba(239,68,68,1)"
+                      backgroundColor="rgba(151,221,151,1)"
                       innerPadding={0}
-                      style={styles.smallButton}
                     >
                       <TouchableOpacity
                         style={styles.pixelButtonInner}
-                        onPress={handleEndDay}
+                        onPress={() => {
+                          Haptics.notificationAsync(
+                            Haptics.NotificationFeedbackType.Success
+                          );
+                          router.push('/game-end');
+                        }}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.endDayButtonText}>
-                          {day === 5 ? 'Game End' : 'End Day'}
-                        </Text>
-                        <Text style={styles.endDaySubtext}>
-                          {day === 5
-                            ? 'Finish the game'
-                            : 'Skip to after school'}
-                        </Text>
+                        <TextWithEmojis
+                          style={styles.nextPeriodButtonText}
+                          imageSize={28}
+                        >
+                          🏆 End Game
+                        </TextWithEmojis>
+                        <TextWithEmojis style={styles.nextPeriodSubtext}>
+                          See your final results!
+                        </TextWithEmojis>
                       </TouchableOpacity>
                     </PixelBorder>
-                  </View>
-                ) : period === 8 && day === 5 ? (
-                  // Period 8 on Day 5: Show end game button
+                  ) : period === 8 ? (
+                    // Period 8 on other days: Show leave school button
+                    <TouchableOpacity
+                      style={styles.nextPeriodButton}
+                      onPress={handleNextDay}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.nextPeriodButtonText}>
+                        Leave School for the Day
+                      </Text>
+                      <Text style={styles.nextPeriodSubtext}>
+                        Time to head home!
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    // Periods 1-7: Show both next period and end day buttons
+                    <View style={styles.buttonRow}>
+                      <PixelBorder
+                        borderColor="rgba(123,169,101,1)"
+                        borderWidth={3}
+                        backgroundColor="rgba(154,193,118,1)"
+                        innerPadding={0}
+                        style={styles.bigButton}
+                      >
+                        <TouchableOpacity
+                          style={styles.pixelButtonInner}
+                          onPress={handleNextDay}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.nextPeriodButtonText}>
+                            Next Period
+                          </Text>
+                          <Text style={styles.nextPeriodSubtext}>
+                            Going to period {period + 1}
+                          </Text>
+                        </TouchableOpacity>
+                      </PixelBorder>
+
+                      <PixelBorder
+                        borderColor="rgba(185,28,28,1)"
+                        borderWidth={3}
+                        backgroundColor="rgba(239,68,68,1)"
+                        innerPadding={0}
+                        style={styles.smallButton}
+                      >
+                        <TouchableOpacity
+                          style={styles.pixelButtonInner}
+                          onPress={handleEndDay}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.endDayButtonText}>
+                            {day === 5 ? 'Game End' : 'End Day'}
+                          </Text>
+                          <Text style={styles.endDaySubtext}>
+                            {day === 5
+                              ? 'Finish the game'
+                              : 'Skip to after school'}
+                          </Text>
+                        </TouchableOpacity>
+                      </PixelBorder>
+                    </View>
+                  )}
+                </View>
+              </CopilotView>
+            </CopilotStep>
+          ) : (
+            <View style={styles.buttonContainer}>
+              {isLunchPeriod && !hasPlayedLunchMinigame ? (
+                // Lunch period before playing minigame: Show play minigames button and end day
+                <View style={styles.buttonRow}>
                   <PixelBorder
-                    borderColor="rgba(101,181,101,1)"
+                    borderColor="rgba(250,204,21,1)"
                     borderWidth={3}
-                    backgroundColor="rgba(151,221,151,1)"
+                    backgroundColor="rgba(253,224,71,1)"
                     innerPadding={0}
+                    style={styles.bigButton}
                   >
                     <TouchableOpacity
                       style={styles.pixelButtonInner}
-                      onPress={() => {
-                        Haptics.notificationAsync(
-                          Haptics.NotificationFeedbackType.Success
-                        );
-                        router.push('/game-end');
-                      }}
+                      onPress={() => setShowLunchMinigames(true)}
                       activeOpacity={0.8}
                     >
-                      <TextWithEmojis
-                        style={styles.nextPeriodButtonText}
-                        imageSize={28}
-                      >
-                        🏆 End Game
-                      </TextWithEmojis>
-                      <TextWithEmojis style={styles.nextPeriodSubtext}>
-                        See your final results!
-                      </TextWithEmojis>
+                      <Text style={styles.lunchButtonText}>
+                        🎮 Play Minigames
+                      </Text>
+                      <Text style={styles.lunchSubtext}>
+                        Earn a joker during lunch!
+                      </Text>
                     </TouchableOpacity>
                   </PixelBorder>
-                ) : period === 8 ? (
-                  // Period 8 on other days: Show leave school button
+
+                  <PixelBorder
+                    borderColor="rgba(185,28,28,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(239,68,68,1)"
+                    innerPadding={0}
+                    style={styles.smallButton}
+                  >
+                    <TouchableOpacity
+                      style={styles.pixelButtonInner}
+                      onPress={handleEndDay}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.endDayButtonText}>
+                        {day === 5 ? 'Game End' : 'End Day'}
+                      </Text>
+                      <Text style={styles.endDaySubtext}>
+                        {day === 5 ? 'Finish the game' : 'Skip to after school'}
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+                </View>
+              ) : isLunchPeriod &&
+                !hasPlayedLunchMinigame &&
+                showLunchMinigames ? (
+                // In StudySubjectSelector: Show Leave Lunch button and end day (only if not played yet)
+                <View style={styles.buttonRow}>
+                  <PixelBorder
+                    borderColor="rgba(250,204,21,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(253,224,71,1)"
+                    innerPadding={0}
+                    style={styles.bigButton}
+                  >
+                    <TouchableOpacity
+                      style={styles.pixelButtonInner}
+                      onPress={handleLunchBack}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.lunchButtonText}>🚪 Leave Lunch</Text>
+                      <Text style={styles.lunchSubtext}>Back to market</Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+
+                  <PixelBorder
+                    borderColor="rgba(185,28,28,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(239,68,68,1)"
+                    innerPadding={0}
+                    style={styles.smallButton}
+                  >
+                    <TouchableOpacity
+                      style={styles.pixelButtonInner}
+                      onPress={handleEndDay}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.endDayButtonText}>
+                        {day === 5 ? 'Game End' : 'End Day'}
+                      </Text>
+                      <Text style={styles.endDaySubtext}>
+                        {day === 5 ? 'Finish the game' : 'Skip to after school'}
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+                </View>
+              ) : period === 8 && day === 5 ? (
+                // Period 8 on Day 5: Show end game button
+                <PixelBorder
+                  borderColor="rgba(101,181,101,1)"
+                  borderWidth={3}
+                  backgroundColor="rgba(151,221,151,1)"
+                  innerPadding={0}
+                >
                   <TouchableOpacity
-                    style={styles.nextPeriodButton}
-                    onPress={handleNextDay}
+                    style={styles.pixelButtonInner}
+                    onPress={() => {
+                      Haptics.notificationAsync(
+                        Haptics.NotificationFeedbackType.Success
+                      );
+                      router.push('/game-end');
+                    }}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.nextPeriodButtonText}>
-                      Leave School for the Day
-                    </Text>
-                    <Text style={styles.nextPeriodSubtext}>
-                      Time to head home!
-                    </Text>
+                    <TextWithEmojis
+                      style={styles.nextPeriodButtonText}
+                      imageSize={28}
+                    >
+                      🏆 End Game
+                    </TextWithEmojis>
+                    <TextWithEmojis style={styles.nextPeriodSubtext}>
+                      See your final results!
+                    </TextWithEmojis>
                   </TouchableOpacity>
-                ) : (
-                  // Periods 1-7: Show both next period and end day buttons
-                  <View style={styles.buttonRow}>
-                    <PixelBorder
-                      borderColor="rgba(123,169,101,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(154,193,118,1)"
-                      innerPadding={0}
-                      style={styles.bigButton}
+                </PixelBorder>
+              ) : period === 8 ? (
+                // Period 8 on other days: Show leave school button
+                <TouchableOpacity
+                  style={styles.nextPeriodButton}
+                  onPress={handleNextDay}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.nextPeriodButtonText}>
+                    Leave School for the Day
+                  </Text>
+                  <Text style={styles.nextPeriodSubtext}>
+                    Time to head home!
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                // Periods 1-7: Show both next period and end day buttons
+                <View style={styles.buttonRow}>
+                  <PixelBorder
+                    borderColor="rgba(123,169,101,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(154,193,118,1)"
+                    innerPadding={0}
+                    style={styles.bigButton}
+                  >
+                    <TouchableOpacity
+                      style={styles.pixelButtonInner}
+                      onPress={handleNextDay}
+                      activeOpacity={0.8}
                     >
-                      <TouchableOpacity
-                        style={styles.pixelButtonInner}
-                        onPress={handleNextDay}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.nextPeriodButtonText}>
-                          Next Period
-                        </Text>
-                        <Text style={styles.nextPeriodSubtext}>
-                          Going to period {period + 1}
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
+                      <Text style={styles.nextPeriodButtonText}>
+                        Next Period
+                      </Text>
+                      <Text style={styles.nextPeriodSubtext}>
+                        Going to period {period + 1}
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
 
-                    <PixelBorder
-                      borderColor="rgba(185,28,28,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(239,68,68,1)"
-                      innerPadding={0}
-                      style={styles.smallButton}
+                  <PixelBorder
+                    borderColor="rgba(185,28,28,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(239,68,68,1)"
+                    innerPadding={0}
+                    style={styles.smallButton}
+                  >
+                    <TouchableOpacity
+                      style={styles.pixelButtonInner}
+                      onPress={handleEndDay}
+                      activeOpacity={0.8}
                     >
-                      <TouchableOpacity
-                        style={styles.pixelButtonInner}
-                        onPress={handleEndDay}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.endDayButtonText}>
-                          {day === 5 ? 'Game End' : 'End Day'}
-                        </Text>
-                        <Text style={styles.endDaySubtext}>
-                          {day === 5
-                            ? 'Finish the game'
-                            : 'Skip to after school'}
-                        </Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  </View>
-                )}
-              </View>
-            </CopilotView>
-          </CopilotStep>
+                      <Text style={styles.endDayButtonText}>
+                        {day === 5 ? 'Game End' : 'End Day'}
+                      </Text>
+                      <Text style={styles.endDaySubtext}>
+                        {day === 5 ? 'Finish the game' : 'Skip to after school'}
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </ImageBackground>
 
@@ -1615,7 +1857,7 @@ function Market(props) {
         onCancel={() =>
           setConfirmationModal((prev) => ({ ...prev, visible: false }))
         }
-        theme={"market" as const}
+        theme={'market' as const}
       />
 
       <ConfirmationModal
@@ -1734,7 +1976,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   buttonContainer: {
-    backgroundColor: '#fefaf5',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
     borderTopWidth: 3,
     borderColor: '#d4a574',
     padding: 10,
