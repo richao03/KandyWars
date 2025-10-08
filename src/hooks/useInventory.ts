@@ -67,6 +67,7 @@ export const useInventory = () => {
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const jokerState = useAppSelector(state => state.joker);
   const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
+  const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
 
   // Ensure joker state is properly migrated on first use
   useEffect(() => {
@@ -77,10 +78,11 @@ export const useInventory = () => {
   }, [dispatch, jokerState.computedEffects]);
 
   const getInventoryLimit = useCallback((): number => {
-    // Apply Hall Pass inventory bonus
-    const finalLimit = HallPassUtils.applyInventoryBonus(computedInventoryLimit, hallPassEffects);
+    // Apply Hall Pass inventory bonus from pre-computed modifiers
+    const inventoryBonusSlots = hallPassModifiers.inventoryBonusSlots;
+    const finalLimit = computedInventoryLimit + inventoryBonusSlots;
     return finalLimit;
-  }, [computedInventoryLimit, hallPassEffects]);
+  }, [computedInventoryLimit, hallPassModifiers.inventoryBonusSlots]);
 
   // New Redux-style methods
   const addCandyAction = useCallback((candy: any) => {

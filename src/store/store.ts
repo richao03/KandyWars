@@ -15,6 +15,7 @@ import tabBarReducer from './slices/tabBarSlice';
 import dailyStatsReducer from './slices/dailyStatsSlice';
 import priceDoublingReducer from './slices/priceDoublingSlice';
 import hallPassReducer from './slices/hallPassSlice';
+import hallPassModifiersReducer from './slices/hallPassModifiersSlice';
 import minigameTrackingReducer from './slices/minigameTrackingSlice';
 
 // Combine reducers
@@ -32,6 +33,7 @@ const rootReducer = combineReducers({
   dailyStats: dailyStatsReducer,
   priceDoubling: priceDoublingReducer,
   hallPass: hallPassReducer,
+  hallPassModifiers: hallPassModifiersReducer,
   minigameTracking: minigameTrackingReducer,
 });
 
@@ -40,7 +42,7 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'minigameTracking'], // Only persist these slices
+  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'scoreboard', 'candySales', 'tabBar'], // Don't persist these
   // Performance optimizations
   timeout: 10000, // 10 second timeout for persistence operations

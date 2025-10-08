@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
+import { useAppSelector } from '../../src/store/hooks';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
@@ -48,6 +49,8 @@ export default function JokerSelection({
     jokers: ownedJokers,
   } = useJokers();
   const { getJokerBonus } = useHallPass();
+  // Get pre-computed hall pass modifiers from Redux
+  const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
 
   // Get user's jokers for this subject (for reference, not used for selection anymore)
   // const userJokers = getUserJokersBySubject(subject); // Removed to fix linting warning
@@ -69,8 +72,11 @@ export default function JokerSelection({
 
     const shuffled = [...availableJokers].sort(() => Math.random() - 0.5);
     const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
-    const jokerBonus = getJokerBonus(); // +1 from valedictorian_vendor Hall Pass
+    const jokerBonus = hallPassModifiers.jokerBonusCount; // Pre-computed hall pass bonus
     const requestedJokerCount = baseJokerCount + jokerBonus;
+    if (jokerBonus > 0) {
+      console.log(`🎖️ Hall Pass joker bonus: +${jokerBonus} jokers (showing ${requestedJokerCount} instead of ${baseJokerCount})`);
+    }
     // Limit to available jokers if we don't have enough
     const jokerCount = Math.min(requestedJokerCount, availableJokers.length);
     const selected = shuffled.slice(0, jokerCount);
@@ -91,7 +97,7 @@ export default function JokerSelection({
     // So if you have 2 jokers, reroll gives you 1 random joker
     // If you have 3 jokers, reroll gives you 2 random jokers
     const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
-    const jokerBonus = getJokerBonus(); // +1 from valedictorian_vendor Hall Pass
+    const jokerBonus = hallPassModifiers.jokerBonusCount; // Pre-computed hall pass bonus
     const originalCount = baseJokerCount + jokerBonus;
     const rerollJokerCount = Math.max(1, originalCount - 1); // At least 1 joker on reroll
 
@@ -360,7 +366,7 @@ export default function JokerSelection({
 
   const getRerollDescription = () => {
     const remaining = getMaxRerolls() - rerollsUsed;
-    const jokerBonus = getJokerBonus();
+    const jokerBonus = hallPassModifiers.jokerBonusCount;
     const originalCount = rewardTier + jokerBonus;
     const rerollCards = Math.max(1, originalCount - 1);
     return `${remaining} reroll${remaining > 1 ? 's' : ''} left, ${rerollCards} card${rerollCards > 1 ? 's' : ''}`;

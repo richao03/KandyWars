@@ -35,7 +35,7 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
-import { useAppDispatch } from '../../src/store/hooks';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { forceSave } from '../../src/store/store';
 import { JokerService } from '../../src/utils/jokerService';
@@ -68,6 +68,10 @@ type PriceBreakdown = {
     effectType: 'buy' | 'sell';
     isActive: boolean;
   }>;
+  hallPassEffect?: {
+    bonusPercent: number;
+    bonusAmount: number;
+  };
   finalPrice: number;
 };
 
@@ -197,6 +201,9 @@ function Market(props) {
 
   const { activeEffects, jokers, removeJoker, clearActiveEffect } = useJokers();
   const { applySalePriceBonus, getSalePriceBonus } = useHallPass();
+
+  // Get pre-computed hall pass modifiers from Redux (computed once at game start)
+  const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
 
   // Initialize computed joker effects system
   useComputedJokerEffects();
@@ -642,13 +649,31 @@ function Market(props) {
       // Get inventory information for this candy
       const inventoryItem = inventory.find((item) => item.name === candy.name);
 
+      // Calculate hall pass effect for price breakdown (only for selling)
+      const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
+      let hallPassEffect: { bonusPercent: number; bonusAmount: number } | undefined;
+
+      if (hallPassSaleBonusPercent > 0 && inventoryItem && inventoryItem.quantity > 0) {
+        // Calculate profit and hall pass bonus for 1 unit
+        const purchasePrice = inventoryItem.price || finalCost;
+        const profitPerUnit = Math.max(0, finalCost - purchasePrice);
+        const hallPassBonusPerUnit = profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100); // 5x multiplier
+
+        hallPassEffect = {
+          bonusPercent: hallPassSaleBonusPercent * 5,
+          bonusAmount: hallPassBonusPerUnit,
+        };
+      }
+
       return {
         ...candy,
         basePrice: finalCost, // Use finalCost as basePrice
         cost: finalCost,
         quantityOwned: inventoryItem?.quantity || 0,
         averagePrice: inventoryItem?.price || null,
-        priceBreakdown,
+        priceBreakdown: hallPassEffect
+          ? { ...priceBreakdown, hallPassEffect }
+          : priceBreakdown,
       };
     });
     const endTime = performance.now();
@@ -670,6 +695,7 @@ function Market(props) {
     jokers,
     jokerServiceComputed,
     totalCandiesSold,
+    hallPassModifiers,
   ]);
 
   // Sync memoized candies to state only when they change
@@ -967,7 +993,7 @@ function Market(props) {
             );
           }
 
-          // 7. Calculate profit-based hall pass bonus from Redux state
+          // 7. Calculate profit-based hall pass bonus from pre-computed modifiers
           const inventoryItem = inventory.find(
             (item) => item.name === candy.name
           );
@@ -975,8 +1001,8 @@ function Market(props) {
           const profitPerUnit = Math.max(0, candy.cost - purchasePrice);
           const totalProfit = profitPerUnit * quantity;
 
-          // Get hall pass bonus from Redux via useHallPass()
-          const hallPassSaleBonusPercent = getSalePriceBonus();
+          // Use pre-computed hall pass modifiers (set once at game start)
+          const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
           const hallPassProfitBonus =
             hallPassSaleBonusPercent > 0
               ? totalProfit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
@@ -989,6 +1015,7 @@ function Market(props) {
               multiplier: 1,
               flatBonus: hallPassProfitBonus,
             });
+            console.log(`🎖️ Hall Pass bonus: +$${hallPassProfitBonus.toFixed(2)} (${hallPassSaleBonusPercent}% × 5x on $${totalProfit.toFixed(2)} profit)`);
           }
 
           // === CALCULATE FINAL GAIN ===

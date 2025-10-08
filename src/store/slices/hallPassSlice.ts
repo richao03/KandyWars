@@ -277,14 +277,19 @@ const hallPassSlice = createSlice({
     },
     selectHallPass: (state, action: PayloadAction<string>) => {
       const passId = action.payload;
+      console.log(`🎖️ REDUCER: selectHallPass called for passId: ${passId}`);
+      console.log(`🎖️ REDUCER: Current selectedPassIds:`, state.selectedPassIds);
       // Toggle: add if not present, remove if present
       if (state.selectedPassIds.includes(passId)) {
         state.selectedPassIds = state.selectedPassIds.filter(
           (id) => id !== passId
         );
+        console.log(`🎖️ REDUCER: Removed ${passId} from selection`);
       } else {
         state.selectedPassIds.push(passId);
+        console.log(`🎖️ REDUCER: Added ${passId} to selection`);
       }
+      console.log(`🎖️ REDUCER: New selectedPassIds:`, state.selectedPassIds);
     },
     resetHallPassSelection: (state) => {
       state.selectedPassIds = [];
@@ -296,15 +301,18 @@ const hallPassSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(resetGame, (state) => {
-      console.log('🎓 REDUCER: resetGame called - preserving unlocked hall passes');
+      console.log('🎓 REDUCER: resetGame called - preserving unlocked hall passes AND selected passes');
       console.log('🎓 REDUCER: Unlocked passes before reset:', state.unlockedPassIds);
+      console.log('🎓 REDUCER: Selected passes before reset:', state.selectedPassIds);
 
-      // Preserve unlocked hall passes across game resets
+      // Preserve both unlocked AND selected hall passes across game resets
+      // The player intentionally selected these passes before starting the game
       // Only clear the newly unlocked list for the current playthrough
       state.newlyUnlockedPassIds = [];
-      state.selectedPassIds = []; // Clear selected passes for new game
+      // DO NOT clear selectedPassIds - preserve player's selection for the new game
 
       console.log('🎓 REDUCER: Unlocked passes after reset (preserved):', state.unlockedPassIds);
+      console.log('🎓 REDUCER: Selected passes after reset (preserved):', state.selectedPassIds);
     });
   },
 });

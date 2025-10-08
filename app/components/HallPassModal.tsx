@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { HallPass } from '../../src/store/slices/hallPassSlice';
+import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 
@@ -16,6 +17,7 @@ interface HallPassModalProps {
   visible: boolean;
   onClose: () => void;
   onSelectPass?: (passId: string | null) => void; // Optional for view-only mode
+  onConfirm?: () => void; // Called when "Pack Hall Passes" is clicked (for new game flow)
   viewMode?: 'selection' | 'gallery'; // New prop to control mode
 }
 
@@ -23,25 +25,40 @@ export default function HallPassModal({
   visible,
   onClose,
   onSelectPass,
+  onConfirm,
   viewMode = 'selection',
 }: HallPassModalProps) {
   const { allPasses, unlockedPasses, selectedPassIds } = useHallPass();
   const [localSelectedIds, setLocalSelectedIds] = useState<string[]>(
     selectedPassIds || []
   );
+  const [expandedPassId, setExpandedPassId] = useState<string | null>(null);
 
   const isSelectionMode = viewMode === 'selection' && onSelectPass;
 
-  // Debug logging when modal becomes visible
+  // Sync local state with Redux when modal opens
   React.useEffect(() => {
     if (visible) {
       console.log('🎓 HALL PASS MODAL: Opened');
       console.log('🎓 HALL PASS MODAL: Total passes:', allPasses.length);
-      console.log('🎓 HALL PASS MODAL: Unlocked passes:', unlockedPasses.length);
-      console.log('🎓 HALL PASS MODAL: Unlocked pass IDs:', unlockedPasses.map(p => p.id));
-      console.log('🎓 HALL PASS MODAL: All passes unlocked status:', allPasses.map(p => ({ id: p.id, isUnlocked: p.isUnlocked })));
+      console.log(
+        '🎓 HALL PASS MODAL: Unlocked passes:',
+        unlockedPasses.length
+      );
+      console.log(
+        '🎓 HALL PASS MODAL: Unlocked pass IDs:',
+        unlockedPasses.map((p) => p.id)
+      );
+      console.log(
+        '🎓 HALL PASS MODAL: Currently selected pass IDs from Redux:',
+        selectedPassIds
+      );
+      console.log('🎓 HALL PASS MODAL: isSelectionMode:', isSelectionMode);
+
+      // Sync local selection state with Redux
+      setLocalSelectedIds(selectedPassIds || []);
     }
-  }, [visible, allPasses, unlockedPasses]);
+  }, [visible, allPasses, unlockedPasses, selectedPassIds, isSelectionMode]);
 
   const getRarityColor = (rarity: HallPass['rarity']) => {
     switch (rarity) {
@@ -73,23 +90,50 @@ export default function HallPassModal({
     }
   };
 
-  const handleSelectPass = (passId: string) => {
+  const handlePassClick = (passId: string, isUnlocked: boolean) => {
+    // Always allow expanding/collapsing to view details
+    if (expandedPassId === passId) {
+      setExpandedPassId(null); // Collapse if already expanded
+    } else {
+      setExpandedPassId(passId); // Expand to show details
+    }
+  };
+
+  const handleSelectPass = (passId: string, e: any) => {
+    // Stop propagation to prevent triggering expand/collapse
+    e?.stopPropagation?.();
+
     if (isSelectionMode) {
+      console.log('🎖️ MODAL: Pass selected:', passId);
+      console.log('🎖️ MODAL: Current localSelectedIds:', localSelectedIds);
+
       // Toggle selection and immediately call onSelectPass to update Redux
       if (onSelectPass) {
         onSelectPass(passId); // This toggles in Redux
       }
+
       // Update local state for UI
       if (localSelectedIds.includes(passId)) {
-        setLocalSelectedIds(localSelectedIds.filter((id) => id !== passId));
+        const newIds = localSelectedIds.filter((id) => id !== passId);
+        console.log('🎖️ MODAL: Removing pass, new selection:', newIds);
+        setLocalSelectedIds(newIds);
       } else {
-        setLocalSelectedIds([...localSelectedIds, passId]);
+        const newIds = [...localSelectedIds, passId];
+        console.log('🎖️ MODAL: Adding pass, new selection:', newIds);
+        setLocalSelectedIds(newIds);
       }
     }
   };
 
   const handleConfirm = () => {
-    onClose();
+    console.log('🎖️ MODAL: Pack Hall Passes clicked');
+    if (onConfirm) {
+      // New game flow - call onConfirm to proceed to difficulty selection
+      onConfirm();
+    } else {
+      // Regular flow - just close
+      onClose();
+    }
   };
 
   const renderPassCard = (pass: HallPass) => {
@@ -97,6 +141,7 @@ export default function HallPassModal({
     const isUnlocked = pass.isUnlocked;
     const isCurrentlySelected =
       !isSelectionMode && selectedPassIds.includes(pass.id);
+    const isExpanded = expandedPassId === pass.id;
 
     return (
       <PixelBorder
@@ -106,7 +151,7 @@ export default function HallPassModal({
             ? '#2196F3'
             : getRarityColor(pass.rarity)
         }
-        borderWidth={isSelected || isCurrentlySelected ? 4 : 3}
+        borderWidth={isSelected || isCurrentlySelected ? 3 : 2}
         backgroundColor={
           isUnlocked ? getRarityBackground(pass.rarity) : '#f5f5f5'
         }
@@ -115,79 +160,104 @@ export default function HallPassModal({
       >
         <TouchableOpacity
           style={styles.passCard}
-          onPress={() =>
-            isUnlocked && isSelectionMode && handleSelectPass(pass.id)
-          }
-          disabled={!isUnlocked || !isSelectionMode}
+          onPress={() => handlePassClick(pass.id, isUnlocked)}
+          activeOpacity={0.7}
         >
           <View style={styles.passHeader}>
-            <Image
-              source={require('../../assets/images/emojis/hallpass.png')}
-              style={[styles.hallPassIcon, { opacity: isUnlocked ? 1 : 0.4 }]}
-            />
-            <View style={styles.headerTextContainer}>
-              <Text
-                style={[
-                  styles.passName,
-                  { color: isUnlocked ? getRarityColor(pass.rarity) : '#999' },
-                ]}
-              >
-                {pass.name}
-              </Text>
-              <Text
-                style={[
-                  styles.passRarity,
-                  { color: isUnlocked ? getRarityColor(pass.rarity) : '#999' },
-                ]}
-              >
-                {pass.rarity.toUpperCase()}
-              </Text>
-            </View>
-          </View>
-
-          <Text
-            style={[
-              styles.passDescription,
-              { color: isUnlocked ? '#333' : '#999' },
-            ]}
-          >
-            {pass.description}
-          </Text>
-
-          {
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+            >
               <Image
-                source={require('../../assets/images/emojis/lock.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                  marginRight: 4,
-                }}
+                source={require('../../assets/images/emojis/hallpass.png')}
+                style={[styles.hallPassIcon, { opacity: isUnlocked ? 1 : 0.4 }]}
               />
-              <Text style={styles.unlockRequirement}>
-                {pass.unlockRequirement}
-              </Text>
+              <View style={styles.headerTextContainer}>
+                <Text
+                  style={[
+                    styles.passName,
+                    {
+                      color: isUnlocked ? getRarityColor(pass.rarity) : '#999',
+                    },
+                  ]}
+                >
+                  {pass.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.passRarity,
+                    {
+                      color: isUnlocked ? getRarityColor(pass.rarity) : '#999',
+                    },
+                  ]}
+                >
+                  {pass.rarity.toUpperCase()}
+                </Text>
+              </View>
             </View>
-          }
-
-          <View style={styles.effectsContainer}>
-            {pass.effects.map((effect, index) => (
-              <Text
-                key={index}
-                style={[
-                  styles.effectText,
-                  { color: isUnlocked ? '#4a7c4a' : '#999' },
-                ]}
-              >
-                • {effect.description}
-              </Text>
-            ))}
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+            >
+              {isSelectionMode && isUnlocked && (
+                <TouchableOpacity
+                  style={[
+                    styles.checkboxButton,
+                    isSelected && styles.checkboxButtonSelected,
+                  ]}
+                  onPress={(e) => handleSelectPass(pass.id, e)}
+                >
+                  {isSelected && <Text style={styles.checkboxText}>✓</Text>}
+                </TouchableOpacity>
+              )}
+              <Text style={styles.expandIcon}>{isExpanded ? 'v' : '>>'}</Text>
+            </View>
           </View>
 
-          {(isSelected || isCurrentlySelected) && (
-            <View style={styles.selectedIndicator}>
-              <Text style={styles.selectedText}>✓</Text>
+          {isExpanded && (
+            <View style={styles.expandedContent}>
+              <Text
+                style={[
+                  styles.passDescription,
+                  { color: isUnlocked ? '#333' : '#999' },
+                ]}
+              >
+                {pass.description}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                <Image
+                  source={require('../../assets/images/emojis/lock.png')}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    resizeMode: 'contain',
+                    marginRight: 6,
+                  }}
+                />
+                <Text style={styles.unlockRequirement}>
+                  {pass.unlockRequirement}
+                </Text>
+              </View>
+
+              <View style={styles.effectsContainer}>
+                <Text style={styles.effectsTitle}>Effects:</Text>
+                {pass.effects.map((effect, index) => (
+                  <Text
+                    key={index}
+                    style={[
+                      styles.effectText,
+                      { color: isUnlocked ? '#4a7c4a' : '#999' },
+                    ]}
+                  >
+                    • {effect.description}
+                  </Text>
+                ))}
+              </View>
             </View>
           )}
 
@@ -205,12 +275,57 @@ export default function HallPassModal({
       backdropOpacity={0.8}
       modalStyle={styles.modalContainer}
     >
-      <Text style={styles.title}>Hall Pass Hall of Fame</Text>
+      <Text style={styles.title}>Hall Passes</Text>
       <Text style={styles.subtitle}>
         {isSelectionMode
           ? 'Choose Hall Passes to gain permanent bonuses (select multiple)'
           : 'Your collection of earned Hall Passes'}
       </Text>
+      {isSelectionMode &&
+        localSelectedIds.length > 0 &&
+        (() => {
+          const selectedPasses = allPasses.filter((p) =>
+            localSelectedIds.includes(p.id)
+          );
+          const modifiers = computeHallPassModifiers(selectedPasses);
+          return (
+            <View style={styles.accumulatedEffects}>
+              <Text style={styles.accumulatedTitle}>
+                {localSelectedIds.length} pass
+                {localSelectedIds.length !== 1 ? 'es' : ''} selected -
+                Accumulated Effects:
+              </Text>
+              {modifiers.salePriceBonusPercent > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  💰 +{modifiers.salePriceBonusPercent * 5}% profit bonus on
+                  sales
+                </Text>
+              )}
+              {modifiers.inventoryBonusSlots > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  🎒 +{modifiers.inventoryBonusSlots} inventory slots
+                </Text>
+              )}
+              {modifiers.allowanceBonusPercent > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  💵 +{modifiers.allowanceBonusPercent}% daily allowance
+                </Text>
+              )}
+              {modifiers.jokerBonusCount > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  🃏 +{modifiers.jokerBonusCount} joker
+                  {modifiers.jokerBonusCount !== 1 ? 's' : ''}
+                </Text>
+              )}
+              {modifiers.extraPeriodsPerDay > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  ⏰ +{modifiers.extraPeriodsPerDay} period
+                  {modifiers.extraPeriodsPerDay !== 1 ? 's' : ''} per day
+                </Text>
+              )}
+            </View>
+          );
+        })()}
 
       <ScrollView
         style={styles.scrollContainer}
@@ -230,7 +345,9 @@ export default function HallPassModal({
               style={styles.confirmButton}
               onPress={handleConfirm}
             >
-              <Text style={styles.confirmText}>Confirm</Text>
+              <Text style={styles.confirmText}>
+                {onConfirm ? 'Pack Hall Passes' : 'Confirm'}
+              </Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -268,6 +385,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'PixeloidMono',
     color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  selectedCount: {
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    color: '#2196F3',
+    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -316,74 +441,102 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   passCardWrapper: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   passCard: {
-    padding: 8,
-    paddingHorizontal: 12,
+    padding: 6,
+    paddingHorizontal: 10,
     position: 'relative',
   },
   passHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'space-between',
   },
   hallPassIcon: {
-    width: 48,
-    height: 48,
-    marginRight: 12,
+    width: 32,
+    height: 32,
+    marginRight: 8,
   },
   headerTextContainer: {
     flex: 1,
   },
   passName: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   passRarity: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   passDescription: {
-    fontSize: 14,
-    fontFamily: 'PixeloidMono',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  unlockRequirement: {
     fontSize: 12,
     fontFamily: 'PixeloidMono',
-    fontStyle: 'italic',
-    marginBottom: 12,
-    color: '#999',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    padding: 8,
-    borderRadius: 6,
+    marginBottom: 10,
+    lineHeight: 18,
   },
-  effectsContainer: {
-    marginTop: 0,
+  expandedContent: {
+    marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0, 0, 0, 0.1)',
   },
-
-  effectText: {
+  expandIcon: {
     fontSize: 12,
+    color: '#666',
     fontFamily: 'PixeloidMono',
+  },
+  checkboxButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#999',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxButtonSelected: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  checkboxText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'PixeloidMono',
+  },
+  unlockRequirement: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: 'PixeloidMono',
+    fontStyle: 'italic',
+    color: '#666',
+  },
+  effectsContainer: {
+    marginTop: 4,
+  },
+  effectsTitle: {
+    fontSize: 11,
+    fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 4,
-    lineHeight: 18,
+  },
+  effectText: {
+    fontSize: 11,
+    fontFamily: 'PixeloidMono',
+    marginBottom: 3,
+    lineHeight: 16,
   },
   selectedIndicator: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
     backgroundColor: '#2196F3',
-    width: 20,
-    height: 20,
+    width: 24,
+    height: 24,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
@@ -392,9 +545,30 @@ const styles = StyleSheet.create({
   },
   selectedText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
+  },
+  accumulatedEffects: {
+    backgroundColor: '#e8f5e8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#4a7c4a',
+  },
+  accumulatedTitle: {
+    fontSize: 12,
+    fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
+    color: '#2d5f2d',
+    marginBottom: 8,
+  },
+  accumulatedEffect: {
+    fontSize: 11,
+    fontFamily: 'PixeloidMono',
+    color: '#2d5f2d',
+    marginBottom: 4,
   },
   lockedOverlay: {
     position: 'absolute',

@@ -22,9 +22,11 @@ import ExactFontHandwriting from './ExactFontHandwriting';
 import HallPassModal from './HallPassModal';
 import PixelBorder from './PixelBorder';
 import StoryModal from './StoryModal';
-import { useAppDispatch } from '../../src/store/hooks';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { setPeriodCount } from '../../src/store/slices/gameSlice';
 import { setBalance, setStashedAmount } from '../../src/store/slices/walletSlice';
+import { setHallPassModifiers } from '../../src/store/slices/hallPassModifiersSlice';
+import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
 import { scoreboardService } from '../../src/services/firebase';
 
 const { width, height } = Dimensions.get('window');
@@ -47,7 +49,7 @@ export default function CandyWarsTitleScreen({
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
   const { setSeed, setGameData } = useSeed();
-  const { selectPass } = useHallPass();
+  const { selectPass, selectedPasses } = useHallPass();
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
@@ -78,6 +80,18 @@ export default function CandyWarsTitleScreen({
     );
   }, []);
 
+  // Recompute modifiers if there are selected passes but modifiers aren't initialized
+  // This handles the case where selectedPassIds persisted but modifiers didn't
+  const hallPassModifiersState = useAppSelector((state) => state.hallPassModifiers);
+  useEffect(() => {
+    if (selectedPasses.length > 0 && !hallPassModifiersState.isInitialized) {
+      console.log('🎖️ Title Screen: Found', selectedPasses.length, 'selected passes but modifiers not initialized, computing now');
+      const modifiers = computeHallPassModifiers(selectedPasses);
+      dispatch(setHallPassModifiers(modifiers));
+      console.log('🎖️ Title Screen: Modifiers initialized:', modifiers);
+    }
+  }, [selectedPasses.length, hallPassModifiersState.isInitialized, selectedPasses, dispatch]);
+
   const handleAnimationComplete = () => {
     setAnimationComplete(true);
   };
@@ -98,12 +112,15 @@ export default function CandyWarsTitleScreen({
     }).start();
   };
 
+  const [isNewGameFlow, setIsNewGameFlow] = useState(false);
+
   const handleNewGamePress = async () => {
     try {
       console.log('🎬 NEW GAME: Starting new game process');
-      // Go straight to difficulty selection
-      console.log('🎬 NEW GAME: Showing difficulty selection');
-      setShowDifficultyModal(true);
+      // First show hall pass selection
+      console.log('🎬 NEW GAME: Showing hall pass selection');
+      setIsNewGameFlow(true); // Mark this as new game flow
+      setShowHallPassModal(true);
     } catch (error) {
       console.error('❌ NEW GAME: Error in handleNewGamePress:', error);
     }
@@ -112,7 +129,15 @@ export default function CandyWarsTitleScreen({
   // Hall Passes button shows selection mode for toggling active Hall Pass
   const handleHallPassesPress = () => {
     console.log('🎬 HALL PASSES: Opening Hall Pass selection');
+    setIsNewGameFlow(false); // Not part of new game flow
     setShowHallPassModal(true);
+  };
+
+  // Handle when user packs hall passes in new game flow
+  const handlePackHallPasses = () => {
+    console.log('🎬 NEW GAME: Hall passes packed, showing difficulty selection');
+    setShowHallPassModal(false);
+    setShowDifficultyModal(true);
   };
 
   // Hall Pass selection handler for toggling active pass
@@ -120,38 +145,61 @@ export default function CandyWarsTitleScreen({
     console.log('🎬 HALL PASSES: Hall Pass toggled:', passId);
     selectPass(passId);
     // Don't close modal - user can select multiple
+    // Note: Modifiers will be computed when difficulty is selected and game starts
   };
 
   const handleDifficultySelect = async (level: number) => {
     try {
+      console.log('🎯 ===== STARTING NEW GAME =====');
       setShowDifficultyModal(false);
       setSelectedLevel(level);
 
       // Immediately save game state when difficulty is selected
       console.log('💾 Auto-saving game with difficulty level:', level);
+      console.log('🎖️ STEP 1: Checking selected hall passes...');
+      console.log('🎖️ selectedPasses.length:', selectedPasses.length);
+      console.log('🎖️ selectedPasses:', selectedPasses.map(p => p.name));
+
+      // IMPORTANT: Compute hall pass modifiers from selected passes FIRST
+      // This must happen BEFORE resetting or generating anything
+      console.log('🎖️ STEP 2: Computing hall pass modifiers from selected passes');
+      const hallPassModifiers = computeHallPassModifiers(selectedPasses);
+      console.log('🎖️ Hall pass modifiers computed:', JSON.stringify(hallPassModifiers));
+
+      // Calculate total periods including hall pass bonus
+      const basePeriods = 40;
+      const totalPeriods = basePeriods + (hallPassModifiers.extraPeriodsPerDay * 5); // 5 days
+      console.log(`🎲 Total periods: ${totalPeriods} (base: ${basePeriods} + bonus: ${hallPassModifiers.extraPeriodsPerDay * 5})`);
 
       // Generate new seed for fresh game data
       const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       setSeed(newSeed);
       console.log('🔄 New seed set:', newSeed);
 
-      // Generate game data using the seed
-      const gameData = generateSeededGameData(newSeed, 40);
+      // Generate game data using the seed with hall pass-adjusted periods
+      const gameData = generateSeededGameData(newSeed, totalPeriods);
       setGameData(gameData);
-      console.log('🎲 Generated game data with 40 periods:', gameData.periodEvents.length, 'events');
+      console.log('🎲 Generated game data with', totalPeriods, 'periods:', gameData.periodEvents.length, 'events');
 
-      // Reset all game state before initializing new game
-      console.log('🔄 Resetting all game state for new game');
-      resetGame();
+      // Reset all game state (this preserves selectedPassIds and clears hallPassModifiers)
+      console.log('🎖️ STEP 4: Resetting all game state for new game');
+      resetGame(); // Preserves selectedPassIds, clears hallPassModifiers via extraReducer
       resetInventory();
       resetJokers();
       resetFlavorText();
 
       // Initialize wallet with the selected difficulty level
-      // This will trigger auto-save via redux-persist and handle all other resets
+      // NOTE: This will trigger another resetGame() call internally, which clears modifiers
       const existingPlayerName = wallet?.playerName;
-      console.log('💾 Initializing wallet for auto-save with level:', level);
+      console.log('🎖️ STEP 5: Initializing wallet (this will call resetGame again)');
       wallet?.initializeWallet(level, existingPlayerName);
+
+      // IMPORTANT: Set hall pass modifiers AFTER wallet initialization
+      // Because initializeWallet calls resetGame which clears the modifiers
+      console.log('🎖️ STEP 6: Setting hall pass modifiers AFTER wallet init');
+      console.log('🎖️ About to dispatch setHallPassModifiers with:', JSON.stringify(hallPassModifiers));
+      dispatch(setHallPassModifiers(hallPassModifiers));
+      console.log('🎖️ ✅ Hall pass modifiers dispatched successfully');
 
       // Mark game as initialized so continue button works
       setIsInitialized(true);
@@ -445,8 +493,12 @@ export default function CandyWarsTitleScreen({
 
       <HallPassModal
         visible={showHallPassModal}
-        onClose={() => setShowHallPassModal(false)}
+        onClose={() => {
+          setShowHallPassModal(false);
+          setIsNewGameFlow(false); // Reset flag when closing
+        }}
         onSelectPass={handleHallPassToggle}
+        onConfirm={isNewGameFlow ? handlePackHallPasses : undefined}
         viewMode="selection"
       />
     </Animated.View>

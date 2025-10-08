@@ -86,6 +86,7 @@ export const EMOJI_IMAGES = {
   mountain: require('../assets/images/emojis/mountain.png'),
   theater: require('../assets/images/emojis/theater.png'),
   scale: require('../assets/images/emojis/scale.png'),
+  hallpass: require('../assets/images/emojis/hallpass.png'),
   // Add more emoji images as needed
   // heart: require('../assets/images/emojis/heart.png'),
   // etc...
@@ -140,6 +141,7 @@ export const EMOJI_TO_IMAGE_MAP = {
   '🎭': 'theater', // Theater masks emoji
   '⚖️': 'scale', // Scale emoji
   '❤️': 'loveheart', // Heart emoji
+  '🎖️': 'hallpass', // Hall pass / military medal emoji
   // Add more mappings as images become available
 } as const;
 

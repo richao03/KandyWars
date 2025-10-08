@@ -2,6 +2,7 @@ import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
@@ -9,8 +10,6 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
 import FastModal from './FastModal';
 import TextWithEmojis from './TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 type PriceBreakdown = {
   basePrice: number;
@@ -22,6 +21,10 @@ type PriceBreakdown = {
     effectType: 'buy' | 'sell';
     isActive: boolean;
   }>;
+  hallPassEffect?: {
+    bonusPercent: number;
+    bonusAmount: number;
+  };
   finalPrice: number;
 };
 
@@ -169,6 +172,36 @@ function TransactionModal({
     candy.cost,
   ]);
 
+  // Calculate hall pass bonus per unit (only for selling)
+  const hallPassBonusPerUnit = useMemo(() => {
+    if (mode === 'sell' && priceBreakdown?.hallPassEffect) {
+      return priceBreakdown.hallPassEffect.bonusAmount;
+    }
+    return 0;
+  }, [mode, priceBreakdown]);
+
+  // Calculate dynamic font size for pocket value based on number length
+  const pocketValue = useMemo(() => {
+    return ((finalUnitPrice + hallPassBonusPerUnit) * quantity).toFixed(2);
+  }, [finalUnitPrice, hallPassBonusPerUnit, quantity]);
+
+  const pocketFontSizes = useMemo(() => {
+    const length = pocketValue.length;
+    if (length <= 6) {
+      // Small numbers: $100.00
+      return { label: 18, amount: 18 };
+    } else if (length <= 8) {
+      // Medium numbers: $1,000.00
+      return { label: 16, amount: 16 };
+    } else if (length <= 10) {
+      // Large numbers: $10,000.00
+      return { label: 16, amount: 16 };
+    } else {
+      // Very large nuers: $100,000.00+
+      return { label: 16, amount: 16 };
+    }
+  }, [pocketValue]);
+
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
       onConfirm(quantity, mode);
@@ -246,7 +279,8 @@ function TransactionModal({
         </View>
 
         {priceBreakdown &&
-          priceBreakdown.jokerEffects.length > 0 &&
+          (priceBreakdown.jokerEffects.length > 0 ||
+            priceBreakdown.hallPassEffect) &&
           mode === 'sell' &&
           (() => {
             // Collect all active sell effects for simplified display
@@ -302,13 +336,26 @@ function TransactionModal({
               }
             });
 
+            // Add hall pass effect if present
+            if (
+              priceBreakdown.hallPassEffect &&
+              priceBreakdown.hallPassEffect.bonusAmount > 0
+            ) {
+              const hallPassBonusTotal =
+                priceBreakdown.hallPassEffect.bonusAmount * quantity;
+              activeEffects.push({
+                emoji: '🎖️',
+                text: `Hall Pass (+${priceBreakdown.hallPassEffect.bonusPercent}% profit): +$${hallPassBonusTotal.toFixed(2)}`,
+              });
+            }
+
             if (activeEffects.length > 0) {
               return (
                 <View style={styles.priceBreakdownContainer}>
                   {activeEffects.map((effect, index) => (
-                    <Text key={index} style={styles.slowCookerText}>
-                      {effect.emoji} {effect.text}
-                    </Text>
+                    <TextWithEmojis key={index} style={styles.slowCookerText}>
+                      {`${effect.emoji} ${effect.text}`}
+                    </TextWithEmojis>
                   ))}
                 </View>
               );
@@ -359,14 +406,14 @@ function TransactionModal({
           />
 
           <View style={styles.totalValueContainer}>
-            <Text style={styles.totalValueLabel}>Total Value:</Text>
+            <Text style={styles.totalValueLabel}>Value:</Text>
             <Text
               style={[
                 styles.totalValueAmount,
                 { color: mode === 'buy' ? '#ef4444' : '#22c55e' },
               ]}
             >
-              ${(quantity * finalUnitPrice).toFixed(2)}
+              ${(quantity * candy.cost).toFixed(2)}
             </Text>
           </View>
 
@@ -436,23 +483,23 @@ function TransactionModal({
             </TextWithEmojis>
           )}
 
-          {mode === 'sell' && candy.averagePrice !== null && quantity > 0 && (
+          {mode === 'sell' && quantity > 0 && (
             <View style={styles.profitContainer}>
-              <Text style={styles.profitLabel}>
-                {finalUnitPrice > candy.averagePrice ? 'Profit:' : 'Loss:'}
+              <Text
+                style={[
+                  styles.profitLabel,
+                  { fontSize: pocketFontSizes.label },
+                ]}
+              >
+                Pocket:
               </Text>
               <Text
                 style={[
                   styles.profitAmount,
-                  {
-                    color:
-                      finalUnitPrice > candy.averagePrice
-                        ? '#22c55e'
-                        : '#ef4444',
-                  },
+                  { color: '#22c55e', fontSize: pocketFontSizes.amount },
                 ]}
               >
-                ${((finalUnitPrice - candy.averagePrice) * quantity).toFixed(2)}
+                ${pocketValue}
               </Text>
             </View>
           )}
@@ -550,22 +597,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 8,
     backgroundColor: '#f0f9ff',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: '#bae6fd',
   },
   totalValueLabel: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
-    marginRight: 10,
+    marginRight: 8,
   },
   totalValueAmount: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
   },
@@ -573,22 +620,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 12,
     backgroundColor: '#f0fdf4',
-    padding: 6,
-    borderRadius: 8,
-    borderWidth: 1,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
     borderColor: '#bbf7d0',
   },
   profitLabel: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.brown.primary,
     fontFamily: 'PixeloidMono',
-    marginRight: 8,
+    marginRight: 10,
   },
   profitAmount: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
   },

@@ -28,6 +28,7 @@ export const useWallet = () => {
   const playerId = useAppSelector(state => state.wallet.playerId);
   const isFirstTimeDifficultySelection = useAppSelector(state => state.wallet.isFirstTimeDifficultySelection);
   const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
+  const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
 
   const spend = useCallback((amount: number): boolean => {
     if (balance >= amount) {
@@ -45,8 +46,12 @@ export const useWallet = () => {
     // Base allowance
     let baseAllowance = 10;
 
-    // Apply Hall Pass allowance bonus first
-    baseAllowance = HallPassUtils.applyAllowanceBonus(baseAllowance, hallPassEffects);
+    // Apply Hall Pass allowance bonus from pre-computed modifiers
+    const allowanceBonusPercent = hallPassModifiers.allowanceBonusPercent;
+    if (allowanceBonusPercent > 0) {
+      baseAllowance = Math.round(baseAllowance * (1 + allowanceBonusPercent / 100));
+      console.log(`🎖️ Hall Pass allowance bonus: ${allowanceBonusPercent}% → $${baseAllowance}`);
+    }
 
     // Apply joker effects
     let finalAllowance = baseAllowance;
@@ -74,7 +79,7 @@ export const useWallet = () => {
 
     dispatch(addBalance(finalAllowance));
     return finalAllowance;
-  }, [dispatch, hallPassEffects]);
+  }, [dispatch, hallPassModifiers.allowanceBonusPercent]);
 
   const stashMoneyAction = useCallback((amount: number, jokers?: any[]): boolean => {
     // Use small epsilon to handle floating point precision issues

@@ -80,20 +80,36 @@ export const useHallPass = () => {
   );
 
   const getSalePriceBonus = useCallback((): number => {
-    return getEffectValue('sale_price_bonus');
-  }, [getEffectValue]);
+    const bonus = getEffectValue('sale_price_bonus');
+    console.log('🎖️ getSalePriceBonus called, returning:', bonus);
+    console.log('🎖️ Selected passes:', selectedPassIds);
+    console.log('🎖️ Selected effects:', selectedEffects);
+    return bonus;
+  }, [getEffectValue, selectedPassIds, selectedEffects]);
 
   const getInventoryBonus = useCallback((): number => {
-    return getEffectValue('inventory_bonus');
-  }, [getEffectValue]);
+    const bonus = getEffectValue('inventory_bonus');
+    console.log('🎖️ getInventoryBonus called, returning:', bonus);
+    console.log('🎖️ Selected passes:', selectedPassIds);
+    console.log('🎖️ Selected effects:', selectedEffects);
+    return bonus;
+  }, [getEffectValue, selectedPassIds, selectedEffects]);
 
   const getAllowanceBonus = useCallback((): number => {
-    return getEffectValue('allowance_bonus');
-  }, [getEffectValue]);
+    const bonus = getEffectValue('allowance_bonus');
+    console.log('🎖️ getAllowanceBonus called, returning:', bonus);
+    console.log('🎖️ Selected passes:', selectedPassIds);
+    console.log('🎖️ Selected effects:', selectedEffects);
+    return bonus;
+  }, [getEffectValue, selectedPassIds, selectedEffects]);
 
   const getJokerBonus = useCallback((): number => {
-    return getEffectValue('joker_bonus');
-  }, [getEffectValue]);
+    const bonus = getEffectValue('joker_bonus');
+    console.log('🎖️ getJokerBonus called, returning:', bonus);
+    console.log('🎖️ Selected passes:', selectedPassIds);
+    console.log('🎖️ Selected effects:', selectedEffects);
+    return bonus;
+  }, [getEffectValue, selectedPassIds, selectedEffects]);
 
   const hasSpecialEffect = useCallback(
     (description: string): boolean => {
