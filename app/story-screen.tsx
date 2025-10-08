@@ -113,7 +113,7 @@ const getStoryLines = (breed: string, cost: string) => {
           { text: `A ` },
           { text: breed, color: '#6b4423' },
           {
-            text: `. Stoic and simply perferct. It's the perfect starter companion! Just `,
+            text: `. Stoic in its perfection. It's the best starter companion! Just `,
           },
           { text: `$${cost}`, color: '#85BB65' },
           { text: ` and it's yours.` },
@@ -152,7 +152,7 @@ const getStoryLines = (breed: string, cost: string) => {
           { text: `A lost ` },
           { text: breed, color: '#6b4423' },
           {
-            text: ` is swimming in circles at the aquarium. With the tank setup, it's `,
+            text: ` is swimming in circles at the aquarium next to a Blue Tang. With the tank setup, it's `,
           },
           { text: `$${cost}`, color: '#4a7c4a' },
           { text: `.` },
@@ -162,21 +162,21 @@ const getStoryLines = (breed: string, cost: string) => {
     case 'Evee Cat':
       story.push({
         highlights: [
-          { text: `You've found the perfect companion - a playful ` },
+          { text: `You have been chosen by ` },
           { text: breed, color: '#6b4423' },
-          { text: ` that needs ` },
+          { text: ` at the local shelter, you had no chance. ` },
           { text: `$${cost}`, color: '#4a7c4a' },
-          { text: ` for adoption and care.` },
+          { text: ` please.` },
         ],
       });
       break;
     case 'Chicken':
       story.push({
         highlights: [
-          { text: `A friendly, and surpsingly cuddly ` },
+          { text: `A friendly, and zen looking ` },
           { text: breed, color: '#6b4423' },
           {
-            text: ` at the farm needs a home. With the coop setup, it costs `,
+            text: ` started following you. Ebay says the coop set up costs `,
           },
           { text: `$${cost}`, color: '#4a7c4a' },
           { text: `.` },
@@ -186,7 +186,9 @@ const getStoryLines = (breed: string, cost: string) => {
     case 'Byul Terrier':
       story.push({
         highlights: [
-          { text: `At the premium pet boutique, you've met ` },
+          {
+            text: `At a exclusive fancy premium deluxe pet boutique, you found `,
+          },
           { text: breed, color: '#6b4423' },
           { text: ` - an elegant rare breed that costs ` },
           { text: `$${cost}`, color: '#4a7c4a' },
@@ -210,7 +212,7 @@ const getStoryLines = (breed: string, cost: string) => {
     case 'Cane Corso':
       story.push({
         highlights: [
-          { text: `A very serious looking, but goofy` },
+          { text: `A very serious looking, ` },
           { text: breed, color: '#6b4423' },
           { text: ` at the specialized rescue needs ` },
           { text: `$${cost}`, color: '#4a7c4a' },

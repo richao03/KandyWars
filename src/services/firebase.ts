@@ -459,8 +459,21 @@ class ScoreboardService {
   async incrementGameCompletions(): Promise<number> {
     console.log('🏆 Incrementing game completions...');
 
+    if (!this.isInitialized) {
+      console.log('🏆 Auto-initializing Firebase for game completion tracking...');
+      try {
+        await this.initialize();
+        console.log('🏆 Auto-initialization complete. isInitialized:', this.isInitialized, 'currentUser:', !!this.currentUser);
+      } catch (error) {
+        console.error('❌ Auto-initialization failed:', error);
+        return 0;
+      }
+    }
+
     if (!this.isInitialized || !this.currentUser) {
-      console.log('❌ Cannot increment completions - not initialized or no user');
+      console.log('❌ Cannot increment completions - initialization failed');
+      console.log('   isInitialized:', this.isInitialized);
+      console.log('   currentUser:', !!this.currentUser);
       return 0;
     }
 
@@ -485,8 +498,13 @@ class ScoreboardService {
   async getTotalCompletions(): Promise<number> {
     console.log('🏆 Fetching total game completions...');
 
+    if (!this.isInitialized) {
+      console.log('🏆 Auto-initializing Firebase for fetching completions...');
+      await this.initialize();
+    }
+
     if (!this.isInitialized || !this.currentUser) {
-      console.log('❌ Cannot fetch completions - not initialized or no user');
+      console.log('❌ Cannot fetch completions - initialization failed');
       return 0;
     }
 

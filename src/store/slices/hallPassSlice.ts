@@ -206,6 +206,11 @@ const hallPassSlice = createSlice({
   initialState,
   reducers: {
     initializeHallPasses: (state) => {
+      console.log('🎓 REDUCER: initializeHallPasses called');
+      console.log('🎓 REDUCER: Current unlockedPassIds:', state.unlockedPassIds);
+      console.log('🎓 REDUCER: Current newlyUnlockedPassIds:', state.newlyUnlockedPassIds);
+      console.log('🎓 REDUCER: Stack trace:', new Error().stack);
+
       state.isLoaded = true;
 
       // Migration: convert old selectedPassId to selectedPassIds array
@@ -232,6 +237,9 @@ const hallPassSlice = createSlice({
         unlockedAt: state.availablePasses.find((p) => p.id === pass.id)
           ?.unlockedAt,
       }));
+
+      console.log('🎓 REDUCER: After initialization, availablePasses unlocked status:',
+        state.availablePasses.map(p => ({ id: p.id, isUnlocked: p.isUnlocked })));
     },
     unlockHallPass: (
       state,
@@ -239,12 +247,19 @@ const hallPassSlice = createSlice({
     ) => {
       const { passId, timestamp = new Date().toISOString() } = action.payload;
 
+      console.log(`🎓 REDUCER: unlockHallPass called for passId: ${passId}`);
+      console.log(`🎓 REDUCER: Current unlockedPassIds before:`, state.unlockedPassIds);
+
       if (!state.unlockedPassIds.includes(passId)) {
         state.unlockedPassIds.push(passId);
+        console.log(`🎓 REDUCER: Added ${passId} to unlockedPassIds`);
         // Track as newly unlocked in this playthrough
         if (!state.newlyUnlockedPassIds.includes(passId)) {
           state.newlyUnlockedPassIds.push(passId);
+          console.log(`🎓 REDUCER: Added ${passId} to newlyUnlockedPassIds`);
         }
+      } else {
+        console.log(`🎓 REDUCER: ${passId} already in unlockedPassIds`);
       }
 
       const passIndex = state.availablePasses.findIndex(
@@ -253,7 +268,12 @@ const hallPassSlice = createSlice({
       if (passIndex !== -1) {
         state.availablePasses[passIndex].isUnlocked = true;
         state.availablePasses[passIndex].unlockedAt = timestamp;
+        console.log(`🎓 REDUCER: Updated availablePasses[${passIndex}] isUnlocked to true`);
+      } else {
+        console.log(`🎓 REDUCER: WARNING - Could not find passId ${passId} in availablePasses`);
       }
+
+      console.log(`🎓 REDUCER: Current unlockedPassIds after:`, state.unlockedPassIds);
     },
     selectHallPass: (state, action: PayloadAction<string>) => {
       const passId = action.payload;
@@ -275,7 +295,17 @@ const hallPassSlice = createSlice({
     resetHallPasses: () => initialState,
   },
   extraReducers: (builder) => {
-    builder.addCase(resetGame, () => initialState);
+    builder.addCase(resetGame, (state) => {
+      console.log('🎓 REDUCER: resetGame called - preserving unlocked hall passes');
+      console.log('🎓 REDUCER: Unlocked passes before reset:', state.unlockedPassIds);
+
+      // Preserve unlocked hall passes across game resets
+      // Only clear the newly unlocked list for the current playthrough
+      state.newlyUnlockedPassIds = [];
+      state.selectedPassIds = []; // Clear selected passes for new game
+
+      console.log('🎓 REDUCER: Unlocked passes after reset (preserved):', state.unlockedPassIds);
+    });
   },
 });
 

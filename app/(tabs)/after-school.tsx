@@ -106,9 +106,11 @@ function AfterSchoolPage() {
 
   // Check if game should end (when entering after-school on day 5)
   useEffect(() => {
+    console.log(`🎯 After-school useEffect: day=${day}, gameEndModalVisible=${gameEndModalVisible}`);
     if (day === 5 && !gameEndModalVisible) {
+      console.log('🎯 Game End: Condition met - starting game end sequence');
       const handleGameEnd = async () => {
-        console.log('🎯 Game End: Entered after-school on day 5');
+        console.log('🎯 Game End: Entered handleGameEnd function');
 
         // Calculate final score
         const finalScore = balance + stashedAmount;
@@ -126,10 +128,10 @@ function AfterSchoolPage() {
           setGameResult('lost');
         }
 
-        // Track game completion and get total completions count (only if won)
+        // Get total completions count
         let totalCompletions = 0;
-        if (hasWon) {
-          try {
+        try {
+          if (hasWon) {
             console.log(
               '🏆 Player won - incrementing game completions in Firebase...'
             );
@@ -138,9 +140,15 @@ function AfterSchoolPage() {
             dispatch(setTotalCompletions(totalCompletions));
             setTotalCompletionsForModal(totalCompletions);
             console.log('🏆 Total completions:', totalCompletions);
-          } catch (error) {
-            console.error('❌ Error tracking game completion:', error);
+          } else {
+            console.log(
+              '😢 Player lost - fetching total completions for hall pass checks...'
+            );
+            totalCompletions = await scoreboardService.getTotalCompletions();
+            console.log('🏆 Total completions (lost game):', totalCompletions);
           }
+        } catch (error) {
+          console.error('❌ Error tracking/fetching game completion:', error);
         }
 
         // Check for newly unlocked Hall Passes
@@ -159,6 +167,9 @@ function AfterSchoolPage() {
           const minigameTrackingData = {
             hasPlayedAllMinigames,
           };
+
+          console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
+          console.log('🎓 Minigame tracking data:', minigameTrackingData);
 
           const unlocked = checkUnlockRequirements(
             gameStats,

@@ -1,6 +1,6 @@
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Stack, router } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Image,
   ImageBackground,
@@ -16,6 +16,10 @@ import { useGame } from '../src/hooks/useGame';
 import { useHallPass } from '../src/hooks/useHallPass';
 import { useJokers } from '../src/hooks/useJokers';
 import { useWallet } from '../src/hooks/useWallet';
+import { scoreboardService } from '../src/services/firebase';
+import { useAppDispatch } from '../src/store/hooks';
+import { setTotalCompletions } from '../src/store/slices/gameSlice';
+import { forceSave } from '../src/store/store';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
 
@@ -29,9 +33,11 @@ export default function GameEndScreen() {
     getMostSoldCandy,
     resetPlaythrough,
   } = useDailyStats();
-  const { resetGame } = useGame();
-  const { newlyUnlockedPasses, clearNewlyUnlocked } = useHallPass();
+  const { resetGame, periodCount } = useGame();
+  const { newlyUnlockedPasses, clearNewlyUnlocked, checkUnlockRequirements } =
+    useHallPass();
   const navigation = useNavigation();
+  const dispatch = useAppDispatch();
 
   const totalStats = getTotalStats();
   const playthroughStats = getPlaythroughStats();
@@ -41,6 +47,64 @@ export default function GameEndScreen() {
   // Win condition: paid off the debt (stashedAmount >= 0)
   // The game starts with stashedAmount = -adoptionFee (negative = debt)
   const gameResult = finalScore >= 0 ? 'won' : 'lost';
+
+  // Check for hall pass unlocks when screen loads
+  useEffect(() => {
+    const checkHallPassUnlocks = async () => {
+      console.log('🎯 Game End Screen: Checking hall pass unlocks');
+
+      const hasWon = finalScore >= adoptionFee;
+      let totalCompletions = 0;
+
+      try {
+        if (hasWon) {
+          console.log(
+            '🏆 Player won - incrementing game completions in Firebase...'
+          );
+          totalCompletions = await scoreboardService.incrementGameCompletions();
+          dispatch(setTotalCompletions(totalCompletions));
+          console.log('🏆 Total completions:', totalCompletions);
+        } else {
+          console.log(
+            '😢 Player lost - fetching total completions for hall pass checks...'
+          );
+          totalCompletions = await scoreboardService.getTotalCompletions();
+          console.log('🏆 Total completions (lost game):', totalCompletions);
+        }
+      } catch (error) {
+        console.error('❌ Error tracking/fetching game completion:', error);
+      }
+
+      // Check for newly unlocked Hall Passes
+      try {
+        const gameStats = {
+          completions: totalCompletions,
+          finalProfit: finalScore,
+          difficulty: difficultyLevel,
+          completionTime: periodCount,
+          perfectAttendance: periodCount >= 40,
+          totalCandySold: totalStats?.candiesSold || 0,
+          noJokers: jokers.length === 0,
+        };
+
+        console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
+
+        const unlocked = checkUnlockRequirements(gameStats, {
+          hasPlayedAllMinigames: false,
+        });
+        console.log('🎓 Newly unlocked Hall Passes:', unlocked);
+
+        if (unlocked.length > 0) {
+          console.log(`🎓 ${unlocked.length} hall pass(es) were unlocked - forcing save to persist...`);
+          forceSave();
+        }
+      } catch (error) {
+        console.error('❌ Error checking Hall Pass unlocks:', error);
+      }
+    };
+
+    checkHallPassUnlocks();
+  }, []); // Empty deps - only run once when screen loads
 
   // Get dog breed and image based on difficulty level
   const getDogBreed = (level: number) => {
@@ -255,7 +319,7 @@ export default function GameEndScreen() {
                 📊 TLDR:
               </TextWithEmojis>
 
-              <View style={styles.statItemRow}>
+              <View style={{ ...styles.statItemRow, marginTop: 12 }}>
                 <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
                   💰 Balance
                 </TextWithEmojis>
@@ -291,12 +355,15 @@ export default function GameEndScreen() {
               innerPadding={16}
               style={styles.section}
             >
-              <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
+              <TextWithEmojis style={styles.sectionTitle} imageSize={40}>
                 🎮 Playthrough Stats
               </TextWithEmojis>
 
               <View style={styles.statItemRow}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis
+                  style={{ ...styles.statLabelLeft, marginTop: 12 }}
+                  imageSize={20}
+                >
                   💰 Total Profit
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
@@ -343,14 +410,16 @@ export default function GameEndScreen() {
               )}
 
               {bestSale && (
-                <View style={styles.statItemRow}>
-                  <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
-                    💎 Best Single Sale
-                  </TextWithEmojis>
+                <>
+                  <View style={styles.statItemRow}>
+                    <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                      💎 Best Single Sale:
+                    </TextWithEmojis>
+                  </View>
                   <Text style={styles.statValueRight}>
                     {bestSale.candyName} (+${bestSale.profit.toFixed(2)})
                   </Text>
-                </View>
+                </>
               )}
             </PixelBorder>
 

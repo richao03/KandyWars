@@ -47,7 +47,7 @@ export default function StoryModal({
         };
       case 2:
         return {
-          title: 'A Dream and a Pug',
+          title: 'A Pug and a Dream',
           petImage: require('../../assets/images/doggs/pug.png'),
         };
       case 3:
@@ -62,37 +62,37 @@ export default function StoryModal({
         };
       case 5:
         return {
-          title: 'Finding Nemo',
+          title: 'Searching for Clownfish',
           petImage: require('../../assets/images/doggs/clownfish.png'),
         };
       case 6:
         return {
-          title: 'Saving for Eevee',
+          title: 'Eevee 4 Ever',
           petImage: require('../../assets/images/doggs/evee.png'),
         };
       case 7:
         return {
-          title: 'The Chicken Coop',
+          title: "You're being followed!",
           petImage: require('../../assets/images/doggs/chicken.png'),
         };
       case 8:
         return {
-          title: 'The Byul Challenge',
+          title: 'The Shining Byul',
           petImage: require('../../assets/images/doggs/byul.png'),
         };
       case 9:
         return {
-          title: 'Polly Wants a Cracker',
+          title: 'You Talking to Me?',
           petImage: require('../../assets/images/doggs/parrot.png'),
         };
       case 10:
         return {
-          title: 'The Cane Corso Promise',
+          title: 'Never Laughed',
           petImage: require('../../assets/images/doggs/caneCorso.png'),
         };
       case 11:
         return {
-          title: 'Dragon of the Desert',
+          title: "Don't Call Me a Lizard",
           petImage: require('../../assets/images/doggs/beardedDragon.png'),
         };
       case 12:

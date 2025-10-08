@@ -506,7 +506,7 @@ export class JokerService {
             const bonusPercent = (effect.amount - 1) * 100; // Convert 1.1 to 10%
 
             effectText = isAfternoon ? `+${bonusPercent.toFixed(0)}% afternoon sell` : `Afternoon sell bonus (inactive)`;
-            effectAmount = isAfternoon ? effect.amount : 1;
+            effectAmount = bonusPercent; // Use percentage, not multiplier
             effectType = 'sell';
             jokerEmoji = '🌅';
 

@@ -651,6 +651,53 @@ function Settings() {
           </View>
         </PixelBorder>
 
+        {__DEV__ && (
+          <PixelBorder
+            borderColor="#a855f7"
+            borderWidth={2}
+            backgroundColor="rgba(243, 232, 255, 0.8)"
+            innerPadding={20}
+            style={styles.sectionWrapper}
+          >
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🔧 Debug Tools</Text>
+              <PixelBorder
+                borderColor="#a855f7"
+                borderWidth={3}
+                backgroundColor="#f3e8ff"
+                innerPadding={0}
+              >
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={async () => {
+                    console.log('🔧 DEBUG: Fetching total completions from Firebase...');
+                    try {
+                      const total = await scoreboardService.getTotalCompletions();
+                      console.log('🏆 TOTAL COMPLETIONS FROM FIREBASE:', total);
+                      Alert.alert(
+                        'Total Completions',
+                        `You have completed ${total} game(s)`,
+                        [{ text: 'OK' }]
+                      );
+                    } catch (error) {
+                      console.error('❌ Failed to fetch completions:', error);
+                      Alert.alert(
+                        'Error',
+                        'Failed to fetch completions - check console',
+                        [{ text: 'OK' }]
+                      );
+                    }
+                  }}
+                >
+                  <Text style={styles.debugButtonText}>
+                    Show Total Completions
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+            </View>
+          </PixelBorder>
+        )}
+
         <PixelBorder
           borderColor="#d4a574"
           borderWidth={2}
@@ -859,6 +906,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  debugButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  debugButtonText: {
+    color: '#7e22ce',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'PixeloidMono',
   },
 });
 

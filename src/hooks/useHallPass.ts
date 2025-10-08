@@ -37,6 +37,7 @@ export const useHallPass = () => {
 
   // Initialize hall passes on mount to refresh definitions from static data
   useEffect(() => {
+    console.log('🎓 useHallPass: Dispatching initializeHallPasses');
     dispatch(initializeHallPasses());
   }, [dispatch]);
 
@@ -148,15 +149,23 @@ export const useHallPass = () => {
         hasPlayedAllMinigames: boolean;
       }
     ) => {
+      console.log('🎓 checkUnlockRequirements called with:', { gameStats, minigameTrackingData });
+      console.log('🎓 Total passes to check:', allPasses.length);
+
       const newUnlocks: string[] = [];
 
       // Check each pass requirement
       allPasses.forEach((pass) => {
+        console.log(`🎓 Checking pass: ${pass.id}, isUnlocked: ${pass.isUnlocked}`);
         if (pass.isUnlocked) return; // Already unlocked
 
         switch (pass.id) {
           case 'no_longer_freshman':
-            if (gameStats.completions >= 1) newUnlocks.push(pass.id);
+            console.log(`🎓 No Longer Freshman check: completions=${gameStats.completions}, required=1`);
+            if (gameStats.completions >= 1) {
+              console.log('🎓 No Longer Freshman UNLOCKED!');
+              newUnlocks.push(pass.id);
+            }
             break;
           case 'sophomore_swagger':
             if (gameStats.completions >= 3) newUnlocks.push(pass.id);
@@ -197,9 +206,12 @@ export const useHallPass = () => {
       });
 
       // Unlock new passes
+      console.log('🎓 About to dispatch unlock actions for:', newUnlocks);
       newUnlocks.forEach((passId) => {
+        console.log(`🎓 Dispatching unlockHallPass for: ${passId}`);
         dispatch(unlockHallPass({ passId }));
       });
+      console.log('🎓 All unlock dispatches completed');
 
       return newUnlocks;
     },

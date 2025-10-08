@@ -16,11 +16,11 @@ import ReAnimated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import colors from '../../src/constants/colors';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useWallet } from '../../src/hooks/useWallet';
 import PixelBorder from './PixelBorder';
-import colors from '../../src/constants/colors';
-
+import TextWithEmojis from './TextWithEmojis';
 
 // Image resolver to handle cached image IDs and string references
 const getResolvedImage = (backgroundImage: any, eventEffect?: string) => {
@@ -164,9 +164,13 @@ const EventModal = React.memo(function EventModal() {
       if (isMoneyStealingEvent) {
         if (currentEvent.effect === 'LOSE_MONEY') {
           // Use the stored original balance (before spend) and amount stolen
-          if (currentEvent.originalBalance !== undefined && currentEvent.amountStolen !== undefined) {
+          if (
+            currentEvent.originalBalance !== undefined &&
+            currentEvent.amountStolen !== undefined
+          ) {
             startAmount = currentEvent.originalBalance;
-            endAmount = currentEvent.originalBalance - currentEvent.amountStolen;
+            endAmount =
+              currentEvent.originalBalance - currentEvent.amountStolen;
           } else {
             // Fallback for old events without stored values
             const fiftyPercent = Math.floor(balance * 0.5);
@@ -435,20 +439,21 @@ const EventModal = React.memo(function EventModal() {
                         {currentEvent.subtitle}
                       </Text>
                       {currentEvent.bullyHasMercy && (
-                        <PixelBorder
-                          borderColor="#d4af37"
-                          borderWidth={3}
-                          backgroundColor="rgba(0, 0, 0, 0.2)"
-                          innerPadding={12}
-                          style={{ marginTop: 12 }}
-                        >
-                          <View style={styles.protectionContainer}>
-                            <Text style={styles.protectionEmoji}>🙏</Text>
-                            <Text style={styles.protectionText}>
-                              The bully has mercy on your poor wallet
-                            </Text>
-                          </View>
-                        </PixelBorder>
+                        // <PixelBorder
+                        //   borderColor="white"
+                        //   borderWidth={3}
+                        //   innerPadding={12}
+                        //   style={{ marginTop: 12 }}
+                        // >
+                        <View style={styles.protectionContainer}>
+                          <TextWithEmojis style={styles.protectionEmoji}>
+                            💸
+                          </TextWithEmojis>
+                          <Text style={styles.protectionText}>
+                            The bully has mercy on your poor wallet
+                          </Text>
+                        </View>
+                        // </PixelBorder>
                       )}
                       {currentEvent.protectedByMedievalShield && (
                         <PixelBorder
@@ -461,7 +466,12 @@ const EventModal = React.memo(function EventModal() {
                           <View style={styles.protectionContainer}>
                             <Image
                               source={require('../../assets/images/emojis/shield.png')}
-                              style={{ width: 48, height: 48, resizeMode: 'contain', marginBottom: 8 }}
+                              style={{
+                                width: 48,
+                                height: 48,
+                                resizeMode: 'contain',
+                                marginBottom: 8,
+                              }}
                             />
                             <Text style={styles.protectionText}>
                               Medieval Shield Activated!

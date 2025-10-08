@@ -32,6 +32,17 @@ export default function HallPassModal({
 
   const isSelectionMode = viewMode === 'selection' && onSelectPass;
 
+  // Debug logging when modal becomes visible
+  React.useEffect(() => {
+    if (visible) {
+      console.log('🎓 HALL PASS MODAL: Opened');
+      console.log('🎓 HALL PASS MODAL: Total passes:', allPasses.length);
+      console.log('🎓 HALL PASS MODAL: Unlocked passes:', unlockedPasses.length);
+      console.log('🎓 HALL PASS MODAL: Unlocked pass IDs:', unlockedPasses.map(p => p.id));
+      console.log('🎓 HALL PASS MODAL: All passes unlocked status:', allPasses.map(p => ({ id: p.id, isUnlocked: p.isUnlocked })));
+    }
+  }, [visible, allPasses, unlockedPasses]);
+
   const getRarityColor = (rarity: HallPass['rarity']) => {
     switch (rarity) {
       case 'common':

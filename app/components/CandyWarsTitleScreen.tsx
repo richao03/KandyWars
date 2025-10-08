@@ -22,6 +22,10 @@ import ExactFontHandwriting from './ExactFontHandwriting';
 import HallPassModal from './HallPassModal';
 import PixelBorder from './PixelBorder';
 import StoryModal from './StoryModal';
+import { useAppDispatch } from '../../src/store/hooks';
+import { setPeriodCount } from '../../src/store/slices/gameSlice';
+import { setBalance, setStashedAmount } from '../../src/store/slices/walletSlice';
+import { scoreboardService } from '../../src/services/firebase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,6 +41,7 @@ export default function CandyWarsTitleScreen({
   onSettings,
 }: CandyWarsTitleScreenProps) {
   const wallet = useWallet();
+  const dispatch = useAppDispatch();
   const { resetGame, periodCount, isInitialized, setIsInitialized, setHasCompletedMarketTutorial, setHasCompletedAfterSchoolTutorial } = useGame();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
@@ -316,26 +321,109 @@ export default function CandyWarsTitleScreen({
               </PixelBorder>
 
               {__DEV__ && (
-                <PixelBorder
-                  borderColor="#ff6b6b"
-                  borderWidth={3}
-                  backgroundColor="#ffe8e8"
-                  style={{ width: '80%' }}
-                  innerPadding={0}
-                >
-                  <TouchableOpacity
-                    style={[styles.button, styles.debugButton]}
-                    onPress={() => {
-                      setHasCompletedMarketTutorial(false);
-                      setHasCompletedAfterSchoolTutorial(false);
-                      console.log('🔧 DEBUG: Tutorial flags reset');
-                    }}
+                <>
+                  <PixelBorder
+                    borderColor="#ff6b6b"
+                    borderWidth={3}
+                    backgroundColor="#ffe8e8"
+                    style={{ width: '80%' }}
+                    innerPadding={0}
                   >
-                    <Text style={[styles.buttonText, styles.debugText]}>
-                      Reset Tutorial
-                    </Text>
-                  </TouchableOpacity>
-                </PixelBorder>
+                    <TouchableOpacity
+                      style={[styles.button, styles.debugButton]}
+                      onPress={() => {
+                        setHasCompletedMarketTutorial(false);
+                        setHasCompletedAfterSchoolTutorial(false);
+                        console.log('🔧 DEBUG: Tutorial flags reset');
+                      }}
+                    >
+                      <Text style={[styles.buttonText, styles.debugText]}>
+                        Reset Tutorial
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+
+                  <PixelBorder
+                    borderColor="#4ade80"
+                    borderWidth={3}
+                    backgroundColor="#d1fae5"
+                    style={{ width: '80%' }}
+                    innerPadding={0}
+                  >
+                    <TouchableOpacity
+                      style={[styles.button, styles.debugButton]}
+                      onPress={() => {
+                        console.log('🔧 DEBUG: Setting up WIN scenario - Day 5');
+                        // Set to day 5 (period 32 = day 5, period 1)
+                        dispatch(setPeriodCount(32));
+                        // Give enough money to win (adoption fee + extra)
+                        const adoptionFee = wallet.adoptionFee || 1000;
+                        dispatch(setBalance(adoptionFee + 100));
+                        dispatch(setStashedAmount(0));
+                        setIsInitialized(true);
+                        console.log('🔧 DEBUG: WIN setup complete - navigate to continue');
+                      }}
+                    >
+                      <Text style={[styles.buttonText, { color: '#15803d' }]}>
+                        Debug: Win Setup
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+
+                  <PixelBorder
+                    borderColor="#f87171"
+                    borderWidth={3}
+                    backgroundColor="#fee2e2"
+                    style={{ width: '80%' }}
+                    innerPadding={0}
+                  >
+                    <TouchableOpacity
+                      style={[styles.button, styles.debugButton]}
+                      onPress={() => {
+                        console.log('🔧 DEBUG: Setting up LOSE scenario - Day 5');
+                        // Set to day 5 (period 32 = day 5, period 1)
+                        dispatch(setPeriodCount(32));
+                        // Give not enough money to win
+                        const adoptionFee = wallet.adoptionFee || 1000;
+                        dispatch(setBalance(adoptionFee - 200));
+                        dispatch(setStashedAmount(0));
+                        setIsInitialized(true);
+                        console.log('🔧 DEBUG: LOSE setup complete - navigate to continue');
+                      }}
+                    >
+                      <Text style={[styles.buttonText, { color: '#991b1b' }]}>
+                        Debug: Lose Setup
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+
+                  <PixelBorder
+                    borderColor="#a855f7"
+                    borderWidth={3}
+                    backgroundColor="#f3e8ff"
+                    style={{ width: '80%' }}
+                    innerPadding={0}
+                  >
+                    <TouchableOpacity
+                      style={[styles.button, styles.debugButton]}
+                      onPress={async () => {
+                        console.log('🔧 DEBUG: Fetching total completions from Firebase...');
+                        try {
+                          const total = await scoreboardService.getTotalCompletions();
+                          console.log('🏆 TOTAL COMPLETIONS FROM FIREBASE:', total);
+                          alert(`Total Completions: ${total}`);
+                        } catch (error) {
+                          console.error('❌ Failed to fetch completions:', error);
+                          alert('Error fetching completions - check console');
+                        }
+                      }}
+                    >
+                      <Text style={[styles.buttonText, { color: '#7e22ce' }]}>
+                        Show Completions
+                      </Text>
+                    </TouchableOpacity>
+                  </PixelBorder>
+                </>
               )}
             </Animated.View>
           )}
