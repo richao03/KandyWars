@@ -248,7 +248,38 @@ function TransactionModal({
         innerPadding={0}
       >
         <View style={styles.container}>
-          <Text style={styles.title}>{candy.name}</Text>
+          <View style={styles.tabContainer}>
+            <PixelBorder
+              borderColor={mode === 'buy' ? '#cc7a00' : '#e5e7eb'}
+              borderWidth={3}
+              backgroundColor={mode === 'buy' ? '#ffcc99' : '#f3f4f6'}
+              style={{ flex: 1, marginRight: 6 }}
+            >
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => changeMode('buy')}
+              >
+                <Text style={styles.tabText}>
+                  {mode === 'buy' ? 'Buy Max' : 'Buy'}
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
+            <PixelBorder
+              borderColor={mode === 'sell' ? '#cc7a00' : '#e5e7eb'}
+              borderWidth={3}
+              backgroundColor={mode === 'sell' ? '#ffcc99' : '#f3f4f6'}
+              style={{ flex: 1 }}
+            >
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => changeMode('sell')}
+              >
+                <Text style={styles.tabText}>
+                  {mode === 'sell' ? 'Sell Max' : 'Sell'}
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
+          </View>
 
           <PixelBorder
             borderColor="#e5e7eb"
@@ -259,34 +290,67 @@ function TransactionModal({
           >
             <View style={styles.priceInfoContainer}>
               <View style={styles.priceRow}>
+                <Text style={{ ...styles.priceValue, fontSize: 20 }}>
+                  {candy.name}
+                </Text>
+              </View>
+              <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Current Price:</Text>
                 <Text style={styles.priceValue}>${candy.cost.toFixed(2)}</Text>
               </View>
 
               {candy.quantityOwned > 0 && (
                 <>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.priceLabel}>You Own:</Text>
-                    <Text style={styles.priceValue}>{candy.quantityOwned}</Text>
-                  </View>
-
-                  {candy.averagePrice !== null && (
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceLabel}>Avg Buy Price:</Text>
-                      <Text
-                        style={[
-                          styles.priceValue,
-                          {
-                            color:
-                              candy.averagePrice < candy.cost
-                                ? '#22c55e'
-                                : '#ef4444',
-                          },
-                        ]}
-                      >
-                        ${candy.averagePrice.toFixed(2)}
-                      </Text>
-                    </View>
+                  {mode === 'sell' ? (
+                    <>
+                      {candy.averagePrice !== null && (
+                        <View style={styles.priceRow}>
+                          <Text style={styles.priceLabel}>
+                            Avg Purchase Price:
+                          </Text>
+                          <Text
+                            style={[
+                              styles.priceValue,
+                              {
+                                color:
+                                  candy.averagePrice < candy.cost
+                                    ? '#22c55e'
+                                    : '#ef4444',
+                              },
+                            ]}
+                          >
+                            ${candy.averagePrice.toFixed(2)}
+                          </Text>
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.priceRow}>
+                        <Text style={styles.priceLabel}>You Own:</Text>
+                        <Text style={styles.priceValue}>
+                          {candy.quantityOwned}
+                        </Text>
+                      </View>
+                      {candy.averagePrice !== null && (
+                        <View style={styles.priceRow}>
+                          <Text style={styles.priceLabel}>Avg Buy Price:</Text>
+                          <Text
+                            style={[
+                              styles.priceValue,
+                              {
+                                color:
+                                  candy.averagePrice < candy.cost
+                                    ? '#22c55e'
+                                    : '#ef4444',
+                              },
+                            ]}
+                          >
+                            ${candy.averagePrice.toFixed(2)}
+                          </Text>
+                        </View>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -361,7 +425,7 @@ function TransactionModal({
                   priceBreakdown.hallPassEffect.bonusAmount * quantity;
                 activeEffects.push({
                   emoji: '🎖️',
-                  text: `Hall Pass (+${priceBreakdown.hallPassEffect.bonusPercent}% profit): `,
+                  text: `+${priceBreakdown.hallPassEffect.bonusPercent}% profit: `,
                   amount: `+$${hallPassBonusTotal.toFixed(2)}`,
                 });
               }
@@ -382,15 +446,7 @@ function TransactionModal({
                             style={styles.slowCookerText}
                             imageSize={24}
                           >
-                            {`${effect.emoji} ${effect.text}`}
-                          </TextWithEmojis>
-                          <TextWithEmojis
-                            style={{
-                              ...styles.slowCookerText,
-                              textAlign: 'right',
-                            }}
-                          >
-                            {effect.amount}
+                            {`${effect.emoji} ${effect.text} ${effect.amount}`}
                           </TextWithEmojis>
                         </>
                       ))}
@@ -402,43 +458,15 @@ function TransactionModal({
               return null;
             })()}
 
-          <View style={styles.tabContainer}>
-            <PixelBorder
-              borderColor={mode === 'buy' ? '#cc7a00' : '#e5e7eb'}
-              borderWidth={3}
-              backgroundColor={mode === 'buy' ? '#ffcc99' : '#f3f4f6'}
-              style={{ flex: 1, marginRight: 6 }}
-            >
-              <TouchableOpacity
-                style={styles.tab}
-                onPress={() => changeMode('buy')}
-              >
-                <Text style={styles.tabText}>
-                  {mode === 'buy' ? 'Buy Max' : 'Buy'}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-            <PixelBorder
-              borderColor={mode === 'sell' ? '#cc7a00' : '#e5e7eb'}
-              borderWidth={3}
-              backgroundColor={mode === 'sell' ? '#ffcc99' : '#f3f4f6'}
-              style={{ flex: 1 }}
-            >
-              <TouchableOpacity
-                style={styles.tab}
-                onPress={() => changeMode('sell')}
-              >
-                <Text style={styles.tabText}>
-                  {mode === 'sell' ? 'Sell Max' : 'Sell'}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-          </View>
-
           <View style={styles.sliderSection}>
             <Text style={styles.quantityLabel}>
               {mode === 'buy' && maxQuantity <= 0
-                ? 'Inventory Full'
+                ? playerBalance !== undefined && playerBalance < candy.cost
+                  ? 'Not Enough Money'
+                  : availableInventorySpace !== undefined &&
+                      availableInventorySpace <= 0
+                    ? 'Inventory Full'
+                    : 'Cannot Buy'
                 : `Quantity: ${quantity} / ${maxQuantity}`}
             </Text>
 
@@ -457,24 +485,35 @@ function TransactionModal({
               disabled={mode === 'buy' && maxQuantity <= 0}
             />
 
-            <PixelBorder
-              borderColor="#bae6fd"
-              borderWidth={2}
-              backgroundColor="#f0f9ff"
-              innerPadding={0}
-            >
-              <View style={styles.totalValueContainer}>
-                <Text style={styles.totalValueLabel}>Value:</Text>
-                <Text
-                  style={[
-                    styles.totalValueAmount,
-                    { color: mode === 'buy' ? '#ef4444' : '#22c55e' },
-                  ]}
-                >
-                  ${(quantity * candy.cost).toFixed(2)}
-                </Text>
-              </View>
-            </PixelBorder>
+            {mode === 'buy' ? (
+              <PixelBorder
+                borderColor="#bae6fd"
+                borderWidth={2}
+                backgroundColor="#f0f9ff"
+                innerPadding={0}
+              >
+                <View style={styles.totalValueContainer}>
+                  <Text style={styles.totalValueLabel}>Total Cost:</Text>
+                  <Text style={[styles.totalValueAmount, { color: '#ef4444' }]}>
+                    ${(quantity * candy.cost).toFixed(2)}
+                  </Text>
+                </View>
+              </PixelBorder>
+            ) : (
+              <PixelBorder
+                borderColor="#bae6fd"
+                borderWidth={2}
+                backgroundColor="#f0f9ff"
+                innerPadding={0}
+              >
+                <View style={styles.totalValueContainer}>
+                  <Text style={styles.totalValueLabel}>Total Value:</Text>
+                  <Text style={[styles.totalValueAmount, { color: '#22c55e' }]}>
+                    ${pocketValue}
+                  </Text>
+                </View>
+              </PixelBorder>
+            )}
 
             {/* Morning Discount Notification */}
             {qualifiesForMorningDiscount && mode === 'buy' && (
@@ -541,34 +580,6 @@ function TransactionModal({
                   : '⚠️ Your stash is full!'}
               </TextWithEmojis>
             )}
-
-            {mode === 'sell' && quantity > 0 && (
-              <PixelBorder
-                borderColor="#bbf7d0"
-                borderWidth={2}
-                backgroundColor="#f0fdf4"
-                innerPadding={0}
-              >
-                <View style={styles.profitContainer}>
-                  <Text
-                    style={[
-                      styles.profitLabel,
-                      { fontSize: pocketFontSizes.label },
-                    ]}
-                  >
-                    Pocket:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.profitAmount,
-                      { color: '#22c55e', fontSize: pocketFontSizes.amount },
-                    ]}
-                  >
-                    ${pocketValue}
-                  </Text>
-                </View>
-              </PixelBorder>
-            )}
           </View>
 
           <View style={styles.buttonRow}>
@@ -633,7 +644,7 @@ const styles = StyleSheet.create({
   },
   priceInfoContainer: {
     padding: 12,
-    marginVertical: 8,
+    marginVertical: 2,
   },
   priceRow: {
     flexDirection: 'row',
@@ -733,6 +744,7 @@ const styles = StyleSheet.create({
     padding: 4,
     marginVertical: 4,
     flexDirection: 'column',
+    alignItems: 'center',
     gap: 4,
   },
   slowCookerText: {

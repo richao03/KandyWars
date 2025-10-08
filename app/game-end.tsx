@@ -410,16 +410,14 @@ export default function GameEndScreen() {
               )}
 
               {bestSale && (
-                <>
-                  <View style={styles.statItemRow}>
-                    <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
-                      💎 Best Single Sale:
-                    </TextWithEmojis>
-                  </View>
+                <View style={styles.statItemRow}>
+                  <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                    💎 Best Single Sale
+                  </TextWithEmojis>
                   <Text style={styles.statValueRight}>
                     {bestSale.candyName} (+${bestSale.profit.toFixed(2)})
                   </Text>
-                </>
+                </View>
               )}
             </PixelBorder>
 
@@ -666,7 +664,9 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'right',
     marginLeft: 8,
-    flexShrink: 0,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    maxWidth: '60%',
   },
   hallPassGrid: {
     flexDirection: 'row',

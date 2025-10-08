@@ -109,6 +109,7 @@ function GameHUD({
   const translateY = useSharedValue(0);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
+  const shakeX = useSharedValue(0);
 
   // Initialize previous balance on first render
   useEffect(() => {
@@ -134,6 +135,7 @@ function GameHUD({
       translateY.value = 0;
       opacity.value = 0;
       scale.value = 0.8;
+      shakeX.value = 0;
 
       // Animate in, hold, then fade out
       translateY.value = withSequence(
@@ -154,6 +156,17 @@ function GameHUD({
         withSpring(1.2, { damping: 12, stiffness: 200 }),
         withSpring(1, { damping: 15, stiffness: 150 })
       );
+
+      // Shake the wallet container
+      shakeX.value = withSequence(
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(4, { duration: 50 }),
+        withTiming(-4, { duration: 50 }),
+        withTiming(0, { duration: 50 })
+      );
     }
 
     previousBalance.current = balance;
@@ -163,6 +176,11 @@ function GameHUD({
   const animatedMoneyChangeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
     opacity: opacity.value,
+  }));
+
+  // Animated style for wallet shake
+  const animatedWalletStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
   }));
 
   const totalInventory = getTotalInventoryCount();
@@ -232,7 +250,7 @@ function GameHUD({
 
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
-        <View style={{ flex: 1, overflow: 'visible' }}>
+        <Animated.View style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}>
           <PixelBorder
             borderColor="#4a7c4a"
             borderWidth={3}
@@ -262,7 +280,7 @@ function GameHUD({
               )}
             </View>
           </PixelBorder>
-        </View>
+        </Animated.View>
 
         <PixelBorder
           borderColor="#b85c8a"
