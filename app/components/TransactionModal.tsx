@@ -9,6 +9,7 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
 
 type PriceBreakdown = {
@@ -238,285 +239,365 @@ function TransactionModal({
       onClose={undefined}
       animationType="spring"
       backdropOpacity={0.6}
-      modalStyle={styles.container}
+      modalStyle={styles.modalWrapper}
     >
-      <>
-        <Text style={styles.title}>{candy.name}</Text>
+      <PixelBorder
+        borderColor={'#cc7a00'}
+        borderWidth={3}
+        backgroundColor={colors.gold.beige}
+        innerPadding={0}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>{candy.name}</Text>
 
-        <View style={styles.priceInfoContainer}>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Current Price:</Text>
-            <Text style={styles.priceValue}>${candy.cost.toFixed(2)}</Text>
-          </View>
-
-          {candy.quantityOwned > 0 && (
-            <>
+          <PixelBorder
+            borderColor="#e5e7eb"
+            borderWidth={3}
+            backgroundColor="#ffffff"
+            innerPadding={0}
+            style={{ marginBottom: 8 }}
+          >
+            <View style={styles.priceInfoContainer}>
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>You Own:</Text>
-                <Text style={styles.priceValue}>{candy.quantityOwned}</Text>
+                <Text style={styles.priceLabel}>Current Price:</Text>
+                <Text style={styles.priceValue}>${candy.cost.toFixed(2)}</Text>
               </View>
 
-              {candy.averagePrice !== null && (
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>Avg Buy Price:</Text>
-                  <Text
-                    style={[
-                      styles.priceValue,
-                      {
-                        color:
-                          candy.averagePrice < candy.cost
-                            ? '#22c55e'
-                            : '#ef4444',
-                      },
-                    ]}
-                  >
-                    ${candy.averagePrice.toFixed(2)}
-                  </Text>
-                </View>
+              {candy.quantityOwned > 0 && (
+                <>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>You Own:</Text>
+                    <Text style={styles.priceValue}>{candy.quantityOwned}</Text>
+                  </View>
+
+                  {candy.averagePrice !== null && (
+                    <View style={styles.priceRow}>
+                      <Text style={styles.priceLabel}>Avg Buy Price:</Text>
+                      <Text
+                        style={[
+                          styles.priceValue,
+                          {
+                            color:
+                              candy.averagePrice < candy.cost
+                                ? '#22c55e'
+                                : '#ef4444',
+                          },
+                        ]}
+                      >
+                        ${candy.averagePrice.toFixed(2)}
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </View>
+            </View>
+          </PixelBorder>
 
-        {priceBreakdown &&
-          (priceBreakdown.jokerEffects.length > 0 ||
-            priceBreakdown.hallPassEffect) &&
-          mode === 'sell' &&
-          (() => {
-            // Collect all active sell effects for simplified display
-            const activeEffects: Array<{ emoji: string; text: string }> = [];
+          {priceBreakdown &&
+            (priceBreakdown.jokerEffects.length > 0 ||
+              priceBreakdown.hallPassEffect) &&
+            mode === 'sell' &&
+            (() => {
+              // Collect all active sell effects for simplified display
+              const activeEffects: Array<{ emoji: string; text: string }> = [];
 
-            // Check for Slow Cooker
-            const slowCookerEffect = priceBreakdown.jokerEffects.find(
-              (effect) =>
-                effect.jokerName === 'Slow Cooker' &&
-                effect.effectType === 'sell'
-            );
-            if (slowCookerEffect && slowCookerJoker) {
-              const basePrice = priceBreakdown.basePrice;
-              const additionalProfit =
-                basePrice * (slowCookerMultiplier - 1) * quantity;
-              const periodText = periodsHeld === 1 ? 'period' : 'periods';
-              activeEffects.push({
-                emoji: '🍲',
-                text: `Slow cooked for ${periodsHeld} ${periodText}: +$${additionalProfit.toFixed(2)}`,
-              });
-            }
-
-            // Check for other sell effects (Pursuasion, Even Stevens, Odd Todd, etc.)
-            // Calculate bonuses with proper compounding
-            let currentPrice = priceBreakdown.basePrice;
-
-            priceBreakdown.jokerEffects.forEach((effect) => {
-              console.log('📊 TransactionModal effect:', effect);
-
-              if (
-                effect.isActive &&
-                effect.effectType === 'sell' &&
-                effect.jokerName !== 'Slow Cooker'
-              ) {
-                // Calculate the actual bonus amount with compounding
-                const priceBeforeBonus = currentPrice;
-                const multiplier = 1 + effect.amount / 100;
-                const priceAfterBonus = currentPrice * multiplier;
-                const bonusAmount =
-                  (priceAfterBonus - priceBeforeBonus) * quantity;
-
-                // Update current price for next effect (compounding)
-                currentPrice = priceAfterBonus;
-
-                console.log(
-                  `📊 Adding ${effect.jokerName} to display: priceBeforeBonus=${priceBeforeBonus.toFixed(2)}, priceAfterBonus=${priceAfterBonus.toFixed(2)}, bonusAmount=${bonusAmount.toFixed(2)}`
-                );
-
+              // Check for Slow Cooker
+              const slowCookerEffect = priceBreakdown.jokerEffects.find(
+                (effect) =>
+                  effect.jokerName === 'Slow Cooker' &&
+                  effect.effectType === 'sell'
+              );
+              if (slowCookerEffect && slowCookerJoker) {
+                const basePrice = priceBreakdown.basePrice;
+                const additionalProfit =
+                  basePrice * (slowCookerMultiplier - 1) * quantity;
+                const periodText = periodsHeld === 1 ? 'period' : 'periods';
                 activeEffects.push({
-                  emoji: effect.jokerEmoji,
-                  text: `${effect.jokerName}: +$${bonusAmount.toFixed(2)}`,
+                  emoji: '🍲',
+                  text: `Slow cooked for ${periodsHeld} ${periodText}: +$${additionalProfit.toFixed(2)}`,
                 });
               }
-            });
 
-            // Add hall pass effect if present
-            if (
-              priceBreakdown.hallPassEffect &&
-              priceBreakdown.hallPassEffect.bonusAmount > 0
-            ) {
-              const hallPassBonusTotal =
-                priceBreakdown.hallPassEffect.bonusAmount * quantity;
-              activeEffects.push({
-                emoji: '🎖️',
-                text: `Hall Pass (+${priceBreakdown.hallPassEffect.bonusPercent}% profit): +$${hallPassBonusTotal.toFixed(2)}`,
+              // Check for other sell effects (Pursuasion, Even Stevens, Odd Todd, etc.)
+              // Calculate bonuses with proper compounding
+              let currentPrice = priceBreakdown.basePrice;
+
+              priceBreakdown.jokerEffects.forEach((effect) => {
+                console.log('📊 TransactionModal effect:', effect);
+
+                if (
+                  effect.isActive &&
+                  effect.effectType === 'sell' &&
+                  effect.jokerName !== 'Slow Cooker'
+                ) {
+                  // Calculate the actual bonus amount with compounding
+                  const priceBeforeBonus = currentPrice;
+                  const multiplier = 1 + effect.amount / 100;
+                  const priceAfterBonus = currentPrice * multiplier;
+                  const bonusAmount =
+                    (priceAfterBonus - priceBeforeBonus) * quantity;
+
+                  // Update current price for next effect (compounding)
+                  currentPrice = priceAfterBonus;
+
+                  console.log(
+                    `📊 Adding ${effect.jokerName} to display: priceBeforeBonus=${priceBeforeBonus.toFixed(2)}, priceAfterBonus=${priceAfterBonus.toFixed(2)}, bonusAmount=${bonusAmount.toFixed(2)}`
+                  );
+
+                  activeEffects.push({
+                    emoji: effect.jokerEmoji,
+                    text: `${effect.jokerName}: +$${bonusAmount.toFixed(2)}`,
+                  });
+                }
               });
-            }
 
-            if (activeEffects.length > 0) {
-              return (
-                <View style={styles.priceBreakdownContainer}>
-                  {activeEffects.map((effect, index) => (
-                    <TextWithEmojis key={index} style={styles.slowCookerText}>
-                      {`${effect.emoji} ${effect.text}`}
-                    </TextWithEmojis>
-                  ))}
-                </View>
-              );
-            }
+              // Add hall pass effect if present
+              if (
+                priceBreakdown.hallPassEffect &&
+                priceBreakdown.hallPassEffect.bonusAmount > 0 &&
+                priceBreakdown.hallPassEffect.bonusAmount * quantity > 0
+              ) {
+                const hallPassBonusTotal =
+                  priceBreakdown.hallPassEffect.bonusAmount * quantity;
+                activeEffects.push({
+                  emoji: '🎖️',
+                  text: `Hall Pass (+${priceBreakdown.hallPassEffect.bonusPercent}% profit): `,
+                  amount: `+$${hallPassBonusTotal.toFixed(2)}`,
+                });
+              }
 
-            return null;
-          })()}
+              if (activeEffects.length > 0) {
+                return (
+                  <PixelBorder
+                    borderColor="#fde047"
+                    borderWidth={3}
+                    backgroundColor="#fef3c7"
+                    innerPadding={0}
+                  >
+                    <View style={styles.priceBreakdownContainer}>
+                      {activeEffects.map((effect, index) => (
+                        <>
+                          <TextWithEmojis
+                            key={index}
+                            style={styles.slowCookerText}
+                            imageSize={24}
+                          >
+                            {`${effect.emoji} ${effect.text}`}
+                          </TextWithEmojis>
+                          <TextWithEmojis
+                            style={{
+                              ...styles.slowCookerText,
+                              textAlign: 'right',
+                            }}
+                          >
+                            {effect.amount}
+                          </TextWithEmojis>
+                        </>
+                      ))}
+                    </View>
+                  </PixelBorder>
+                );
+              }
 
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, mode === 'buy' && styles.activeTab]}
-            onPress={() => changeMode('buy')}
-          >
-            <Text style={styles.tabText}>
-              {mode === 'buy' ? 'Buy Max' : 'Buy'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, mode === 'sell' && styles.activeTab]}
-            onPress={() => changeMode('sell')}
-          >
-            <Text style={styles.tabText}>
-              {mode === 'sell' ? 'Sell Max' : 'Sell'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              return null;
+            })()}
 
-        <View style={styles.sliderSection}>
-          <Text style={styles.quantityLabel}>
-            {mode === 'buy' && maxQuantity <= 0
-              ? 'Inventory Full'
-              : `Quantity: ${quantity} / ${maxQuantity}`}
-          </Text>
-
-          <Slider
-            style={{ width: '100%', height: 50, marginVertical: 10 }}
-            minimumValue={0}
-            maximumValue={maxQuantity > 0 ? maxQuantity : 1}
-            step={1}
-            value={Math.max(
-              0,
-              Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0)
-            )}
-            onValueChange={handleSliderChange}
-            minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
-            maximumTrackTintColor="#ccc"
-            disabled={mode === 'buy' && maxQuantity <= 0}
-          />
-
-          <View style={styles.totalValueContainer}>
-            <Text style={styles.totalValueLabel}>Value:</Text>
-            <Text
-              style={[
-                styles.totalValueAmount,
-                { color: mode === 'buy' ? '#ef4444' : '#22c55e' },
-              ]}
+          <View style={styles.tabContainer}>
+            <PixelBorder
+              borderColor={mode === 'buy' ? '#cc7a00' : '#e5e7eb'}
+              borderWidth={3}
+              backgroundColor={mode === 'buy' ? '#ffcc99' : '#f3f4f6'}
+              style={{ flex: 1, marginRight: 6 }}
             >
-              ${(quantity * candy.cost).toFixed(2)}
-            </Text>
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => changeMode('buy')}
+              >
+                <Text style={styles.tabText}>
+                  {mode === 'buy' ? 'Buy Max' : 'Buy'}
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
+            <PixelBorder
+              borderColor={mode === 'sell' ? '#cc7a00' : '#e5e7eb'}
+              borderWidth={3}
+              backgroundColor={mode === 'sell' ? '#ffcc99' : '#f3f4f6'}
+              style={{ flex: 1 }}
+            >
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => changeMode('sell')}
+              >
+                <Text style={styles.tabText}>
+                  {mode === 'sell' ? 'Sell Max' : 'Sell'}
+                </Text>
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
 
-          {/* Morning Discount Notification */}
-          {qualifiesForMorningDiscount && mode === 'buy' && (
-            <View style={styles.morningDiscountContainer}>
-              <View style={styles.morningDiscountContent}>
-                <Text style={styles.morningDiscountLabel}>
-                  Morning Discount Applied!
-                </Text>
-                <Text style={styles.morningDiscountLabel}>
-                  You Save: ${(quantity * candy.cost * 0.1).toFixed(2)}
+          <View style={styles.sliderSection}>
+            <Text style={styles.quantityLabel}>
+              {mode === 'buy' && maxQuantity <= 0
+                ? 'Inventory Full'
+                : `Quantity: ${quantity} / ${maxQuantity}`}
+            </Text>
+
+            <Slider
+              style={{ width: '100%', height: 50, marginVertical: 4 }}
+              minimumValue={0}
+              maximumValue={maxQuantity > 0 ? maxQuantity : 1}
+              step={1}
+              value={Math.max(
+                0,
+                Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0)
+              )}
+              onValueChange={handleSliderChange}
+              minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
+              maximumTrackTintColor="#ccc"
+              disabled={mode === 'buy' && maxQuantity <= 0}
+            />
+
+            <PixelBorder
+              borderColor="#bae6fd"
+              borderWidth={2}
+              backgroundColor="#f0f9ff"
+              innerPadding={0}
+            >
+              <View style={styles.totalValueContainer}>
+                <Text style={styles.totalValueLabel}>Value:</Text>
+                <Text
+                  style={[
+                    styles.totalValueAmount,
+                    { color: mode === 'buy' ? '#ef4444' : '#22c55e' },
+                  ]}
+                >
+                  ${(quantity * candy.cost).toFixed(2)}
                 </Text>
               </View>
-            </View>
-          )}
+            </PixelBorder>
 
-          {/* Afternoon Sale Bonus Notification */}
-          {qualifiesForAfternoonBonus && mode === 'sell' && (
-            <View style={styles.afternoonBonusContainer}>
-              <View style={styles.afternoonBonusContent}>
-                <Text style={styles.afternoonBonusLabel}>
-                  Afternoon Bonus Applied!
-                </Text>
-                <Text style={styles.afternoonBonusLabel}>
-                  You Earn: ${(quantity * candy.cost * 0.1).toFixed(2)} extra
-                </Text>
+            {/* Morning Discount Notification */}
+            {qualifiesForMorningDiscount && mode === 'buy' && (
+              <View style={styles.morningDiscountContainer}>
+                <View style={styles.morningDiscountContent}>
+                  <Text style={styles.morningDiscountLabel}>
+                    Morning Discount Applied!
+                  </Text>
+                  <Text style={styles.morningDiscountLabel}>
+                    You Save: ${(quantity * candy.cost * 0.1).toFixed(2)}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {/* Combined Bulk Discount Notification */}
-          {qualifiesForBulkDiscount && mode === 'buy' && (
-            <View style={styles.bulkDiscountContainer}>
-              <View style={styles.bulkDiscountContent}>
-                {/* <Image
+            {/* Afternoon Sale Bonus Notification */}
+            {qualifiesForAfternoonBonus && mode === 'sell' && (
+              <View style={styles.afternoonBonusContainer}>
+                <View style={styles.afternoonBonusContent}>
+                  <Text style={styles.afternoonBonusLabel}>
+                    Afternoon Bonus Applied!
+                  </Text>
+                  <Text style={styles.afternoonBonusLabel}>
+                    You Earn: ${(quantity * candy.cost * 0.1).toFixed(2)} extra
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Combined Bulk Discount Notification */}
+            {qualifiesForBulkDiscount && mode === 'buy' && (
+              <View style={styles.bulkDiscountContainer}>
+                <View style={styles.bulkDiscountContent}>
+                  {/* <Image
                   source={require('../../assets/images/emojis/bullseye.png')}
                   style={styles.bullseyeIcon}
                 /> */}
-                <Text style={styles.bulkDiscountLabel}>
-                  Bulk Discount Applied!
-                </Text>
-                <Text style={styles.bulkDiscountLabel}>
-                  You Save: $
-                  {(
-                    quantity *
-                    (qualifiesForMorningDiscount
-                      ? candy.cost * 0.9
-                      : candy.cost) *
-                    0.1
-                  ).toFixed(2)}
-                </Text>
+                  <Text style={styles.bulkDiscountLabel}>
+                    Bulk Discount Applied!
+                  </Text>
+                  <Text style={styles.bulkDiscountLabel}>
+                    You Save: $
+                    {(
+                      quantity *
+                      (qualifiesForMorningDiscount
+                        ? candy.cost * 0.9
+                        : candy.cost) *
+                      0.1
+                    ).toFixed(2)}
+                  </Text>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {mode === 'buy' && maxBuyQuantity === 0 && (
-            <TextWithEmojis style={styles.warningText}>
-              {playerBalance !== undefined &&
-              availableInventorySpace !== undefined
-                ? playerBalance < candy.cost
-                  ? "⚠️ You don't have enough money!"
-                  : availableInventorySpace <= 0
-                    ? '⚠️ Your stash is full!'
-                    : "⚠️ You can't buy this item!"
-                : '⚠️ Your stash is full!'}
-            </TextWithEmojis>
-          )}
+            {mode === 'buy' && maxBuyQuantity === 0 && (
+              <TextWithEmojis style={styles.warningText}>
+                {playerBalance !== undefined &&
+                availableInventorySpace !== undefined
+                  ? playerBalance < candy.cost
+                    ? "⚠️ You don't have enough money!"
+                    : availableInventorySpace <= 0
+                      ? '⚠️ Your stash is full!'
+                      : "⚠️ You can't buy this item!"
+                  : '⚠️ Your stash is full!'}
+              </TextWithEmojis>
+            )}
 
-          {mode === 'sell' && quantity > 0 && (
-            <View style={styles.profitContainer}>
-              <Text
-                style={[
-                  styles.profitLabel,
-                  { fontSize: pocketFontSizes.label },
-                ]}
+            {mode === 'sell' && quantity > 0 && (
+              <PixelBorder
+                borderColor="#bbf7d0"
+                borderWidth={2}
+                backgroundColor="#f0fdf4"
+                innerPadding={0}
               >
-                Pocket:
-              </Text>
-              <Text
-                style={[
-                  styles.profitAmount,
-                  { color: '#22c55e', fontSize: pocketFontSizes.amount },
-                ]}
-              >
-                ${pocketValue}
-              </Text>
-            </View>
-          )}
-        </View>
+                <View style={styles.profitContainer}>
+                  <Text
+                    style={[
+                      styles.profitLabel,
+                      { fontSize: pocketFontSizes.label },
+                    ]}
+                  >
+                    Pocket:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.profitAmount,
+                      { color: '#22c55e', fontSize: pocketFontSizes.amount },
+                    ]}
+                  >
+                    ${pocketValue}
+                  </Text>
+                </View>
+              </PixelBorder>
+            )}
+          </View>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={handleConfirm}
-          >
-            <Text style={styles.confirmButtonText}>Confirm {mode}</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <PixelBorder
+              borderColor={colors.red.dark}
+              borderWidth={3}
+              backgroundColor={colors.red.error}
+              style={{ flex: 1, marginRight: 8 }}
+            >
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                <Text style={styles.cancelButtonText}>cancel</Text>
+              </TouchableOpacity>
+            </PixelBorder>
+            <PixelBorder
+              borderColor="rgba(123,169,101,1)"
+              borderWidth={3}
+              backgroundColor="rgba(154,193,118,1)"
+              style={{ flex: 1 }}
+            >
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.confirmButtonText}>{mode}</Text>
+              </TouchableOpacity>
+            </PixelBorder>
+          </View>
         </View>
-      </>
+      </PixelBorder>
     </FastModal>
   );
 }
@@ -525,38 +606,34 @@ const MemoizedTransactionModal = React.memo(TransactionModal);
 export default MemoizedTransactionModal;
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fefaf5', // Warm paper background
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'stretch',
-    borderWidth: 3,
-    borderColor: '#d4a574', // Brown crayon border
+  modalWrapper: {
     shadowColor: colors.brown.secondary,
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
+    borderRadius: 30,
     elevation: 8,
     minHeight: 450,
     minWidth: '90%',
+  },
+  container: {
+    padding: 16,
+    alignItems: 'stretch',
+    minHeight: 450,
     fontFamily: 'PixeloidMono',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
     color: colors.brown.primary, // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
     fontFamily: 'PixeloidMono',
   },
   priceInfoContainer: {
-    backgroundColor: '#fff9e6',
-    borderRadius: 12,
     padding: 12,
     marginVertical: 8,
-    borderWidth: 2,
-    borderColor: '#e6d4b7',
   },
   priceRow: {
     flexDirection: 'row',
@@ -576,11 +653,10 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   sliderSection: {
-    marginTop: 16,
     paddingVertical: 8,
   },
   quantityLabel: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     alignSelf: 'center',
     color: colors.brown.secondary,
@@ -588,7 +664,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 12,
-    marginBottom: 8,
     borderWidth: 2,
     borderColor: '#f4d03f',
     fontFamily: 'PixeloidMono',
@@ -597,12 +672,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    backgroundColor: '#f0f9ff',
     padding: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#bae6fd',
   },
   totalValueLabel: {
     fontSize: 14,
@@ -620,12 +690,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 12,
-    backgroundColor: '#f0fdf4',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#bbf7d0',
+    padding: 8,
   },
   profitLabel: {
     fontSize: 20,
@@ -653,36 +718,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tab: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#cc7a00',
-    backgroundColor: colors.white,
-  },
-  activeTab: {
-    backgroundColor: '#ffcc99', // Orange crayon
-    borderColor: '#cc7a00',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
   },
   tabText: {
     color: colors.brown.secondary,
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'PixeloidMono',
   },
   priceBreakdownContainer: {
-    backgroundColor: '#f0f8ff',
-    borderRadius: 10,
     padding: 4,
-    marginVertical: 6,
-    borderWidth: 2,
-    borderColor: '#4a90e2',
+    marginVertical: 4,
+    flexDirection: 'column',
+    gap: 4,
   },
   slowCookerText: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.green.success,
-    textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
   breakdownTitle: {
@@ -744,7 +800,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: '#fef3c7',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#f59e0b',
   },
@@ -845,14 +901,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   cancelButton: {
-    flex: 1,
-    backgroundColor: colors.red.error,
     paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.red.error,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cancelButtonText: {
     color: colors.white,
@@ -861,18 +913,14 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   confirmButton: {
-    flex: 1,
-    backgroundColor: colors.green.success,
     paddingVertical: 8,
     paddingHorizontal: 4,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#16a34a',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   confirmButtonText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
   },
