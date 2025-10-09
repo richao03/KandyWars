@@ -19,6 +19,7 @@ import { useWallet } from '../src/hooks/useWallet';
 import { scoreboardService } from '../src/services/firebase';
 import { useAppDispatch } from '../src/store/hooks';
 import { setTotalCompletions } from '../src/store/slices/gameSlice';
+import { setWonDifficulties } from '../src/store/slices/scoreboardSlice';
 import { forceSave } from '../src/store/store';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
@@ -66,12 +67,19 @@ export default function GameEndScreen() {
           console.log('🏆 Total completions:', totalCompletions);
 
           // Track difficulty win
-          console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
-          await scoreboardService.trackDifficultyWin(difficultyLevel);
+          console.log('🏆 Wallet state - difficultyLevel:', difficultyLevel);
 
-          // Fetch and log all won difficulties
+          if (difficultyLevel) {
+            console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
+            await scoreboardService.trackDifficultyWin(difficultyLevel);
+          } else {
+            console.error('❌ Cannot track difficulty win - difficultyLevel is null/undefined');
+          }
+
+          // Fetch and save all won difficulties to Redux
           const wonDifficulties = await scoreboardService.getWonDifficulties();
           console.log('🏆 All difficulties won by this user:', wonDifficulties);
+          dispatch(setWonDifficulties(wonDifficulties));
         } else {
           console.log(
             '😢 Player lost - fetching total completions for hall pass checks...'

@@ -12,6 +12,8 @@ interface ScoreboardState {
   currentScore: number;
   highScore: number;
   isLoading: boolean;
+  totalCompletions: number;
+  wonDifficulties: number[];
 }
 
 const initialState: ScoreboardState = {
@@ -19,6 +21,8 @@ const initialState: ScoreboardState = {
   currentScore: 0,
   highScore: 0,
   isLoading: false,
+  totalCompletions: 0,
+  wonDifficulties: [],
 };
 
 const scoreboardSlice = createSlice({
@@ -43,6 +47,12 @@ const scoreboardSlice = createSlice({
     setIsLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
+    setTotalCompletions: (state, action: PayloadAction<number>) => {
+      state.totalCompletions = action.payload;
+    },
+    setWonDifficulties: (state, action: PayloadAction<number[]>) => {
+      state.wonDifficulties = action.payload;
+    },
     resetScoreboard: () => initialState,
   },
 });
@@ -53,6 +63,8 @@ export const {
   setCurrentScore,
   setHighScore,
   setIsLoading,
+  setTotalCompletions,
+  setWonDifficulties,
   resetScoreboard,
 } = scoreboardSlice.actions;
 

@@ -1793,62 +1793,84 @@ function Market(props) {
                 </PixelBorder>
               ) : period === 8 ? (
                 // Period 8 on other days: Show leave school button
-                <TouchableOpacity
-                  style={styles.nextPeriodButton}
+                <PressableButton
                   onPress={handleNextDay}
-                  activeOpacity={0.8}
+                  shadowColor="rgba(123,169,101,1)"
+                  shadowOffset={{ width: 0, height: 4 }}
+                  shadowOpacity={0.5}
+                  shadowRadius={5}
+                  elevation={8}
                 >
-                  <Text style={styles.nextPeriodButtonText}>
-                    Leave School for the Day
-                  </Text>
-                  <Text style={styles.nextPeriodSubtext}>
-                    Time to head home!
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                // Periods 1-7: Show both next period and end day buttons
-                <View style={styles.buttonRow}>
                   <PixelBorder
                     borderColor="rgba(123,169,101,1)"
                     borderWidth={3}
                     backgroundColor="rgba(154,193,118,1)"
                     innerPadding={0}
-                    style={styles.bigButton}
                   >
-                    <TouchableOpacity
-                      style={styles.pixelButtonInner}
-                      onPress={handleNextDay}
-                      activeOpacity={0.8}
-                    >
+                    <View style={styles.pixelButtonInner}>
                       <Text style={styles.nextPeriodButtonText}>
-                        Next Period
+                        Leave School for the Day
                       </Text>
                       <Text style={styles.nextPeriodSubtext}>
-                        Going to period {period + 1}
+                        Time to head home!
                       </Text>
-                    </TouchableOpacity>
+                    </View>
                   </PixelBorder>
+                </PressableButton>
+              ) : (
+                // Periods 1-7: Show both next period and end day buttons
+                <View style={styles.buttonRow}>
+                  <PressableButton
+                    onPress={handleNextDay}
+                    shadowColor="rgba(123,169,101,1)"
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.5}
+                    shadowRadius={5}
+                    elevation={8}
+                    style={styles.bigButton}
+                  >
+                    <PixelBorder
+                      borderColor="rgba(123,169,101,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(154,193,118,1)"
+                      innerPadding={0}
+                    >
+                      <View style={styles.pixelButtonInner}>
+                        <Text style={styles.nextPeriodButtonText}>
+                          Next Period
+                        </Text>
+                        <Text style={styles.nextPeriodSubtext}>
+                          Going to period {period + 1}
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
 
-                  <PixelBorder
-                    borderColor="rgba(185,28,28,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(239,68,68,1)"
-                    innerPadding={0}
+                  <PressableButton
+                    onPress={handleEndDay}
+                    shadowColor="rgba(185,28,28,1)"
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.5}
+                    shadowRadius={5}
+                    elevation={8}
                     style={styles.smallButton}
                   >
-                    <TouchableOpacity
-                      style={styles.pixelButtonInner}
-                      onPress={handleEndDay}
-                      activeOpacity={0.8}
+                    <PixelBorder
+                      borderColor="rgba(185,28,28,1)"
+                      borderWidth={3}
+                      backgroundColor="rgba(239,68,68,1)"
+                      innerPadding={0}
                     >
-                      <Text style={styles.endDayButtonText}>
-                        {day === 5 ? 'Game End' : 'End Day'}
-                      </Text>
-                      <Text style={styles.endDaySubtext}>
-                        {day === 5 ? 'Finish the game' : 'Skip to after school'}
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <View style={styles.pixelButtonInner}>
+                        <Text style={styles.endDayButtonText}>
+                          {day === 5 ? 'Game End' : 'End Day'}
+                        </Text>
+                        <Text style={styles.endDaySubtext}>
+                          {day === 5 ? 'Finish the game' : 'Skip to after school'}
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
                 </View>
               )}
             </View>

@@ -10,6 +10,7 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { Candy } from '../../src/types/candy';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 
 type PriceBreakdown = {
@@ -32,7 +33,7 @@ type PriceBreakdown = {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (quantity: number, mode: 'buy' | 'sell') => void;
+  onConfirm: (quantity: number, mode: 'Buy' | 'Sell') => void;
   maxBuyQuantity: number;
   maxSellQuantity: number;
   candy: Candy & {
@@ -56,7 +57,7 @@ function TransactionModal({
   playerBalance,
   availableInventorySpace,
 }: Props) {
-  const [mode, setMode] = useState<'buy' | 'sell'>('buy');
+  const [mode, setMode] = useState<'Buy' | 'Sell'>('Buy');
   const [quantity, setQuantity] = useState(1);
   const { jokers } = useJokers();
   const { getInventoryLimit, inventory } = useInventory();
@@ -67,10 +68,10 @@ function TransactionModal({
   const clampedMaxBuyQuantity = maxBuyQuantity < 0 ? 0 : maxBuyQuantity;
   const clampedMaxSellQuantity = maxSellQuantity < 0 ? 0 : maxSellQuantity;
   const maxQuantity =
-    mode === 'buy' ? clampedMaxBuyQuantity : clampedMaxSellQuantity;
+    mode === 'Buy' ? clampedMaxBuyQuantity : clampedMaxSellQuantity;
 
   // Debug logging for sell mode
-  if (mode === 'sell') {
+  if (mode === 'Sell') {
     console.log(`📊 TransactionModal SELL mode:`);
     console.log(
       `📊 maxSellQuantity=${maxSellQuantity}, clamped=${clampedMaxSellQuantity}`
@@ -106,7 +107,7 @@ function TransactionModal({
   }, [periodCount]);
 
   const qualifiesForMorningDiscount = useMemo(() => {
-    return mode === 'buy' && timeZoneArbitrageJoker && isMorning;
+    return mode === 'Buy' && timeZoneArbitrageJoker && isMorning;
   }, [mode, timeZoneArbitrageJoker, isMorning]);
 
   // Check for Sunset Surge joker (afternoon sale bonus)
@@ -117,13 +118,13 @@ function TransactionModal({
   }, [periodCount]);
 
   const qualifiesForAfternoonBonus = useMemo(() => {
-    return mode === 'sell' && sunsetSurgeJoker && isAfternoon;
+    return mode === 'Sell' && sunsetSurgeJoker && isAfternoon;
   }, [mode, sunsetSurgeJoker, isAfternoon]);
 
   // Check for Bulk Sale joker
   const bulkDiscountJoker = findJokerById(jokers, JOKER_IDS.BULK_SALE);
   const qualifiesForBulkDiscount = useMemo(() => {
-    return mode === 'buy' && bulkDiscountJoker && quantity > inventoryLimit / 2;
+    return mode === 'Buy' && bulkDiscountJoker && quantity > inventoryLimit / 2;
   }, [mode, bulkDiscountJoker, quantity, inventoryLimit]);
 
   // Check for Slow Cooker joker (sell multiplier)
@@ -155,7 +156,7 @@ function TransactionModal({
   // Calculate final price with discounts/bonuses
   const finalUnitPrice = useMemo(() => {
     // For selling, use the priceBreakdown if available (includes all joker effects)
-    if (mode === 'sell' && priceBreakdown) {
+    if (mode === 'Sell' && priceBreakdown) {
       console.log(
         `💰 TransactionModal finalUnitPrice: basePrice=${priceBreakdown.basePrice}, finalPrice=${priceBreakdown.finalPrice}`
       );
@@ -186,7 +187,7 @@ function TransactionModal({
 
   // Calculate hall pass bonus per unit (only for selling)
   const hallPassBonusPerUnit = useMemo(() => {
-    if (mode === 'sell' && priceBreakdown?.hallPassEffect) {
+    if (mode === 'Sell' && priceBreakdown?.hallPassEffect) {
       return priceBreakdown.hallPassEffect.bonusAmount;
     }
     return 0;
@@ -220,13 +221,13 @@ function TransactionModal({
     }
   };
 
-  const changeMode = (newMode: 'buy' | 'sell') => {
+  const changeMode = (newMode: 'Buy' | 'Sell') => {
     if (mode === newMode) {
       // If clicking the same mode, set to max quantity
-      if (newMode === 'buy' && maxBuyQuantity > 0) {
+      if (newMode === 'Buy' && maxBuyQuantity > 0) {
         setQuantity(maxBuyQuantity);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } else if (newMode === 'sell' && maxSellQuantity > 0) {
+      } else if (newMode === 'Sell' && maxSellQuantity > 0) {
         setQuantity(maxSellQuantity);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
@@ -279,7 +280,7 @@ function TransactionModal({
 
               {candy.quantityOwned > 0 && (
                 <>
-                  {mode === 'sell' ? (
+                  {mode === 'Sell' ? (
                     <>
                       {candy.averagePrice !== null && (
                         <View style={styles.priceRow}>
@@ -338,7 +339,7 @@ function TransactionModal({
           {priceBreakdown &&
             (priceBreakdown.jokerEffects.length > 0 ||
               priceBreakdown.hallPassEffect) &&
-            mode === 'sell' &&
+            mode === 'Sell' &&
             (() => {
               // Collect all active sell effects for simplified display
               const activeEffects: Array<{ emoji: string; text: string }> = [];
@@ -438,7 +439,7 @@ function TransactionModal({
 
           <View style={styles.sliderSection}>
             <Text style={styles.quantityLabel}>
-              {mode === 'buy' && maxQuantity <= 0
+              {mode === 'Buy' && maxQuantity <= 0
                 ? playerBalance !== undefined && playerBalance < candy.cost
                   ? 'Not Enough Money'
                   : availableInventorySpace !== undefined &&
@@ -458,43 +459,43 @@ function TransactionModal({
                 Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0)
               )}
               onValueChange={handleSliderChange}
-              minimumTrackTintColor={mode === 'buy' ? '#ef4444' : '#4ade80'}
+              minimumTrackTintColor={mode === 'Buy' ? '#ef4444' : '#4ade80'}
               maximumTrackTintColor="#ccc"
-              disabled={mode === 'buy' && maxQuantity <= 0}
+              disabled={mode === 'Buy' && maxQuantity <= 0}
             />
             <View style={styles.tabContainer}>
               <PixelBorder
-                borderColor={mode === 'buy' ? '#cc7a00' : '#e5e7eb'}
+                borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
                 borderWidth={3}
-                backgroundColor={mode === 'buy' ? '#ffcc99' : '#f3f4f6'}
+                backgroundColor={mode === 'Buy' ? '#ffcc99' : '#f3f4f6'}
                 style={{ flex: 1, marginRight: 6 }}
               >
                 <TouchableOpacity
                   style={styles.tab}
-                  onPress={() => changeMode('buy')}
+                  onPress={() => changeMode('Buy')}
                 >
                   <Text style={styles.tabText}>
-                    {mode === 'buy' ? 'Buy Max' : 'Buy'}
+                    {mode === 'Buy' ? 'Buy Max' : 'Buy'}
                   </Text>
                 </TouchableOpacity>
               </PixelBorder>
               <PixelBorder
-                borderColor={mode === 'sell' ? '#cc7a00' : '#e5e7eb'}
+                borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
                 borderWidth={3}
-                backgroundColor={mode === 'sell' ? '#ffcc99' : '#f3f4f6'}
+                backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
                 style={{ flex: 1 }}
               >
                 <TouchableOpacity
                   style={styles.tab}
-                  onPress={() => changeMode('sell')}
+                  onPress={() => changeMode('Sell')}
                 >
                   <Text style={styles.tabText}>
-                    {mode === 'sell' ? 'Sell Max' : 'Sell'}
+                    {mode === 'Sell' ? 'Sell Max' : 'Sell'}
                   </Text>
                 </TouchableOpacity>
               </PixelBorder>
             </View>
-            {mode === 'buy' ? (
+            {mode === 'Buy' ? (
               <PixelBorder
                 borderColor="#bae6fd"
                 borderWidth={2}
@@ -525,7 +526,7 @@ function TransactionModal({
             )}
 
             {/* Morning Discount Notification */}
-            {qualifiesForMorningDiscount && mode === 'buy' && (
+            {qualifiesForMorningDiscount && mode === 'Buy' && (
               <View style={styles.morningDiscountContainer}>
                 <View style={styles.morningDiscountContent}>
                   <Text style={styles.morningDiscountLabel}>
@@ -539,7 +540,7 @@ function TransactionModal({
             )}
 
             {/* Afternoon Sale Bonus Notification */}
-            {qualifiesForAfternoonBonus && mode === 'sell' && (
+            {qualifiesForAfternoonBonus && mode === 'Sell' && (
               <View style={styles.afternoonBonusContainer}>
                 <View style={styles.afternoonBonusContent}>
                   <Text style={styles.afternoonBonusLabel}>
@@ -553,7 +554,7 @@ function TransactionModal({
             )}
 
             {/* Combined Bulk Discount Notification */}
-            {qualifiesForBulkDiscount && mode === 'buy' && (
+            {qualifiesForBulkDiscount && mode === 'Buy' && (
               <View style={styles.bulkDiscountContainer}>
                 <View style={styles.bulkDiscountContent}>
                   {/* <Image
@@ -577,7 +578,7 @@ function TransactionModal({
               </View>
             )}
 
-            {mode === 'buy' && maxBuyQuantity === 0 && (
+            {mode === 'Buy' && maxBuyQuantity === 0 && (
               <TextWithEmojis style={styles.warningText}>
                 {playerBalance !== undefined &&
                 availableInventorySpace !== undefined
@@ -592,29 +593,46 @@ function TransactionModal({
           </View>
 
           <View style={styles.buttonRow}>
-            <PixelBorder
-              borderColor={colors.red.dark}
-              borderWidth={3}
-              backgroundColor={colors.red.error}
+            <PressableButton
+              onPress={onClose}
+              shadowColor="rgba(185,28,28,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
               style={{ flex: 1, marginRight: 8 }}
             >
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>cancel</Text>
-              </TouchableOpacity>
-            </PixelBorder>
-            <PixelBorder
-              borderColor="rgba(123,169,101,1)"
-              borderWidth={3}
-              backgroundColor="rgba(154,193,118,1)"
+              <PixelBorder
+                borderColor="rgba(185,28,28,1)"
+                borderWidth={3}
+                backgroundColor="rgba(239,68,68,1)"
+                innerPadding={0}
+              >
+                <View style={styles.cancelButton}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
+            <PressableButton
+              onPress={handleConfirm}
+              shadowColor="rgba(123,169,101,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
               style={{ flex: 1 }}
             >
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={handleConfirm}
+              <PixelBorder
+                borderColor="rgba(123,169,101,1)"
+                borderWidth={3}
+                backgroundColor="rgba(154,193,118,1)"
+                innerPadding={0}
               >
-                <Text style={styles.confirmButtonText}>{mode}</Text>
-              </TouchableOpacity>
-            </PixelBorder>
+                <View style={styles.confirmButton}>
+                  <Text style={styles.confirmButtonText}>{mode}</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           </View>
         </View>
       </PixelBorder>
@@ -725,7 +743,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   buttonRow: {
-    marginTop: 16,
+    marginTop: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
@@ -733,7 +751,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 16,
     justifyContent: 'center',
     gap: 10,
   },

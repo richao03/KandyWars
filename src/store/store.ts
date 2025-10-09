@@ -42,8 +42,8 @@ const persistConfig = {
   key: 'root',
   version: 1,
   storage: AsyncStorage,
-  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking'], // Only persist these slices
-  blacklist: ['flavorText', 'eventHandler', 'scoreboard', 'candySales', 'tabBar'], // Don't persist these
+  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard'], // Only persist these slices
+  blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
   // Performance optimizations
   timeout: 10000, // 10 second timeout for persistence operations
   writeFailHandler: (err: Error) => {

@@ -35,7 +35,7 @@ interface HallPassState {
 const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'no_longer_freshman',
-    name: 'No Longer a Freshman',
+    name: 'Not a Freshman',
     description: "You've graduated from rookie status!",
     unlockRequirement: 'Win the game once (pay off adoption fee)',
     effects: [
@@ -55,8 +55,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'inventory_bonus',
-        value: 10,
-        description: '+10 inventory slots',
+        value: 15,
+        description: '+15 inventory slots',
       },
     ],
     rarity: 'common',
@@ -69,8 +69,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'allowance_bonus',
-        value: 100,
-        description: '+100% daily allowance',
+        value: 1000,
+        description: '+1000% daily allowance',
       },
     ],
     rarity: 'rare',
@@ -83,8 +83,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'sale_price_bonus',
-        value: 15,
-        description: '+75% profit bonus on candy sales (15% × 5x multiplier)',
+        value: 15, //15 * 5 = 75
+        description: '+75% profit bonus on candy sales',
       },
       {
         type: 'inventory_bonus',
@@ -116,8 +116,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'sale_price_bonus',
-        value: 25,
-        description: '+125% profit bonus on candy sales (25% × 5x multiplier)',
+        value: 25, //25 * 5 = 125
+        description: '+125% profit bonus on candy sales',
       },
       {
         type: 'allowance_bonus',
@@ -149,8 +149,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'sale_price_bonus',
-        value: 20,
-        description: '+100% profit bonus on candy sales (20% × 5x multiplier)',
+        value: 30, //20*5=100
+        description: '+150% profit bonus on candy sales',
       },
     ],
     rarity: 'epic',
@@ -163,13 +163,13 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'sale_price_bonus',
-        value: 30,
-        description: '+150% profit bonus on candy sales (30% × 5x multiplier)',
+        value: 30, //30* 5 = 150
+        description: '+150% profit bonus on candy sales',
       },
       {
         type: 'inventory_bonus',
-        value: 10,
-        description: '+10 inventory slots',
+        value: 15,
+        description: '+15 inventory slots',
       },
     ],
     rarity: 'legendary',
@@ -182,8 +182,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'allowance_bonus',
-        value: 75,
-        description: '+75% daily allowance',
+        value: 100,
+        description: '+100% daily allowance',
       },
     ],
     rarity: 'legendary',
@@ -207,8 +207,14 @@ const hallPassSlice = createSlice({
   reducers: {
     initializeHallPasses: (state) => {
       console.log('🎓 REDUCER: initializeHallPasses called');
-      console.log('🎓 REDUCER: Current unlockedPassIds:', state.unlockedPassIds);
-      console.log('🎓 REDUCER: Current newlyUnlockedPassIds:', state.newlyUnlockedPassIds);
+      console.log(
+        '🎓 REDUCER: Current unlockedPassIds:',
+        state.unlockedPassIds
+      );
+      console.log(
+        '🎓 REDUCER: Current newlyUnlockedPassIds:',
+        state.newlyUnlockedPassIds
+      );
 
       state.isLoaded = true;
 
@@ -237,8 +243,13 @@ const hallPassSlice = createSlice({
           ?.unlockedAt,
       }));
 
-      console.log('🎓 REDUCER: After initialization, availablePasses unlocked status:',
-        state.availablePasses.map(p => ({ id: p.id, isUnlocked: p.isUnlocked })));
+      console.log(
+        '🎓 REDUCER: After initialization, availablePasses unlocked status:',
+        state.availablePasses.map((p) => ({
+          id: p.id,
+          isUnlocked: p.isUnlocked,
+        }))
+      );
     },
     unlockHallPass: (
       state,
@@ -247,7 +258,10 @@ const hallPassSlice = createSlice({
       const { passId, timestamp = new Date().toISOString() } = action.payload;
 
       console.log(`🎓 REDUCER: unlockHallPass called for passId: ${passId}`);
-      console.log(`🎓 REDUCER: Current unlockedPassIds before:`, state.unlockedPassIds);
+      console.log(
+        `🎓 REDUCER: Current unlockedPassIds before:`,
+        state.unlockedPassIds
+      );
 
       if (!state.unlockedPassIds.includes(passId)) {
         state.unlockedPassIds.push(passId);
@@ -267,17 +281,27 @@ const hallPassSlice = createSlice({
       if (passIndex !== -1) {
         state.availablePasses[passIndex].isUnlocked = true;
         state.availablePasses[passIndex].unlockedAt = timestamp;
-        console.log(`🎓 REDUCER: Updated availablePasses[${passIndex}] isUnlocked to true`);
+        console.log(
+          `🎓 REDUCER: Updated availablePasses[${passIndex}] isUnlocked to true`
+        );
       } else {
-        console.log(`🎓 REDUCER: WARNING - Could not find passId ${passId} in availablePasses`);
+        console.log(
+          `🎓 REDUCER: WARNING - Could not find passId ${passId} in availablePasses`
+        );
       }
 
-      console.log(`🎓 REDUCER: Current unlockedPassIds after:`, state.unlockedPassIds);
+      console.log(
+        `🎓 REDUCER: Current unlockedPassIds after:`,
+        state.unlockedPassIds
+      );
     },
     selectHallPass: (state, action: PayloadAction<string>) => {
       const passId = action.payload;
       console.log(`🎖️ REDUCER: selectHallPass called for passId: ${passId}`);
-      console.log(`🎖️ REDUCER: Current selectedPassIds:`, state.selectedPassIds);
+      console.log(
+        `🎖️ REDUCER: Current selectedPassIds:`,
+        state.selectedPassIds
+      );
       // Toggle: add if not present, remove if present
       if (state.selectedPassIds.includes(passId)) {
         state.selectedPassIds = state.selectedPassIds.filter(
@@ -300,9 +324,17 @@ const hallPassSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(resetGame, (state) => {
-      console.log('🎓 REDUCER: resetGame called - preserving unlocked hall passes AND selected passes');
-      console.log('🎓 REDUCER: Unlocked passes before reset:', state.unlockedPassIds);
-      console.log('🎓 REDUCER: Selected passes before reset:', state.selectedPassIds);
+      console.log(
+        '🎓 REDUCER: resetGame called - preserving unlocked hall passes AND selected passes'
+      );
+      console.log(
+        '🎓 REDUCER: Unlocked passes before reset:',
+        state.unlockedPassIds
+      );
+      console.log(
+        '🎓 REDUCER: Selected passes before reset:',
+        state.selectedPassIds
+      );
 
       // Preserve both unlocked AND selected hall passes across game resets
       // The player intentionally selected these passes before starting the game
@@ -310,8 +342,14 @@ const hallPassSlice = createSlice({
       state.newlyUnlockedPassIds = [];
       // DO NOT clear selectedPassIds - preserve player's selection for the new game
 
-      console.log('🎓 REDUCER: Unlocked passes after reset (preserved):', state.unlockedPassIds);
-      console.log('🎓 REDUCER: Selected passes after reset (preserved):', state.selectedPassIds);
+      console.log(
+        '🎓 REDUCER: Unlocked passes after reset (preserved):',
+        state.unlockedPassIds
+      );
+      console.log(
+        '🎓 REDUCER: Selected passes after reset (preserved):',
+        state.selectedPassIds
+      );
     });
   },
 });

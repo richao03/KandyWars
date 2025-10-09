@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
@@ -42,6 +42,16 @@ const locationColors: Record<Location, { bg: string; border: string }> = {
   'science lab': { bg: '#ffffcc', border: '#ffff66' }, // Light yellow
   'school yard': { bg: '#e6ffcc', border: '#a3ff66' }, // Light lime
   bathroom: { bg: '#ffcc99', border: '#ff9933' }, // Light orange
+};
+
+const locationIcons: Record<Location, any> = {
+  gym: require('../../assets/images/emojis/gym.png'),
+  cafeteria: require('../../assets/images/emojis/cafeteria.png'),
+  'home room': require('../../assets/images/emojis/homeroom.png'),
+  library: require('../../assets/images/emojis/books.png'),
+  'science lab': require('../../assets/images/emojis/lab.png'),
+  'school yard': require('../../assets/images/emojis/recess.png'),
+  bathroom: require('../../assets/images/emojis/bathroom.png'),
 };
 
 function LocationModal({
@@ -123,6 +133,10 @@ function LocationModal({
                 innerPadding={0}
               >
                 <View style={styles.locationButton}>
+                  <Image
+                    source={locationIcons[location]}
+                    style={styles.locationIcon}
+                  />
                   {!hasGoodEvent && !hasBadEvent && (
                     <TextWithEmojis style={styles.locationText}>
                       {location.charAt(0).toUpperCase() + location.slice(1)}
@@ -213,14 +227,20 @@ const styles = StyleSheet.create({
   },
   locationButtonWrapper: {
     width: '45%',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   locationButton: {
-    padding: 18,
+    padding: 8,
     alignItems: 'center',
+    gap: 0,
+  },
+  locationIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
   },
   locationText: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
     color: '#5d4e37', // Dark brown

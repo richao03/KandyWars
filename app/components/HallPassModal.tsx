@@ -12,6 +12,7 @@ import { HallPass } from '../../src/store/slices/hallPassSlice';
 import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 
 interface HallPassModalProps {
   visible: boolean;
@@ -275,103 +276,164 @@ export default function HallPassModal({
       backdropOpacity={0.8}
       modalStyle={styles.modalContainer}
     >
-      <Text style={styles.title}>Hall Passes</Text>
-      <Text style={styles.subtitle}>
-        {isSelectionMode
-          ? 'Choose Hall Passes to gain permanent bonuses (select multiple)'
-          : 'Your collection of earned Hall Passes'}
-      </Text>
-      {isSelectionMode &&
-        localSelectedIds.length > 0 &&
-        (() => {
-          const selectedPasses = allPasses.filter((p) =>
-            localSelectedIds.includes(p.id)
-          );
-          const modifiers = computeHallPassModifiers(selectedPasses);
-          return (
-            <View style={styles.accumulatedEffects}>
-              <Text style={styles.accumulatedTitle}>
-                {localSelectedIds.length} pass
-                {localSelectedIds.length !== 1 ? 'es' : ''} selected -
-                Accumulated Effects:
-              </Text>
-              {modifiers.salePriceBonusPercent > 0 && (
-                <Text style={styles.accumulatedEffect}>
-                  💰 +{modifiers.salePriceBonusPercent * 5}% profit bonus on
-                  sales
-                </Text>
-              )}
-              {modifiers.inventoryBonusSlots > 0 && (
-                <Text style={styles.accumulatedEffect}>
-                  🎒 +{modifiers.inventoryBonusSlots} inventory slots
-                </Text>
-              )}
-              {modifiers.allowanceBonusPercent > 0 && (
-                <Text style={styles.accumulatedEffect}>
-                  💵 +{modifiers.allowanceBonusPercent}% daily allowance
-                </Text>
-              )}
-              {modifiers.jokerBonusCount > 0 && (
-                <Text style={styles.accumulatedEffect}>
-                  🃏 +{modifiers.jokerBonusCount} joker
-                  {modifiers.jokerBonusCount !== 1 ? 's' : ''}
-                </Text>
-              )}
-              {modifiers.extraPeriodsPerDay > 0 && (
-                <Text style={styles.accumulatedEffect}>
-                  ⏰ +{modifiers.extraPeriodsPerDay} period
-                  {modifiers.extraPeriodsPerDay !== 1 ? 's' : ''} per day
-                </Text>
-              )}
-            </View>
-          );
-        })()}
-
-      <ScrollView
-        style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+      <PixelBorder
+        borderColor="#d4a574"
+        borderWidth={3}
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        innerPadding={24}
       >
-        {/* All passes */}
-        {allPasses.map(renderPassCard)}
-      </ScrollView>
+        <Text style={styles.title}>Hall Passes</Text>
+        <Text style={styles.subtitle}>
+          {isSelectionMode
+            ? 'Choose Hall Passes to gain bonuses'
+            : 'Your collection of earned Hall Passes'}
+        </Text>
+        {isSelectionMode &&
+          localSelectedIds.length > 0 &&
+          (() => {
+            const selectedPasses = allPasses.filter((p) =>
+              localSelectedIds.includes(p.id)
+            );
+            const modifiers = computeHallPassModifiers(selectedPasses);
+            return (
+              <PixelBorder
+                borderColor="#4a7c4a"
+                borderWidth={3}
+                backgroundColor="#e8f5e8"
+                innerPadding={12}
+                style={styles.accumulatedEffects}
+              >
+                <Text style={styles.accumulatedTitle}>
+                  {localSelectedIds.length} pass
+                  {localSelectedIds.length !== 1 ? 'es' : ''} selected:
+                </Text>
+                {modifiers.salePriceBonusPercent > 0 && (
+                  <Text style={styles.accumulatedEffect}>
+                    💰 +{modifiers.salePriceBonusPercent * 5}% profit bonus on
+                    sales
+                  </Text>
+                )}
+                {modifiers.inventoryBonusSlots > 0 && (
+                  <Text style={styles.accumulatedEffect}>
+                    🎒 +{modifiers.inventoryBonusSlots} inventory slots
+                  </Text>
+                )}
+                {modifiers.allowanceBonusPercent > 0 && (
+                  <Text style={styles.accumulatedEffect}>
+                    💵 +{modifiers.allowanceBonusPercent}% daily allowance
+                  </Text>
+                )}
+                {modifiers.jokerBonusCount > 0 && (
+                  <Text style={styles.accumulatedEffect}>
+                    🃏 +{modifiers.jokerBonusCount} joker
+                    {modifiers.jokerBonusCount !== 1 ? 's' : ''}
+                  </Text>
+                )}
+                {modifiers.extraPeriodsPerDay > 0 && (
+                  <Text style={styles.accumulatedEffect}>
+                    ⏰ +{modifiers.extraPeriodsPerDay} period
+                    {modifiers.extraPeriodsPerDay !== 1 ? 's' : ''} per day
+                  </Text>
+                )}
+              </PixelBorder>
+            );
+          })()}
 
-      <View style={styles.buttonContainer}>
-        {isSelectionMode ? (
-          <>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={handleConfirm}
+        <ScrollView
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* All passes */}
+          {allPasses.map(renderPassCard)}
+        </ScrollView>
+
+        <View style={styles.buttonContainer}>
+          {isSelectionMode ? (
+            <>
+              <PressableButton
+                onPress={onClose}
+                shadowColor="#6b5a2d"
+                shadowOffset={{ width: 0, height: 3 }}
+                shadowOpacity={0.4}
+                shadowRadius={4}
+                elevation={6}
+                style={{ flex: 1 }}
+              >
+                <PixelBorder
+                  borderColor="#d1d5db"
+                  borderWidth={3}
+                  backgroundColor="#f3f4f6"
+                  innerPadding={0}
+                >
+                  <View style={styles.cancelButtonInner}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
+
+              <PressableButton
+                onPress={handleConfirm}
+                shadowColor="rgba(123,169,101,1)"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.5}
+                shadowRadius={5}
+                elevation={8}
+                style={{ flex: 1 }}
+              >
+                <PixelBorder
+                  borderColor="rgba(123,169,101,1)"
+                  borderWidth={3}
+                  backgroundColor="rgba(154,193,118,1)"
+                  innerPadding={0}
+                >
+                  <View style={styles.confirmButtonInner}>
+                    <Text style={styles.confirmText}>Lets go!</Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
+            </>
+          ) : (
+            <PressableButton
+              onPress={onClose}
+              shadowColor="rgba(123,169,101,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
             >
-              <Text style={styles.confirmText}>
-                {onConfirm ? 'Pack Hall Passes' : 'Confirm'}
-              </Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity style={styles.confirmButton} onPress={onClose}>
-            <Text style={styles.confirmText}>Close</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+              <PixelBorder
+                borderColor="rgba(123,169,101,1)"
+                borderWidth={3}
+                backgroundColor="rgba(154,193,118,1)"
+                innerPadding={0}
+              >
+                <View style={styles.confirmButtonInner}>
+                  <Text style={styles.confirmText}>Close</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
+          )}
+        </View>
 
-      <Text style={styles.unlockedCount}>
-        Unlocked: {unlockedPasses.length} / {allPasses.length}
-      </Text>
+        <Text style={styles.unlockedCount}>
+          Unlocked: {unlockedPasses.length} / {allPasses.length}
+        </Text>
+      </PixelBorder>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   modalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
     width: '95%',
     maxWidth: 500,
     maxHeight: '90%',
+    shadowColor: '#8b4513',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
   title: {
     fontSize: 28,
@@ -418,7 +480,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   scrollContainer: {
-    maxHeight: 400,
+    maxHeight: 300,
     marginBottom: 16,
   },
   noneOption: {
@@ -462,13 +524,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   passName: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     marginBottom: 1,
   },
   passRarity: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     letterSpacing: 0.5,
@@ -550,12 +612,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   accumulatedEffects: {
-    backgroundColor: '#e8f5e8',
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#4a7c4a',
   },
   accumulatedTitle: {
     fontSize: 12,
@@ -565,7 +622,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   accumulatedEffect: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'PixeloidMono',
     color: '#2d5f2d',
     marginBottom: 4,
@@ -590,31 +647,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  cancelButton: {
-    flex: 1,
+  cancelButtonInner: {
     paddingVertical: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    paddingHorizontal: 24,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
-  confirmButton: {
-    flex: 1,
+  confirmButtonInner: {
     paddingVertical: 12,
-    backgroundColor: '#4a7c4a',
-    borderRadius: 8,
+    paddingHorizontal: 24,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cancelText: {
     fontSize: 16,
     fontFamily: 'PixeloidMono',
-    color: '#666',
-    fontWeight: 'bold',
+    color: '#374151',
+    fontWeight: '700',
   },
   confirmText: {
     fontSize: 16,
     fontFamily: 'PixeloidMono',
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#ffffff',
+    fontWeight: '800',
+    textShadowColor: '#166534',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   unlockedCount: {
     textAlign: 'center',

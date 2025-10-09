@@ -27,6 +27,7 @@ import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { setPeriodCount } from '../../src/store/slices/gameSlice';
 import { setBalance, setStashedAmount } from '../../src/store/slices/walletSlice';
 import { setHallPassModifiers } from '../../src/store/slices/hallPassModifiersSlice';
+import { setTotalCompletions, setWonDifficulties } from '../../src/store/slices/scoreboardSlice';
 import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
 import { scoreboardService } from '../../src/services/firebase';
 
@@ -80,16 +81,21 @@ export default function CandyWarsTitleScreen({
       '🎬 CandyWarsTitleScreen: Starting fully visible to avoid white screen'
     );
 
-    // Fetch and log won difficulties on game load
-    const fetchWonDifficulties = async () => {
+    // Fetch and store won difficulties and total completions on game load
+    const fetchGameProgress = async () => {
       try {
         const wonDifficulties = await scoreboardService.getWonDifficulties();
         console.log('🏆 Won difficulties on game load:', wonDifficulties);
+        dispatch(setWonDifficulties(wonDifficulties));
+
+        const totalCompletions = await scoreboardService.getTotalCompletions();
+        console.log('🏆 Total completions on game load:', totalCompletions);
+        dispatch(setTotalCompletions(totalCompletions));
       } catch (error) {
-        console.error('❌ Failed to fetch won difficulties:', error);
+        console.error('❌ Failed to fetch game progress:', error);
       }
     };
-    fetchWonDifficulties();
+    fetchGameProgress();
   }, []);
 
   // Recompute modifiers if there are selected passes but modifiers aren't initialized

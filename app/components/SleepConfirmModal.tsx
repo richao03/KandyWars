@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 import colors from '../../src/constants/colors';
 
@@ -63,34 +64,49 @@ export default function SleepConfirmModal({
           </PixelBorder>
 
           <View style={styles.buttonContainer}>
-            <PixelBorder
-              borderColor="#3a7bc8"
-              borderWidth={3}
-              backgroundColor="#4a90e2"
-              innerPadding={0}
+            <PressableButton
+              onPress={onConfirm}
+              shadowColor="#3a7bc8"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
             >
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={onConfirm}
+              <PixelBorder
+                borderColor="#3a7bc8"
+                borderWidth={3}
+                backgroundColor="#4a90e2"
+                innerPadding={0}
               >
-                <TextWithEmojis style={styles.confirmButtonText}>
-                  Yes, Go to Sleep
-                </TextWithEmojis>
-              </TouchableOpacity>
-            </PixelBorder>
+                <View style={styles.confirmButton}>
+                  <TextWithEmojis style={styles.confirmButtonText}>
+                    Yes, Go to Sleep
+                  </TextWithEmojis>
+                </View>
+              </PixelBorder>
+            </PressableButton>
 
-            <PixelBorder
-              borderColor="rgba(255, 255, 255, 0.3)"
-              borderWidth={3}
-              backgroundColor="rgba(255, 255, 255, 0.2)"
-              innerPadding={0}
+            <PressableButton
+              onPress={onCancel}
+              shadowColor="rgba(255, 255, 255, 0.3)"
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.4}
+              shadowRadius={4}
+              elevation={6}
             >
-              <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-                <TextWithEmojis style={styles.cancelButtonText}>
-                  Not Yet!
-                </TextWithEmojis>
-              </TouchableOpacity>
-            </PixelBorder>
+              <PixelBorder
+                borderColor="rgba(255, 255, 255, 0.3)"
+                borderWidth={3}
+                backgroundColor="rgba(255, 255, 255, 0.2)"
+                innerPadding={0}
+              >
+                <View style={styles.cancelButton}>
+                  <TextWithEmojis style={styles.cancelButtonText}>
+                    Not Yet!
+                  </TextWithEmojis>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           </View>
         </View>
       </PixelBorder>
@@ -158,6 +174,8 @@ const styles = StyleSheet.create({
   confirmButton: {
     paddingVertical: 14,
     paddingHorizontal: 24,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   confirmButtonText: {
     fontSize: 18,
@@ -169,6 +187,8 @@ const styles = StyleSheet.create({
   cancelButton: {
     paddingVertical: 14,
     paddingHorizontal: 24,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cancelButtonText: {
     fontSize: 18,

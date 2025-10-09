@@ -21,6 +21,7 @@ import {
   where,
   updateDoc,
 } from 'firebase/firestore';
+import * as Device from 'expo-device';
 
 // Firebase configuration - YOU NEED TO REPLACE THESE WITH YOUR PROJECT CONFIG
 const firebaseConfig = {
@@ -87,6 +88,7 @@ export interface PrivacySettings {
 class ScoreboardService {
   private isInitialized = false;
   private currentUser: User | null = null;
+  private deviceId: string | null = null;
 
   async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -98,6 +100,10 @@ class ScoreboardService {
       console.log('📊 Initializing Firebase...');
       initializeFirebase();
 
+      // Get device ID (unique to this device)
+      this.deviceId = Device.osInternalBuildId || Device.osBuildId || Device.modelId || 'unknown-device';
+      console.log('📱 Device ID:', this.deviceId);
+
       console.log('📊 Signing in anonymously...');
       // Sign in anonymously for beta testing
       const userCredential = await signInAnonymously(auth);
@@ -105,8 +111,10 @@ class ScoreboardService {
       this.isInitialized = true;
 
       console.log('📊 Scoreboard service initialized successfully');
-      console.log('📊 User ID:', this.currentUser.uid);
+      console.log('📊 User ID (Firebase Auth):', this.currentUser.uid);
+      console.log('📱 Device ID (Primary Identifier):', this.deviceId);
       console.log('📊 Firebase config loaded');
+      console.log('📊 NOTE: Using device ID for player identification. Progress persists on this device.');
     } catch (error) {
       console.error('❌ Failed to initialize scoreboard:', error);
       throw error;
@@ -130,7 +138,7 @@ class ScoreboardService {
     try {
       const entry: ScoreboardEntry = {
         ...scoreData,
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId!,
         playerName: privacySettings.sharePlayerName
           ? scoreData.playerName
           : 'Anonymous',
@@ -294,25 +302,25 @@ class ScoreboardService {
   // Auto-tracking methods for real-time updates
   async trackJokerUsage(jokerId: number, playerName: string): Promise<void> {
     console.log('🃏 Tracking joker usage - ID:', jokerId, 'Player:', playerName);
-    
-    if (!this.isInitialized || !this.currentUser) {
-      console.log('❌ Cannot track joker usage - not initialized or no user');
+
+    if (!this.isInitialized || !this.deviceId) {
+      console.log('❌ Cannot track joker usage - not initialized or no device ID');
       console.log('  - isInitialized:', this.isInitialized);
-      console.log('  - currentUser:', !!this.currentUser);
+      console.log('  - deviceId:', this.deviceId);
       return;
     }
 
     try {
       console.log('🃏 Adding joker usage to player_stats collection...');
       const docData = {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId!,
         playerName,
         action: 'joker_used',
         jokerId,
         timestamp: serverTimestamp(),
       };
       console.log('🃏 Document data:', docData);
-      
+
       const docRef = await addDoc(collection(db, 'player_stats'), docData);
       console.log('✅ Joker usage tracked successfully! Doc ID:', docRef.id);
     } catch (error) {
@@ -338,15 +346,15 @@ class ScoreboardService {
     console.log('  - Player Name:', playerName);
     console.log('  - Total Periods:', totalPeriodsPlayed);
     
-    if (!this.isInitialized || !this.currentUser) {
-      console.log('❌ Cannot track game completion - not initialized or no user');
+    if (!this.isInitialized || !this.deviceId) {
+      console.log('❌ Cannot track game completion - not initialized or no device ID');
       return;
     }
 
     try {
       console.log('🎮 Adding game completion to scoreboard collection...');
       const docData = {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId,
         playerName,
         difficulty,
         finalBalance,
@@ -371,11 +379,11 @@ class ScoreboardService {
   }
 
   async trackMinigamePlay(minigameType: string, playerName: string): Promise<void> {
-    if (!this.isInitialized || !this.currentUser) return;
+    if (!this.isInitialized || !this.deviceId) return;
 
     try {
       await addDoc(collection(db, 'player_stats'), {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId,
         playerName,
         action: 'minigame_played',
         minigameType,
@@ -390,15 +398,15 @@ class ScoreboardService {
   async getPlayedMinigames(): Promise<string[]> {
     console.log('🎮 Fetching played minigames...');
 
-    if (!this.isInitialized || !this.currentUser) {
-      console.log('❌ Cannot fetch played minigames - not initialized or no user');
+    if (!this.isInitialized || !this.deviceId) {
+      console.log('❌ Cannot fetch played minigames - not initialized or no device ID');
       return [];
     }
 
     try {
       const q = query(
         collection(db, 'player_stats'),
-        where('playerId', '==', this.currentUser.uid),
+        where('playerId', '==', this.deviceId),
         where('action', '==', 'minigame_played')
       );
 
@@ -422,11 +430,11 @@ class ScoreboardService {
   }
 
   async trackJokerFromMinigame(jokerName: string, jokerId: number, minigameType: string): Promise<void> {
-    if (!this.isInitialized || !this.currentUser) return;
+    if (!this.isInitialized || !this.deviceId) return;
 
     try {
       await addDoc(collection(db, 'player_stats'), {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId,
         action: 'joker_from_minigame',
         jokerName,
         jokerId,
@@ -440,11 +448,11 @@ class ScoreboardService {
   }
 
   async trackDailyPeriods(periodsCount: number, playerName: string): Promise<void> {
-    if (!this.isInitialized || !this.currentUser) return;
+    if (!this.isInitialized || !this.deviceId) return;
 
     try {
       await addDoc(collection(db, 'player_stats'), {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId,
         playerName,
         action: 'daily_periods',
         periodsCount,
@@ -470,17 +478,17 @@ class ScoreboardService {
       }
     }
 
-    if (!this.isInitialized || !this.currentUser) {
+    if (!this.isInitialized || !this.deviceId) {
       console.log('❌ Cannot increment completions - initialization failed');
       console.log('   isInitialized:', this.isInitialized);
-      console.log('   currentUser:', !!this.currentUser);
+      console.log('   deviceId:', this.deviceId);
       return 0;
     }
 
     try {
       // Add a completion record
       await addDoc(collection(db, 'player_stats'), {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId,
         action: 'game_completed',
         timestamp: serverTimestamp(),
       });
@@ -503,7 +511,7 @@ class ScoreboardService {
       await this.initialize();
     }
 
-    if (!this.isInitialized || !this.currentUser) {
+    if (!this.isInitialized || !this.deviceId) {
       console.log('❌ Cannot fetch completions - initialization failed');
       return 0;
     }
@@ -511,7 +519,7 @@ class ScoreboardService {
     try {
       const q = query(
         collection(db, 'player_stats'),
-        where('playerId', '==', this.currentUser.uid),
+        where('playerId', '==', this.deviceId),
         where('action', '==', 'game_completed')
       );
 
@@ -528,19 +536,24 @@ class ScoreboardService {
   async trackDifficultyWin(difficultyLevel: number): Promise<void> {
     console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
 
-    if (!this.isInitialized || !this.currentUser) {
-      console.log('❌ Cannot track difficulty win - not initialized or no user');
+    if (!this.isInitialized || !this.deviceId) {
+      console.log('❌ Cannot track difficulty win - not initialized or no device ID');
+      return;
+    }
+
+    if (!difficultyLevel || difficultyLevel < 1) {
+      console.error('❌ Cannot track difficulty win - invalid difficulty level:', difficultyLevel);
       return;
     }
 
     try {
       await addDoc(collection(db, 'player_stats'), {
-        playerId: this.currentUser.uid,
+        playerId: this.deviceId,
         action: 'difficulty_won',
         difficultyLevel,
         timestamp: serverTimestamp(),
       });
-      console.log('✅ Difficulty win tracked for level:', difficultyLevel);
+      console.log('✅ Difficulty win tracked for level:', difficultyLevel, 'for device:', this.deviceId);
     } catch (error) {
       console.error('❌ Failed to track difficulty win:', error);
     }
@@ -554,23 +567,29 @@ class ScoreboardService {
       await this.initialize();
     }
 
-    if (!this.isInitialized || !this.currentUser) {
+    if (!this.isInitialized || !this.deviceId) {
       console.log('❌ Cannot fetch won difficulties - initialization failed');
+      console.log('   isInitialized:', this.isInitialized);
+      console.log('   deviceId:', this.deviceId);
       return [];
     }
 
     try {
+      console.log('🏆 Querying player_stats for device:', this.deviceId);
       const q = query(
         collection(db, 'player_stats'),
-        where('playerId', '==', this.currentUser.uid),
+        where('playerId', '==', this.deviceId),
         where('action', '==', 'difficulty_won')
       );
 
       const querySnapshot = await getDocs(q);
+      console.log('🏆 Query returned', querySnapshot.size, 'documents');
+
       const wonDifficulties = new Set<number>();
 
       querySnapshot.docs.forEach(doc => {
         const data = doc.data();
+        console.log('🏆 Document data:', data);
         if (data.difficultyLevel) {
           wonDifficulties.add(data.difficultyLevel);
         }

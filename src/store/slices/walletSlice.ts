@@ -138,12 +138,13 @@ const walletSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(resetGame, (state) => {
-      // Preserve playerName and playerId across game resets
-      const { playerName, playerId } = state;
+      // Preserve playerName, playerId, and difficultyLevel across game resets
+      const { playerName, playerId, difficultyLevel } = state;
       return {
         ...initialState,
         playerName,
         playerId,
+        difficultyLevel,
       };
     });
   },

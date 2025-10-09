@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import React from 'react';
 import {
   Platform,
@@ -6,7 +7,6 @@ import {
   ViewStyle,
 } from 'react-native';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -51,6 +51,8 @@ export default function PressableButton({
 
   const handlePressIn = () => {
     if (disabled) return;
+    // Trigger light haptic feedback on press
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Push down effect - very fast and no bounce
     translateY.value = withSpring(4, {
       damping: 1000,
@@ -67,19 +69,10 @@ export default function PressableButton({
     if (disabled) return;
 
     // Return to original position - very fast and no bounce
-    translateY.value = withSpring(
-      0,
-      {
-        damping: 1000,
-        stiffness: 1500,
-      },
-      (finished) => {
-        // Call onPress after animation completes
-        if (finished && onPress) {
-          runOnJS(onPress)();
-        }
-      }
-    );
+    translateY.value = withSpring(0, {
+      damping: 1000,
+      stiffness: 1500,
+    });
 
     // Restore shadow
     shadowOpacityValue.value = withSpring(shadowOpacity, {
@@ -92,6 +85,7 @@ export default function PressableButton({
     <TouchableOpacity
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      onPress={onPress}
       disabled={disabled}
       activeOpacity={activeOpacity}
       style={[styles.touchable, style]}

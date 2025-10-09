@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { scoreboardService } from '../../src/services/firebase';
+import { useAppSelector } from '../../src/store/hooks';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -23,22 +17,32 @@ export default function DifficultySelectionModal({
   onSelectDifficulty,
   onClose,
 }: DifficultySelectionModalProps) {
+  // Get won difficulties from Redux (which loads from Firebase on app start)
+  const wonDifficultiesFromRedux = useAppSelector((state) => state.scoreboard.wonDifficulties);
   const [wonDifficulties, setWonDifficulties] = useState<number[]>([]);
 
+  // Sync with Redux when modal opens
   useEffect(() => {
     if (visible) {
+      console.log('🏆 DifficultyModal: Loading won difficulties from Redux:', wonDifficultiesFromRedux);
+      setWonDifficulties(wonDifficultiesFromRedux);
+
+      // Also fetch fresh data from Firebase in the background
       const fetchWonDifficulties = async () => {
         try {
           const won = await scoreboardService.getWonDifficulties();
-          console.log('🏆 Won difficulties:', won);
-          setWonDifficulties(won);
+          console.log('🏆 DifficultyModal: Fetched fresh won difficulties from Firebase:', won);
+          if (JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)) {
+            console.log('🏆 DifficultyModal: Firebase data differs from Redux, updating...');
+            setWonDifficulties(won);
+          }
         } catch (error) {
           console.error('❌ Failed to fetch won difficulties:', error);
         }
       };
       fetchWonDifficulties();
     }
-  }, [visible]);
+  }, [visible, wonDifficultiesFromRedux]);
   const levelOptions = [
     {
       level: 1,
@@ -387,8 +391,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -5,
-    width: 36,
-    height: 36,
+    width: 24,
+    height: 24,
     resizeMode: 'contain',
   },
   textContent: {

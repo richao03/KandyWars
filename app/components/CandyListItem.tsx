@@ -1,9 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import PixelBorder from './PixelBorder';
-import type { Candy } from '../../src/types/candy';
+import { StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
-
+import type { Candy } from '../../src/types/candy';
+import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 
 export type CandyForMarket = Candy & {
   cost: number;
@@ -26,35 +26,38 @@ const CandyListItem = React.memo(function CandyListItem({
   onPress,
 }: CandyListItemProps) {
   return (
-    <View style={styles.container}>
+    <PressableButton
+      onPress={() => onPress(index)}
+      shadowColor="#d4a574"
+      shadowOffset={{ width: 0, height: 3 }}
+      shadowOpacity={0.4}
+      shadowRadius={4}
+      elevation={6}
+      style={styles.container}
+    >
       <PixelBorder
         borderColor="#d4a574"
         borderWidth={3}
         backgroundColor="rgba(255, 255, 255, 0.7)"
         innerPadding={8}
       >
-        <TouchableOpacity
-          onPress={() => onPress(index)}
-          style={{ backgroundColor: 'transparent' }}
-        >
-          <View style={styles.candyInfo}>
-            <View style={styles.candyNameRow}>
-              <Text style={styles.name}>{item.name}</Text>
-              {item.quantityOwned > 0 && (
-                <View style={styles.ownedBadge}>
-                  <Text style={styles.ownedText}>{item.quantityOwned}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.candyPriceRow}>
-              <Text style={styles.price}>
-                {localPricesUpdating ? '$-.--' : `$${item.cost.toFixed(2)}`}
-              </Text>
-            </View>
+        <View style={styles.candyInfo}>
+          <View style={styles.candyNameRow}>
+            <Text style={styles.name}>{item.name}</Text>
+            {item.quantityOwned > 0 && (
+              <View style={styles.ownedBadge}>
+                <Text style={styles.ownedText}>{item.quantityOwned}</Text>
+              </View>
+            )}
           </View>
-        </TouchableOpacity>
+          <View style={styles.candyPriceRow}>
+            <Text style={styles.price}>
+              {localPricesUpdating ? '$-.--' : `$${item.cost.toFixed(2)}`}
+            </Text>
+          </View>
+        </View>
       </PixelBorder>
-    </View>
+    </PressableButton>
   );
 });
 

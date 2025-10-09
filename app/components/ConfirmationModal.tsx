@@ -4,10 +4,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -167,68 +168,76 @@ export default function ConfirmationModal({
       onClose={dismissible ? onCancel : undefined}
       animationType="spring"
       backdropOpacity={0.6}
-      modalStyle={[
-        styles.modal,
-        {
-          backgroundColor: themeStyles.background,
-          borderColor: themeStyles.border,
-          zIndex: 1000000,
-          elevation: 1000000,
-        },
-      ]}
+      modalStyle={styles.modal}
     >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <PixelBorder
+        borderColor="#d4a574"
+        borderWidth={3}
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        innerPadding={0}
       >
-        <TextWithEmojis style={styles.emoji}>{emoji}</TextWithEmojis>
-        <TextWithEmojis
-          style={[styles.title, { color: themeStyles.titleColor }]}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          {title}
-        </TextWithEmojis>
-        {renderMessage()}
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              {
-                backgroundColor: themeStyles.confirmBg,
-                borderColor: themeStyles.confirmBorder,
-              },
-            ]}
-            onPress={onConfirm}
+          <TextWithEmojis style={styles.emoji}>{emoji}</TextWithEmojis>
+          <TextWithEmojis
+            style={[styles.title, { color: themeStyles.titleColor }]}
           >
-            <Text style={[styles.confirmButtonText, { color: '#ffffff' }]}>
-              {confirmText}
-            </Text>
-          </TouchableOpacity>
+            {title}
+          </TextWithEmojis>
+          {renderMessage()}
 
-          {cancelText && (
-            <TouchableOpacity
-              style={[
-                styles.cancelButton,
-                {
-                  backgroundColor: themeStyles.cancelBg,
-                  borderColor: themeStyles.cancelBorder,
-                },
-              ]}
-              onPress={onCancel}
+          <View style={styles.buttonContainer}>
+            <PressableButton
+              onPress={onConfirm}
+              shadowColor="rgba(123,169,101,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
             >
-              <Text
-                style={[
-                  styles.cancelButtonText,
-                  { color: themeStyles.textColor },
-                ]}
+              <PixelBorder
+                borderColor="rgba(123,169,101,1)"
+                borderWidth={3}
+                backgroundColor="rgba(154,193,118,1)"
+                innerPadding={0}
               >
-                {cancelText}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+                <View style={styles.confirmButtonInner}>
+                  <Text style={styles.confirmButtonText}>
+                    {confirmText}
+                  </Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
+
+            {cancelText && (
+              <PressableButton
+                onPress={onCancel}
+                shadowColor="#6b5a2d"
+                shadowOffset={{ width: 0, height: 3 }}
+                shadowOpacity={0.4}
+                shadowRadius={4}
+                elevation={6}
+              >
+                <PixelBorder
+                  borderColor="#d1d5db"
+                  borderWidth={3}
+                  backgroundColor="#f3f4f6"
+                  innerPadding={0}
+                >
+                  <View style={styles.cancelButtonInner}>
+                    <Text style={styles.cancelButtonText}>
+                      {cancelText}
+                    </Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
+            )}
+          </View>
+        </ScrollView>
+      </PixelBorder>
     </FastModal>
   );
 }
@@ -236,16 +245,14 @@ export default function ConfirmationModal({
 const styles = StyleSheet.create({
   modal: {
     borderRadius: 24,
-    padding: 24,
     width: '100%',
     maxWidth: 380,
     alignSelf: 'center',
-    borderWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowColor: '#8b4513',
+    shadowOffset: { width: 2, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
   scrollView: {
     maxHeight: SCREEN_HEIGHT * 0.8 - 48, // Account for modal padding and borders
@@ -326,33 +333,34 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     gap: 12,
+    width: '100%',
   },
-  confirmButton: {
-    paddingVertical: 14,
+  confirmButtonInner: {
+    paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   confirmButtonText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#ffffff',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
+    textShadowColor: '#166534',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  cancelButton: {
-    paddingVertical: 14,
+  cancelButtonInner: {
+    paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 16,
-    borderWidth: 2,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   cancelButtonText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#374151',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
