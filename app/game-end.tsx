@@ -64,6 +64,14 @@ export default function GameEndScreen() {
           totalCompletions = await scoreboardService.incrementGameCompletions();
           dispatch(setTotalCompletions(totalCompletions));
           console.log('🏆 Total completions:', totalCompletions);
+
+          // Track difficulty win
+          console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
+          await scoreboardService.trackDifficultyWin(difficultyLevel);
+
+          // Fetch and log all won difficulties
+          const wonDifficulties = await scoreboardService.getWonDifficulties();
+          console.log('🏆 All difficulties won by this user:', wonDifficulties);
         } else {
           console.log(
             '😢 Player lost - fetching total completions for hall pass checks...'
@@ -95,7 +103,9 @@ export default function GameEndScreen() {
         console.log('🎓 Newly unlocked Hall Passes:', unlocked);
 
         if (unlocked.length > 0) {
-          console.log(`🎓 ${unlocked.length} hall pass(es) were unlocked - forcing save to persist...`);
+          console.log(
+            `🎓 ${unlocked.length} hall pass(es) were unlocked - forcing save to persist...`
+          );
           forceSave();
         }
       } catch (error) {
@@ -285,8 +295,8 @@ export default function GameEndScreen() {
               innerPadding={10}
               style={styles.difficultyBadge}
             >
-              <TextWithEmojis style={styles.difficultyText} imageSize={16}>
-                {`🎯 Difficulty: ${difficultyName} (Level ${difficultyLevel})`}
+              <TextWithEmojis style={styles.difficultyText} imageSize={24}>
+                {`🎯 Difficulty: ${difficultyName} `}
               </TextWithEmojis>
             </PixelBorder>
 
@@ -320,14 +330,14 @@ export default function GameEndScreen() {
               </TextWithEmojis>
 
               <View style={{ ...styles.statItemRow, marginTop: 12 }}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   💰 Balance
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>${balance.toFixed(2)}</Text>
               </View>
 
               <View style={styles.statItemRow}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   {stashedAmount >= 0 ? '⚖️ Savings' : '⚖️ Debt'}
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
@@ -336,7 +346,7 @@ export default function GameEndScreen() {
               </View>
 
               <View style={styles.statItemRow}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   {gameResult === 'won' ? '🎉 Status' : '❌ Status'}
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
@@ -362,7 +372,7 @@ export default function GameEndScreen() {
               <View style={styles.statItemRow}>
                 <TextWithEmojis
                   style={{ ...styles.statLabelLeft, marginTop: 12 }}
-                  imageSize={20}
+                  imageSize={24}
                 >
                   💰 Total Profit
                 </TextWithEmojis>
@@ -372,7 +382,7 @@ export default function GameEndScreen() {
               </View>
 
               <View style={styles.statItemRow}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   💸 Spent on Candy
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
@@ -381,7 +391,7 @@ export default function GameEndScreen() {
               </View>
 
               <View style={styles.statItemRow}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   💰 Total Allowance
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
@@ -390,7 +400,7 @@ export default function GameEndScreen() {
               </View>
 
               <View style={styles.statItemRow}>
-                <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   🍬 Candies Sold
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
@@ -400,7 +410,7 @@ export default function GameEndScreen() {
 
               {mostSoldCandy && (
                 <View style={styles.statItemRow}>
-                  <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                     🏆 Most Sold Candy
                   </TextWithEmojis>
                   <Text style={styles.statValueRight}>
@@ -411,7 +421,7 @@ export default function GameEndScreen() {
 
               {bestSale && (
                 <View style={styles.statItemRow}>
-                  <TextWithEmojis style={styles.statLabelLeft} imageSize={20}>
+                  <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                     💎 Best Single Sale
                   </TextWithEmojis>
                   <Text style={styles.statValueRight}>
@@ -479,7 +489,7 @@ export default function GameEndScreen() {
                       innerPadding={8}
                       style={styles.jokerItem}
                     >
-                      <TextWithEmojis style={styles.jokerText} imageSize={20}>
+                      <TextWithEmojis style={styles.jokerText} imageSize={24}>
                         {joker.emoji} {joker.name}
                       </TextWithEmojis>
                     </PixelBorder>
@@ -642,7 +652,7 @@ const styles = StyleSheet.create({
     flex: 1, // Take available space but can shrink
   },
   statLabelLeft: {
-    fontSize: 13,
+    fontSize: 16,
     color: '#6B9B3F',
     fontFamily: 'PixeloidMono',
     textAlign: 'left',

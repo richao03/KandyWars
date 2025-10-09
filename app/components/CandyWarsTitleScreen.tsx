@@ -21,6 +21,7 @@ import DifficultySelectionModal from './DifficultySelectionModal';
 import ExactFontHandwriting from './ExactFontHandwriting';
 import HallPassModal from './HallPassModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import StoryModal from './StoryModal';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { setPeriodCount } from '../../src/store/slices/gameSlice';
@@ -78,6 +79,17 @@ export default function CandyWarsTitleScreen({
     console.log(
       '🎬 CandyWarsTitleScreen: Starting fully visible to avoid white screen'
     );
+
+    // Fetch and log won difficulties on game load
+    const fetchWonDifficulties = async () => {
+      try {
+        const wonDifficulties = await scoreboardService.getWonDifficulties();
+        console.log('🏆 Won difficulties on game load:', wonDifficulties);
+      } catch (error) {
+        console.error('❌ Failed to fetch won difficulties:', error);
+      }
+    };
+    fetchWonDifficulties();
   }, []);
 
   // Recompute modifiers if there are selected passes but modifiers aren't initialized
@@ -293,184 +305,232 @@ export default function CandyWarsTitleScreen({
             <Animated.View
               style={[styles.buttonContainer, { opacity: buttonOpacity }]}
             >
-              <PixelBorder
-                borderColor="#4a7c4a"
-                borderWidth={3}
-                backgroundColor="#d4f6d4"
+              <PressableButton
+                onPress={handleNewGamePress}
+                shadowColor="#2d5a2d"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.4}
+                shadowRadius={5}
+                elevation={8}
                 style={{ width: '80%' }}
-                innerPadding={0}
               >
-                <TouchableOpacity
-                  style={[styles.button, styles.newGameButton]}
-                  onPress={handleNewGamePress}
+                <PixelBorder
+                  borderColor="#4a7c4a"
+                  borderWidth={3}
+                  backgroundColor="#d4f6d4"
+                  innerPadding={0}
                 >
-                  <Text style={[styles.buttonText, styles.newGameText]}>
-                    New Game
-                  </Text>
-                </TouchableOpacity>
-              </PixelBorder>
+                  <View style={[styles.button, styles.newGameButton]}>
+                    <Text style={[styles.buttonText, styles.newGameText]}>
+                      New Game
+                    </Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
 
-              <PixelBorder
-                borderColor={!isInitialized ? '#ccc' : '#b85c8a'}
-                borderWidth={3}
-                backgroundColor={!isInitialized ? '#e0e0e0' : '#ffd6e8'}
+              <PressableButton
+                onPress={!isInitialized ? undefined : onContinue}
+                disabled={!isInitialized}
+                shadowColor="#5a2d5a"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.4}
+                shadowRadius={5}
+                elevation={8}
                 style={{ width: '80%', opacity: !isInitialized ? 0.6 : 1 }}
-                innerPadding={0}
               >
-                <TouchableOpacity
-                  style={[styles.button, styles.continueButton]}
-                  onPress={!isInitialized ? undefined : onContinue}
-                  disabled={!isInitialized}
+                <PixelBorder
+                  borderColor={!isInitialized ? '#ccc' : '#b85c8a'}
+                  borderWidth={3}
+                  backgroundColor={!isInitialized ? '#e0e0e0' : '#ffd6e8'}
+                  innerPadding={0}
                 >
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      styles.continueText,
-                      !isInitialized && styles.disabledText,
-                    ]}
-                  >
-                    {'Continue'}
-                  </Text>
-                </TouchableOpacity>
-              </PixelBorder>
+                  <View style={[styles.button, styles.continueButton]}>
+                    <Text
+                      style={[
+                        styles.buttonText,
+                        styles.continueText,
+                        !isInitialized && styles.disabledText,
+                      ]}
+                    >
+                      {'Continue'}
+                    </Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
 
-              <PixelBorder
-                borderColor="#b8a05c"
-                borderWidth={3}
-                backgroundColor="#fff2d6"
+              <PressableButton
+                onPress={handleHallPassesPress}
+                shadowColor="#6b5a2d"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.4}
+                shadowRadius={5}
+                elevation={8}
                 style={{ width: '80%' }}
-                innerPadding={0}
               >
-                <TouchableOpacity
-                  style={[styles.button, styles.hallPassButton]}
-                  onPress={handleHallPassesPress}
+                <PixelBorder
+                  borderColor="#b8a05c"
+                  borderWidth={3}
+                  backgroundColor="#fff2d6"
+                  innerPadding={0}
                 >
-                  <Text style={[styles.buttonText, styles.hallPassText]}>
-                    Hall Passes
-                  </Text>
-                </TouchableOpacity>
-              </PixelBorder>
+                  <View style={[styles.button, styles.hallPassButton]}>
+                    <Text style={[styles.buttonText, styles.hallPassText]}>
+                      Hall Passes
+                    </Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
 
-              <PixelBorder
-                borderColor="#5c7cb8"
-                borderWidth={3}
-                backgroundColor="#d6e8ff"
+              <PressableButton
+                onPress={onSettings}
+                shadowColor="#2d5a6b"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.4}
+                shadowRadius={5}
+                elevation={8}
                 style={{ width: '80%' }}
-                innerPadding={0}
               >
-                <TouchableOpacity
-                  style={[styles.button, styles.settingsButton]}
-                  onPress={onSettings}
+                <PixelBorder
+                  borderColor="#5c7cb8"
+                  borderWidth={3}
+                  backgroundColor="#d6e8ff"
+                  innerPadding={0}
                 >
-                  <Text style={[styles.buttonText, styles.settingsText]}>
-                    Settings
-                  </Text>
-                </TouchableOpacity>
-              </PixelBorder>
+                  <View style={[styles.button, styles.settingsButton]}>
+                    <Text style={[styles.buttonText, styles.settingsText]}>
+                      Settings
+                    </Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
 
               {__DEV__ && (
                 <>
-                  <PixelBorder
-                    borderColor="#ff6b6b"
-                    borderWidth={3}
-                    backgroundColor="#ffe8e8"
+                  <PressableButton
+                    onPress={() => {
+                      setHasCompletedMarketTutorial(false);
+                      setHasCompletedAfterSchoolTutorial(false);
+                      console.log('🔧 DEBUG: Tutorial flags reset');
+                    }}
+                    shadowColor="#6b2d2d"
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.4}
+                    shadowRadius={5}
+                    elevation={8}
                     style={{ width: '80%' }}
-                    innerPadding={0}
                   >
-                    <TouchableOpacity
-                      style={[styles.button, styles.debugButton]}
-                      onPress={() => {
-                        setHasCompletedMarketTutorial(false);
-                        setHasCompletedAfterSchoolTutorial(false);
-                        console.log('🔧 DEBUG: Tutorial flags reset');
-                      }}
+                    <PixelBorder
+                      borderColor="#ff6b6b"
+                      borderWidth={3}
+                      backgroundColor="#ffe8e8"
+                      innerPadding={0}
                     >
-                      <Text style={[styles.buttonText, styles.debugText]}>
-                        Reset Tutorial
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <View style={[styles.button, styles.debugButton]}>
+                        <Text style={[styles.buttonText, styles.debugText]}>
+                          Reset Tutorial
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
 
-                  <PixelBorder
-                    borderColor="#4ade80"
-                    borderWidth={3}
-                    backgroundColor="#d1fae5"
+                  <PressableButton
+                    onPress={() => {
+                      console.log('🔧 DEBUG: Setting up WIN scenario - Day 5');
+                      // Set to day 5 (period 32 = day 5, period 1)
+                      dispatch(setPeriodCount(32));
+                      // Give enough money to win (adoption fee + extra)
+                      const adoptionFee = wallet.adoptionFee || 1000;
+                      dispatch(setBalance(adoptionFee + 100));
+                      dispatch(setStashedAmount(0));
+                      setIsInitialized(true);
+                      console.log('🔧 DEBUG: WIN setup complete - navigate to continue');
+                    }}
+                    shadowColor="#15803d"
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.4}
+                    shadowRadius={5}
+                    elevation={8}
                     style={{ width: '80%' }}
-                    innerPadding={0}
                   >
-                    <TouchableOpacity
-                      style={[styles.button, styles.debugButton]}
-                      onPress={() => {
-                        console.log('🔧 DEBUG: Setting up WIN scenario - Day 5');
-                        // Set to day 5 (period 32 = day 5, period 1)
-                        dispatch(setPeriodCount(32));
-                        // Give enough money to win (adoption fee + extra)
-                        const adoptionFee = wallet.adoptionFee || 1000;
-                        dispatch(setBalance(adoptionFee + 100));
-                        dispatch(setStashedAmount(0));
-                        setIsInitialized(true);
-                        console.log('🔧 DEBUG: WIN setup complete - navigate to continue');
-                      }}
+                    <PixelBorder
+                      borderColor="#4ade80"
+                      borderWidth={3}
+                      backgroundColor="#d1fae5"
+                      innerPadding={0}
                     >
-                      <Text style={[styles.buttonText, { color: '#15803d' }]}>
-                        Debug: Win Setup
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <View style={[styles.button, styles.debugButton]}>
+                        <Text style={[styles.buttonText, { color: '#15803d' }]}>
+                          Debug: Win Setup
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
 
-                  <PixelBorder
-                    borderColor="#f87171"
-                    borderWidth={3}
-                    backgroundColor="#fee2e2"
+                  <PressableButton
+                    onPress={() => {
+                      console.log('🔧 DEBUG: Setting up LOSE scenario - Day 5');
+                      // Set to day 5 (period 32 = day 5, period 1)
+                      dispatch(setPeriodCount(32));
+                      // Give not enough money to win
+                      const adoptionFee = wallet.adoptionFee || 1000;
+                      dispatch(setBalance(adoptionFee - 200));
+                      dispatch(setStashedAmount(0));
+                      setIsInitialized(true);
+                      console.log('🔧 DEBUG: LOSE setup complete - navigate to continue');
+                    }}
+                    shadowColor="#991b1b"
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.4}
+                    shadowRadius={5}
+                    elevation={8}
                     style={{ width: '80%' }}
-                    innerPadding={0}
                   >
-                    <TouchableOpacity
-                      style={[styles.button, styles.debugButton]}
-                      onPress={() => {
-                        console.log('🔧 DEBUG: Setting up LOSE scenario - Day 5');
-                        // Set to day 5 (period 32 = day 5, period 1)
-                        dispatch(setPeriodCount(32));
-                        // Give not enough money to win
-                        const adoptionFee = wallet.adoptionFee || 1000;
-                        dispatch(setBalance(adoptionFee - 200));
-                        dispatch(setStashedAmount(0));
-                        setIsInitialized(true);
-                        console.log('🔧 DEBUG: LOSE setup complete - navigate to continue');
-                      }}
+                    <PixelBorder
+                      borderColor="#f87171"
+                      borderWidth={3}
+                      backgroundColor="#fee2e2"
+                      innerPadding={0}
                     >
-                      <Text style={[styles.buttonText, { color: '#991b1b' }]}>
-                        Debug: Lose Setup
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <View style={[styles.button, styles.debugButton]}>
+                        <Text style={[styles.buttonText, { color: '#991b1b' }]}>
+                          Debug: Lose Setup
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
 
-                  <PixelBorder
-                    borderColor="#a855f7"
-                    borderWidth={3}
-                    backgroundColor="#f3e8ff"
+                  <PressableButton
+                    onPress={async () => {
+                      console.log('🔧 DEBUG: Fetching total completions from Firebase...');
+                      try {
+                        const total = await scoreboardService.getTotalCompletions();
+                        console.log('🏆 TOTAL COMPLETIONS FROM FIREBASE:', total);
+                        alert(`Total Completions: ${total}`);
+                      } catch (error) {
+                        console.error('❌ Failed to fetch completions:', error);
+                        alert('Error fetching completions - check console');
+                      }
+                    }}
+                    shadowColor="#7e22ce"
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={0.4}
+                    shadowRadius={5}
+                    elevation={8}
                     style={{ width: '80%' }}
-                    innerPadding={0}
                   >
-                    <TouchableOpacity
-                      style={[styles.button, styles.debugButton]}
-                      onPress={async () => {
-                        console.log('🔧 DEBUG: Fetching total completions from Firebase...');
-                        try {
-                          const total = await scoreboardService.getTotalCompletions();
-                          console.log('🏆 TOTAL COMPLETIONS FROM FIREBASE:', total);
-                          alert(`Total Completions: ${total}`);
-                        } catch (error) {
-                          console.error('❌ Failed to fetch completions:', error);
-                          alert('Error fetching completions - check console');
-                        }
-                      }}
+                    <PixelBorder
+                      borderColor="#a855f7"
+                      borderWidth={3}
+                      backgroundColor="#f3e8ff"
+                      innerPadding={0}
                     >
-                      <Text style={[styles.buttonText, { color: '#7e22ce' }]}>
-                        Show Completions
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <View style={[styles.button, styles.debugButton]}>
+                        <Text style={[styles.buttonText, { color: '#7e22ce' }]}>
+                          Show Completions
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
                 </>
               )}
             </Animated.View>

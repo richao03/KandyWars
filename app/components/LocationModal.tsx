@@ -1,12 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 export type Location =
   | 'gym'
@@ -95,7 +95,7 @@ function LocationModal({
       backdropOpacity={0.5}
       modalStyle={styles.modal}
     >
-      <Text style={styles.title}>Where do you want to go?</Text>
+      <Text style={styles.title}>Where to next?</Text>
 
       <View style={styles.locationGrid}>
         {locations.map((location) => {
@@ -106,50 +106,65 @@ function LocationModal({
           let borderWidth = 3;
 
           return (
-            <PixelBorder
+            <PressableButton
               key={location}
-              borderColor={borderColor}
-              borderWidth={borderWidth}
-              backgroundColor={locationColors[location].bg}
-              innerPadding={0}
+              onPress={() => handleLocationSelect(location)}
+              shadowColor={borderColor}
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.4}
+              shadowRadius={4}
+              elevation={6}
               style={styles.locationButtonWrapper}
             >
-              <TouchableOpacity
-                style={styles.locationButton}
-                onPress={() => handleLocationSelect(location)}
+              <PixelBorder
+                borderColor={borderColor}
+                borderWidth={borderWidth}
+                backgroundColor={locationColors[location].bg}
+                innerPadding={0}
               >
-                {!hasGoodEvent && !hasBadEvent && (
-                  <TextWithEmojis style={styles.locationText}>
-                    {location.charAt(0).toUpperCase() + location.slice(1)}
-                  </TextWithEmojis>
-                )}
-                {hasGoodEvent && (
-                  <TextWithEmojis style={styles.goodEventText} imageSize={24}>
-                    {location.charAt(0).toUpperCase() + location.slice(1)}
-                  </TextWithEmojis>
-                )}
-                {hasBadEvent && (
-                  <TextWithEmojis style={styles.badEventText} imageSize={24}>
-                    {location.charAt(0).toUpperCase() + location.slice(1)}
-                  </TextWithEmojis>
-                )}
-              </TouchableOpacity>
-            </PixelBorder>
+                <View style={styles.locationButton}>
+                  {!hasGoodEvent && !hasBadEvent && (
+                    <TextWithEmojis style={styles.locationText}>
+                      {location.charAt(0).toUpperCase() + location.slice(1)}
+                    </TextWithEmojis>
+                  )}
+                  {hasGoodEvent && (
+                    <TextWithEmojis style={styles.goodEventText} imageSize={24}>
+                      {location.charAt(0).toUpperCase() + location.slice(1)}
+                    </TextWithEmojis>
+                  )}
+                  {hasBadEvent && (
+                    <TextWithEmojis style={styles.badEventText} imageSize={24}>
+                      {location.charAt(0).toUpperCase() + location.slice(1)}
+                    </TextWithEmojis>
+                  )}
+                </View>
+              </PixelBorder>
+            </PressableButton>
           );
         })}
       </View>
 
-      <PixelBorder
-        borderColor="#999"
-        borderWidth={2}
-        backgroundColor="#f0f0f0"
-        innerPadding={0}
+      <PressableButton
+        onPress={onClose}
+        shadowColor="#666"
+        shadowOffset={{ width: 0, height: 3 }}
+        shadowOpacity={0.3}
+        shadowRadius={4}
+        elevation={5}
         style={styles.cancelButtonWrapper}
       >
-        <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-      </PixelBorder>
+        <PixelBorder
+          borderColor="#999"
+          borderWidth={2}
+          backgroundColor="#f0f0f0"
+          innerPadding={0}
+        >
+          <View style={styles.cancelButton}>
+            <Text style={styles.cancelText}>Cancel</Text>
+          </View>
+        </PixelBorder>
+      </PressableButton>
     </FastModal>
   );
 }

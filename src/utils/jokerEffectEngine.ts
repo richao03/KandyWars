@@ -320,12 +320,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     type: 'persistent',
     flavorText: 'All good things come in pairs',
     description:
-      'If total inventory limit is an even number, all candy sale +10%',
+      'If total inventory limit is an even number, all candy sale +50%',
     effects: [
       {
         target: 'sell_multiplier',
         operation: 'multiply',
-        amount: 1.1,
+        amount: 1.5,
         duration: 'persistent',
       },
     ],
@@ -337,12 +337,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     type: 'persistent',
     flavorText: 'Never tell me the odds!',
     description:
-      'If total inventory limit is an odd number, all candy sale +10%',
+      'If total inventory limit is an odd number, all candy sale +50%',
     effects: [
       {
         target: 'sell_multiplier',
         operation: 'multiply',
-        amount: 1.1,
+        amount: 1.5,
         duration: 'persistent',
       },
     ],
@@ -486,12 +486,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Home Economics',
     type: 'persistent',
     flavorText: 'Timing... ... ...is everything',
-    description: 'End the day with 0 candy in inventory and get $300',
+    description: 'End the day with 0 candy in inventory and get $1000',
     effects: [
       {
         target: 'empty_inventory_bonus',
         operation: 'add',
-        amount: 300,
+        amount: 1000,
         duration: 'persistent',
       },
     ],
@@ -502,12 +502,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Home Economics',
     type: 'one-time',
     flavorText: 'Cash rules everything around me CREAM! and cookies',
-    description: 'Instantly Gain $1000 ',
+    description: 'Instantly Gain $3000 ',
     effects: [
       {
         target: 'money',
         operation: 'add',
-        amount: 1000,
+        amount: 3000,
         duration: 'one-time',
       },
     ],
@@ -534,12 +534,13 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Home Economics',
     type: 'persistent',
     flavorText: 'Good things come to those who wait',
-    description: 'Candy in inventory gains compounding +5% profit per period held',
+    description:
+      'Candy gains compounding +5% profit per period held (resets daily)',
     effects: [
       {
         target: 'sell_multiplier',
         operation: 'multiply',
-        amount: 1.05, // +5% per period held
+        amount: 1.05, // +5% per period held (resets each day)
         duration: 'persistent',
       },
     ],
@@ -618,12 +619,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Gym',
     type: 'persistent',
     flavorText: "Don't call it a come back!",
-    description: 'Every 3 period of no sale, you receive $500',
+    description: 'Every 3 period of no sale, you receive $1000',
     effects: [
       {
         target: 'drought_relief_bonus',
         operation: 'add',
-        amount: 500,
+        amount: 1000,
         duration: 'persistent',
       },
     ],
@@ -652,12 +653,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Logic',
     type: 'persistent',
     flavorText: "Every day's a reason to add three more.",
-    description: 'Every new day, inventory limit +3',
+    description: 'Every new day, inventory limit +5',
     effects: [
       {
         target: 'inventory_limit',
         operation: 'add',
-        amount: 3,
+        amount: 5,
         duration: 'persistent',
       },
     ],
@@ -668,12 +669,13 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Logic',
     type: 'persistent',
     flavorText: 'It only makes dollars if it makes cents',
-    description: 'If your cash ends in .00 at the end of the day, get +$1000 bonus',
+    description:
+      'If your cash ends in .00 at the end of the day, get +$5000 bonus',
     effects: [
       {
         target: 'perfect_balance_bonus',
         operation: 'add',
-        amount: 1000,
+        amount: 5000,
         duration: 'persistent',
       },
     ],
@@ -751,12 +753,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Gym',
     type: 'persistent',
     flavorText: 'Stay hungry, no, stay starving.',
-    description: 'Every period you end with 0 inventory, you get $100',
+    description: 'Every period you end with 0 inventory, you get $500',
     effects: [
       {
         target: 'empty_inventory_bonus',
         operation: 'add',
-        amount: 100,
+        amount: 500,
         duration: 'persistent',
       },
     ],
@@ -901,12 +903,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Economy',
     type: 'persistent',
     flavorText: 'Hodl the line! 🚀💎🙌',
-    description: '+$5 per candy in your inventory at the start of each period',
+    description: '+$10 per candy in your inventory at the start of each period',
     effects: [
       {
         target: 'period_start_inventory_bonus',
         operation: 'add',
-        amount: 50,
+        amount: 10,
         duration: 'persistent',
       },
     ],
@@ -951,12 +953,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Recess',
     type: 'persistent',
     flavorText: 'Keep the rhythm going, every third counts',
-    description: 'Every 3rd sale gets +33% bonus',
+    description: 'Every 3rd sale gets +66% bonus',
     effects: [
       {
         target: 'every_third_sale_bonus',
         operation: 'multiply',
-        amount: 1.33,
+        amount: 1.66,
         duration: 'persistent',
       },
     ],
@@ -983,12 +985,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Recess',
     type: 'persistent',
     flavorText: 'Even squares are always luckier',
-    description: 'Every even period sales get +20%',
+    description: 'Every even period sales get +25%',
     effects: [
       {
         target: 'even_period_sale_bonus',
         operation: 'multiply',
-        amount: 1.2,
+        amount: 1.25,
         duration: 'persistent',
       },
     ],
@@ -1049,12 +1051,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Geography',
     type: 'persistent',
     flavorText: 'The last 10% is 90% of the work',
-    description: '+10% profit to all afternoon candy sale ',
+    description: '+33% profit to all afternoon candy sale ',
     effects: [
       {
         target: 'afternoon_sale_bonus',
         operation: 'multiply',
-        amount: 1.1,
+        amount: 1.33,
         duration: 'persistent',
       },
     ],
@@ -1113,12 +1115,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Geography',
     type: 'persistent',
     flavorText: 'Buy low in the morning, sell high in the afternoon',
-    description: 'Morning purchases cost 10% less',
+    description: 'Morning purchases cost 25% less',
     effects: [
       {
         target: 'morning_purchase_discount',
         operation: 'multiply',
-        amount: 0.9,
+        amount: 0.75,
         duration: 'persistent',
       },
     ],
@@ -1129,12 +1131,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Geography',
     type: 'one-time',
     flavorText: 'The weight of the world brings heavy profits',
-    description: 'Instantly gain $1500',
+    description: 'Instantly gain $2500',
     effects: [
       {
         target: 'money',
         operation: 'add',
-        amount: 1500,
+        amount: 2500,
         duration: 'one-time',
       },
     ],

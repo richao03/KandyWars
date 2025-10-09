@@ -3,6 +3,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 
 const subjects = [
   { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' }, icon: require('../../assets/images/emojis/math.png') },
@@ -107,143 +108,176 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         {/* First Row - 3 subjects */}
         <View style={styles.subjectsRow}>
           {subjects.slice(0, 3).map((subject) => (
-            <PixelBorder
+            <PressableButton
               key={subject.name}
-              borderColor={disabled ? '#999' : subject.color.border}
-              borderWidth={3}
-              backgroundColor={disabled ? '#ccc' : subject.color.bg}
-              innerPadding={0}
+              onPress={() => handleSubjectSelect(subject.name)}
+              disabled={disabled}
+              shadowColor={disabled ? '#999' : subject.color.border}
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.4}
+              shadowRadius={4}
+              elevation={6}
               style={
                 isLunchPeriod
                   ? styles.subjectDayTimeButtonWrapper
                   : styles.subjectButtonWrapper
               }
             >
-              <TouchableOpacity
-                style={[
-                  styles.subjectButtonInner,
-                  disabled && styles.disabledSubjectButton,
-                ]}
-                onPress={() => handleSubjectSelect(subject.name)}
-                disabled={disabled}
+              <PixelBorder
+                borderColor={disabled ? '#999' : subject.color.border}
+                borderWidth={3}
+                backgroundColor={disabled ? '#ccc' : subject.color.bg}
+                innerPadding={0}
               >
-                <Image
-                  source={subject.icon}
+                <View
                   style={[
-                    styles.subjectIcon,
-                    disabled && styles.disabledIcon,
+                    styles.subjectButtonInner,
+                    disabled && styles.disabledSubjectButton,
                   ]}
-                />
-                <Text
-                  style={[styles.subjectText, disabled && styles.disabledText]}
                 >
-                  {subject.name}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
+                  <Image
+                    source={subject.icon}
+                    style={[
+                      styles.subjectIcon,
+                      disabled && styles.disabledIcon,
+                    ]}
+                  />
+                  <Text
+                    style={[styles.subjectText, disabled && styles.disabledText]}
+                  >
+                    {subject.name}
+                  </Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           ))}
         </View>
 
         {/* Second Row - 3 subjects */}
         <View style={styles.subjectsRow}>
           {subjects.slice(3, 6).map((subject) => (
-            <PixelBorder
+            <PressableButton
               key={subject.name}
-              borderColor={disabled ? '#999' : subject.color.border}
-              borderWidth={3}
-              backgroundColor={disabled ? '#ccc' : subject.color.bg}
-              innerPadding={0}
+              onPress={() => handleSubjectSelect(subject.name)}
+              disabled={disabled}
+              shadowColor={disabled ? '#999' : subject.color.border}
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.4}
+              shadowRadius={4}
+              elevation={6}
               style={
                 isLunchPeriod
                   ? styles.subjectDayTimeButtonWrapper
                   : styles.subjectButtonWrapper
               }
             >
-              <TouchableOpacity
-                style={[
-                  styles.subjectButtonInner,
-                  disabled && styles.disabledSubjectButton,
-                ]}
-                onPress={() => handleSubjectSelect(subject.name)}
-                disabled={disabled}
+              <PixelBorder
+                borderColor={disabled ? '#999' : subject.color.border}
+                borderWidth={3}
+                backgroundColor={disabled ? '#ccc' : subject.color.bg}
+                innerPadding={0}
               >
-                <Image
-                  source={subject.icon}
+                <View
                   style={[
-                    styles.subjectIcon,
-                    disabled && styles.disabledIcon,
+                    styles.subjectButtonInner,
+                    disabled && styles.disabledSubjectButton,
                   ]}
-                />
-                <Text
-                  style={[styles.subjectText, disabled && styles.disabledText]}
                 >
-                  {subject.name}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
+                  <Image
+                    source={subject.icon}
+                    style={[
+                      styles.subjectIcon,
+                      disabled && styles.disabledIcon,
+                    ]}
+                  />
+                  <Text
+                    style={[styles.subjectText, disabled && styles.disabledText]}
+                  >
+                    {subject.name}
+                  </Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           ))}
         </View>
 
         {/* Third Row - 3 subjects */}
         <View style={styles.subjectsRow}>
           {subjects.slice(6, 9).map((subject) => (
-            <PixelBorder
+            <PressableButton
               key={subject.name}
-              borderColor={disabled ? '#999' : subject.color.border}
-              borderWidth={3}
-              backgroundColor={disabled ? '#ccc' : subject.color.bg}
-              innerPadding={0}
+              onPress={() => handleSubjectSelect(subject.name)}
+              disabled={disabled}
+              shadowColor={disabled ? '#999' : subject.color.border}
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.4}
+              shadowRadius={4}
+              elevation={6}
               style={
                 isLunchPeriod
                   ? styles.subjectDayTimeButtonWrapper
                   : styles.subjectButtonWrapper
               }
             >
-              <TouchableOpacity
-                style={[
-                  styles.subjectButtonInner,
-                  disabled && styles.disabledSubjectButton,
-                ]}
-                onPress={() => handleSubjectSelect(subject.name)}
-                disabled={disabled}
+              <PixelBorder
+                borderColor={disabled ? '#999' : subject.color.border}
+                borderWidth={3}
+                backgroundColor={disabled ? '#ccc' : subject.color.bg}
+                innerPadding={0}
               >
-                <Image
-                  source={subject.icon}
+                <View
                   style={[
-                    styles.subjectIcon,
-                    disabled && styles.disabledIcon,
+                    styles.subjectButtonInner,
+                    disabled && styles.disabledSubjectButton,
                   ]}
-                />
-                <Text
-                  style={[styles.subjectText, disabled && styles.disabledText]}
                 >
-                  {subject.name}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
+                  <Image
+                    source={subject.icon}
+                    style={[
+                      styles.subjectIcon,
+                      disabled && styles.disabledIcon,
+                    ]}
+                  />
+                  <Text
+                    style={[styles.subjectText, disabled && styles.disabledText]}
+                  >
+                    {subject.name}
+                  </Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           ))}
         </View>
       </View>
 
       {!isLunchPeriod && (
-        <PixelBorder
-          borderColor={isLunchPeriod ? 'rgba(90,99,127, 0.8)' : '#f7e98e'}
-          borderWidth={3}
-          backgroundColor={isLunchPeriod ? '#f7e98e' : 'rgba(90,99,127, 0.8)'}
-          innerPadding={0}
+        <PressableButton
+          onPress={onBack}
+          shadowColor="#6b5a2d"
+          shadowOffset={{ width: 0, height: 3 }}
+          shadowOpacity={0.4}
+          shadowRadius={4}
+          elevation={6}
           style={{ marginBottom: 20 }}
         >
-          <TouchableOpacity style={styles.backButtonInner} onPress={onBack}>
-            <Text
-              style={{
-                fontFamily: 'PixeloidMono',
-                color: isLunchPeriod ? 'rgba(90,99,127, 0.8)' : '#f7e98e',
-              }}
-            >
-              ← Back
-            </Text>
-          </TouchableOpacity>
-        </PixelBorder>
+          <PixelBorder
+            borderColor={isLunchPeriod ? 'rgba(90,99,127, 0.8)' : '#f7e98e'}
+            borderWidth={3}
+            backgroundColor={isLunchPeriod ? '#f7e98e' : 'rgba(90,99,127, 0.8)'}
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text
+                style={{
+                  fontFamily: 'PixeloidMono',
+                  color: isLunchPeriod ? 'rgba(90,99,127, 0.8)' : '#f7e98e',
+                }}
+              >
+                ← Back
+              </Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       )}
     </View>
   );

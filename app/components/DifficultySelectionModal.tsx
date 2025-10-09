@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { scoreboardService } from '../../src/services/firebase';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 
 interface DifficultySelectionModalProps {
   visible: boolean;
@@ -21,6 +23,22 @@ export default function DifficultySelectionModal({
   onSelectDifficulty,
   onClose,
 }: DifficultySelectionModalProps) {
+  const [wonDifficulties, setWonDifficulties] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (visible) {
+      const fetchWonDifficulties = async () => {
+        try {
+          const won = await scoreboardService.getWonDifficulties();
+          console.log('🏆 Won difficulties:', won);
+          setWonDifficulties(won);
+        } catch (error) {
+          console.error('❌ Failed to fetch won difficulties:', error);
+        }
+      };
+      fetchWonDifficulties();
+    }
+  }, [visible]);
   const levelOptions = [
     {
       level: 1,
@@ -209,59 +227,86 @@ export default function DifficultySelectionModal({
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.optionsContainer}>
-                  {levelOptions.map((option) => (
-                    <PixelBorder
-                      key={option.level}
-                      borderColor={option.borderColor}
-                      borderWidth={3}
-                      backgroundColor={option.color}
-                      innerPadding={0}
-                      style={styles.pixelBorderWrapper}
-                    >
-                      <TouchableOpacity
-                        style={styles.difficultyButton}
+                  {levelOptions.map((option) => {
+                    const isWon = wonDifficulties.includes(option.level);
+                    return (
+                      <PressableButton
+                        key={option.level}
                         onPress={() => onSelectDifficulty(option.level)}
+                        shadowColor={option.borderColor}
+                        shadowOffset={{ width: 0, height: 3 }}
+                        shadowOpacity={0.4}
+                        shadowRadius={4}
+                        elevation={6}
+                        style={styles.pixelBorderWrapper}
                       >
-                        <View style={styles.buttonContent}>
-                          <Image
-                            source={option.image}
-                            style={styles.dogImage}
-                          />
-                          <View style={styles.textContent}>
-                            <Text
-                              style={[
-                                styles.difficultyTitle,
-                                { color: option.textColor },
-                              ]}
-                            >
-                              {option.petName}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.piggyBankText,
-                                { color: option.textColor },
-                              ]}
-                            >
-                              Adoption Fee: ${option.piggyBank.toLocaleString()}
-                            </Text>
+                        <PixelBorder
+                          borderColor={option.borderColor}
+                          borderWidth={3}
+                          backgroundColor={option.color}
+                          innerPadding={0}
+                        >
+                          <View style={styles.difficultyButton}>
+                            <View style={styles.buttonContent}>
+                              <View style={styles.imageContainer}>
+                                <Image
+                                  source={option.image}
+                                  style={styles.dogImage}
+                                />
+                              </View>
+                              <View style={styles.textContent}>
+                                <Text
+                                  style={[
+                                    styles.difficultyTitle,
+                                    { color: option.textColor },
+                                  ]}
+                                >
+                                  {option.petName}
+                                </Text>
+                                {isWon && (
+                                  <Image
+                                    source={require('../../assets/images/emojis/loveheart.png')}
+                                    style={styles.heartIcon}
+                                  />
+                                )}
+                                <Text
+                                  style={[
+                                    styles.piggyBankText,
+                                    { color: option.textColor },
+                                  ]}
+                                >
+                                  Adoption Fee: $
+                                  {option.piggyBank.toLocaleString()}
+                                </Text>
+                              </View>
+                            </View>
                           </View>
-                        </View>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  ))}
+                        </PixelBorder>
+                      </PressableButton>
+                    );
+                  })}
                 </View>
               </ScrollView>
             </PixelBorder>
-            <PixelBorder
-              borderColor="#ccc"
-              borderWidth={2}
-              backgroundColor="#f0f0f0"
-              innerPadding={0}
+            <PressableButton
+              onPress={onClose}
+              shadowColor="#666"
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.3}
+              shadowRadius={4}
+              elevation={5}
             >
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </PixelBorder>
+              <PixelBorder
+                borderColor="#ccc"
+                borderWidth={2}
+                backgroundColor="#f0f0f0"
+                innerPadding={0}
+              >
+                <View style={styles.cancelButton}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           </View>
         </View>
       </PixelBorder>
@@ -328,11 +373,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  imageContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
   dogImage: {
     width: 60,
     height: 60,
     borderRadius: 10,
-    marginRight: 15,
+    resizeMode: 'contain',
+  },
+  heartIcon: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 36,
+    height: 36,
     resizeMode: 'contain',
   },
   textContent: {

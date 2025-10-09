@@ -48,6 +48,7 @@ import InventoryModal from '../components/InventoryModal';
 import LocationModal, { Location } from '../components/LocationModal';
 import MarketList from '../components/MarketList';
 import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import SchoolsOutModal from '../components/SchoolsOutModal';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StashMoneyModal from '../components/StashMoneyModal';
@@ -967,7 +968,7 @@ function Market(props) {
             );
           }
 
-          // 6. Check for Slow Cooker sell multiplier (persistent joker)
+          // 6. Check for Slow Cooker sell multiplier (persistent joker) - resets every day
           const hasSlowCooker = jokers.some(
             (j) => j.id === JOKER_IDS.SLOW_COOKER.toString()
           );
@@ -977,10 +978,17 @@ function Market(props) {
               (item) => item.name === candy.name
             );
             const purchasedAtPeriod = inventoryItem?.purchasedAt ?? periodCount;
-            const periodsHeld = Math.max(
-              1,
-              periodCount - purchasedAtPeriod + 1
-            );
+
+            // Calculate current day and purchased day (8 periods per day)
+            const currentDay = Math.floor(periodCount / 8);
+            const purchasedDay = Math.floor(purchasedAtPeriod / 8);
+
+            // If purchased on a different day, reset to start of current day
+            const effectivePurchasedPeriod = currentDay === purchasedDay
+              ? purchasedAtPeriod
+              : Math.floor(periodCount / 8) * 8; // Start of current day
+
+            const periodsHeld = Math.max(0, periodCount - effectivePurchasedPeriod);
             const slowCookerMultiplier = Math.pow(1.05, periodsHeld); // Compound 5% per period
             multiplier *= slowCookerMultiplier;
             bonusDetails.push({
@@ -989,7 +997,7 @@ function Market(props) {
               multiplier: slowCookerMultiplier,
             });
             console.log(
-              `🍲 Slow Cooker: +${((slowCookerMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (held for ${periodsHeld} periods, ${slowCookerMultiplier.toFixed(3)}x multiplier)`
+              `🍲 Slow Cooker: +${((slowCookerMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (held for ${periodsHeld} periods within day ${currentDay}, ${slowCookerMultiplier.toFixed(3)}x multiplier)`
             );
           }
 
@@ -1579,64 +1587,86 @@ function Market(props) {
                     </PixelBorder>
                   ) : period === 8 ? (
                     // Period 8 on other days: Show leave school button
-                    <TouchableOpacity
-                      style={styles.nextPeriodButton}
+                    <PressableButton
                       onPress={handleNextDay}
-                      activeOpacity={0.8}
+                      shadowColor="rgba(123,169,101,1)"
+                      shadowOffset={{ width: 0, height: 4 }}
+                      shadowOpacity={0.5}
+                      shadowRadius={5}
+                      elevation={8}
                     >
-                      <Text style={styles.nextPeriodButtonText}>
-                        Leave School for the Day
-                      </Text>
-                      <Text style={styles.nextPeriodSubtext}>
-                        Time to head home!
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    // Periods 1-7: Show both next period and end day buttons
-                    <View style={styles.buttonRow}>
                       <PixelBorder
                         borderColor="rgba(123,169,101,1)"
                         borderWidth={3}
                         backgroundColor="rgba(154,193,118,1)"
                         innerPadding={0}
-                        style={styles.bigButton}
                       >
-                        <TouchableOpacity
-                          style={styles.pixelButtonInner}
-                          onPress={handleNextDay}
-                          activeOpacity={0.8}
-                        >
+                        <View style={styles.pixelButtonInner}>
                           <Text style={styles.nextPeriodButtonText}>
-                            Next Period
+                            Leave School for the Day
                           </Text>
                           <Text style={styles.nextPeriodSubtext}>
-                            Going to period {period + 1}
+                            Time to head home!
                           </Text>
-                        </TouchableOpacity>
+                        </View>
                       </PixelBorder>
+                    </PressableButton>
+                  ) : (
+                    // Periods 1-7: Show both next period and end day buttons
+                    <View style={styles.buttonRow}>
+                      <PressableButton
+                        onPress={handleNextDay}
+                        shadowColor="rgba(123,169,101,1)"
+                        shadowOffset={{ width: 0, height: 4 }}
+                        shadowOpacity={0.5}
+                        shadowRadius={5}
+                        elevation={8}
+                        style={styles.bigButton}
+                      >
+                        <PixelBorder
+                          borderColor="rgba(123,169,101,1)"
+                          borderWidth={3}
+                          backgroundColor="rgba(154,193,118,1)"
+                          innerPadding={0}
+                        >
+                          <View style={styles.pixelButtonInner}>
+                            <Text style={styles.nextPeriodButtonText}>
+                              Next Period
+                            </Text>
+                            <Text style={styles.nextPeriodSubtext}>
+                              Going to period {period + 1}
+                            </Text>
+                          </View>
+                        </PixelBorder>
+                      </PressableButton>
 
-                      <PixelBorder
-                        borderColor="rgba(185,28,28,1)"
-                        borderWidth={3}
-                        backgroundColor="rgba(239,68,68,1)"
-                        innerPadding={0}
+                      <PressableButton
+                        onPress={handleEndDay}
+                        shadowColor="rgba(185,28,28,1)"
+                        shadowOffset={{ width: 0, height: 4 }}
+                        shadowOpacity={0.5}
+                        shadowRadius={5}
+                        elevation={8}
                         style={styles.smallButton}
                       >
-                        <TouchableOpacity
-                          style={styles.pixelButtonInner}
-                          onPress={handleEndDay}
-                          activeOpacity={0.8}
+                        <PixelBorder
+                          borderColor="rgba(185,28,28,1)"
+                          borderWidth={3}
+                          backgroundColor="rgba(239,68,68,1)"
+                          innerPadding={0}
                         >
-                          <Text style={styles.endDayButtonText}>
-                            {day === 5 ? 'Game End' : 'End Day'}
-                          </Text>
-                          <Text style={styles.endDaySubtext}>
-                            {day === 5
-                              ? 'Finish the game'
-                              : 'Skip to after school'}
-                          </Text>
-                        </TouchableOpacity>
-                      </PixelBorder>
+                          <View style={styles.pixelButtonInner}>
+                            <Text style={styles.endDayButtonText}>
+                              {day === 5 ? 'Game End' : 'End Day'}
+                            </Text>
+                            <Text style={styles.endDaySubtext}>
+                              {day === 5
+                                ? 'Finish the game'
+                                : 'Skip to after school'}
+                            </Text>
+                          </View>
+                        </PixelBorder>
+                      </PressableButton>
                     </View>
                   )}
                 </View>

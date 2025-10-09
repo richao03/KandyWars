@@ -22,6 +22,7 @@ import {
 import { useWallet } from '../src/hooks/useWallet';
 import NamePromptModal from './components/NamePromptModal';
 import PixelBorder from './components/PixelBorder';
+import PressableButton from './components/PressableButton';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const getDogImage = (level: number) => {
@@ -830,28 +831,28 @@ export default function StoryScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* Skip button */}
-      {showSkip && (
-        <Animated.View style={[styles.skipContainer, { opacity: fadeAnim }]}>
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipText}>Skip →</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
-
       {/* Continue button */}
       {showContinue && (
         <View style={styles.continueContainer}>
-          <View style={{ position: 'relative' }}>
-            <PixelBorder borderColor="#5f5f5f" borderWidth={3} innerPadding={0}>
-              <TouchableOpacity
-                style={styles.continueButton}
-                onPress={handleContinue}
-              >
+          <PressableButton
+            onPress={handleContinue}
+            shadowColor="rgba(123,169,101,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={6}
+            elevation={8}
+          >
+            <PixelBorder
+              borderColor="rgba(123,169,101,1)"
+              borderWidth={3}
+              backgroundColor="rgba(154,193,118,1)"
+              innerPadding={0}
+            >
+              <View style={styles.continueButton}>
                 <Text style={styles.continueText}>Start Day 1</Text>
-              </TouchableOpacity>
+              </View>
             </PixelBorder>
-          </View>
+          </PressableButton>
           <Text style={styles.tapHint}>
             Your future best friend is waiting...
           </Text>
@@ -875,7 +876,7 @@ const styles = StyleSheet.create({
   },
   dogImage: {
     position: 'absolute',
-    top: 60,
+    top: 36,
     left: '50%',
     marginLeft: -50,
     width: 100,
@@ -887,7 +888,7 @@ const styles = StyleSheet.create({
   },
   heartLeft: {
     position: 'absolute',
-    top: 100,
+    top: 80,
     left: '50%',
     marginLeft: -90,
     width: 24,
@@ -896,7 +897,7 @@ const styles = StyleSheet.create({
   },
   heartRight: {
     position: 'absolute',
-    top: 100,
+    top: 80,
     left: '50%',
     marginLeft: 70,
     width: 24,
@@ -910,7 +911,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     paddingHorizontal: 40,
-    paddingTop: 180,
+    paddingTop: 160,
     width: '100%',
     height: '100%',
     alignSelf: 'flex-start',
@@ -954,23 +955,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   continueButton: {
-    backgroundColor: '#ff6b35',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: '#ff8c42',
-    shadowColor: '#ff6b35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
   },
   continueText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   tapHint: {
     color: 'rgba(255, 255, 255, 0.6)',

@@ -525,6 +525,71 @@ class ScoreboardService {
     }
   }
 
+  async trackDifficultyWin(difficultyLevel: number): Promise<void> {
+    console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
+
+    if (!this.isInitialized || !this.currentUser) {
+      console.log('❌ Cannot track difficulty win - not initialized or no user');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'player_stats'), {
+        playerId: this.currentUser.uid,
+        action: 'difficulty_won',
+        difficultyLevel,
+        timestamp: serverTimestamp(),
+      });
+      console.log('✅ Difficulty win tracked for level:', difficultyLevel);
+    } catch (error) {
+      console.error('❌ Failed to track difficulty win:', error);
+    }
+  }
+
+  async getWonDifficulties(): Promise<number[]> {
+    console.log('🏆 Fetching won difficulties...');
+
+    if (!this.isInitialized) {
+      console.log('🏆 Auto-initializing Firebase for fetching won difficulties...');
+      await this.initialize();
+    }
+
+    if (!this.isInitialized || !this.currentUser) {
+      console.log('❌ Cannot fetch won difficulties - initialization failed');
+      return [];
+    }
+
+    try {
+      const q = query(
+        collection(db, 'player_stats'),
+        where('playerId', '==', this.currentUser.uid),
+        where('action', '==', 'difficulty_won')
+      );
+
+      const querySnapshot = await getDocs(q);
+      const wonDifficulties = new Set<number>();
+
+      querySnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.difficultyLevel) {
+          wonDifficulties.add(data.difficultyLevel);
+        }
+      });
+
+      const uniqueDifficulties = Array.from(wonDifficulties).sort((a, b) => a - b);
+      console.log('✅ Won difficulties:', uniqueDifficulties);
+      return uniqueDifficulties;
+    } catch (error) {
+      console.error('❌ Failed to fetch won difficulties:', error);
+      return [];
+    }
+  }
+
+  async hasDifficultyBeenWon(difficultyLevel: number): Promise<boolean> {
+    const wonDifficulties = await this.getWonDifficulties();
+    return wonDifficulties.includes(difficultyLevel);
+  }
+
   // Analytics methods for leaderboard
   async getMostObtainedJokersFromMinigames(limit: number = 10): Promise<Array<{jokerName: string, count: number, jokerId: number}>> {
     if (!this.isInitialized) await this.initialize();

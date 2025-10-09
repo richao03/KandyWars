@@ -129,14 +129,25 @@ function TransactionModal({
   // Check for Slow Cooker joker (sell multiplier)
   const slowCookerJoker = findJokerById(jokers, JOKER_IDS.SLOW_COOKER);
 
-  // Calculate periodsHeld for Slow Cooker
+  // Calculate periodsHeld for Slow Cooker (resets every day)
   const { periodsHeld, slowCookerMultiplier } = useMemo(() => {
     if (!slowCookerJoker || mode !== 'sell') {
       return { periodsHeld: 0, slowCookerMultiplier: 1 };
     }
     const inventoryItem = inventory.find((item) => item.name === candy.name);
     const purchasedAtPeriod = inventoryItem?.purchasedAt ?? periodCount;
-    const periods = Math.max(1, periodCount - purchasedAtPeriod + 1);
+
+    // Calculate current day and purchased day (8 periods per day)
+    const currentDay = Math.floor(periodCount / 8);
+    const purchasedDay = Math.floor(purchasedAtPeriod / 8);
+
+    // If purchased on a different day, reset to current period (day just started)
+    const effectivePurchasedPeriod =
+      currentDay === purchasedDay
+        ? purchasedAtPeriod
+        : Math.floor(periodCount / 8) * 8; // Start of current day
+
+    const periods = Math.max(0, periodCount - effectivePurchasedPeriod);
     const multiplier = Math.pow(1.05, periods);
     return { periodsHeld: periods, slowCookerMultiplier: multiplier };
   }, [slowCookerJoker, mode, inventory, candy.name, periodCount]);
@@ -248,39 +259,6 @@ function TransactionModal({
         innerPadding={0}
       >
         <View style={styles.container}>
-          <View style={styles.tabContainer}>
-            <PixelBorder
-              borderColor={mode === 'buy' ? '#cc7a00' : '#e5e7eb'}
-              borderWidth={3}
-              backgroundColor={mode === 'buy' ? '#ffcc99' : '#f3f4f6'}
-              style={{ flex: 1, marginRight: 6 }}
-            >
-              <TouchableOpacity
-                style={styles.tab}
-                onPress={() => changeMode('buy')}
-              >
-                <Text style={styles.tabText}>
-                  {mode === 'buy' ? 'Buy Max' : 'Buy'}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-            <PixelBorder
-              borderColor={mode === 'sell' ? '#cc7a00' : '#e5e7eb'}
-              borderWidth={3}
-              backgroundColor={mode === 'sell' ? '#ffcc99' : '#f3f4f6'}
-              style={{ flex: 1 }}
-            >
-              <TouchableOpacity
-                style={styles.tab}
-                onPress={() => changeMode('sell')}
-              >
-                <Text style={styles.tabText}>
-                  {mode === 'sell' ? 'Sell Max' : 'Sell'}
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-          </View>
-
           <PixelBorder
             borderColor="#e5e7eb"
             borderWidth={3}
@@ -471,7 +449,7 @@ function TransactionModal({
             </Text>
 
             <Slider
-              style={{ width: '100%', height: 50, marginVertical: 4 }}
+              style={{ width: '100%', height: 50, marginVertical: 2 }}
               minimumValue={0}
               maximumValue={maxQuantity > 0 ? maxQuantity : 1}
               step={1}
@@ -484,7 +462,38 @@ function TransactionModal({
               maximumTrackTintColor="#ccc"
               disabled={mode === 'buy' && maxQuantity <= 0}
             />
-
+            <View style={styles.tabContainer}>
+              <PixelBorder
+                borderColor={mode === 'buy' ? '#cc7a00' : '#e5e7eb'}
+                borderWidth={3}
+                backgroundColor={mode === 'buy' ? '#ffcc99' : '#f3f4f6'}
+                style={{ flex: 1, marginRight: 6 }}
+              >
+                <TouchableOpacity
+                  style={styles.tab}
+                  onPress={() => changeMode('buy')}
+                >
+                  <Text style={styles.tabText}>
+                    {mode === 'buy' ? 'Buy Max' : 'Buy'}
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+              <PixelBorder
+                borderColor={mode === 'sell' ? '#cc7a00' : '#e5e7eb'}
+                borderWidth={3}
+                backgroundColor={mode === 'sell' ? '#ffcc99' : '#f3f4f6'}
+                style={{ flex: 1 }}
+              >
+                <TouchableOpacity
+                  style={styles.tab}
+                  onPress={() => changeMode('sell')}
+                >
+                  <Text style={styles.tabText}>
+                    {mode === 'sell' ? 'Sell Max' : 'Sell'}
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+            </View>
             {mode === 'buy' ? (
               <PixelBorder
                 borderColor="#bae6fd"
@@ -723,8 +732,8 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    marginTop: 10,
-    marginBottom: 6,
+    marginTop: 4,
+    marginBottom: 12,
     justifyContent: 'center',
     gap: 10,
   },

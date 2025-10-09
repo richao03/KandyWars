@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 
 interface DayStatsModalProps {
   visible: boolean;
@@ -162,28 +163,33 @@ export default function DayStatsModal({
           </PixelBorder>
         </PixelBorder>
 
-        <PixelBorder
-          borderColor="rgba(123,169,101,1)"
-          borderWidth={3}
-          backgroundColor="rgba(154,193,118,1)"
-          innerPadding={0}
+        <PressableButton
+          onPress={() => {
+            // Trigger success haptic feedback when going to after school
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success
+            );
+            onClose();
+          }}
+          shadowColor="rgba(123,169,101,1)"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.5}
+          shadowRadius={5}
+          elevation={8}
           style={styles.continueButton}
         >
-          <TouchableOpacity
-            style={styles.continueButtonInner}
-            onPress={() => {
-              // Trigger success haptic feedback when going to after school
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success
-              );
-              onClose();
-            }}
-            activeOpacity={0.8}
+          <PixelBorder
+            borderColor="rgba(123,169,101,1)"
+            borderWidth={3}
+            backgroundColor="rgba(154,193,118,1)"
+            innerPadding={0}
           >
-            <Text style={styles.continueButtonText}>Got it!</Text>
-            <Text style={styles.continueButtonSubtext}>Time to head home!</Text>
-          </TouchableOpacity>
-        </PixelBorder>
+            <View style={styles.continueButtonInner}>
+              <Text style={styles.continueButtonText}>Got it!</Text>
+              <Text style={styles.continueButtonSubtext}>Time to head home!</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
 
         {/* <PixelBorder
           borderColor="rgba(185,28,28,1)"

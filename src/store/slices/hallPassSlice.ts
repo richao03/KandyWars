@@ -209,7 +209,6 @@ const hallPassSlice = createSlice({
       console.log('🎓 REDUCER: initializeHallPasses called');
       console.log('🎓 REDUCER: Current unlockedPassIds:', state.unlockedPassIds);
       console.log('🎓 REDUCER: Current newlyUnlockedPassIds:', state.newlyUnlockedPassIds);
-      console.log('🎓 REDUCER: Stack trace:', new Error().stack);
 
       state.isLoaded = true;
 

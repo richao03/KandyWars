@@ -1,7 +1,7 @@
 import { useIsFocused } from '@react-navigation/native';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   ImageBackground,
@@ -37,6 +37,7 @@ import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import InventoryModal from '../components/InventoryModal';
 import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
 import DeliPage from '../deli';
@@ -82,7 +83,6 @@ function AfterSchoolPage() {
   const { hasPlayedAllMinigames } = useMinigameTracking();
   const { totalCandiesSold } = useCandySales();
   const { start, copilotEvents, eventEmitter } = useCopilot();
-  const [tutorialStarted, setTutorialStarted] = useState(false);
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
   const [goingToSchoolModalVisible, setGoingToSchoolModalVisible] =
@@ -106,7 +106,9 @@ function AfterSchoolPage() {
 
   // Check if game should end (when entering after-school on day 5)
   useEffect(() => {
-    console.log(`🎯 After-school useEffect: day=${day}, gameEndModalVisible=${gameEndModalVisible}`);
+    console.log(
+      `🎯 After-school useEffect: day=${day}, gameEndModalVisible=${gameEndModalVisible}`
+    );
     if (day === 5 && !gameEndModalVisible) {
       console.log('🎯 Game End: Condition met - starting game end sequence');
       const handleGameEnd = async () => {
@@ -168,7 +170,10 @@ function AfterSchoolPage() {
             hasPlayedAllMinigames,
           };
 
-          console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
+          console.log(
+            '🎓 Checking hall pass unlocks with gameStats:',
+            gameStats
+          );
           console.log('🎓 Minigame tracking data:', minigameTrackingData);
 
           const unlocked = checkUnlockRequirements(
@@ -217,50 +222,143 @@ function AfterSchoolPage() {
     setIsInitialized,
   ]);
 
-  // Start copilot tutorial on first after-school visit (only if not already completed)
+  // Tutorial using Copilot - only show if not already completed
+  const shouldShowTutorial =
+    day === 1 && periodCount === 0 && !hasCompletedAfterSchoolTutorial;
+  const tutorialStartedRef = useRef(false);
+
+  // Reset tutorialStartedRef when not on day 1
   useEffect(() => {
-    if (day === 1 && !hasCompletedAfterSchoolTutorial) {
-      console.log('🎯 After school day 1 - checking tutorial status:', {
+    if (day !== 1) {
+      tutorialStartedRef.current = false;
+    }
+  }, [day]);
+
+  // Simple tutorial auto-start - only run on day 1
+  useEffect(() => {
+    // Skip entirely if not day 1
+    if (day !== 1) return;
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🎓 After-school tutorial check:', {
         day,
-        tutorialStarted,
+        periodCount,
         hasCompletedAfterSchoolTutorial,
+        shouldShowTutorial,
+        tutorialStarted: tutorialStartedRef.current,
       });
-
-      if (!tutorialStarted) {
-        // Small delay to ensure UI is ready
-        const timeoutId = setTimeout(() => {
-          console.log('🎯 Starting after-school copilot tutorial');
-          setTutorialStarted(true);
-          start();
-        }, 300);
-
-        return () => clearTimeout(timeoutId);
-      }
     }
-  }, [day, start, tutorialStarted, hasCompletedAfterSchoolTutorial]);
 
-  // Mark tutorial as completed when it finishes or is skipped
+    if (shouldShowTutorial && !tutorialStartedRef.current) {
+      console.log('🎓 Auto-starting after-school tutorial');
+
+      // Small delay to ensure UI is ready
+      const timeoutId = setTimeout(() => {
+        console.log('🎯 Starting after-school copilot tutorial');
+        tutorialStartedRef.current = true;
+        start();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [shouldShowTutorial, start, day, periodCount, hasCompletedAfterSchoolTutorial]);
+
+  // Mark tutorial as completed when it finishes or is skipped - only on day 1
   useEffect(() => {
+    // Skip entirely if not day 1
+    if (day !== 1) return;
+
     if (eventEmitter && copilotEvents) {
-      const handleComplete = () => {
-        console.log('🎓 After-school tutorial completed');
+      console.log('🎓 Setting up after-school tutorial event listeners');
+
+      const handleStop = () => {
+        console.log('🎓 After-school tutorial STOP event fired');
+        console.log(
+          '🎓 Current hasCompletedAfterSchoolTutorial:',
+          hasCompletedAfterSchoolTutorial
+        );
         setHasCompletedAfterSchoolTutorial(true);
-        // Force immediate save to AsyncStorage
-        setTimeout(() => {
-          forceSave();
-          console.log('💾 Tutorial completion saved to AsyncStorage');
-        }, 100);
+        forceSave();
       };
 
-      // Listen for both STOP (finish) and SKIP events
-      eventEmitter.on(copilotEvents.STOP, handleComplete);
-      eventEmitter.on(copilotEvents.SKIP, handleComplete);
+      const handleSkip = () => {
+        console.log('🎓 After-school tutorial SKIP event fired');
+        console.log(
+          '🎓 Current hasCompletedAfterSchoolTutorial:',
+          hasCompletedAfterSchoolTutorial
+        );
+        setHasCompletedAfterSchoolTutorial(true);
+        forceSave();
+      };
+
+      // Try to listen to all events
+      if (copilotEvents.STOP) {
+        eventEmitter.on(copilotEvents.STOP, handleStop);
+        console.log('✅ Registered after-school STOP listener');
+      }
+      if (copilotEvents.SKIP) {
+        eventEmitter.on(copilotEvents.SKIP, handleSkip);
+        console.log('✅ Registered after-school SKIP listener');
+      }
+
+      console.log('🎓 After-school event listeners registered');
+
       return () => {
-        eventEmitter.off(copilotEvents.STOP, handleComplete);
-        eventEmitter.off(copilotEvents.SKIP, handleComplete);
+        console.log('🎓 Cleaning up after-school event listeners');
+        if (copilotEvents.STOP)
+          eventEmitter.off(copilotEvents.STOP, handleStop);
+        if (copilotEvents.SKIP)
+          eventEmitter.off(copilotEvents.SKIP, handleSkip);
       };
     }
-  }, [eventEmitter, copilotEvents, setHasCompletedAfterSchoolTutorial]);
+  }, [
+    eventEmitter,
+    copilotEvents,
+    setHasCompletedAfterSchoolTutorial,
+    hasCompletedAfterSchoolTutorial,
+    day,
+  ]);
+
+  // Fallback: Mark tutorial as complete when user navigates away or advances to period 1+
+  useEffect(() => {
+    if (
+      day === 1 &&
+      periodCount > 0 &&
+      !hasCompletedAfterSchoolTutorial &&
+      tutorialStartedRef.current
+    ) {
+      console.log(
+        '🎓 Fallback: Marking after-school tutorial complete (user advanced period)'
+      );
+      setHasCompletedAfterSchoolTutorial(true);
+      forceSave();
+    }
+  }, [
+    day,
+    periodCount,
+    hasCompletedAfterSchoolTutorial,
+    setHasCompletedAfterSchoolTutorial,
+  ]);
+
+  // Fallback: Mark tutorial as complete when screen loses focus after tutorial started
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // On blur/unfocus
+        if (
+          day === 1 &&
+          !hasCompletedAfterSchoolTutorial &&
+          tutorialStartedRef.current
+        ) {
+          console.log(
+            '🎓 Fallback: Marking after-school tutorial complete (user navigated away)'
+          );
+          setHasCompletedAfterSchoolTutorial(true);
+          forceSave();
+        }
+      };
+    }, [day, hasCompletedAfterSchoolTutorial, setHasCompletedAfterSchoolTutorial])
+  );
 
   const handleStudy = () => {
     if (hasStudiedTonight) {
@@ -476,44 +574,52 @@ function AfterSchoolPage() {
       const stepConfig = stepConfigs[item.id];
 
       const button = (
-        <PixelBorder
+        <PressableButton
           key={item.id}
-          borderColor={item.disabled ? '#666' : '#f7e98e'}
-          borderWidth={3}
-          backgroundColor={
-            item.disabled ? 'rgba(60,60,60, 0.8)' : 'rgba(0,0,0, 0.3)'
-          }
-          innerPadding={0}
-          style={styles.gridButtonWrapper}
+          onPress={item.disabled ? undefined : item.onPress}
+          disabled={item.disabled}
+          shadowColor="#000"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.4}
+          shadowRadius={5}
+          elevation={8}
         >
-          <TouchableOpacity
-            style={[
-              styles.gridButtonInner,
-              item.disabled && styles.disabledButton,
-            ]}
-            onPress={item.disabled ? undefined : item.onPress}
-            disabled={item.disabled}
+          <PixelBorder
+            borderColor={item.disabled ? '#666' : '#f7e98e'}
+            borderWidth={3}
+            backgroundColor={
+              item.disabled ? 'rgba(60,60,60, 0.8)' : 'rgba(0,0,0, 0.3)'
+            }
+            innerPadding={0}
+            style={styles.gridButtonWrapper}
           >
-            <Image
-              source={ACTIVITY_IMAGES[item.id as keyof typeof ACTIVITY_IMAGES]}
-              style={[styles.buttonIcon, item.disabled && styles.disabledIcon]}
-              resizeMode="contain"
-            />
-            <Text
-              style={[styles.buttonTitle, item.disabled && styles.disabledText]}
-            >
-              {item.title}
-            </Text>
-            <Text
+            <View
               style={[
-                styles.buttonSubtext,
-                item.disabled && styles.disabledText,
+                styles.gridButtonInner,
+                item.disabled && styles.disabledButton,
               ]}
             >
-              {item.desc}
-            </Text>
-          </TouchableOpacity>
-        </PixelBorder>
+              <Image
+                source={ACTIVITY_IMAGES[item.id as keyof typeof ACTIVITY_IMAGES]}
+                style={[styles.buttonIcon, item.disabled && styles.disabledIcon]}
+                resizeMode="contain"
+              />
+              <Text
+                style={[styles.buttonTitle, item.disabled && styles.disabledText]}
+              >
+                {item.title}
+              </Text>
+              <Text
+                style={[
+                  styles.buttonSubtext,
+                  item.disabled && styles.disabledText,
+                ]}
+              >
+                {item.desc}
+              </Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       );
 
       // Wrap with CopilotStep only if tutorial should show
@@ -644,6 +750,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 12,
+    padding: 8,
     backgroundColor: 'rgba(90,99,127, 0.8)',
     borderWidth: 3,
     borderColor: colors.gold.light,
@@ -659,7 +766,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   buttonTitle: {
-    fontSize: 13,
+    fontSize: 18,
     fontWeight: '600',
     color: colors.gold.light,
     textAlign: 'center',
@@ -679,6 +786,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
     lineHeight: 11,
+    marginBottom: 8,
   },
   disabledButton: {
     opacity: 0.5,
@@ -718,9 +826,9 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   buttonIcon: {
-    width: 40,
-    height: 40,
-    marginBottom: 8,
+    width: 45,
+    height: 45,
+    marginTop: 8,
   },
   disabledIcon: {
     opacity: 0.3,
