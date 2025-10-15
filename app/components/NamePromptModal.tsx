@@ -5,11 +5,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 
 interface NamePromptModalProps {
   visible: boolean;
@@ -118,24 +119,55 @@ export default function NamePromptModal({
         )}
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.submitButton, isValidating && styles.disabledButton]}
+          <PressableButton
             onPress={handleSubmit}
             disabled={isValidating}
+            shadowColor="rgba(123,169,101,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={isValidating ? 0.2 : 0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={[styles.submitButton, isValidating && styles.disabledButton]}
           >
-            {isValidating ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#2d5a2d" />
-                <Text style={styles.submitButtonText}>Checking...</Text>
+            <PixelBorder
+              borderColor="rgba(123,169,101,1)"
+              borderWidth={3}
+              backgroundColor="rgba(154,193,118,1)"
+              innerPadding={0}
+            >
+              <View style={styles.buttonInner}>
+                {isValidating ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#ffffff" />
+                    <Text style={styles.submitButtonText}>Checking...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.submitButtonText}>Start Playing!</Text>
+                )}
               </View>
-            ) : (
-              <Text style={styles.submitButtonText}>Start Playing!</Text>
-            )}
-          </TouchableOpacity>
+            </PixelBorder>
+          </PressableButton>
 
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipButtonText}>Skip (use default)</Text>
-          </TouchableOpacity>
+          <PressableButton
+            onPress={handleSkip}
+            shadowColor="#666"
+            shadowOffset={{ width: 0, height: 3 }}
+            shadowOpacity={0.3}
+            shadowRadius={4}
+            elevation={5}
+            style={styles.skipButton}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={2}
+              backgroundColor="#f0f0f0"
+              innerPadding={0}
+            >
+              <View style={styles.buttonInner}>
+                <Text style={styles.skipButtonText}>Skip (use default)</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </View>
       </>
     </FastModal>
@@ -187,33 +219,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   submitButton: {
-    backgroundColor: '#d4f6d4', // Light green
-    borderWidth: 2,
-    borderColor: '#4a7c4a',
-    borderRadius: 15,
+    width: '100%',
+  },
+  skipButton: {
+    width: '100%',
+  },
+  buttonInner: {
     paddingVertical: 15,
     paddingHorizontal: 25,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
   },
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    color: '#2d5a2d', // Dark green
-  },
-  skipButton: {
-    backgroundColor: '#f0f0f0',
-    borderWidth: 2,
-    borderColor: '#ccc',
-    borderRadius: 15,
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    alignItems: 'center',
+    color: '#ffffff',
   },
   skipButtonText: {
     fontSize: 16,

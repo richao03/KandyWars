@@ -13,6 +13,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -20,9 +21,8 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 interface MathGameProps {
   onComplete: () => void;
@@ -472,6 +472,20 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     backgroundColor: flashValue.value ? 'rgba(0, 255, 0, 0.3)' : '#1a3d1a',
   }));
 
+  // Render joker selection
+  if (gameState === 'jokerSelection') {
+    return (
+      <JokerSelection
+        jokers={MATH_JOKERS}
+        theme="candy"
+        subject="Math"
+        onComplete={onComplete}
+        rewardTier={jokerRewardTier as 1 | 2 | 3}
+        completionLevel={completedLevel as 1 | 2 | 3}
+      />
+    );
+  }
+
   // Render instructions
   if (gameState === 'instructions') {
     return (
@@ -503,49 +517,48 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
               </Text>
             </View>
           </PixelBorder>
-
-          <PixelBorder
-            borderColor="#f5f5dc"
-            borderWidth={3}
-            backgroundColor="#2d4a3e"
-            innerPadding={0}
-            style={{ marginBottom: 10 }}
+          <PressableButton
+            onPress={startGame}
+            shadowColor="#2d4a3e"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={{ marginBottom: 16, width: '100%' }}
           >
-            <TouchableOpacity
-              style={styles.pixelButtonInner}
-              onPress={startGame}
+            <PixelBorder
+              borderColor="#f5f5dc"
+              borderWidth={3}
+              backgroundColor="#2d4a3e"
+              innerPadding={0}
             >
-              <Text style={styles.startButtonText}>Start Game!</Text>
-            </TouchableOpacity>
-          </PixelBorder>
-
-          <TouchableOpacity
-            style={styles.backButton}
+              <View style={styles.pixelButtonInner}>
+                <Text style={styles.startButtonText}>Start Game!</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
             onPress={onBack || (() => router.back())}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.backButton}
           >
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </View>
       </View>
-    );
-  }
-
-  // Render joker selection
-  if (gameState === 'jokerSelection') {
-    // Use ref value to avoid state timing issues
-    const finalRewardTier = jokerRewardTierRef.current || jokerRewardTier || 1;
-    console.log(
-      `🎁 MathGame JokerSelection: jokerRewardTier = ${jokerRewardTier}, jokerRewardTierRef = ${jokerRewardTierRef.current}, using = ${finalRewardTier}`
-    );
-    return (
-      <JokerSelection
-        jokers={MATH_JOKERS}
-        theme="math"
-        subject="Math"
-        onComplete={onComplete}
-        rewardTier={finalRewardTier as 1 | 2 | 3}
-        completionLevel={finalRewardTier as 1 | 2 | 3}
-      />
     );
   }
 
@@ -639,7 +652,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
               borderWidth={2}
               backgroundColor="#000"
               innerPadding={0}
-              style={{ flex: 1 }}
+              style={{ flex: 1, alignContent: 'center' }}
             >
               <TouchableOpacity
                 style={styles.pixelNumberBox}
@@ -762,13 +775,19 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   backButton: {
-    paddingVertical: 10,
+    marginTop: 16,
+    width: '100%',
+  },
+  backButtonInner: {
+    paddingVertical: 12,
     paddingHorizontal: 30,
+    alignItems: 'center',
   },
   backButtonText: {
     fontSize: 18,
-    color: colors.gold.beige,
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   scrollContainer: {
     marginTop: 20,
@@ -856,14 +875,13 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
-    paddingVertical: 15,
+    paddingVertical: 18,
     paddingHorizontal: 40,
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
   pixelNumberBox: {
-    width: 60,
-    height: 60,
+    aspectRatio: 1, // Makes it a perfect square
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',

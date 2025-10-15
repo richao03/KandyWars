@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Image,
   ImageBackground,
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ import colors from '../../src/constants/colors';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useWallet } from '../../src/hooks/useWallet';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 
 // Image resolver to handle cached image IDs and string references
@@ -135,15 +137,9 @@ const EventModal = React.memo(function EventModal() {
       shakeAnim.setValue(0);
 
       // Check if this is a money-stealing event (bully or similar)
+      // Note: STASH_LOCKED is NOT a money-stealing event, it confiscates inventory/candy
       const isMoneyStealingEvent =
-        currentEvent.effect === 'LOSE_MONEY' || // Direct check for LOSE_MONEY effect
-        (currentEvent.category === 'bad' &&
-          (currentEvent.title?.toLowerCase().includes('bully') ||
-            currentEvent.subtitle
-              ?.toLowerCase()
-              .includes('took all your money') ||
-            currentEvent.subtitle?.toLowerCase().includes('took') ||
-            currentEvent.subtitle?.toLowerCase().includes('stole')));
+        currentEvent.effect === 'LOSE_MONEY'; // Only LOSE_MONEY events show money counter
 
       // Check if this is a money-gaining event (found money or similar)
       const isMoneyGainingEvent =
@@ -556,32 +552,50 @@ const EventModal = React.memo(function EventModal() {
                     </View>
                   </PixelBorder>
 
-                  <PixelBorder
-                    borderColor={canDismiss ? theme.borderColor : '#666'}
-                    borderWidth={3}
-                    backgroundColor={canDismiss ? theme.buttonColor : '#888888'}
-                    innerPadding={0}
+                  <PressableButton
+                    onPress={handleDismiss}
+                    disabled={!canDismiss}
+                    shadowColor={
+                      currentEvent.category === 'bad'
+                        ? 'rgba(185,28,28,1)'
+                        : 'rgba(123,169,101,1)'
+                    }
+                    shadowOffset={{ width: 0, height: 4 }}
+                    shadowOpacity={canDismiss ? 0.5 : 0.2}
+                    shadowRadius={5}
+                    elevation={8}
                     style={{ opacity: canDismiss ? 1 : 0.5, marginTop: 12 }}
                   >
-                    <TouchableOpacity
-                      style={styles.dismissButton}
-                      onPress={handleDismiss}
-                      disabled={!canDismiss}
+                    <PixelBorder
+                      borderColor={
+                        currentEvent.category === 'bad'
+                          ? 'rgba(185,28,28,1)'
+                          : 'rgba(123,169,101,1)'
+                      }
+                      borderWidth={3}
+                      backgroundColor={
+                        currentEvent.category === 'bad'
+                          ? 'rgba(239,68,68,1)'
+                          : 'rgba(154,193,118,1)'
+                      }
+                      innerPadding={0}
                     >
-                      <Text style={styles.dismissText}>
-                        {!canDismiss
-                          ? 'Please wait...'
-                          : currentEvent.protectedByMedievalShield ||
-                              currentEvent.protectedByCandyVault
-                            ? 'Noice!'
-                            : currentEvent.dismissText
-                              ? currentEvent.dismissText
-                              : currentEvent.category === 'bad'
-                                ? 'Ah Shucks!'
-                                : 'Noice!'}
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
+                      <View style={styles.dismissButton}>
+                        <Text style={styles.dismissText}>
+                          {!canDismiss
+                            ? 'Please wait...'
+                            : currentEvent.protectedByMedievalShield ||
+                                currentEvent.protectedByCandyVault
+                              ? 'Noice!'
+                              : currentEvent.dismissText
+                                ? currentEvent.dismissText
+                                : currentEvent.category === 'bad'
+                                  ? 'Ah Shucks!'
+                                  : 'Noice!'}
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
                 </View>
               </ImageBackground>
             </View>
@@ -677,25 +691,43 @@ const EventModal = React.memo(function EventModal() {
                 </View>
               </PixelBorder>
 
-              <PixelBorder
-                borderColor={canDismiss ? theme.borderColor : '#666'}
-                borderWidth={3}
-                backgroundColor={canDismiss ? theme.buttonColor : '#888888'}
-                innerPadding={0}
+              <PressableButton
+                onPress={handleDismiss}
+                disabled={!canDismiss}
+                shadowColor={
+                  currentEvent.category === 'bad'
+                    ? 'rgba(185,28,28,1)'
+                    : 'rgba(123,169,101,1)'
+                }
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={canDismiss ? 0.5 : 0.2}
+                shadowRadius={5}
+                elevation={8}
                 style={{ opacity: canDismiss ? 1 : 0.5, marginTop: 12 }}
               >
-                <TouchableOpacity
-                  style={styles.dismissButton}
-                  onPress={handleDismiss}
-                  disabled={!canDismiss}
+                <PixelBorder
+                  borderColor={
+                    currentEvent.category === 'bad'
+                      ? 'rgba(185,28,28,1)'
+                      : 'rgba(123,169,101,1)'
+                  }
+                  borderWidth={3}
+                  backgroundColor={
+                    currentEvent.category === 'bad'
+                      ? 'rgba(239,68,68,1)'
+                      : 'rgba(154,193,118,1)'
+                  }
+                  innerPadding={0}
                 >
-                  <Text style={styles.dismissText}>
-                    {!canDismiss
-                      ? '⏳ Please wait...'
-                      : currentEvent.dismissText || 'Got it!'}
-                  </Text>
-                </TouchableOpacity>
-              </PixelBorder>
+                  <View style={styles.dismissButton}>
+                    <Text style={styles.dismissText}>
+                      {!canDismiss
+                        ? '⏳ Please wait...'
+                        : currentEvent.dismissText || 'Got it!'}
+                    </Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
             </View>
           </PixelBorder>
         )}

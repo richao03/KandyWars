@@ -1,16 +1,21 @@
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { router } from 'expo-router';
 import React from 'react';
 import { useGame } from '../src/hooks/useGame';
 import GymGame from './minigames/GymGame';
 
 export default function HistoryGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
-  const navigation = useNavigation();
+
+  const navigateBack = () => {
+    // Since we use router.push() to get here, we can use router.back() to return
+    router.back();
+  };
 
   const handleGameComplete = () => {
     console.log('Gym game completed! Context:', minigameContext);
 
-    // Mark study as completed based on context
+    // Mark study as completed based on context BEFORE navigating
+    // This ensures the state is updated before Market re-renders
     if (minigameContext === 'after-school') {
       markStudiedTonight();
       console.log('After-school study session finished.');
@@ -19,19 +24,21 @@ export default function HistoryGameScreen() {
       console.log('Lunch minigame finished.');
     }
 
-    // Clear context and navigate to appropriate screen
+    // Clear context
     setMinigameContext(null);
 
-    // Use CommonActions.reset() to properly clean up navigation stack
-    const targetRoute = minigameContext === 'lunch' ? 'market' : 'after-school';
-    console.log(`🧹 Resetting navigation stack to ${targetRoute} tab`);
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: '(tabs)', params: { screen: targetRoute } }],
-      })
-    );
+    // Use setTimeout to ensure state updates are flushed before navigation
+    // Increased delay to give Redux time to propagate the state change
+    setTimeout(() => {
+      navigateBack();
+    }, 100);
   };
 
-  return <GymGame onComplete={handleGameComplete} />;
+  const handleBack = () => {
+    // Clear context when going back
+    setMinigameContext(null);
+    navigateBack();
+  };
+
+  return <GymGame onComplete={handleGameComplete} onBack={handleBack} />;
 }

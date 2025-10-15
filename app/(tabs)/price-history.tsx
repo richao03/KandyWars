@@ -1,13 +1,12 @@
 // app/(tabs)/price-history.tsx
-import React, { useState, useMemo, useCallback } from 'react';
-import { ScrollView, StyleSheet, View, Text, Image } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useSeed } from '../../src/hooks/useSeed';
 import CandyPriceChart from '../components/CandyPriceChart';
 import GameHUD from '../components/GameHUD';
-import colors from '../../src/constants/colors';
-
 
 // Memoized chart component to prevent unnecessary re-renders
 const MemoizedCandyPriceChart = React.memo(CandyPriceChart);
@@ -17,7 +16,10 @@ export default function PriceHistory() {
   const { gameData } = useSeed();
   const [isTabFocused, setIsTabFocused] = useState(false);
 
-  const candyNames = useMemo(() => Object.keys(gameData.candyPrices || {}), [gameData.candyPrices]);
+  const candyNames = useMemo(
+    () => Object.keys(gameData.candyPrices || {}),
+    [gameData.candyPrices]
+  );
 
   // Memoize the chart components to prevent re-creating them on every render
   const chartComponents = useMemo(() => {
@@ -48,7 +50,7 @@ export default function PriceHistory() {
       <GameHUD
         theme="evening"
         customHeaderText="Price History"
-        customLocationText="Trading Floor"
+        customLocationText="Price History"
       />
 
       <ScrollView

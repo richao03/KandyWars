@@ -5,6 +5,7 @@ import {
   startAfterSchool,
   startNewDay,
   resetGame,
+  fullResetGame,
   revertToPreviousPeriod,
   jumpToPeriod,
   markStudiedTonight,
@@ -53,6 +54,10 @@ export const useGame = () => {
 
   const resetGameAction = useCallback(() => {
     dispatch(resetGame());
+  }, [dispatch]);
+
+  const fullResetGameAction = useCallback(() => {
+    dispatch(fullResetGame());
   }, [dispatch]);
 
   const revertToPreviousPeriodAction = useCallback(() => {
@@ -118,6 +123,7 @@ export const useGame = () => {
     startAfterSchool: startAfterSchoolAction,
     startNewDay: startNewDayAction,
     resetGame: resetGameAction,
+    fullResetGame: fullResetGameAction,
     revertToPeriousPeriod: revertToPreviousPeriodAction,
     jumpToPeriod: jumpToPeriodAction,
     markStudiedTonight: markStudiedTonightAction,

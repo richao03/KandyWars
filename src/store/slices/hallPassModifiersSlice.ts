@@ -17,7 +17,7 @@ export interface HallPassModifiers {
   inventoryBonusSlots: number; // Additional inventory slots (e.g., 10 = +10 slots)
   allowanceBonusPercent: number; // Percentage bonus to daily allowance (e.g., 100 = +100%)
   jokerBonusCount: number; // Additional jokers from selection (e.g., 1 = +1 joker)
-  extraPeriodsPerDay: number; // Extra periods each day (e.g., 1 = +1 period)
+  rerollBonusCount: number; // Additional rerolls in joker selection (e.g., 1 = +1 reroll)
 }
 
 interface HallPassModifiersState extends HallPassModifiers {
@@ -29,7 +29,7 @@ const initialState: HallPassModifiersState = {
   inventoryBonusSlots: 0,
   allowanceBonusPercent: 0,
   jokerBonusCount: 0,
-  extraPeriodsPerDay: 0,
+  rerollBonusCount: 0,
   isInitialized: false,
 };
 
@@ -44,7 +44,7 @@ const hallPassModifiersSlice = createSlice({
       state.inventoryBonusSlots = action.payload.inventoryBonusSlots;
       state.allowanceBonusPercent = action.payload.allowanceBonusPercent;
       state.jokerBonusCount = action.payload.jokerBonusCount;
-      state.extraPeriodsPerDay = action.payload.extraPeriodsPerDay;
+      state.rerollBonusCount = action.payload.rerollBonusCount;
       state.isInitialized = true;
       console.log('🎖️ MODIFIERS REDUCER: State updated successfully');
       console.log('🎖️ MODIFIERS REDUCER: New state:', JSON.stringify({
@@ -52,7 +52,7 @@ const hallPassModifiersSlice = createSlice({
         inventoryBonusSlots: state.inventoryBonusSlots,
         allowanceBonusPercent: state.allowanceBonusPercent,
         jokerBonusCount: state.jokerBonusCount,
-        extraPeriodsPerDay: state.extraPeriodsPerDay,
+        rerollBonusCount: state.rerollBonusCount,
         isInitialized: state.isInitialized,
       }));
     },
@@ -79,7 +79,7 @@ export const selectHallPassModifiers = (state: { hallPassModifiers: HallPassModi
   inventoryBonusSlots: state.hallPassModifiers.inventoryBonusSlots,
   allowanceBonusPercent: state.hallPassModifiers.allowanceBonusPercent,
   jokerBonusCount: state.hallPassModifiers.jokerBonusCount,
-  extraPeriodsPerDay: state.hallPassModifiers.extraPeriodsPerDay,
+  rerollBonusCount: state.hallPassModifiers.rerollBonusCount,
 });
 
 export const selectIsHallPassModifiersInitialized = (state: { hallPassModifiers: HallPassModifiersState }) =>

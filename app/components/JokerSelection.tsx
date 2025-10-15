@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useAppSelector } from '../../src/store/hooks';
 import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
 import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 interface Joker {
   id: number;
@@ -26,7 +26,17 @@ interface Joker {
 
 interface JokerSelectionProps {
   jokers: Joker[];
-  theme: 'math' | 'computer' | 'homeec' | 'economy' | 'candy' | 'gym' | 'art' | 'logic' | 'recess' | 'geography';
+  theme:
+    | 'math'
+    | 'computer'
+    | 'homeec'
+    | 'economy'
+    | 'candy'
+    | 'gym'
+    | 'art'
+    | 'logic'
+    | 'recess'
+    | 'geography';
   subject: string;
   onComplete: () => void;
   rewardTier?: 1 | 2 | 3; // 1 = 1 joker no reroll, 2 = 2 jokers + 1 reroll, 3 = 3 jokers + 2 rerolls
@@ -61,6 +71,10 @@ export default function JokerSelection({
   );
 
   const selectRandomJokers = () => {
+    console.log(
+      `🃏 JokerSelection: selectRandomJokers called with rewardTier=${rewardTier}`
+    );
+
     if (availableJokers.length === 0) {
       console.log(
         '🃏 JokerSelection: No available jokers (player owns all jokers for this subject)'
@@ -74,20 +88,36 @@ export default function JokerSelection({
     const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
     const jokerBonus = hallPassModifiers.jokerBonusCount; // Pre-computed hall pass bonus
     const requestedJokerCount = baseJokerCount + jokerBonus;
+
+    console.log(
+      `🃏 JokerSelection: baseJokerCount=${baseJokerCount}, jokerBonus=${jokerBonus}, requestedJokerCount=${requestedJokerCount}, availableJokers.length=${availableJokers.length}`
+    );
+
     if (jokerBonus > 0) {
-      console.log(`🎖️ Hall Pass joker bonus: +${jokerBonus} jokers (showing ${requestedJokerCount} instead of ${baseJokerCount})`);
+      console.log(
+        `🎖️ Hall Pass joker bonus: +${jokerBonus} jokers (showing ${requestedJokerCount} instead of ${baseJokerCount})`
+      );
     }
     // Limit to available jokers if we don't have enough
     const jokerCount = Math.min(requestedJokerCount, availableJokers.length);
     const selected = shuffled.slice(0, jokerCount);
+
+    console.log(
+      `🃏 JokerSelection: Selecting ${jokerCount} jokers from ${availableJokers.length} available. Selected:`,
+      selected.map((j) => j.name)
+    );
+
     setSelectedJokers(selected);
   };
 
   const rerollJokers = () => {
-    // For reroll, get fresh random jokers from the full pool for this subject, excluding owned ones
+    // For reroll, get fresh random jokers from the full pool for this subject, excluding owned ones AND currently selected ones
     const allSubjectJokers = getJokersBySubject(subject);
+    const currentSelectedIds = selectedJokers.map((j) => j.id);
     const availableSubjectJokers = allSubjectJokers.filter(
-      (joker) => !ownedJokerIds.includes(joker.id)
+      (joker) =>
+        !ownedJokerIds.includes(joker.id) &&
+        !currentSelectedIds.includes(joker.id)
     );
     const shuffled = [...availableSubjectJokers].sort(
       () => Math.random() - 0.5
@@ -355,13 +385,26 @@ export default function JokerSelection({
 
   // Helper functions for reroll logic
   const getMaxRerolls = () => {
-    if (rewardTier === 2) return 1; // Level 2: 1 reroll allowed
-    if (rewardTier === 3) return 2; // Level 3: 2 rerolls allowed
-    return 0; // Level 1: no rerolls
+    let baseRerolls = 0;
+    if (rewardTier === 2) baseRerolls = 1; // Level 2: 1 reroll allowed
+    if (rewardTier === 3) baseRerolls = 2; // Level 3: 2 rerolls allowed
+
+    // Add Forged Pass bonus
+    const rerollBonus = hallPassModifiers.rerollBonusCount || 0;
+    const totalRerolls = baseRerolls + rerollBonus;
+
+    if (rerollBonus > 0) {
+      console.log(
+        `🎖️ Hall Pass reroll bonus: +${rerollBonus} rerolls (total: ${totalRerolls})`
+      );
+    }
+
+    return totalRerolls;
   };
 
   const canReroll = () => {
-    return rerollsUsed < getMaxRerolls() && rewardTier > 1;
+    const maxRerolls = getMaxRerolls();
+    return rerollsUsed < maxRerolls && maxRerolls > 0;
   };
 
   const getRerollDescription = () => {
@@ -393,33 +436,35 @@ export default function JokerSelection({
         </Text>
 
         {selectedJokers.length === 0 && availableJokers.length > 0 && (
-          <PixelBorder
-            borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
-            borderWidth={3}
-            backgroundColor={
-              themeStyles.generateButton?.backgroundColor || '#1a2f23'
-            }
-            innerPadding={0}
-            style={{ marginBottom: 20 }}
+          <PressableButton
+            onPress={selectRandomJokers}
+            shadowOpacity={0}
+            elevation={0}
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+              marginBottom: 20,
+            }}
           >
-            <TouchableOpacity
-              style={{
-                padding: 16,
-                alignItems: 'center',
-                backgroundColor: 'transparent',
-              }}
-              onPress={selectRandomJokers}
+            <PixelBorder
+              borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
+              borderWidth={3}
+              backgroundColor={
+                themeStyles.generateButton?.backgroundColor || '#1a2f23'
+              }
+              innerPadding={0}
             >
               <View
                 style={[
                   styles.generateButtonText,
                   themeStyles.generateButtonText,
+                  { padding: 16 },
                 ]}
               >
                 {getButtonText()}
               </View>
-            </TouchableOpacity>
-          </PixelBorder>
+            </PixelBorder>
+          </PressableButton>
         )}
 
         {selectedJokers.map((joker) => {
@@ -431,19 +476,24 @@ export default function JokerSelection({
           const typeEmoji = isOneTime ? '⚡' : '🔮';
 
           return (
-            <PixelBorder
+            <PressableButton
               key={joker.id}
-              borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
-              borderWidth={3}
-              backgroundColor={
-                themeStyles.jokerCard?.backgroundColor || '#1a2f23'
-              }
-              innerPadding={16}
-              style={{ marginBottom: 12 }}
+              onPress={() => handleJokerChoice(joker.id)}
+              shadowOpacity={0}
+              elevation={0}
+              style={{
+                backgroundColor: 'transparent',
+                marginBottom: 12,
+                width: '100%',
+              }}
             >
-              <TouchableOpacity
-                onPress={() => handleJokerChoice(joker.id)}
-                style={{ backgroundColor: 'transparent' }}
+              <PixelBorder
+                borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
+                borderWidth={3}
+                backgroundColor={
+                  themeStyles.jokerCard?.backgroundColor || '#1a2f23'
+                }
+                innerPadding={16}
               >
                 <View style={styles.jokerHeader}>
                   <Text style={[styles.jokerName, themeStyles.jokerName]}>
@@ -478,31 +528,33 @@ export default function JokerSelection({
                 >
                   {joker.description}
                 </Text>
-              </TouchableOpacity>
-            </PixelBorder>
+              </PixelBorder>
+            </PressableButton>
           );
         })}
 
         {selectedJokers.length > 0 && canReroll() && (
-          <PixelBorder
-            borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
-            borderWidth={3}
-            backgroundColor={
-              themeStyles.generateButton?.backgroundColor || '#1a2f23'
-            }
-            innerPadding={0}
-            style={{ marginBottom: 20 }}
+          <PressableButton
+            onPress={rerollJokers}
+            shadowOpacity={0}
+            elevation={0}
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+              marginBottom: 20,
+            }}
           >
-            <TouchableOpacity
-              style={{
-                padding: 16,
-                alignItems: 'center',
-                backgroundColor: 'transparent',
-              }}
-              onPress={rerollJokers}
+            <PixelBorder
+              borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
+              borderWidth={3}
+              backgroundColor={
+                themeStyles.generateButton?.backgroundColor || '#1a2f23'
+              }
+              innerPadding={0}
             >
               <View
                 style={{
+                  padding: 16,
                   marginLeft: 14,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -522,35 +574,45 @@ export default function JokerSelection({
                   ]}
                   imageSize={20}
                 >
-                  {`Reroll ${getRerollDescription()}`}
+                  {`${getRerollDescription()}`}
                 </TextWithEmojis>
               </View>
-            </TouchableOpacity>
-          </PixelBorder>
+            </PixelBorder>
+          </PressableButton>
         )}
 
-        <PixelBorder
-          borderColor={themeStyles.skipButton?.borderColor || '#daa520'}
-          borderWidth={2}
-          backgroundColor={themeStyles.skipButton?.backgroundColor || '#8b4513'}
-          innerPadding={0}
-          style={{ marginTop: 16 }}
+        <PressableButton
+          onPress={onComplete}
+          shadowOpacity={0}
+          elevation={0}
+          style={{
+            alignItems: 'center',
+            backgroundColor: 'transparent',
+            marginTop: 0,
+          }}
         >
-          <TouchableOpacity
-            style={{
-              paddingVertical: 12,
-              alignItems: 'center',
-              backgroundColor: 'transparent',
-            }}
-            onPress={onComplete}
+          <PixelBorder
+            borderColor={themeStyles.skipButton?.borderColor || '#daa520'}
+            borderWidth={3}
+            backgroundColor={
+              themeStyles.skipButton?.backgroundColor || '#8b4513'
+            }
+            innerPadding={0}
           >
-            <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
-              {availableJokers.length === 0
-                ? 'Continue'
-                : 'Skip Joker Selection'}
-            </Text>
-          </TouchableOpacity>
-        </PixelBorder>
+            <View
+              style={{
+                padding: 16,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
+                {availableJokers.length === 0
+                  ? 'Continue'
+                  : 'Skip Joker Selection'}
+              </Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     </View>
   );

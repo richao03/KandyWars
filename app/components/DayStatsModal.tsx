@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -36,7 +36,8 @@ export default function DayStatsModal({
   }
 
   // Calculate total bonuses
-  const totalBonuses = bonuses?.reduce((sum, bonus) => sum + bonus.amount, 0) || 0;
+  const totalBonuses =
+    bonuses?.reduce((sum, bonus) => sum + bonus.amount, 0) || 0;
   const netGainWithBonuses = stats.netGain + totalBonuses;
 
   return (
@@ -157,7 +158,8 @@ export default function DayStatsModal({
                     : styles.negativeGain,
                 ]}
               >
-                {netGainWithBonuses >= 0 ? '+' : ''}${netGainWithBonuses.toFixed(2)}
+                {netGainWithBonuses >= 0 ? '+' : ''}$
+                {netGainWithBonuses.toFixed(2)}
               </Text>
             </View>
           </PixelBorder>
@@ -166,9 +168,7 @@ export default function DayStatsModal({
         <PressableButton
           onPress={() => {
             // Trigger success haptic feedback when going to after school
-            Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success
-            );
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onClose();
           }}
           shadowColor="rgba(123,169,101,1)"
@@ -185,8 +185,12 @@ export default function DayStatsModal({
             innerPadding={0}
           >
             <View style={styles.continueButtonInner}>
-              <Text style={styles.continueButtonText}>Got it!</Text>
-              <Text style={styles.continueButtonSubtext}>Time to head home!</Text>
+              <Text style={styles.continueButtonText}>
+                {day === 5 ? 'See Summary' : 'Got it!'}
+              </Text>
+              <Text style={styles.continueButtonSubtext}>
+                {day === 5 ? 'Show me the money!' : 'Time to head home!'}
+              </Text>
             </View>
           </PixelBorder>
         </PressableButton>

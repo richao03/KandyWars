@@ -15,11 +15,16 @@ import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useGame } from '../src/hooks/useGame';
 import { useHallPass } from '../src/hooks/useHallPass';
 import { useJokers } from '../src/hooks/useJokers';
+import { useMinigameTracking } from '../src/hooks/useMinigameTracking';
 import { useWallet } from '../src/hooks/useWallet';
 import { scoreboardService } from '../src/services/firebase';
-import { useAppDispatch } from '../src/store/hooks';
+import { useAppDispatch, useAppSelector } from '../src/store/hooks';
 import { setTotalCompletions } from '../src/store/slices/gameSlice';
+import { resetLocalAnalytics } from '../src/store/slices/localAnalyticsSlice';
 import { setWonDifficulties } from '../src/store/slices/scoreboardSlice';
+import {
+  setCachedUserObject,
+} from '../src/store/slices/userObjectSlice';
 import { forceSave } from '../src/store/store';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
@@ -34,11 +39,20 @@ export default function GameEndScreen() {
     getMostSoldCandy,
     resetPlaythrough,
   } = useDailyStats();
-  const { resetGame, periodCount } = useGame();
-  const { newlyUnlockedPasses, clearNewlyUnlocked, checkUnlockRequirements } =
-    useHallPass();
+  const { resetGame, fullResetGame, periodCount } = useGame();
+  const {
+    unlockedPasses,
+    newlyUnlockedPasses,
+    clearNewlyUnlocked,
+    checkUnlockRequirements,
+  } = useHallPass();
+  const { hasPlayedAllMinigames, playedMinigames } = useMinigameTracking();
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
+  const localAnalytics = useAppSelector((state) => state.localAnalytics);
+  const reduxUserObject = useAppSelector(
+    (state) => state.userObject.cachedUser
+  );
 
   const totalStats = getTotalStats();
   const playthroughStats = getPlaythroughStats();
@@ -54,66 +68,192 @@ export default function GameEndScreen() {
     const checkHallPassUnlocks = async () => {
       console.log('🎯 Game End Screen: Checking hall pass unlocks');
 
-      const hasWon = finalScore >= adoptionFee;
-      let totalCompletions = 0;
+      // Clear any previously newly unlocked passes from last session
+      // This ensures we only show passes unlocked in THIS game
+      clearNewlyUnlocked();
+      console.log('🎓 Cleared previously newly unlocked passes');
+
+      const hasWon = finalScore >= 0;
 
       try {
-        if (hasWon) {
-          console.log(
-            '🏆 Player won - incrementing game completions in Firebase...'
-          );
-          totalCompletions = await scoreboardService.incrementGameCompletions();
-          dispatch(setTotalCompletions(totalCompletions));
-          console.log('🏆 Total completions:', totalCompletions);
+        // Ensure Firebase is initialized first
+        await scoreboardService.initializeAuth();
 
-          // Track difficulty win
-          console.log('🏆 Wallet state - difficultyLevel:', difficultyLevel);
+        // Get cached user object from service
+        let userObject = scoreboardService.getCachedUserObject();
 
-          if (difficultyLevel) {
-            console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
-            await scoreboardService.trackDifficultyWin(difficultyLevel);
+        // If service cache is empty, restore from Redux
+        if (!userObject) {
+          console.log('⚠️ Service cache empty, checking Redux...');
+
+          if (reduxUserObject) {
+            console.log('✅ Restoring user object from Redux to service cache');
+            scoreboardService.setCachedUserObject(reduxUserObject);
+            userObject = reduxUserObject;
           } else {
-            console.error('❌ Cannot track difficulty win - difficultyLevel is null/undefined');
-          }
+            console.error('❌ User object not found in service or Redux cache');
 
-          // Fetch and save all won difficulties to Redux
-          const wonDifficulties = await scoreboardService.getWonDifficulties();
-          console.log('🏆 All difficulties won by this user:', wonDifficulties);
-          dispatch(setWonDifficulties(wonDifficulties));
+            // Try to initialize Firebase as last resort
+            console.log('🔄 Attempting to fetch user object from Firebase...');
+            try {
+              userObject = await scoreboardService.fetchUserObject();
+              scoreboardService.setCachedUserObject(userObject);
+              console.log('✅ User object loaded from Firebase:', userObject);
+            } catch (error) {
+              console.error('❌ Failed to fetch user object:', error);
+              return;
+            }
+          }
+        }
+
+        console.log('📊 Current user object:', userObject);
+
+        // Always update played minigames (regardless of win/loss)
+        const updates: any = {
+          playedMinigames: playedMinigames,
+        };
+        console.log('🎮 Updating played minigames:', playedMinigames);
+
+        if (hasWon) {
+          console.log('🏆 Player won - updating user object...');
+
+          // Add win-related updates
+          updates.totalWinCount = userObject.totalWinCount + 1;
+
+          // Add difficulty to won list if not already there
+          if (
+            difficultyLevel &&
+            !userObject.difficultyWon.includes(difficultyLevel)
+          ) {
+            updates.difficultyWon = [
+              ...userObject.difficultyWon,
+              difficultyLevel,
+            ];
+            console.log('🏆 Adding difficulty to won list:', difficultyLevel);
+          }
         } else {
-          console.log(
-            '😢 Player lost - fetching total completions for hall pass checks...'
+          console.log('😢 Player lost - saving minigame progress only');
+        }
+
+        // Update local cache
+        scoreboardService.updateLocalUserObject(updates);
+
+        // Save to Firebase
+        const updatedUserObject = scoreboardService.getCachedUserObject();
+        if (updatedUserObject) {
+          await scoreboardService.saveUserObject(updatedUserObject);
+          console.log('✅ User object saved to Firebase:', updatedUserObject);
+
+          // Update Redux (persisted across app restarts)
+          dispatch(setCachedUserObject(updatedUserObject));
+          dispatch(setTotalCompletions(updatedUserObject.totalWinCount));
+          dispatch(setWonDifficulties(updatedUserObject.difficultyWon));
+        }
+
+        // Batch update universal analytics to Firebase
+        console.log('📊 Syncing local analytics to Firebase...');
+        console.log('📊 Jokers obtained:', localAnalytics.jokersObtained);
+        console.log('📊 Minigames played:', localAnalytics.minigamesPlayed);
+
+        // Update joker stats
+        if (Object.keys(localAnalytics.jokersObtained).length > 0) {
+          await scoreboardService.batchUpdateJokerStats(
+            localAnalytics.jokersObtained
           );
-          totalCompletions = await scoreboardService.getTotalCompletions();
-          console.log('🏆 Total completions (lost game):', totalCompletions);
+        }
+
+        // Update minigame stats
+        if (Object.keys(localAnalytics.minigamesPlayed).length > 0) {
+          await scoreboardService.batchUpdateMinigameStats(
+            localAnalytics.minigamesPlayed
+          );
+        }
+
+        // Reset local analytics for next game
+        dispatch(resetLocalAnalytics());
+        console.log('✅ Local analytics synced and reset');
+
+        // Track game completion to scoreboard
+        try {
+          const day = Math.floor(periodCount / 8) + 1;
+          await scoreboardService.trackGameCompletion(
+            balance,
+            difficultyLevel?.toString() || '1',
+            day,
+            updatedUserObject?.playerName || 'Player',
+            playthroughStats?.totalProfit || 0,
+            playthroughStats?.totalCandiesSold || 0,
+            jokers.length,
+            periodCount * 5, // Approximate minutes (5 min per period)
+            periodCount
+          );
+          console.log('✅ Game completion tracked to scoreboard');
+        } catch (error) {
+          console.error('❌ Failed to track game completion:', error);
         }
       } catch (error) {
-        console.error('❌ Error tracking/fetching game completion:', error);
+        console.error('❌ Error updating user object:', error);
       }
 
       // Check for newly unlocked Hall Passes
       try {
+        const userObject = scoreboardService.getCachedUserObject();
+        if (!userObject) {
+          console.error('❌ User object not available for hall pass checks');
+          return;
+        }
+
         const gameStats = {
-          completions: totalCompletions,
+          completions: userObject.totalWinCount,
           finalProfit: finalScore,
-          difficulty: difficultyLevel,
+          difficulty: difficultyLevel || 1,
           completionTime: periodCount,
-          perfectAttendance: periodCount >= 40,
-          totalCandySold: totalStats?.candiesSold || 0,
+          totalCandySold: playthroughStats?.totalCandiesSold || 0,
           noJokers: jokers.length === 0,
+          confiscationCount: playthroughStats?.confiscationCount || 0,
+          stashedAmount: stashedAmount,
+          jokerCount: jokers.length,
         };
 
         console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
 
         const unlocked = checkUnlockRequirements(gameStats, {
-          hasPlayedAllMinigames: false,
+          hasPlayedAllMinigames: hasPlayedAllMinigames,
         });
         console.log('🎓 Newly unlocked Hall Passes:', unlocked);
 
         if (unlocked.length > 0) {
-          console.log(
-            `🎓 ${unlocked.length} hall pass(es) were unlocked - forcing save to persist...`
-          );
+          console.log(`🎓 ${unlocked.length} hall pass(es) were unlocked!`);
+
+          // Get current unlocked passes from Redux
+          const currentUnlockedPassIds = unlockedPasses.map((p) => p.id);
+          console.log('🎓 Current unlocked passes:', currentUnlockedPassIds);
+
+          // Merge with newly unlocked (avoid duplicates)
+          const allUnlockedPassIds = [
+            ...new Set([...currentUnlockedPassIds, ...unlocked]),
+          ];
+          console.log('🎓 All unlocked passes:', allUnlockedPassIds);
+
+          // Update user object with hall passes
+          scoreboardService.updateLocalUserObject({
+            unlockedHallPasses: allUnlockedPassIds,
+          });
+
+          // Save to Firebase
+          const updatedUserObject = scoreboardService.getCachedUserObject();
+          if (updatedUserObject) {
+            await scoreboardService.saveUserObject(updatedUserObject);
+            console.log(
+              '✅ Hall passes synced to Firebase:',
+              updatedUserObject.unlockedHallPasses
+            );
+
+            // Update Redux
+            dispatch(setCachedUserObject(updatedUserObject));
+          }
+
+          // Force save Redux persist
           forceSave();
         }
       } catch (error) {
@@ -203,8 +343,10 @@ export default function GameEndScreen() {
     }
   };
 
-  const dogBreed = getDogBreed(difficultyLevel);
-  const dogImage = getDogImage(difficultyLevel);
+  // Fallback to level 1 if difficultyLevel is null
+  const safeDifficultyLevel = difficultyLevel ?? 1;
+  const dogBreed = getDogBreed(safeDifficultyLevel);
+  const dogImage = getDogImage(safeDifficultyLevel);
 
   // Get difficulty name
   const getDifficultyName = (level: number) => {
@@ -255,7 +397,11 @@ export default function GameEndScreen() {
   const handlePlayAgain = () => {
     clearNewlyUnlocked(); // Clear the newly unlocked list for next playthrough
     resetPlaythrough(); // Clear playthrough stats for next game
-    resetGame();
+    fullResetGame(); // Full reset including isInitialized to disable "Continue" button
+
+    // Note: We don't clear user object cache here because it contains
+    // persistent user data like playerName that should carry over between games
+    forceSave(); // Persist Redux changes to AsyncStorage
 
     console.log('🎮 Play Again: Resetting navigation stack to title screen');
 
@@ -320,7 +466,7 @@ export default function GameEndScreen() {
 
               <Text style={styles.subtitle}>
                 {gameResult === 'won'
-                  ? `You paid off all your debt and adopted ${dogBreed}!`
+                  ? `You saved up enough money and adopted ${dogBreed}!`
                   : `${dogBreed} has gone with another loving family`}
               </Text>
             </PixelBorder>
@@ -334,7 +480,7 @@ export default function GameEndScreen() {
               style={styles.section}
             >
               <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
-                📊 TLDR:
+                🗣️ TLDR:
               </TextWithEmojis>
 
               <View style={{ ...styles.statItemRow, marginTop: 12 }}>
@@ -385,7 +531,7 @@ export default function GameEndScreen() {
                   💰 Total Profit
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${totalStats?.profit?.toFixed(2) || '0.00'}
+                  ${playthroughStats?.totalProfit?.toFixed(2) || '0.00'}
                 </Text>
               </View>
 
@@ -394,7 +540,7 @@ export default function GameEndScreen() {
                   💸 Spent on Candy
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${totalStats?.spent?.toFixed(2) || '0.00'}
+                  ${playthroughStats?.totalSpentOnCandy?.toFixed(2) || '0.00'}
                 </Text>
               </View>
 
@@ -412,7 +558,7 @@ export default function GameEndScreen() {
                   🍬 Candies Sold
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  {totalStats?.candiesSold || 0}
+                  {playthroughStats?.totalCandiesSold || 0}
                 </Text>
               </View>
 
@@ -479,15 +625,21 @@ export default function GameEndScreen() {
               <PixelBorder
                 borderColor="#E0B0FF"
                 borderWidth={4}
+                innerPadding={16}
                 backgroundColor="rgba(250, 240, 255, 0.95)"
-                innerPadding={30}
                 style={styles.section}
               >
-                <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
-                  🃏 Jokers Collected ({jokers.length})
+                <TextWithEmojis
+                  style={{
+                    ...styles.sectionTitle,
+                  }}
+                  imageSize={30}
+                  numberOfLines={1}
+                >
+                  🃏 All Jokers Obtained
                 </TextWithEmojis>
 
-                <View style={styles.jokerGrid}>
+                <View style={{ ...styles.jokerGrid }}>
                   {jokers.map((joker, index) => (
                     <PixelBorder
                       key={index}
@@ -503,6 +655,10 @@ export default function GameEndScreen() {
                     </PixelBorder>
                   ))}
                 </View>
+                <Text style={{ ...styles.subtitle, fontSize: 14 }}>
+                  Try out different combinations of jokers for different play
+                  styles!
+                </Text>
               </PixelBorder>
             )}
 
@@ -612,7 +768,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#6B9B3F',
     marginBottom: 12,
-    textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
   finalScore: {
@@ -702,16 +857,18 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   jokerGrid: {
+    marginTop: 4,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'center',
+    marginBottom: 16,
   },
   jokerItem: {
     minWidth: 100,
   },
   jokerText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#8B5FBF',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',

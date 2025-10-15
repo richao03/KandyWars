@@ -2,6 +2,8 @@ import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
 import React, {
+  lazy,
+  Suspense,
   startTransition,
   useCallback,
   useEffect,
@@ -9,14 +11,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  ImageBackground,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { CopilotStep, useCopilot, walkthroughable } from 'react-native-copilot';
+import { StyleSheet, View } from 'react-native';
+import { useCopilot } from 'react-native-copilot';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
@@ -40,24 +36,20 @@ import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import { forceSave } from '../../src/store/store';
 import { JokerService } from '../../src/utils/jokerService';
 import ConfirmationModal from '../components/ConfirmationModal';
-import DayStatsModal from '../components/DayStatsModal';
-import DeliModal from '../components/DeliModal';
 import EventModal from '../components/EventModal';
-import GameHUD from '../components/GameHUD';
-import InventoryModal from '../components/InventoryModal';
-import LocationModal, { Location } from '../components/LocationModal';
-import MarketList from '../components/MarketList';
-import PixelBorder from '../components/PixelBorder';
-import PressableButton from '../components/PressableButton';
-import SchoolsOutModal from '../components/SchoolsOutModal';
-import SleepConfirmModal from '../components/SleepConfirmModal';
-import StashMoneyModal from '../components/StashMoneyModal';
-import TextWithEmojis from '../components/TextWithEmojis';
-import TransactionModal from '../components/TransactionModal';
+import { Location } from '../components/LocationModal';
+import MarketContent from '../components/MarketContent';
+import MarketWithCopilot from '../components/MarketWithCopilot';
 import { Candy } from '../types';
 
-const CopilotView = walkthroughable(View);
-const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
+// Lazy load modals that are shown less frequently
+const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
+const SchoolsOutModal = lazy(() => import('../components/SchoolsOutModal'));
+const SleepConfirmModal = lazy(() => import('../components/SleepConfirmModal'));
+const StashMoneyModal = lazy(() => import('../components/StashMoneyModal'));
+const TransactionModal = lazy(() => import('../components/TransactionModal'));
+const InventoryModal = lazy(() => import('../components/InventoryModal'));
+const LocationModal = lazy(() => import('../components/LocationModal'));
 
 type PriceBreakdown = {
   basePrice: number;
@@ -133,32 +125,13 @@ function Market(props) {
     setLastActiveView('market');
   }, [setLastActiveView]);
 
-  // Handle returning from lunch minigame separately
-  // When user returns from minigame (hasPlayedLunchMinigame = true), hide lunch view
+  // Reset lunch minigames flag when period advances past 4
   useEffect(() => {
-    if (hasPlayedLunchMinigame) {
-      console.log('🎮 Lunch minigame completed, ensuring lunch view is hidden');
+    if (period !== 4 && showLunchMinigames) {
+      console.log('🍽️ Period advanced past 4, hiding lunch minigames');
       setShowLunchMinigames(false);
     }
-  }, [hasPlayedLunchMinigame]);
-
-  // Also hide lunch minigames when screen is focused and minigame was already played
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log(
-        '🎮 Market focused - hasPlayedLunchMinigame:',
-        hasPlayedLunchMinigame,
-        'showLunchMinigames:',
-        showLunchMinigames
-      );
-      if (hasPlayedLunchMinigame) {
-        console.log(
-          '🎮 Returning to market after lunch minigame, hiding lunch view'
-        );
-        setShowLunchMinigames(false);
-      }
-    }, [hasPlayedLunchMinigame, showLunchMinigames])
-  );
+  }, [period, showLunchMinigames]);
   const {
     inventory,
     addToInventory,
@@ -371,7 +344,7 @@ function Market(props) {
   // Show location modal after event modal is dismissed
   useEffect(() => {
     if (pendingLocationModal && !hasActiveEvent) {
-      console.log('Market - Event dismissed, showing pending location modal');
+      console.log('Market - Event dismissed, showing location modal');
       // Small delay to ensure event modal is fully dismissed
       setTimeout(() => {
         setLocationModalVisible(true);
@@ -413,40 +386,32 @@ function Market(props) {
       return;
     }
 
-    // Check for current event at current location
-    // Events without a location field trigger at any location
+    // Check for current event
+    // Universal events (isUniversal=true) trigger at any location
+    // Location-based events (isUniversal=false) require matching location
     // Note: periodCount is 0-indexed (0-39), but event periods are 1-indexed (1-40)
     const currentEvent = gameData.periodEvents.find(
       (e) =>
         e.period === periodCount + 1 &&
-        (!e.location || e.location === currentLocation)
+        (e.isUniversal || e.location === currentLocation)
     );
 
-    // Check if there's an upcoming event at current location
-    // Events without a location field can show hints at any location
+    // Check for upcoming events in next period (for hints)
+    // Always show hints for all upcoming events (Option 3: Hybrid)
     // Note: periodCount is 0-indexed, event periods are 1-indexed, so +2 for next period
-    const nextPeriodEvent = gameData.periodEvents.find(
-      (e) =>
-        e.period === periodCount + 2 &&
-        (!e.location || e.location === currentLocation)
+    const nextPeriodEvents = gameData.periodEvents.filter(
+      (e) => e.period === periodCount + 2
     );
 
     let periodOfTheDay = (periodCount % 8) + 1;
     if (periodOfTheDay === 0) {
       setEvent('NEW_DAY');
-    } else if (currentEvent && currentEvent.description) {
-      // Show the current event description
-      if (currentEvent.effect === 'PRICE_SPIKE') {
-        setEvent('PRICE_SPIKE');
-      } else if (currentEvent.effect === 'PRICE_DROP') {
-        setEvent('PRICE_DROP');
-      } else if (currentEvent.effect === 'FOUND_MONEY') {
-        setEvent('FOUND_MONEY');
-      } else if (currentEvent.effect === 'LOSE_MONEY') {
-        setEvent('LOSE_MONEY');
-      } else if (currentEvent.effect === 'STASH_LOCKED') {
-        setEvent('STASH_LOCKED');
-      }
+    } else if (currentEvent) {
+      // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
+      // Minor events: PRICE_SPIKE, PRICE_DROP - show flavor text only
+
+      // Set event type for tracking
+      setEvent(currentEvent.effect);
 
       // Only trigger event if we haven't already triggered it for this period
       // This prevents duplicate event triggers when other dependencies change
@@ -455,22 +420,32 @@ function Market(props) {
       );
       if (lastEventPeriodRef.current !== periodCount) {
         lastEventPeriodRef.current = periodCount;
-        console.log(
-          '🎯 EVENT: Triggering event modal for period',
-          periodOfTheDay,
-          ':',
-          currentEvent.title
-        );
-        handleEvent(currentEvent);
 
-        // Also show the event's specific description
-        setTimeout(() => setFlavorText(currentEvent.description || ''), 100);
+        // Minor events (PRICE_SPIKE, PRICE_DROP): Show flavor text only, no modal
+        if (currentEvent.effect === 'PRICE_SPIKE' || currentEvent.effect === 'PRICE_DROP') {
+          console.log(
+            '🎯 MINOR EVENT: Showing flavor text only (no modal):',
+            currentEvent.flavorText
+          );
+          setFlavorText(currentEvent.flavorText || '');
+        }
+        // Major events (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED): Show modal
+        else {
+          console.log(
+            '🎯 MAJOR EVENT: Triggering event modal for period',
+            periodOfTheDay,
+            ':',
+            currentEvent.title
+          );
+          handleEvent(currentEvent);
+        }
       } else {
         console.log(
           `⏭️ Event already triggered for period ${periodCount}, skipping`
         );
       }
-    } else if (nextPeriodEvent && nextPeriodEvent.hint) {
+    } else if (nextPeriodEvents.length > 0) {
+      // Show hints for all upcoming events in next period
       // Only check hint once per period to avoid re-rolling on tab switches
       if (lastHintPeriodRef.current !== periodCount) {
         lastHintPeriodRef.current = periodCount;
@@ -488,13 +463,14 @@ function Market(props) {
         );
 
         console.log(
-          `💡 Hint check - baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}, hint: "${nextPeriodEvent.hint}"`
+          `💡 Hint check - ${nextPeriodEvents.length} events next period, baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}`
         );
 
         if (Math.random() < effectiveHintChance) {
-          // Use the actual hint from the event template
-          console.log(`💡 Showing hint: "${nextPeriodEvent.hint}"`);
-          setHint(nextPeriodEvent.hint);
+          // Show all hints from upcoming events (multiple hints possible)
+          const allHints = nextPeriodEvents.map(e => e.hint).filter(h => h).join('\n\n');
+          console.log(`💡 Showing hints for ${nextPeriodEvents.length} events:\n${allHints}`);
+          setHint(allHints);
         } else {
           console.log(`💡 Random check failed, showing flavor text instead`);
 
@@ -509,17 +485,6 @@ function Market(props) {
             setEvent('PERIOD_CHANGE');
           }
         }
-      }
-    } else if (nextPeriodEvent) {
-      // If there's an event but no hint defined, show regular flavor text
-      if (periodOfTheDay <= 2) {
-        setEvent('MORNING_TRADE');
-      } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
-        setEvent('LUNCH_RUSH');
-      } else if (periodOfTheDay >= 7) {
-        setEvent('FINAL_PERIOD');
-      } else {
-        setEvent('PERIOD_CHANGE');
       }
     } else {
       // Period-specific flavor text based on time of day
@@ -652,13 +617,20 @@ function Market(props) {
 
       // Calculate hall pass effect for price breakdown (only for selling)
       const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
-      let hallPassEffect: { bonusPercent: number; bonusAmount: number } | undefined;
+      let hallPassEffect:
+        | { bonusPercent: number; bonusAmount: number }
+        | undefined;
 
-      if (hallPassSaleBonusPercent > 0 && inventoryItem && inventoryItem.quantity > 0) {
+      if (
+        hallPassSaleBonusPercent > 0 &&
+        inventoryItem &&
+        inventoryItem.quantity > 0
+      ) {
         // Calculate profit and hall pass bonus for 1 unit
         const purchasePrice = inventoryItem.price || finalCost;
         const profitPerUnit = Math.max(0, finalCost - purchasePrice);
-        const hallPassBonusPerUnit = profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100); // 5x multiplier
+        const hallPassBonusPerUnit =
+          profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100); // 5x multiplier
 
         hallPassEffect = {
           bonusPercent: hallPassSaleBonusPercent * 5,
@@ -693,7 +665,6 @@ function Market(props) {
     jokerCount,
     activeEffects,
     inventoryLimit,
-    jokers,
     jokerServiceComputed,
     totalCandiesSold,
     hallPassModifiers,
@@ -721,7 +692,6 @@ function Market(props) {
   >([]);
   const [schoolsOutModalVisible, setSchoolsOutModalVisible] = useState(false);
   const [stashMoneyModalVisible, setStashMoneyModalVisible] = useState(false);
-  const [deliModalVisible, setDeliModalVisible] = useState(false);
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -742,6 +712,7 @@ function Market(props) {
   const [isEarlyEndDay, setIsEarlyEndDay] = useState(false);
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
   const [showLunchMinigames, setShowLunchMinigames] = useState(false);
+  const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -749,12 +720,12 @@ function Market(props) {
     setModalMode('buy'); // default to buy, but modal will let user pick
   }, []);
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setIsTransactionModalOpening(false);
     setSelectedCandyIndex(null);
-  };
+  }, []);
 
-  const handleTransaction = (quantity: number, mode: 'buy' | 'sell') => {
+  const handleTransaction = useCallback((quantity: number, mode: 'buy' | 'sell') => {
     if (selectedCandyIndex === null) return;
     const selectedCandy = candies[selectedCandyIndex];
     const isFirstBuy =
@@ -984,11 +955,15 @@ function Market(props) {
             const purchasedDay = Math.floor(purchasedAtPeriod / 8);
 
             // If purchased on a different day, reset to start of current day
-            const effectivePurchasedPeriod = currentDay === purchasedDay
-              ? purchasedAtPeriod
-              : Math.floor(periodCount / 8) * 8; // Start of current day
+            const effectivePurchasedPeriod =
+              currentDay === purchasedDay
+                ? purchasedAtPeriod
+                : Math.floor(periodCount / 8) * 8; // Start of current day
 
-            const periodsHeld = Math.max(0, periodCount - effectivePurchasedPeriod);
+            const periodsHeld = Math.max(
+              0,
+              periodCount - effectivePurchasedPeriod
+            );
             const slowCookerMultiplier = Math.pow(1.05, periodsHeld); // Compound 5% per period
             multiplier *= slowCookerMultiplier;
             bonusDetails.push({
@@ -1010,7 +985,8 @@ function Market(props) {
           const totalProfit = profitPerUnit * quantity;
 
           // Use pre-computed hall pass modifiers (set once at game start)
-          const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
+          const hallPassSaleBonusPercent =
+            hallPassModifiers.salePriceBonusPercent;
           const hallPassProfitBonus =
             hallPassSaleBonusPercent > 0
               ? totalProfit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
@@ -1023,7 +999,9 @@ function Market(props) {
               multiplier: 1,
               flatBonus: hallPassProfitBonus,
             });
-            console.log(`🎖️ Hall Pass bonus: +$${hallPassProfitBonus.toFixed(2)} (${hallPassSaleBonusPercent}% × 5x on $${totalProfit.toFixed(2)} profit)`);
+            console.log(
+              `🎖️ Hall Pass bonus: +$${hallPassProfitBonus.toFixed(2)} (${hallPassSaleBonusPercent}% × 5x on $${totalProfit.toFixed(2)} profit)`
+            );
           }
 
           // === CALCULATE FINAL GAIN ===
@@ -1069,9 +1047,9 @@ function Market(props) {
     );
 
     closeModal();
-  };
+  }, [selectedCandyIndex, candies, balance, day, getTotalInventoryCount, jokers, periodCount, getInventoryLimit, addToInventory, spend, addSpent, resetSales, inventory, recordSale, recordDroughtSale, addSale, jokerService, activeEffects, clearActiveEffect, hallPassModifiers, add, addProfit, addCandySold, recordDailyStatsSale, removeFromInventory, closeModal]);
 
-  const handleNextDay = () => {
+  const handleNextDay = useCallback(() => {
     console.log(
       '🔵 handleNextDay called - period:',
       period,
@@ -1095,6 +1073,10 @@ function Market(props) {
       );
       setDayStatsModalVisible(true);
       console.log('🔵 setDayStatsModalVisible(true) called');
+    } else if (period === 4 && !showLunchMinigames) {
+      // Period 4 - Show lunch confirmation modal
+      console.log('🍽️ Period 4 - Showing lunch confirmation modal');
+      setLunchConfirmVisible(true);
     } else {
       // Check if there's an active event
       if (hasActiveEvent) {
@@ -1117,7 +1099,7 @@ function Market(props) {
         }, 100);
       }
     }
-  };
+  }, [period, day, hasActiveEvent, dayStatsModalVisible, showLunchMinigames]);
 
   const dispatch = useAppDispatch();
 
@@ -1177,6 +1159,12 @@ function Market(props) {
           });
         }
 
+        // Reset lunch minigames flag when advancing from period 4
+        if (showLunchMinigames) {
+          console.log('🍽️ Advancing from lunch, hiding minigame view');
+          setShowLunchMinigames(false);
+        }
+
         // Call incrementPeriod and update flavor text
         incrementPeriod(location);
         setEvent('PERIOD_CHANGE');
@@ -1187,20 +1175,32 @@ function Market(props) {
         }, 625);
       });
     },
-    [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory]
+    [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory, periodCount, showLunchMinigames]
   );
 
-  const handleEndDay = () => {
+  const handleLunchConfirm = useCallback(() => {
+    console.log('🍽️ Lunch confirmed - showing minigame selection');
+    setLunchConfirmVisible(false);
+    setShowLunchMinigames(true);
+  }, []);
+
+  const handleEndDay = useCallback(() => {
     console.log('🏠 End Day button pressed');
     setEndDayConfirmVisible(true);
-  };
+  }, []);
 
-  const handleEndDayConfirm = () => {
+  const handleEndDayConfirm = useCallback(() => {
     console.log('🏠 End Day confirmed');
     // Trigger success haptic feedback when ending day
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     setEndDayConfirmVisible(false);
+
+    // If we're on day 5 or completed all 40 periods, game will end after day stats
+    if (day >= 5 || periodCount >= 40) {
+      console.log('🎮 Day 5 or all periods complete - will end game after showing day stats');
+      console.log('🎮 Day:', day, 'PeriodCount:', periodCount);
+    }
 
     // Check for Perfect Bake joker bonus (empty inventory at end of day)
     const bonuses: Array<{
@@ -1247,13 +1247,6 @@ function Market(props) {
 
     setDayStatsBonuses(bonuses);
 
-    // If it's day 5, go directly to game end screen
-    if (day === 5) {
-      console.log('🎮 Day 5 detected - navigating to game end screen');
-      router.push('/game-end');
-      return;
-    }
-
     // Don't advance periods - just show day stats to simulate end of day
     console.log('🏠 Ending day early - showing day stats modal');
 
@@ -1263,7 +1256,6 @@ function Market(props) {
       setLocationModalVisible(false);
       setSchoolsOutModalVisible(false);
       setStashMoneyModalVisible(false);
-      setDeliModalVisible(false);
       setSleepConfirmModalVisible(false);
 
       // Then show day stats modal (this simulates end of day)
@@ -1277,30 +1269,38 @@ function Market(props) {
         console.log('🏠 setDayStatsModalVisible(true) called via End Day');
       }, 100);
     }, 200);
-  };
+  }, [day, periodCount, balance, jokers, getTotalInventoryCount, add, dayStatsModalVisible]);
 
-  const handleEndDayCancel = () => {
+  const handleEndDayCancel = useCallback(() => {
     setEndDayConfirmVisible(false);
-  };
+  }, []);
 
   // Day stats modal handlers
-  const handleDayStatsClose = () => {
-    console.log('📊 Day stats modal closing - continuing to after school');
+  const handleDayStatsClose = useCallback(() => {
+    console.log('📊 Day stats modal closing - checking if game should end');
     setDayStatsModalVisible(false);
 
-    // Show schools out modal first
+    // If we're on day 5 or have completed all 40 periods, end the game
+    if (day >= 5 || periodCount >= 40) {
+      console.log('🎮 Day 5 complete or all periods done - navigating to game end screen');
+      console.log('🎮 Day:', day, 'PeriodCount:', periodCount);
+      router.push('/game-end');
+      return;
+    }
+
+    // Show schools out modal first (only for days 1-4)
     console.log('📊 Showing schools out modal');
     setSchoolsOutModalVisible(true);
-  };
+  }, [periodCount, day]);
 
-  const handleDayStatsCancel = () => {
+  const handleDayStatsCancel = useCallback(() => {
     console.log('📊 Day stats modal cancelled - staying at school');
     setDayStatsModalVisible(false);
     // Don't show any other modals, just return to market
-  };
+  }, []);
 
   // Schools out modal handler
-  const handleSchoolsOutComplete = () => {
+  const handleSchoolsOutComplete = useCallback(() => {
     console.log('🏫 Schools out modal complete');
     setSchoolsOutModalVisible(false);
 
@@ -1308,9 +1308,9 @@ function Market(props) {
     console.log('🏫 Navigating to after school');
     startAfterSchool();
     router.replace('/(tabs)/after-school');
-  };
+  }, [startAfterSchool]);
 
-  const handleSleepConfirm = () => {
+  const handleSleepConfirm = useCallback(() => {
     setSleepConfirmModalVisible(false);
 
     // Show loading prices immediately
@@ -1322,21 +1322,16 @@ function Market(props) {
     setTimeout(() => {
       setLocalPricesUpdating(false);
     }, 1500);
-  };
+  }, [incrementPeriod]);
 
-  const handleSleepCancel = () => {
+  const handleSleepCancel = useCallback(() => {
     // Cancel sleep confirmation
     setSleepConfirmModalVisible(false);
-  };
+  }, []);
 
-  const handleMoneyStashed = () => {
+  const handleMoneyStashed = useCallback(() => {
     setStashMoneyModalVisible(false);
-  };
-
-  // Handle returning from deli
-  const handleDeliReturn = () => {
-    setDeliModalVisible(false);
-  };
+  }, []);
 
   const selectedCandy =
     selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
@@ -1359,571 +1354,95 @@ function Market(props) {
   // Check if current period is lunch (period 5, which is index 4 in 0-indexed system)
   const isLunchPeriod = period === 5;
 
-  const handleLunchBack = () => {
+  const handleLunchBack = useCallback(() => {
     console.log('🍔 handleLunchBack called');
     setShowLunchMinigames(false);
-  };
+  }, []);
 
   // Check if we should show copilot tutorial wrappers
   const showCopilotWrappers = day === 1 && periodCount === 0;
 
+  // Common props for both market components
+  const marketProps = {
+    candies,
+    localPricesUpdating,
+    isFocused,
+    isLunchPeriod,
+    showLunchMinigames,
+    hasPlayedLunchMinigame,
+    isTransactionModalOpening,
+    selectedCandyIndex,
+    period,
+    day,
+    onCandyPress: openModal,
+    onLunchBack: handleLunchBack,
+    onInventoryPress: () => setInventoryModalVisible(true),
+    onNextPeriod: handleNextDay,
+    onEndDay: handleEndDay,
+  };
+
   return (
     <View style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/images/school.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <View style={styles.contentContainer}>
-          {showCopilotWrappers ? (
-            <CopilotStep
-              text={`Welcome to Candy Wars! Here is your HUD:
-• You can see your cash on hand
-• Savings in your piggy bank
-• Current inventory count`}
-              order={1}
-              name="market_hud"
-            >
-              <CopilotView>
-                <GameHUD
-                  isModalOpening={isTransactionModalOpening}
-                  isModalOpen={selectedCandyIndex !== null}
-                  onInventoryPress={() => setInventoryModalVisible(true)}
-                  flavorTextWrapper={(children) => (
-                    <CopilotStep
-                      text={`Keep an eye on the rumor mill, it can:
-• Hint at the next special event
-• Provide useful tips
-`}
-                      order={2}
-                      name="market_rumor_mill"
-                    >
-                      <CopilotView>{children}</CopilotView>
-                    </CopilotStep>
-                  )}
-                />
-              </CopilotView>
-            </CopilotStep>
-          ) : (
-            <GameHUD
-              isModalOpening={isTransactionModalOpening}
-              isModalOpen={selectedCandyIndex !== null}
-              onInventoryPress={() => setInventoryModalVisible(true)}
-            />
-          )}
-
-          {showCopilotWrappers ? (
-            <CopilotStep
-              // text={`Here's the candy market!
-              // • Tap on any candy to buy or sell it
-              // • Prices change every period!`}
-              text={`Heres the current candy market:
-• Click on a candy to buy or sell
-• Candy prices change every period
-`}
-              order={3}
-              name="market_list"
-            >
-              <CopilotView style={[styles.listContainer]}>
-                <MarketList
-                  candies={candies}
-                  localPricesUpdating={localPricesUpdating}
-                  isFocused={isFocused}
-                  isLunchPeriod={isLunchPeriod}
-                  showLunchMinigames={showLunchMinigames}
-                  hasPlayedLunchMinigame={hasPlayedLunchMinigame}
-                  onCandyPress={openModal}
-                  onLunchBack={handleLunchBack}
-                />
-              </CopilotView>
-            </CopilotStep>
-          ) : (
-            <View style={styles.listContainer}>
-              <MarketList
-                candies={candies}
-                localPricesUpdating={localPricesUpdating}
-                isFocused={isFocused}
-                isLunchPeriod={isLunchPeriod}
-                showLunchMinigames={showLunchMinigames}
-                hasPlayedLunchMinigame={hasPlayedLunchMinigame}
-                onCandyPress={openModal}
-                onLunchBack={handleLunchBack}
-              />
-            </View>
-          )}
-
-          {showCopilotWrappers ? (
-            <CopilotStep
-              text="Use these buttons to advance periods or end the day to skip straight to after school!"
-              order={4}
-              name="market_buttons"
-            >
-              <CopilotView>
-                <View style={styles.buttonContainer}>
-                  {isLunchPeriod && !hasPlayedLunchMinigame ? (
-                    // Lunch period before playing minigame: Show play minigames button and end day
-                    <View style={styles.buttonRow}>
-                      <PixelBorder
-                        borderColor="rgba(250,204,21,1)"
-                        borderWidth={3}
-                        backgroundColor="rgba(253,224,71,1)"
-                        innerPadding={0}
-                        style={styles.bigButton}
-                      >
-                        <TouchableOpacity
-                          style={styles.pixelButtonInner}
-                          onPress={() => setShowLunchMinigames(true)}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.lunchButtonText}>
-                            🎮 Play Minigames
-                          </Text>
-                          <Text style={styles.lunchSubtext}>
-                            Earn a joker during lunch!
-                          </Text>
-                        </TouchableOpacity>
-                      </PixelBorder>
-
-                      <PixelBorder
-                        borderColor="rgba(185,28,28,1)"
-                        borderWidth={3}
-                        backgroundColor="rgba(239,68,68,1)"
-                        innerPadding={0}
-                        style={styles.smallButton}
-                      >
-                        <TouchableOpacity
-                          style={styles.pixelButtonInner}
-                          onPress={handleEndDay}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.endDayButtonText}>
-                            {day === 5 ? 'Game End' : 'End Day'}
-                          </Text>
-                          <Text style={styles.endDaySubtext}>
-                            {day === 5
-                              ? 'Finish the game'
-                              : 'Skip to after school'}
-                          </Text>
-                        </TouchableOpacity>
-                      </PixelBorder>
-                    </View>
-                  ) : isLunchPeriod &&
-                    !hasPlayedLunchMinigame &&
-                    showLunchMinigames ? (
-                    // In StudySubjectSelector: Show Leave Lunch button and end day (only if not played yet)
-                    <View style={styles.buttonRow}>
-                      <PixelBorder
-                        borderColor="rgba(250,204,21,1)"
-                        borderWidth={3}
-                        backgroundColor="rgba(253,224,71,1)"
-                        innerPadding={0}
-                        style={styles.bigButton}
-                      >
-                        <TouchableOpacity
-                          style={styles.pixelButtonInner}
-                          onPress={handleLunchBack}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.lunchButtonText}>
-                            🚪 Leave Lunch
-                          </Text>
-                          <Text style={styles.lunchSubtext}>
-                            Back to market
-                          </Text>
-                        </TouchableOpacity>
-                      </PixelBorder>
-
-                      <PixelBorder
-                        borderColor="rgba(185,28,28,1)"
-                        borderWidth={3}
-                        backgroundColor="rgba(239,68,68,1)"
-                        innerPadding={0}
-                        style={styles.smallButton}
-                      >
-                        <TouchableOpacity
-                          style={styles.pixelButtonInner}
-                          onPress={handleEndDay}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.endDayButtonText}>
-                            {day === 5 ? 'Game End' : 'End Day'}
-                          </Text>
-                          <Text style={styles.endDaySubtext}>
-                            {day === 5
-                              ? 'Finish the game'
-                              : 'Skip to after school'}
-                          </Text>
-                        </TouchableOpacity>
-                      </PixelBorder>
-                    </View>
-                  ) : period === 8 && day === 5 ? (
-                    // Period 8 on Day 5: Show end game button
-                    <PixelBorder
-                      borderColor="rgba(101,181,101,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(151,221,151,1)"
-                      innerPadding={0}
-                    >
-                      <TouchableOpacity
-                        style={styles.pixelButtonInner}
-                        onPress={() => {
-                          Haptics.notificationAsync(
-                            Haptics.NotificationFeedbackType.Success
-                          );
-                          router.push('/game-end');
-                        }}
-                        activeOpacity={0.8}
-                      >
-                        <TextWithEmojis
-                          style={styles.nextPeriodButtonText}
-                          imageSize={28}
-                        >
-                          🏆 End Game
-                        </TextWithEmojis>
-                        <TextWithEmojis style={styles.nextPeriodSubtext}>
-                          See your final results!
-                        </TextWithEmojis>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  ) : period === 8 ? (
-                    // Period 8 on other days: Show leave school button
-                    <PressableButton
-                      onPress={handleNextDay}
-                      shadowColor="rgba(123,169,101,1)"
-                      shadowOffset={{ width: 0, height: 4 }}
-                      shadowOpacity={0.5}
-                      shadowRadius={5}
-                      elevation={8}
-                    >
-                      <PixelBorder
-                        borderColor="rgba(123,169,101,1)"
-                        borderWidth={3}
-                        backgroundColor="rgba(154,193,118,1)"
-                        innerPadding={0}
-                      >
-                        <View style={styles.pixelButtonInner}>
-                          <Text style={styles.nextPeriodButtonText}>
-                            Leave School for the Day
-                          </Text>
-                          <Text style={styles.nextPeriodSubtext}>
-                            Time to head home!
-                          </Text>
-                        </View>
-                      </PixelBorder>
-                    </PressableButton>
-                  ) : (
-                    // Periods 1-7: Show both next period and end day buttons
-                    <View style={styles.buttonRow}>
-                      <PressableButton
-                        onPress={handleNextDay}
-                        shadowColor="rgba(123,169,101,1)"
-                        shadowOffset={{ width: 0, height: 4 }}
-                        shadowOpacity={0.5}
-                        shadowRadius={5}
-                        elevation={8}
-                        style={styles.bigButton}
-                      >
-                        <PixelBorder
-                          borderColor="rgba(123,169,101,1)"
-                          borderWidth={3}
-                          backgroundColor="rgba(154,193,118,1)"
-                          innerPadding={0}
-                        >
-                          <View style={styles.pixelButtonInner}>
-                            <Text style={styles.nextPeriodButtonText}>
-                              Next Period
-                            </Text>
-                            <Text style={styles.nextPeriodSubtext}>
-                              Going to period {period + 1}
-                            </Text>
-                          </View>
-                        </PixelBorder>
-                      </PressableButton>
-
-                      <PressableButton
-                        onPress={handleEndDay}
-                        shadowColor="rgba(185,28,28,1)"
-                        shadowOffset={{ width: 0, height: 4 }}
-                        shadowOpacity={0.5}
-                        shadowRadius={5}
-                        elevation={8}
-                        style={styles.smallButton}
-                      >
-                        <PixelBorder
-                          borderColor="rgba(185,28,28,1)"
-                          borderWidth={3}
-                          backgroundColor="rgba(239,68,68,1)"
-                          innerPadding={0}
-                        >
-                          <View style={styles.pixelButtonInner}>
-                            <Text style={styles.endDayButtonText}>
-                              {day === 5 ? 'Game End' : 'End Day'}
-                            </Text>
-                            <Text style={styles.endDaySubtext}>
-                              {day === 5
-                                ? 'Finish the game'
-                                : 'Skip to after school'}
-                            </Text>
-                          </View>
-                        </PixelBorder>
-                      </PressableButton>
-                    </View>
-                  )}
-                </View>
-              </CopilotView>
-            </CopilotStep>
-          ) : (
-            <View style={styles.buttonContainer}>
-              {isLunchPeriod && !hasPlayedLunchMinigame ? (
-                // Lunch period before playing minigame: Show play minigames button and end day
-                <View style={styles.buttonRow}>
-                  <PixelBorder
-                    borderColor="rgba(250,204,21,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(253,224,71,1)"
-                    innerPadding={0}
-                    style={styles.bigButton}
-                  >
-                    <TouchableOpacity
-                      style={styles.pixelButtonInner}
-                      onPress={() => setShowLunchMinigames(true)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.lunchButtonText}>
-                        🎮 Play Minigames
-                      </Text>
-                      <Text style={styles.lunchSubtext}>
-                        Earn a joker during lunch!
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
-
-                  <PixelBorder
-                    borderColor="rgba(185,28,28,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(239,68,68,1)"
-                    innerPadding={0}
-                    style={styles.smallButton}
-                  >
-                    <TouchableOpacity
-                      style={styles.pixelButtonInner}
-                      onPress={handleEndDay}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.endDayButtonText}>
-                        {day === 5 ? 'Game End' : 'End Day'}
-                      </Text>
-                      <Text style={styles.endDaySubtext}>
-                        {day === 5 ? 'Finish the game' : 'Skip to after school'}
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
-                </View>
-              ) : isLunchPeriod &&
-                !hasPlayedLunchMinigame &&
-                showLunchMinigames ? (
-                // In StudySubjectSelector: Show Leave Lunch button and end day (only if not played yet)
-                <View style={styles.buttonRow}>
-                  <PixelBorder
-                    borderColor="rgba(250,204,21,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(253,224,71,1)"
-                    innerPadding={0}
-                    style={styles.bigButton}
-                  >
-                    <TouchableOpacity
-                      style={styles.pixelButtonInner}
-                      onPress={handleLunchBack}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.lunchButtonText}>🚪 Leave Lunch</Text>
-                      <Text style={styles.lunchSubtext}>Back to market</Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
-
-                  <PixelBorder
-                    borderColor="rgba(185,28,28,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(239,68,68,1)"
-                    innerPadding={0}
-                    style={styles.smallButton}
-                  >
-                    <TouchableOpacity
-                      style={styles.pixelButtonInner}
-                      onPress={handleEndDay}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.endDayButtonText}>
-                        {day === 5 ? 'Game End' : 'End Day'}
-                      </Text>
-                      <Text style={styles.endDaySubtext}>
-                        {day === 5 ? 'Finish the game' : 'Skip to after school'}
-                      </Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
-                </View>
-              ) : period === 8 && day === 5 ? (
-                // Period 8 on Day 5: Show end game button
-                <PixelBorder
-                  borderColor="rgba(101,181,101,1)"
-                  borderWidth={3}
-                  backgroundColor="rgba(151,221,151,1)"
-                  innerPadding={0}
-                >
-                  <TouchableOpacity
-                    style={styles.pixelButtonInner}
-                    onPress={() => {
-                      Haptics.notificationAsync(
-                        Haptics.NotificationFeedbackType.Success
-                      );
-                      router.push('/game-end');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <TextWithEmojis
-                      style={styles.nextPeriodButtonText}
-                      imageSize={28}
-                    >
-                      🏆 End Game
-                    </TextWithEmojis>
-                    <TextWithEmojis style={styles.nextPeriodSubtext}>
-                      See your final results!
-                    </TextWithEmojis>
-                  </TouchableOpacity>
-                </PixelBorder>
-              ) : period === 8 ? (
-                // Period 8 on other days: Show leave school button
-                <PressableButton
-                  onPress={handleNextDay}
-                  shadowColor="rgba(123,169,101,1)"
-                  shadowOffset={{ width: 0, height: 4 }}
-                  shadowOpacity={0.5}
-                  shadowRadius={5}
-                  elevation={8}
-                >
-                  <PixelBorder
-                    borderColor="rgba(123,169,101,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(154,193,118,1)"
-                    innerPadding={0}
-                  >
-                    <View style={styles.pixelButtonInner}>
-                      <Text style={styles.nextPeriodButtonText}>
-                        Leave School for the Day
-                      </Text>
-                      <Text style={styles.nextPeriodSubtext}>
-                        Time to head home!
-                      </Text>
-                    </View>
-                  </PixelBorder>
-                </PressableButton>
-              ) : (
-                // Periods 1-7: Show both next period and end day buttons
-                <View style={styles.buttonRow}>
-                  <PressableButton
-                    onPress={handleNextDay}
-                    shadowColor="rgba(123,169,101,1)"
-                    shadowOffset={{ width: 0, height: 4 }}
-                    shadowOpacity={0.5}
-                    shadowRadius={5}
-                    elevation={8}
-                    style={styles.bigButton}
-                  >
-                    <PixelBorder
-                      borderColor="rgba(123,169,101,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(154,193,118,1)"
-                      innerPadding={0}
-                    >
-                      <View style={styles.pixelButtonInner}>
-                        <Text style={styles.nextPeriodButtonText}>
-                          Next Period
-                        </Text>
-                        <Text style={styles.nextPeriodSubtext}>
-                          Going to period {period + 1}
-                        </Text>
-                      </View>
-                    </PixelBorder>
-                  </PressableButton>
-
-                  <PressableButton
-                    onPress={handleEndDay}
-                    shadowColor="rgba(185,28,28,1)"
-                    shadowOffset={{ width: 0, height: 4 }}
-                    shadowOpacity={0.5}
-                    shadowRadius={5}
-                    elevation={8}
-                    style={styles.smallButton}
-                  >
-                    <PixelBorder
-                      borderColor="rgba(185,28,28,1)"
-                      borderWidth={3}
-                      backgroundColor="rgba(239,68,68,1)"
-                      innerPadding={0}
-                    >
-                      <View style={styles.pixelButtonInner}>
-                        <Text style={styles.endDayButtonText}>
-                          {day === 5 ? 'Game End' : 'End Day'}
-                        </Text>
-                        <Text style={styles.endDaySubtext}>
-                          {day === 5 ? 'Finish the game' : 'Skip to after school'}
-                        </Text>
-                      </View>
-                    </PixelBorder>
-                  </PressableButton>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      </ImageBackground>
-
-      <LocationModal
-        visible={locationModalVisible}
-        onClose={() => {
-          setLocationModalVisible(false);
-        }}
-        onSelectLocation={handleLocationSelect}
-        gameData={gameData}
-      />
-
-      {dayStatsModalVisible && (
-        <DayStatsModal
-          visible={dayStatsModalVisible}
-          onClose={handleDayStatsClose}
-          onCancel={handleDayStatsCancel}
-          stats={
-            getTotalStats() || {
-              profit: 0,
-              spent: 0,
-              candiesSold: 0,
-              netGain: 0,
-            }
-          }
-          day={day}
-          bonuses={dayStatsBonuses}
-        />
+      {showCopilotWrappers ? (
+        <MarketWithCopilot {...marketProps} />
+      ) : (
+        <MarketContent {...marketProps} />
       )}
 
-      <SchoolsOutModal
-        visible={schoolsOutModalVisible}
-        onComplete={handleSchoolsOutComplete}
-      />
+      <Suspense fallback={null}>
+        <LocationModal
+          visible={locationModalVisible}
+          onClose={() => {
+            setLocationModalVisible(false);
+          }}
+          onSelectLocation={handleLocationSelect}
+          gameData={gameData}
+        />
+      </Suspense>
 
-      <StashMoneyModal
-        visible={stashMoneyModalVisible}
-        onClose={() => setStashMoneyModalVisible(false)}
-        onConfirm={handleMoneyStashed}
-      />
+      {dayStatsModalVisible && (
+        <Suspense fallback={null}>
+          <DayStatsModal
+            visible={dayStatsModalVisible}
+            onClose={handleDayStatsClose}
+            onCancel={handleDayStatsCancel}
+            stats={
+              getTotalStats() || {
+                profit: 0,
+                spent: 0,
+                candiesSold: 0,
+                netGain: 0,
+              }
+            }
+            day={day}
+            bonuses={dayStatsBonuses}
+          />
+        </Suspense>
+      )}
 
-      <DeliModal visible={deliModalVisible} onClose={handleDeliReturn} />
+      <Suspense fallback={null}>
+        <SchoolsOutModal
+          visible={schoolsOutModalVisible}
+          onComplete={handleSchoolsOutComplete}
+        />
+      </Suspense>
 
-      <SleepConfirmModal
-        visible={sleepConfirmModalVisible}
-        onConfirm={handleSleepConfirm}
-        onCancel={handleSleepCancel}
-        currentDay={day}
-      />
+      <Suspense fallback={null}>
+        <StashMoneyModal
+          visible={stashMoneyModalVisible}
+          onClose={() => setStashMoneyModalVisible(false)}
+          onConfirm={handleMoneyStashed}
+        />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <SleepConfirmModal
+          visible={sleepConfirmModalVisible}
+          onConfirm={handleSleepConfirm}
+          onCancel={handleSleepCancel}
+          currentDay={day}
+        />
+      </Suspense>
 
       <ConfirmationModal
         visible={confirmationModal.visible}
@@ -1937,6 +1456,19 @@ function Market(props) {
           setConfirmationModal((prev) => ({ ...prev, visible: false }))
         }
         theme={'market' as const}
+      />
+
+      <ConfirmationModal
+        visible={lunchConfirmVisible}
+        title="Time for Lunch!"
+        message="Ready to take a break and play a minigame?"
+        emoji="🍽️"
+        confirmText="Let's Go!"
+        cancelText="Not Yet"
+        onConfirm={handleLunchConfirm}
+        onCancel={() => setLunchConfirmVisible(false)}
+        theme="market"
+        dismissible={true}
       />
 
       <ConfirmationModal
@@ -1957,35 +1489,39 @@ function Market(props) {
       />
 
       {selectedCandy && (
-        <TransactionModal
-          visible={selectedCandyIndex !== null}
-          onClose={closeModal}
-          onConfirm={handleTransaction}
-          maxBuyQuantity={maxBuyQty}
-          maxSellQuantity={maxSellQty}
-          candy={selectedCandy}
-          priceBreakdown={selectedCandy?.priceBreakdown}
-          playerBalance={balance}
-          availableInventorySpace={availableInventorySpace}
-        />
+        <Suspense fallback={null}>
+          <TransactionModal
+            visible={selectedCandyIndex !== null}
+            onClose={closeModal}
+            onConfirm={handleTransaction}
+            maxBuyQuantity={maxBuyQty}
+            maxSellQuantity={maxSellQty}
+            candy={selectedCandy}
+            priceBreakdown={selectedCandy?.priceBreakdown}
+            playerBalance={balance}
+            availableInventorySpace={availableInventorySpace}
+          />
+        </Suspense>
       )}
 
       {/* Inventory Modal - only render when visible */}
       {inventoryModalVisible && (
-        <InventoryModal
-          visible={inventoryModalVisible}
-          onClose={() => {
-            console.log(
-              '🔴 Market onClose called, current state:',
-              inventoryModalVisible
-            );
-            setInventoryModalVisible(false);
-            console.log('🔴 Market onClose completed, should be false now');
-          }}
-          inventory={inventory}
-          totalCount={getTotalInventoryCount()}
-          capacity={getInventoryLimit()}
-        />
+        <Suspense fallback={null}>
+          <InventoryModal
+            visible={inventoryModalVisible}
+            onClose={() => {
+              console.log(
+                '🔴 Market onClose called, current state:',
+                inventoryModalVisible
+              );
+              setInventoryModalVisible(false);
+              console.log('🔴 Market onClose completed, should be false now');
+            }}
+            inventory={inventory}
+            totalCount={getTotalInventoryCount()}
+            capacity={getInventoryLimit()}
+          />
+        </Suspense>
       )}
 
       {/* EventModal for special events */}
@@ -2144,9 +1680,21 @@ const styles = StyleSheet.create({
   },
   pixelButtonInner: {
     paddingVertical: 6,
+
     paddingHorizontal: 12,
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  buttonIcon: {
+    width: 36,
+    height: 36,
+    resizeMode: 'contain',
+    marginRight: 8,
+  },
+  buttonTextRow: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   lunchButtonText: {
     fontSize: 18,

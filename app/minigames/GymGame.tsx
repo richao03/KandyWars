@@ -15,6 +15,7 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import Animated, { runOnJS } from 'react-native-reanimated';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -23,9 +24,8 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 interface Position {
   x: number;
@@ -486,30 +486,47 @@ export default function GymGame({ onComplete }: GymGameProps) {
             </View>
           </PixelBorder>
 
-          <PixelBorder
-            borderColor="#e74c3c"
-            borderWidth={3}
-            backgroundColor="#1a2332"
-            innerPadding={0}
-            style={{ marginBottom: 10 }}
+          <PressableButton
+            onPress={startGame}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginBottom: 16, width: '100%' }}
           >
-            <TouchableOpacity
-              style={styles.pixelButtonInner}
-              onPress={startGame}
+            <PixelBorder
+              borderColor="#e74c3c"
+              borderWidth={3}
+              backgroundColor="#1a2332"
+              innerPadding={0}
             >
-              <Text style={styles.startButtonText}>Start Sneaking!</Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              <View style={styles.pixelButtonInner}>
+                <Text style={styles.startButtonText}>Start Sneaking!</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
 
-          <TouchableOpacity
-            style={styles.backButton}
+          <PressableButton
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.backButton}
           >
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </View>
       </View>
     );
@@ -655,13 +672,19 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   backButton: {
-    paddingVertical: 10,
+    marginTop: 16,
+    width: '100%',
+  },
+  backButtonInner: {
+    paddingVertical: 12,
     paddingHorizontal: 30,
+    alignItems: 'center',
   },
   backButtonText: {
     fontSize: 18,
-    color: colors.red.error, // Gym red
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   contentContainer: {
     flex: 1,
@@ -728,8 +751,8 @@ const styles = StyleSheet.create({
     height: 24,
   },
   doorIcon: {
-    width: 12,
-    height: 12,
+    width: 24,
+    height: 24,
   },
   studentIcon: {
     width: 24,
@@ -820,7 +843,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
-    paddingVertical: 15,
+    paddingVertical: 18,
     paddingHorizontal: 40,
     alignItems: 'center',
     backgroundColor: 'transparent',

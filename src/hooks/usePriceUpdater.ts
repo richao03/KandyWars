@@ -67,10 +67,7 @@ export const usePriceUpdater = () => {
           const calculatedPrice = trueBasePrice * currentEvent.multiplier;
 
           // Apply caps based on event type
-          if (
-            currentEvent.effect === 'PRICE_SPIKE' ||
-            currentEvent.effect === 'PRICE_HIKE'
-          ) {
+          if (currentEvent.effect === 'PRICE_SPIKE') {
             finalCost = Math.min(calculatedPrice, 100);
           } else if (currentEvent.effect === 'PRICE_DROP') {
             finalCost = Math.max(calculatedPrice, 0.01);

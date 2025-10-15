@@ -29,7 +29,8 @@
       "Bash(do echo \"=== $gameGame.tsx ===\")",
       "Bash(tail:*)",
       "Bash(wc:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

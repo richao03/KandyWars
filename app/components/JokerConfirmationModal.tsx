@@ -2,10 +2,11 @@ import React from 'react';
 import {
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 
 interface JokerConfirmationModalProps {
@@ -52,24 +53,52 @@ export default function JokerConfirmationModal({
           {message}
         </TextWithEmojis>
 
-        <TouchableOpacity
-          style={styles.confirmButton}
+        <PressableButton
           onPress={onConfirm}
+          shadowColor="rgba(123,169,101,1)"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.5}
+          shadowRadius={5}
+          elevation={8}
+          style={styles.confirmButton}
         >
-          <Text style={styles.confirmButtonText}>
-            {confirmText}
-          </Text>
-        </TouchableOpacity>
+          <PixelBorder
+            borderColor="rgba(123,169,101,1)"
+            borderWidth={3}
+            backgroundColor="rgba(154,193,118,1)"
+            innerPadding={0}
+          >
+            <View style={styles.buttonInner}>
+              <Text style={styles.confirmButtonText}>
+                {confirmText}
+              </Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
 
         {cancelText && (
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <PressableButton
             onPress={onCancel}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.cancelButton}
           >
-            <Text style={styles.cancelButtonText}>
-              {cancelText}
-            </Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.buttonInner}>
+                <Text style={styles.cancelButtonText}>
+                  {cancelText}
+                </Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         )}
       </>
     </FastModal>
@@ -110,14 +139,15 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   confirmButton: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
+    marginVertical: 4,
+  },
+  cancelButton: {
+    marginVertical: 4,
+  },
+  buttonInner: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginVertical: 4,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3a3a3a',
   },
   confirmButtonText: {
     color: '#ffffff',
@@ -125,16 +155,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#dc2626',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginVertical: 4,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#b91c1c',
   },
   cancelButtonText: {
     color: '#ffffff',

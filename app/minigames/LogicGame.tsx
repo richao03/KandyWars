@@ -17,6 +17,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 import colors from '../../src/constants/colors';
 
@@ -383,27 +384,44 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             </View>
           </PixelBorder>
 
-          <PixelBorder
-            borderColor="#666"
-            borderWidth={3}
-            backgroundColor="#ff6ec7"
-            innerPadding={0}
-            style={{ marginBottom: 16 }}
+          <PressableButton
+            onPress={startGame}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginBottom: 16, width: '100%' }}
           >
-            <TouchableOpacity
-              style={styles.pixelButtonInner}
-              onPress={startGame}
+            <PixelBorder
+              borderColor="#666"
+              borderWidth={3}
+              backgroundColor="#ff6ec7"
+              innerPadding={0}
             >
-              <Text style={styles.startGameButtonText}>Start Challenge!</Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              <View style={styles.pixelButtonInner}>
+                <Text style={styles.startGameButtonText}>Start Challenge!</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
 
-          <TouchableOpacity
-            style={styles.pixelButtonInner}
+          <PressableButton
             onPress={handleForfeit}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.backButton}
           >
-            <Text style={styles.startGameButtonText}>Back</Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </View>
       </View>
     );
@@ -795,6 +813,21 @@ const styles = StyleSheet.create({
   candyOptionTextCompact: {
     fontSize: 20, // Smaller text for level 3 (16 candies)
   },
+  backButton: {
+    marginTop: 16,
+    width: '100%',
+  },
+  backButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
+  },
   submitButton: {
     backgroundColor: '#1890ff',
     paddingVertical: 12,
@@ -919,7 +952,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: colors.darkGray2,
   },
-  backButton: {
+  gameBackButton: {
     flex: 1,
     backgroundColor: '#f5222d',
     paddingVertical: 12,
@@ -928,7 +961,7 @@ const styles = StyleSheet.create({
     borderColor: '#a8071a',
     alignItems: 'center',
   },
-  backButtonText: {
+  gameBackButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.white,

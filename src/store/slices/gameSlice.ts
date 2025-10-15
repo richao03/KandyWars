@@ -7,7 +7,8 @@ export type Location =
   | 'library'
   | 'science lab'
   | 'school yard'
-  | 'bathroom';
+  | 'bathroom'
+  | 'music room';
 
 type LocationHistory = {
   period: number;
@@ -143,10 +144,11 @@ const gameSlice = createSlice({
       console.log('💾 New day started, period:', newPeriodCount, '- Auto-save triggered');
     },
     resetGame: (state) => {
-      // Preserve tutorial completion flags and totalCompletions across game resets
+      // Preserve tutorial completion flags, totalCompletions, and isInitialized across game resets
       const hasCompletedMarketTutorial = state.hasCompletedMarketTutorial;
       const hasCompletedAfterSchoolTutorial = state.hasCompletedAfterSchoolTutorial;
       const totalCompletions = state.totalCompletions;
+      const isInitialized = state.isInitialized; // Preserve so "Continue" button stays enabled
       const gameResetSignal = state.gameResetSignal + 1; // Increment to signal cleanup
       console.log(`🔄 Game reset signal: ${gameResetSignal} - This will trigger zombie cleanup`);
       return {
@@ -154,6 +156,23 @@ const gameSlice = createSlice({
         hasCompletedMarketTutorial,
         hasCompletedAfterSchoolTutorial,
         totalCompletions,
+        isInitialized,
+        gameResetSignal,
+      };
+    },
+    fullResetGame: (state) => {
+      // Full reset including isInitialized - used after completing a game
+      const hasCompletedMarketTutorial = state.hasCompletedMarketTutorial;
+      const hasCompletedAfterSchoolTutorial = state.hasCompletedAfterSchoolTutorial;
+      const totalCompletions = state.totalCompletions;
+      const gameResetSignal = state.gameResetSignal + 1;
+      console.log(`🔄 Full game reset signal: ${gameResetSignal} - Clearing isInitialized`);
+      return {
+        ...initialState,
+        hasCompletedMarketTutorial,
+        hasCompletedAfterSchoolTutorial,
+        totalCompletions,
+        isInitialized: false, // Clear to disable "Continue" button
         gameResetSignal,
       };
     },
@@ -212,6 +231,7 @@ export const {
   startAfterSchool,
   startNewDay,
   resetGame,
+  fullResetGame,
   revertToPreviousPeriod,
   jumpToPeriod,
   markStudiedTonight,

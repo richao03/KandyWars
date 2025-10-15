@@ -8,6 +8,7 @@ import {
   setIsLoading,
   resetScoreboard,
 } from '../store/slices/scoreboardSlice';
+import { trackMinigamePlayed } from '../store/slices/localAnalyticsSlice';
 import { scoreboardService } from '../services/firebase';
 
 export const useScoreboard = () => {
@@ -42,14 +43,10 @@ export const useScoreboard = () => {
     console.log('Game completion tracked via Redux');
   }, []);
 
-  const trackMinigamePlayed = useCallback(async (minigameType: string): Promise<void> => {
-    console.log(`Minigame played: ${minigameType}`);
-    try {
-      await scoreboardService.trackMinigamePlay(minigameType, 'Player');
-    } catch (error) {
-      console.error('Failed to track minigame play:', error);
-    }
-  }, []);
+  const trackMinigamePlayedAction = useCallback((minigameType: string): void => {
+    console.log(`📊 Local: Tracking minigame played - ${minigameType}`);
+    dispatch(trackMinigamePlayed(minigameType));
+  }, [dispatch]);
 
   const trackDayEnded = useCallback(async (periodsCount: number): Promise<void> => {
     console.log(`Day ended with ${periodsCount} periods`);
@@ -62,7 +59,8 @@ export const useScoreboard = () => {
   const refreshScoreboard = useCallback(async () => {
     dispatch(setIsLoading(true));
     try {
-      await scoreboardService.initialize();
+      // Only need auth initialized to fetch scoreboard, not user object
+      await scoreboardService.initializeAuth();
       const scores = await scoreboardService.getTopScores('all', 10);
       setTopScores(scores || []);
     } catch (error) {
@@ -91,7 +89,7 @@ export const useScoreboard = () => {
     updateHighScore,
     setLoading,
     trackGameCompleted,
-    trackMinigamePlayed,
+    trackMinigamePlayed: trackMinigamePlayedAction,
     trackDayEnded,
     reset,
   };

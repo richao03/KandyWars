@@ -29,6 +29,9 @@ export const useWallet = () => {
   const isFirstTimeDifficultySelection = useAppSelector(state => state.wallet.isFirstTimeDifficultySelection);
   const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
+  const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
+  const dailyStats = useAppSelector(state => state.dailyStats.dailyStats);
+  const currentDayStats = useAppSelector(state => state.dailyStats.currentDayStats);
 
   const spend = useCallback((amount: number): boolean => {
     if (balance >= amount) {
@@ -77,9 +80,27 @@ export const useWallet = () => {
       console.log(`💰 Allowance calculation: base=${baseAllowance}, multiplier=${allowanceMultiplier}, addition=${allowanceAddition}, final=${finalAllowance}`);
     }
 
+    // Finance Club: Add 10% of yesterday's profit to allowance
+    const hasFinanceClub = selectedPassIds.includes('finance_club');
+    if (hasFinanceClub && currentDayStats) {
+      // Get current day number
+      const currentDay = currentDayStats.day;
+      // Find yesterday's stats (day - 1)
+      const yesterdayStats = dailyStats.find(d => d.day === currentDay - 1);
+
+      if (yesterdayStats && yesterdayStats.profit > 0) {
+        const profitBonus = Math.round(yesterdayStats.profit * 0.1);
+        finalAllowance += profitBonus;
+        console.log(`💼 Finance Club: Adding 10% of yesterday's profit ($${yesterdayStats.profit}) → +$${profitBonus} to allowance`);
+        console.log(`💼 Finance Club: Final allowance with bonus: $${finalAllowance}`);
+      } else {
+        console.log(`💼 Finance Club: No profit yesterday or first day, no bonus added`);
+      }
+    }
+
     dispatch(addBalance(finalAllowance));
     return finalAllowance;
-  }, [dispatch, hallPassModifiers.allowanceBonusPercent]);
+  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats]);
 
   const stashMoneyAction = useCallback((amount: number, jokers?: any[]): boolean => {
     // Use small epsilon to handle floating point precision issues

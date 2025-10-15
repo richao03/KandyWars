@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import colors from '../../src/constants/colors';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppSelector } from '../../src/store/hooks';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
+import ScrollViewWithFade from './ScrollViewWithFade';
 
 interface DifficultySelectionModalProps {
   visible: boolean;
@@ -18,29 +20,37 @@ export default function DifficultySelectionModal({
   onClose,
 }: DifficultySelectionModalProps) {
   // Get won difficulties from Redux (which loads from Firebase on app start)
-  const wonDifficultiesFromRedux = useAppSelector((state) => state.scoreboard.wonDifficulties);
+  const wonDifficultiesFromRedux = useAppSelector(
+    (state) => state.scoreboard.wonDifficulties
+  );
   const [wonDifficulties, setWonDifficulties] = useState<number[]>([]);
 
   // Sync with Redux when modal opens
   useEffect(() => {
     if (visible) {
-      console.log('🏆 DifficultyModal: Loading won difficulties from Redux:', wonDifficultiesFromRedux);
+      console.log(
+        '🏆 DifficultyModal: Loading won difficulties from Redux:',
+        wonDifficultiesFromRedux
+      );
       setWonDifficulties(wonDifficultiesFromRedux);
 
-      // Also fetch fresh data from Firebase in the background
-      const fetchWonDifficulties = async () => {
-        try {
-          const won = await scoreboardService.getWonDifficulties();
-          console.log('🏆 DifficultyModal: Fetched fresh won difficulties from Firebase:', won);
-          if (JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)) {
-            console.log('🏆 DifficultyModal: Firebase data differs from Redux, updating...');
-            setWonDifficulties(won);
-          }
-        } catch (error) {
-          console.error('❌ Failed to fetch won difficulties:', error);
+      // Also check cache (already loaded at app start)
+      const checkCachedWonDifficulties = () => {
+        const won = scoreboardService.getWonDifficulties();
+        console.log(
+          '🏆 DifficultyModal: Got won difficulties from cache:',
+          won
+        );
+        if (
+          JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)
+        ) {
+          console.log(
+            '🏆 DifficultyModal: Cache data differs from Redux, updating...'
+          );
+          setWonDifficulties(won);
         }
       };
-      fetchWonDifficulties();
+      checkCachedWonDifficulties();
     }
   }, [visible, wonDifficultiesFromRedux]);
   const levelOptions = [
@@ -221,14 +231,15 @@ export default function DifficultySelectionModal({
             <Text style={styles.subtitle}>Select your challenge level</Text>
 
             <PixelBorder
-              borderColor={'#d4a574'}
-              borderWidth={3}
+              borderColor={colors.brown.secondary}
+              borderWidth={0}
               innerPadding={0}
               style={styles.scrollPixelBorder}
             >
-              <ScrollView
+              <ScrollViewWithFade
+                fadeColor={'#ffffff'}
+                fadeHeight={12}
                 style={styles.scrollContainer}
-                showsVerticalScrollIndicator={false}
               >
                 <View style={styles.optionsContainer}>
                   {levelOptions.map((option) => {
@@ -290,7 +301,7 @@ export default function DifficultySelectionModal({
                     );
                   })}
                 </View>
-              </ScrollView>
+              </ScrollViewWithFade>
             </PixelBorder>
             <PressableButton
               onPress={onClose}
@@ -339,6 +350,8 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 12,
     paddingHorizontal: 8,
+    overflow: 'hidden',
+    borderRadius: 12,
   },
   scrollContainer: {
     width: '100%',

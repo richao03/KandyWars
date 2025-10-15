@@ -41,8 +41,21 @@ const walletSlice = createSlice({
     spendBalance: (state, action: PayloadAction<number>) => {
       if (state.balance >= action.payload) {
         state.balance -= action.payload;
+        console.log(
+          '💾 Balance spent:',
+          action.payload,
+          'New balance:',
+          state.balance,
+          '- Auto-save triggered'
+        );
         return;
       }
+      console.log(
+        '❌ Spend rejected - insufficient balance:',
+        state.balance,
+        'amount:',
+        action.payload
+      );
     },
     setStashedAmount: (state, action: PayloadAction<number>) => {
       state.stashedAmount = action.payload;

@@ -9,6 +9,7 @@ import {
   setCurrentEvent,
   setIsProcessing,
 } from '../store/slices/eventHandlerSlice';
+import { recordConfiscation } from '../store/slices/dailyStatsSlice';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
@@ -17,11 +18,19 @@ export const useEventHandler = () => {
   const dispatch = useAppDispatch();
   const eventHandlerState = useAppSelector((state) => state.eventHandler);
   const wallet = useWallet();
-  const { clearInventory } = useInventory();
+  const { clearInventory, inventory, removeFromInventory } = useInventory();
   const { jokers } = useJokers();
+  const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
 
   const handleEvent = useCallback(
     (eventData: any) => {
+      // Safety guard: Only handle major events (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED)
+      // Minor events (PRICE_SPIKE, PRICE_DROP) should be handled in market.tsx via flavor text only
+      if (eventData.effect === 'PRICE_SPIKE' || eventData.effect === 'PRICE_DROP') {
+        console.warn('⚠️ EVENT: Minor event should not reach handleEvent, use flavor text instead');
+        return;
+      }
+
       // Create a unique ID for this event based on period and effect
       const eventId = `${eventData.period}_${eventData.effect}_${eventData.title}`;
 
@@ -101,9 +110,31 @@ export const useEventHandler = () => {
           // Add protection flag to event data
           processedEventData.protectedByCandyVault = true;
         } else {
-          // Teacher confiscates candy inventory
-          console.log('📚 EVENT: Teacher confiscating all candy inventory');
-          clearInventory();
+          // Check for Teachers Pet protection (reduces confiscation to 25%)
+          const hasTeachersPet = selectedPassIds.includes('teachers_pet');
+
+          if (hasTeachersPet) {
+            // Teacher's Pet: Only confiscate 25% of inventory
+            console.log("📚 EVENT: Teacher's Pet active - confiscating 25% of inventory");
+            let totalConfiscated = 0;
+            inventory.forEach(item => {
+              const confiscateAmount = Math.floor((item.quantity || 1) * 0.25);
+              totalConfiscated += confiscateAmount;
+              if (confiscateAmount > 0) {
+                removeFromInventory(item.id, confiscateAmount);
+              }
+            });
+            console.log('📚 EVENT: Confiscated', totalConfiscated, 'candies (25%)');
+            processedEventData.reducedByTeachersPet = true;
+            processedEventData.confiscatedAmount = totalConfiscated;
+          } else {
+            // Teacher confiscates all candy inventory
+            console.log('📚 EVENT: Teacher confiscating all candy inventory');
+            clearInventory();
+          }
+
+          // Track confiscation for hall pass unlock
+          dispatch(recordConfiscation());
         }
       }
 
@@ -114,7 +145,7 @@ export const useEventHandler = () => {
       dispatch(setCurrentEvent(processedEventData));
       console.log('🔄 EVENT: Stored in Redux successfully');
     },
-    [dispatch, wallet, clearInventory, jokers]
+    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds]
   );
 
   const clearEvent = useCallback(() => {

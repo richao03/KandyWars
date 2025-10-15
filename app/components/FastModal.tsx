@@ -27,6 +27,7 @@ interface FastModalProps {
   animationType?: 'fade' | 'slide' | 'spring';
   backdropOpacity?: number;
   modalStyle?: ViewStyle;
+  position?: 'center' | 'bottom';
 }
 
 export default function FastModal({
@@ -36,6 +37,7 @@ export default function FastModal({
   animationType = 'spring',
   backdropOpacity = 0.5,
   modalStyle,
+  position = 'center',
 }: FastModalProps) {
   const animationValue = useSharedValue(0);
   const backdropValue = useSharedValue(0);
@@ -155,7 +157,13 @@ export default function FastModal({
         />
       </TouchableWithoutFeedback>
 
-      <View style={styles.modalContainer} pointerEvents="box-none">
+      <View
+        style={[
+          styles.modalContainer,
+          position === 'bottom' && styles.modalContainerBottom
+        ]}
+        pointerEvents="box-none"
+      >
         <Animated.View
           style={[styles.modal, modalStyle, modalAnimatedStyle]}
           pointerEvents="auto"
@@ -181,6 +189,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     zIndex: 999999,
     elevation: 999999,
+  },
+  modalContainerBottom: {
+    justifyContent: 'flex-end',
+    paddingBottom: 20,
   },
   modal: {
     backgroundColor: 'white',

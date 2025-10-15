@@ -13,6 +13,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -21,8 +22,7 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
-import colors from '../../src/constants/colors';
-
+import PressableButton from '../components/PressableButton';
 
 // Candy emoji to image mapping
 const getCandyImage = (emoji: string) => {
@@ -45,10 +45,7 @@ const CandyImage = React.memo(({ candy }: { candy: string }) => {
   if (!candy) return null;
 
   return (
-    <Image
-      source={getCandyImage(candy)}
-      style={{ width: 50, height: 50 }}
-    />
+    <Image source={getCandyImage(candy)} style={{ width: 50, height: 50 }} />
   );
 });
 
@@ -132,18 +129,31 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     setNextCandy(nextGen);
 
     isSwipingRef.current = false;
-  }, [nextCandy, candyAOpacity, candyBOpacity, candyBTranslateX, candyBTranslateY]);
+  }, [
+    nextCandy,
+    candyAOpacity,
+    candyBOpacity,
+    candyBTranslateX,
+    candyBTranslateY,
+  ]);
 
   // Handle swipe
   const handleSwipe = useCallback(
     (direction: 'up' | 'down' | 'left' | 'right') => {
-      if (isSwipingRef.current || !candyA || gameState !== 'playing' || levelCompleteRef.current) return;
+      if (
+        isSwipingRef.current ||
+        !candyA ||
+        gameState !== 'playing' ||
+        levelCompleteRef.current
+      )
+        return;
 
       isSwipingRef.current = true;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       const currentCandy = candyA;
-      const correctDirection = TARGET_POSITIONS[currentCandy as keyof typeof TARGET_POSITIONS];
+      const correctDirection =
+        TARGET_POSITIONS[currentCandy as keyof typeof TARGET_POSITIONS];
       const isCorrect = direction === correctDirection;
 
       // Step 1: Hide candyA first
@@ -156,7 +166,12 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       candyBOpacity.value = 1;
 
       // Step 3: Load next candy into candyA and show it
-      console.log('🍬 Swipe - current:', currentCandy, 'next preview:', nextCandy);
+      console.log(
+        '🍬 Swipe - current:',
+        currentCandy,
+        'next preview:',
+        nextCandy
+      );
       setCandyA(nextCandy);
       const nextGen = generateCandy();
       console.log('🍬 New next candy generated:', nextGen);
@@ -257,7 +272,17 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         isSwipingRef.current = false;
       }, 400);
     },
-    [candyA, nextCandy, gameState, level, candyAOpacity, candyBOpacity, candyBTranslateX, candyBTranslateY, showModal]
+    [
+      candyA,
+      nextCandy,
+      gameState,
+      level,
+      candyAOpacity,
+      candyBOpacity,
+      candyBTranslateX,
+      candyBTranslateY,
+      showModal,
+    ]
   );
 
   // Gesture handler
@@ -521,24 +546,44 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           </View>
         </PixelBorder>
 
-        <PixelBorder
-          borderColor="#6c757d"
-          borderWidth={3}
-          backgroundColor="#495057"
-          innerPadding={0}
-          style={{ marginBottom: 16 }}
+        <PressableButton
+          onPress={startGame}
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
         >
-          <TouchableOpacity style={styles.pixelButtonInner} onPress={startGame}>
-            <Text style={styles.startGameButtonText}>Start Cooking!</Text>
-          </TouchableOpacity>
-        </PixelBorder>
+          <PixelBorder
+            borderColor="#6c757d"
+            borderWidth={3}
+            backgroundColor="#495057"
+            innerPadding={0}
+          >
+            <View style={styles.pixelButtonInner}>
+              <Text style={styles.startGameButtonText}>Start Cooking!</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
 
-        <TouchableOpacity
-          style={styles.pixelButtonInner}
+        <PressableButton
           onPress={handleForfeit}
+          shadowColor="rgba(185,28,28,1)"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.5}
+          shadowRadius={5}
+          elevation={8}
+          style={styles.backButton}
         >
-          <Text style={styles.startGameButtonText}>Back</Text>
-        </TouchableOpacity>
+          <PixelBorder
+            borderColor="rgba(185,28,28,1)"
+            borderWidth={3}
+            backgroundColor="rgba(239,68,68,1)"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -1019,6 +1064,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  backButton: {
+    marginTop: 16,
+    width: '100%',
+  },
+  backButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   instructionRow: {
     flexDirection: 'row',

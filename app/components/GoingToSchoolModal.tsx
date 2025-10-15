@@ -7,6 +7,7 @@ interface GoingToSchoolModalProps {
   visible: boolean;
   allowanceAmount?: number;
   onComplete: () => void;
+  guaranteedEventWarnings?: string[]; // Array of warning messages for guaranteed events
 }
 
 const { width, height } = Dimensions.get('window');
@@ -15,6 +16,7 @@ export default function GoingToSchoolModal({
   visible,
   allowanceAmount,
   onComplete,
+  guaranteedEventWarnings = [],
 }: GoingToSchoolModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
 
@@ -65,6 +67,17 @@ export default function GoingToSchoolModal({
           Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!
         </Text>
       )}
+
+      {guaranteedEventWarnings.length > 0 && (
+        <>
+          {guaranteedEventWarnings.map((warning, index) => (
+            <Text key={index} style={styles.warningText}>
+              {warning}
+            </Text>
+          ))}
+        </>
+      )}
+
       <Text style={styles.text}>{randomNewDayText}</Text>
     </FastModal>
   );
@@ -103,6 +116,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  warningText: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#DC143C', // Crimson red for warnings
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    borderRadius: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },

@@ -77,6 +77,7 @@ export interface StandardizedJoker {
   flavorText: string;
   description: string;
   effects: JokerEffect[];
+  requiresSnapshot?: boolean; // For jokers like Vacuum Sealer that need current inventory snapshot
 }
 
 // Core effect resolution engine
@@ -454,11 +455,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     type: 'persistent',
     flavorText: 'All candy, no air!',
     description: '2x inventory limit',
+    requiresSnapshot: true, // Flag to indicate this needs current inventory calculated
     effects: [
       {
         target: 'inventory_limit',
-        operation: 'multiply',
-        amount: 2,
+        operation: 'add',
+        amount: 0, // Placeholder - will be set to current inventory when activated
         duration: 'persistent',
       },
     ],

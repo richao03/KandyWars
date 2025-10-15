@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   initializeMinigameTracking,
+  initializeFromUserObject,
   markMinigamePlayed,
   selectPlayedMinigames,
   selectMinigameCompletions,
@@ -9,25 +10,40 @@ import {
   selectMinigameProgress,
   MinigameType,
 } from '../store/slices/minigameTrackingSlice';
+import { updateCachedUserObject } from '../store/slices/userObjectSlice';
 
 export const useMinigameTracking = () => {
   const dispatch = useAppDispatch();
   const minigameState = useAppSelector(state => state.minigameTracking);
+  const cachedUserObject = useAppSelector(state => state.userObject.cachedUser);
   const playedMinigames = useAppSelector(selectPlayedMinigames);
   const minigameCompletions = useAppSelector(selectMinigameCompletions);
   const hasPlayedAllMinigames = useAppSelector(selectHasPlayedAllMinigames);
   const minigameProgress = useAppSelector(selectMinigameProgress);
 
-  // Initialize minigame tracking on first use
+  // Initialize minigame tracking from cached user object (Firebase data)
   useEffect(() => {
     if (!minigameState.isLoaded) {
-      dispatch(initializeMinigameTracking());
+      if (cachedUserObject?.playedMinigames) {
+        console.log('🎮 Initializing minigame tracking from Firebase cache');
+        dispatch(initializeFromUserObject(cachedUserObject.playedMinigames));
+      } else {
+        console.log('🎮 Initializing minigame tracking without Firebase data');
+        dispatch(initializeMinigameTracking());
+      }
     }
-  }, [dispatch, minigameState.isLoaded]);
+  }, [dispatch, minigameState.isLoaded, cachedUserObject]);
 
   const trackMinigamePlayed = useCallback((minigame: MinigameType) => {
     console.log(`🎮 Minigame played: ${minigame}`);
     dispatch(markMinigamePlayed(minigame));
+
+    // Update cached user object if the minigame is new
+    if (!playedMinigames.includes(minigame) && cachedUserObject) {
+      const updatedPlayedMinigames = [...playedMinigames, minigame];
+      dispatch(updateCachedUserObject({ playedMinigames: updatedPlayedMinigames }));
+      console.log('📦 Updated cached user object with new minigame:', minigame);
+    }
 
     // Log progress
     const newProgress = {
@@ -40,7 +56,7 @@ export const useMinigameTracking = () => {
     if (newProgress.played === newProgress.total) {
       console.log('🎉 All minigames completed! Valedictorian Vendor Hall Pass should be unlocked.');
     }
-  }, [dispatch, minigameProgress, playedMinigames]);
+  }, [dispatch, minigameProgress, playedMinigames, cachedUserObject]);
 
   const hasPlayedMinigame = useCallback((minigame: MinigameType): boolean => {
     return playedMinigames.includes(minigame);

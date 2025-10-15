@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,17 +8,29 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useWallet } from '../src/hooks/useWallet';
+import { useAppDispatch, useAppSelector } from '../src/store/hooks';
+import { clearCachedUserObject, updateCachedUserObject, setCachedUserObject } from '../src/store/slices/userObjectSlice';
+import { setWonDifficulties, setTotalCompletions } from '../src/store/slices/scoreboardSlice';
+import { resetHallPasses } from '../src/store/slices/hallPassSlice';
+import { scoreboardService } from '../src/services/firebase';
+import { resetFirebaseSession } from './components/CandyWarsTitleScreen';
 import ConfirmationModal from './components/ConfirmationModal';
 import PixelBorder from './components/PixelBorder';
 
 export default function TitleSettings() {
   const walletContext = useWallet();
+  const dispatch = useAppDispatch();
+  const cachedUser = useAppSelector((state) => state.userObject.cachedUser);
 
   const [isResetting, setIsResetting] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -53,31 +65,144 @@ export default function TitleSettings() {
     });
   };
 
+  const handleEditName = () => {
+    setNewPlayerName(cachedUser?.playerName || 'Player');
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = newPlayerName.trim();
+    if (!trimmedName) {
+      Alert.alert('Error', 'Player name cannot be empty');
+      return;
+    }
+
+    try {
+      // Update Redux cache with new player name
+      dispatch(updateCachedUserObject({ playerName: trimmedName }));
+      console.log('✅ Player name updated in Redux:', trimmedName);
+
+      // Sync to service cache
+      const updatedUser = cachedUser ? { ...cachedUser, playerName: trimmedName } : null;
+      if (updatedUser) {
+        scoreboardService.setCachedUserObject(updatedUser);
+        console.log('✅ Player name synced to service cache');
+
+        // Also ensure scoreboard slice is in sync
+        dispatch(setWonDifficulties(updatedUser.difficultyWon));
+        dispatch(setTotalCompletions(updatedUser.totalWinCount));
+      }
+
+      setEditingName(false);
+      setNewPlayerName('');
+
+      Alert.alert(
+        'Name Updated',
+        `Your name has been changed to "${trimmedName}". It will be saved to the server when you complete a game.`
+      );
+    } catch (error) {
+      console.error('❌ Failed to update player name:', error);
+      Alert.alert('Error', 'Failed to update player name. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingName(false);
+    setNewPlayerName('');
+  };
+
+  const handleViewLeaderboard = () => {
+    router.push('/leaderboard');
+  };
+
+  // Load user object from Firebase when component mounts
+  useEffect(() => {
+    const loadUserObject = async () => {
+      if (cachedUser) {
+        console.log('✅ User object already cached:', cachedUser);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        console.log('📊 Loading user object from Firebase...');
+        await scoreboardService.initializeAuth();
+        const userObject = await scoreboardService.fetchUserObject();
+
+        console.log('✅ User object loaded:', userObject);
+        dispatch(setCachedUserObject(userObject));
+        dispatch(setWonDifficulties(userObject.difficultyWon));
+        dispatch(setTotalCompletions(userObject.totalWinCount));
+      } catch (error) {
+        console.error('❌ Failed to load user object:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUserObject();
+  }, [dispatch, cachedUser]);
+
   const handleResetAllData = async () => {
     showConfirmModal(
       'Reset All Data',
-      'This will permanently delete ALL your game data including:\n\n• All saved games\n• Player names\n• Tutorial progress\n• Settings\n\nThis action cannot be undone. Are you sure?',
+      'This will permanently delete ALL your game data including:\n\n• All saved games\n• Player names\n• Tutorial progress\n• Hall Passes\n• Settings\n• Firebase data\n\nThis action cannot be undone. Are you sure?',
       async () => {
         try {
           setIsResetting(true);
-          console.log('🗑️ Starting complete data reset...');
+          console.log('🗑️ Clearing all data...');
 
-          // Clear all AsyncStorage data first
-          await AsyncStorage.clear();
-          console.log('🗑️ AsyncStorage cleared');
-
-          // Reset all contexts to their initial state
-
-          // Reset wallet context completely (including username and player ID)
-          if (walletContext) {
-            // Use the complete reset method to clear all wallet data including username
-            await walletContext.completeReset();
-            console.log(
-              '🗑️ Wallet completely reset including username and player ID'
-            );
+          // Delete user document from Firebase
+          console.log('🗑️ Deleting user document from Firebase...');
+          try {
+            await scoreboardService.initializeAuth();
+            await scoreboardService.deleteUserObject();
+            console.log('✅ User document deleted from Firebase');
+          } catch (error) {
+            console.error('❌ Failed to delete user document from Firebase:', error);
           }
 
-          console.log('✅ All data cleared and contexts reset successfully');
+          // STEP 1: Reset all Redux slices FIRST (in memory)
+          dispatch(resetHallPasses());
+          dispatch(clearCachedUserObject());
+          dispatch(setWonDifficulties([]));
+          dispatch(setTotalCompletions(0));
+          console.log('✅ All Redux slices reset in memory');
+
+          // STEP 2: Reset wallet context completely (including username and player ID)
+          if (walletContext) {
+            await walletContext.completeReset();
+            console.log('✅ Wallet completely reset including username and player ID');
+          }
+
+          // STEP 3: Clear service cache and Firebase session
+          scoreboardService.clearUserObjectCache();
+          resetFirebaseSession(); // Reset session flag so Firebase re-initializes
+          console.log('✅ Service cache and Firebase session cleared');
+
+          // STEP 4: Clear ALL AsyncStorage data
+          const allKeys = await AsyncStorage.getAllKeys();
+          console.log('🗑️ Found keys to clear:', allKeys);
+          await AsyncStorage.multiRemove(allKeys);
+
+          // Clear AsyncStorage again with specific keys to make sure
+          const specificKeys = [
+            'candyWarz_playerId',
+            'playerName',
+            'wallet_balance',
+            'wallet_difficulty',
+            'wallet_piggyBank',
+            'game_state',
+            'inventory',
+            'jokers',
+            'flavor_text_shown',
+            'persist:root', // Redux persist key
+          ];
+
+          await AsyncStorage.multiRemove(specificKeys);
+          console.log('✅ AsyncStorage cleared');
+
+          console.log('✅ All data cleared successfully');
 
           Alert.alert(
             'Data Reset Complete',
@@ -107,16 +232,16 @@ export default function TitleSettings() {
     <View style={styles.container}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#1a1a1a"
+        backgroundColor="#D2691E"
         translucent={true}
       />
 
       {/* Header */}
       <View style={styles.header}>
         <PixelBorder
-          borderColor="#3b82f6"
+          borderColor="#d4a574"
           borderWidth={3}
-          backgroundColor="#2a2a2a"
+          backgroundColor="rgba(212, 165, 116, 0.3)"
           innerPadding={0}
         >
           <TouchableOpacity
@@ -126,19 +251,104 @@ export default function TitleSettings() {
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
         </PixelBorder>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>⚙️ Settings</Text>
         <View style={{ width: 80 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Data Management */}
+        {/* Player Profile */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data Management</Text>
+          <Text style={styles.sectionTitle}>🎮 Player Profile</Text>
 
           <PixelBorder
-            borderColor="#ff4444"
-            borderWidth={3}
-            backgroundColor="#2a2a2a"
+            borderColor="#d4a574"
+            borderWidth={4}
+            backgroundColor="rgba(212, 165, 116, 0.2)"
+            innerPadding={0}
+          >
+            {isLoading ? (
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <Text style={styles.settingTitle}>Player Name</Text>
+                  <Text style={styles.settingDescription}>Loading...</Text>
+                </View>
+                <ActivityIndicator size="small" color="#3b82f6" />
+              </View>
+            ) : editingName ? (
+              <View style={styles.settingItem}>
+                <View style={styles.settingLeft}>
+                  <Text style={styles.settingTitle}>Edit Player Name</Text>
+                  <TextInput
+                    style={styles.nameInput}
+                    value={newPlayerName}
+                    onChangeText={setNewPlayerName}
+                    placeholder="Enter your name"
+                    placeholderTextColor="#6b7280"
+                    maxLength={20}
+                    autoCapitalize="words"
+                    autoFocus
+                  />
+                  <View style={styles.nameActions}>
+                    <TouchableOpacity
+                      style={[styles.nameButton, styles.saveButton]}
+                      onPress={handleSaveName}
+                    >
+                      <Text style={styles.nameButtonText}>Save</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.nameButton, styles.cancelButton]}
+                      onPress={handleCancelEdit}
+                    >
+                      <Text style={styles.nameButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.settingItem}
+                onPress={handleEditName}
+              >
+                <View style={styles.settingLeft}>
+                  <Text style={styles.settingTitle}>Player Name</Text>
+                  <Text style={styles.settingDescription}>
+                    {cachedUser?.playerName || 'Player'}
+                  </Text>
+                </View>
+                <Text style={styles.actionText}>Edit</Text>
+              </TouchableOpacity>
+            )}
+          </PixelBorder>
+
+          <PixelBorder
+            borderColor="#F4A460"
+            borderWidth={4}
+            backgroundColor="rgba(244, 164, 96, 0.2)"
+            innerPadding={0}
+          >
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={handleViewLeaderboard}
+            >
+              <View style={styles.settingLeft}>
+                <Text style={styles.settingTitle}>🏆 View Leaderboard</Text>
+                <Text style={styles.settingDescription}>
+                  See how you rank against other players
+                </Text>
+              </View>
+              <Text style={styles.actionText}>View →</Text>
+            </TouchableOpacity>
+          </PixelBorder>
+        </View>
+
+        {/* Data Management */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🗑️ Data Management</Text>
+
+          <PixelBorder
+            borderColor="#CD853F"
+            borderWidth={4}
+            backgroundColor="rgba(205, 133, 63, 0.2)"
             innerPadding={0}
           >
             <TouchableOpacity
@@ -167,16 +377,16 @@ export default function TitleSettings() {
 
         {/* Info Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle}>ℹ️ About</Text>
 
           <PixelBorder
-            borderColor="#6b7280"
-            borderWidth={3}
-            backgroundColor="#2a2a2a"
+            borderColor="#DEB887"
+            borderWidth={4}
+            backgroundColor="rgba(222, 184, 135, 0.2)"
             innerPadding={0}
           >
             <View style={styles.infoItem}>
-              <Text style={styles.infoTitle}>Candy Warz</Text>
+              <Text style={styles.infoTitle}>🍬 Candy Warz</Text>
               <Text style={styles.infoDescription}>
                 A strategic candy trading game where you manage debt, buy and
                 sell candy, and collect powerful jokers to succeed.
@@ -185,13 +395,13 @@ export default function TitleSettings() {
           </PixelBorder>
 
           <PixelBorder
-            borderColor="#6b7280"
-            borderWidth={3}
-            backgroundColor="#2a2a2a"
+            borderColor="#d4a574"
+            borderWidth={4}
+            backgroundColor="rgba(212, 165, 116, 0.2)"
             innerPadding={0}
           >
             <View style={styles.infoItem}>
-              <Text style={styles.infoTitle}>Version</Text>
+              <Text style={styles.infoTitle}>📱 Version</Text>
               <Text style={styles.infoDescription}>1.0.0</Text>
             </View>
           </PixelBorder>
@@ -215,7 +425,7 @@ export default function TitleSettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#D2691E',
   },
   header: {
     flexDirection: 'row',
@@ -224,9 +434,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#1a1a1a',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3a3a3a',
+    backgroundColor: '#D2691E',
+    borderBottomWidth: 3,
+    borderBottomColor: '#d4a574',
   },
   backButton: {
     padding: 8,
@@ -305,11 +515,11 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#FFD700',
     fontFamily: 'PixeloidMono',
   },
   dangerText: {
-    color: '#ff4444',
+    color: '#DC143C',
   },
   infoItem: {
     backgroundColor: 'transparent',
@@ -327,6 +537,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9ca3af',
     lineHeight: 20,
+    fontFamily: 'PixeloidMono',
+  },
+  nameInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#d4a574',
+    borderWidth: 3,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  nameActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  nameButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#32CD32',
+  },
+  cancelButton: {
+    backgroundColor: '#8B4513',
+  },
+  nameButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
   },
 });

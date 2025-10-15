@@ -39,14 +39,24 @@ const MarketList = React.memo(function MarketList({
   return (
     <View style={styles.container}>
       {/* Only render StudySubjectSelector when tab is focused and conditions are met */}
-      {console.log('🎮 MarketList render - isFocused:', isFocused, 'isLunchPeriod:', isLunchPeriod, 'showLunchMinigames:', showLunchMinigames, 'hasPlayedLunchMinigame:', hasPlayedLunchMinigame)}
-      {isFocused && isLunchPeriod && !hasPlayedLunchMinigame && showLunchMinigames && (
+      {console.log(
+        '🎮 MarketList render - isFocused:',
+        isFocused,
+        'isLunchPeriod:',
+        isLunchPeriod,
+        'showLunchMinigames:',
+        showLunchMinigames,
+        'hasPlayedLunchMinigame:',
+        hasPlayedLunchMinigame
+      )}
+      {isFocused && showLunchMinigames && (
         <View style={{ flex: 1 }}>
           <StudySubjectSelector
             onBack={onLunchBack}
             disabled={false}
             disabledMessage=""
             isLunchPeriod={true}
+            hasPlayedLunchMinigame={hasPlayedLunchMinigame}
           />
         </View>
       )}
@@ -54,7 +64,7 @@ const MarketList = React.memo(function MarketList({
       {/* Always render FlatList to maintain consistent hook calls */}
       <View
         style={{
-          display: isLunchPeriod && !hasPlayedLunchMinigame && showLunchMinigames ? 'none' : 'flex',
+          display: showLunchMinigames ? 'none' : 'flex',
           flex: 1,
         }}
       >

@@ -36,8 +36,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'no_longer_freshman',
     name: 'Not a Freshman',
-    description: "You've graduated from rookie status!",
-    unlockRequirement: 'Win the game once (pay off adoption fee)',
+    description: "That's the first W",
+    unlockRequirement: 'Win the game once',
     effects: [
       {
         type: 'sale_price_bonus',
@@ -88,8 +88,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       },
       {
         type: 'inventory_bonus',
-        value: 5,
-        description: '+5 inventory slots',
+        value: 10,
+        description: '+10 inventory slots',
       },
     ],
     rarity: 'epic',
@@ -128,15 +128,15 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     rarity: 'legendary',
   },
   {
-    id: 'speed_demon',
-    name: 'Speed Demon',
-    description: 'Lightning fast completion shows true mastery.',
-    unlockRequirement: 'Win the game in under 10 minutes',
+    id: 'forged_pass',
+    name: 'Forged Pass',
+    description: 'Fake it till you make it.',
+    unlockRequirement: 'Win the game with 8+ jokers',
     effects: [
       {
         type: 'special',
         value: 1,
-        description: 'Start each day with +1 extra period',
+        description: '+1 reroll in joker selection',
       },
     ],
     rarity: 'epic',
@@ -144,8 +144,8 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'minimalist_master',
     name: 'Minimalist Master',
-    description: "Proof that less is more when you know what you're doing.",
-    unlockRequirement: 'Win the game without using any jokers',
+    description: 'Less is more.',
+    unlockRequirement: 'Win without using any jokers',
     effects: [
       {
         type: 'sale_price_bonus',
@@ -158,7 +158,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'high_roller',
     name: 'High Roller',
-    description: 'Big sales, bigger rewards.',
+    description: 'Those are big boy numbers.',
     unlockRequirement: 'Win the game and sell over 1000 units of candy',
     effects: [
       {
@@ -187,6 +187,34 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       },
     ],
     rarity: 'legendary',
+  },
+  {
+    id: 'teachers_pet',
+    name: "Teacher's Pet",
+    description: 'Bring an apple for the teacher every morning.',
+    unlockRequirement: 'Get your stash confiscated 3 or more times in one game',
+    effects: [
+      {
+        type: 'special',
+        value: 75,
+        description: 'Stash confiscation only takes 25% of candy instead of 100%',
+      },
+    ],
+    rarity: 'epic',
+  },
+  {
+    id: 'finance_club',
+    name: 'Finance Club',
+    description: "What's sweeter than getting paid?",
+    unlockRequirement: 'Win the game with $35,000+ in the piggy bank',
+    effects: [
+      {
+        type: 'special',
+        value: 10,
+        description: '10% of previous day\'s profit is added to daily allowance',
+      },
+    ],
+    rarity: 'epic',
   },
 ];
 

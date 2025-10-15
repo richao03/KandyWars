@@ -41,6 +41,23 @@ const minigameTrackingSlice = createSlice({
         }
       });
     },
+    initializeFromUserObject: (state, action: PayloadAction<string[]>) => {
+      console.log('🎮 MINIGAME: Initializing from Firebase user object:', action.payload);
+      // Initialize playedMinigames from Firebase data
+      // Use Set to merge and deduplicate local + Firebase data
+      const mergedMinigames = new Set([...state.playedMinigames, ...action.payload]);
+      state.playedMinigames = Array.from(mergedMinigames) as MinigameType[];
+      state.isLoaded = true;
+
+      // Ensure all minigames have completion counts initialized
+      ALL_MINIGAMES.forEach(minigame => {
+        if (!(minigame in state.minigameCompletions)) {
+          state.minigameCompletions[minigame] = 0;
+        }
+      });
+
+      console.log('🎮 MINIGAME: Merged played minigames:', state.playedMinigames);
+    },
     markMinigamePlayed: (state, action: PayloadAction<MinigameType>) => {
       const minigame = action.payload;
 
@@ -55,12 +72,22 @@ const minigameTrackingSlice = createSlice({
     resetMinigameTracking: () => initialState,
   },
   extraReducers: (builder) => {
-    builder.addCase(resetGame, () => initialState);
+    builder.addCase(resetGame, (state) => {
+      // Preserve playedMinigames across game resets (it's progress, not session data)
+      console.log('🎮 MINIGAME: resetGame called - preserving played minigames');
+      const preservedPlayedMinigames = state.playedMinigames;
+      return {
+        ...initialState,
+        playedMinigames: preservedPlayedMinigames,
+        isLoaded: true, // Keep it loaded
+      };
+    });
   },
 });
 
 export const {
   initializeMinigameTracking,
+  initializeFromUserObject,
   markMinigamePlayed,
   resetMinigameTracking,
 } = minigameTrackingSlice.actions;

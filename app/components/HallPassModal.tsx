@@ -1,18 +1,13 @@
-import React, { useState } from 'react';
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { HallPass } from '../../src/store/slices/hallPassSlice';
 import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
+import ScrollViewWithFade from './ScrollViewWithFade';
 
 interface HallPassModalProps {
   visible: boolean;
@@ -36,6 +31,19 @@ export default function HallPassModal({
   const [expandedPassId, setExpandedPassId] = useState<string | null>(null);
 
   const isSelectionMode = viewMode === 'selection' && onSelectPass;
+
+  // Memoize modifier computation to avoid redundant calculations on every render
+  const selectedPassesForModifiers = useMemo(() => {
+    if (!visible || !isSelectionMode || localSelectedIds.length === 0) {
+      return null;
+    }
+    return allPasses.filter((p) => localSelectedIds.includes(p.id));
+  }, [visible, isSelectionMode, localSelectedIds, allPasses]);
+
+  const computedModifiers = useMemo(() => {
+    if (!selectedPassesForModifiers) return null;
+    return computeHallPassModifiers(selectedPassesForModifiers);
+  }, [selectedPassesForModifiers]);
 
   // Sync local state with Redux when modal opens
   React.useEffect(() => {
@@ -64,30 +72,45 @@ export default function HallPassModal({
   const getRarityColor = (rarity: HallPass['rarity']) => {
     switch (rarity) {
       case 'common':
-        return '#4a7c4a';
+        return colors.brown.secondary; // Brown - most popular color
       case 'rare':
-        return '#4a7c8a';
+        return colors.blue.lightBg; // Cyan - very popular
       case 'epic':
-        return '#8a4a7c';
+        return colors.purple.primary; // Hot pink - popular accent
       case 'legendary':
-        return '#8a7c4a';
+        return colors.orange.primary; // Orange - popular CTA color
       default:
-        return '#666';
+        return colors.gray.medium;
     }
   };
 
   const getRarityBackground = (rarity: HallPass['rarity']) => {
     switch (rarity) {
       case 'common':
-        return '#e8f5e8';
+        return colors.gold.beige; // Beige - very popular background
       case 'rare':
-        return '#e8f0f5';
+        return colors.offWhite; // Off white for contrast
       case 'epic':
-        return '#f0e8f5';
+        return colors.gold.beige; // Beige again for consistency
       case 'legendary':
-        return '#f5f0e8';
+        return colors.gold.beige; // Gold beige - matches legendary theme
       default:
-        return '#f0f0f0';
+        return colors.offWhite;
+    }
+  };
+
+  const getRarityGlow = (rarity: HallPass['rarity']) => {
+    switch (rarity) {
+      case 'common':
+        return colors.brown.primary;
+      case 'rare':
+        return colors.blue.cyan;
+      case 'epic':
+        return colors.purple.hotPink;
+      case 'legendary':
+        return colors.orange.primary;
+      default:
+        return colors.gray.light;
     }
   };
 
@@ -145,126 +168,161 @@ export default function HallPassModal({
     const isExpanded = expandedPassId === pass.id;
 
     return (
-      <PixelBorder
+      <View
         key={pass.id}
-        borderColor={
-          isSelected || isCurrentlySelected
-            ? '#2196F3'
-            : getRarityColor(pass.rarity)
-        }
-        borderWidth={isSelected || isCurrentlySelected ? 3 : 2}
-        backgroundColor={
-          isUnlocked ? getRarityBackground(pass.rarity) : '#f5f5f5'
-        }
-        innerPadding={0}
-        style={[styles.passCardWrapper, { opacity: isUnlocked ? 1 : 0.6 }]}
+        style={[
+          styles.passCardWrapper,
+          isUnlocked && {
+            shadowColor: getRarityGlow(pass.rarity),
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 1,
+            shadowRadius: 4,
+            elevation: 4,
+          },
+        ]}
       >
-        <TouchableOpacity
-          style={styles.passCard}
-          onPress={() => handlePassClick(pass.id, isUnlocked)}
-          activeOpacity={0.7}
+        <PixelBorder
+          borderColor={
+            isSelected || isCurrentlySelected
+              ? colors.green.success
+              : getRarityColor(pass.rarity)
+          }
+          borderWidth={isSelected || isCurrentlySelected ? 4 : 3}
+          backgroundColor={
+            isUnlocked ? getRarityBackground(pass.rarity) : colors.offWhite
+          }
+          innerPadding={0}
+          style={{ opacity: isUnlocked ? 1 : 0.5 }}
         >
-          <View style={styles.passHeader}>
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
-            >
-              <Image
-                source={require('../../assets/images/emojis/hallpass.png')}
-                style={[styles.hallPassIcon, { opacity: isUnlocked ? 1 : 0.4 }]}
-              />
-              <View style={styles.headerTextContainer}>
-                <Text
-                  style={[
-                    styles.passName,
-                    {
-                      color: isUnlocked ? getRarityColor(pass.rarity) : '#999',
-                    },
-                  ]}
-                >
-                  {pass.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.passRarity,
-                    {
-                      color: isUnlocked ? getRarityColor(pass.rarity) : '#999',
-                    },
-                  ]}
-                >
-                  {pass.rarity.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-            >
-              {isSelectionMode && isUnlocked && (
-                <TouchableOpacity
-                  style={[
-                    styles.checkboxButton,
-                    isSelected && styles.checkboxButtonSelected,
-                  ]}
-                  onPress={(e) => handleSelectPass(pass.id, e)}
-                >
-                  {isSelected && <Text style={styles.checkboxText}>✓</Text>}
-                </TouchableOpacity>
-              )}
-              <Text style={styles.expandIcon}>{isExpanded ? 'v' : '>>'}</Text>
-            </View>
-          </View>
-
-          {isExpanded && (
-            <View style={styles.expandedContent}>
-              <Text
-                style={[
-                  styles.passDescription,
-                  { color: isUnlocked ? '#333' : '#999' },
-                ]}
-              >
-                {pass.description}
-              </Text>
-
+          <PressableButton
+            onPress={() => handlePassClick(pass.id, isUnlocked)}
+            style={styles.passCard}
+            shadowOpacity={0}
+            elevation={0}
+          >
+            <View style={styles.passHeader}>
               <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
+                style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
               >
                 <Image
-                  source={require('../../assets/images/emojis/lock.png')}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    resizeMode: 'contain',
-                    marginRight: 6,
-                  }}
+                  source={require('../../assets/images/emojis/hallpass.png')}
+                  style={[
+                    styles.hallPassIcon,
+                    { opacity: isUnlocked ? 1 : 0.4 },
+                  ]}
                 />
-                <Text style={styles.unlockRequirement}>
-                  {pass.unlockRequirement}
-                </Text>
-              </View>
-
-              <View style={styles.effectsContainer}>
-                <Text style={styles.effectsTitle}>Effects:</Text>
-                {pass.effects.map((effect, index) => (
+                <View style={styles.headerTextContainer}>
                   <Text
-                    key={index}
                     style={[
-                      styles.effectText,
-                      { color: isUnlocked ? '#4a7c4a' : '#999' },
+                      styles.passName,
+                      {
+                        color: isUnlocked
+                          ? getRarityColor(pass.rarity)
+                          : colors.gray.light,
+                        textShadowRadius: 0,
+                      },
                     ]}
                   >
-                    • {effect.description}
+                    {pass.name}
                   </Text>
-                ))}
+                  <Text
+                    style={[
+                      styles.passRarity,
+                      {
+                        color: isUnlocked
+                          ? getRarityColor(pass.rarity)
+                          : colors.gray.light,
+                      },
+                    ]}
+                  >
+                    {pass.rarity.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                {isSelectionMode && isUnlocked && (
+                  <PressableButton
+                    onPress={(e) => handleSelectPass(pass.id, e)}
+                    style={[
+                      styles.checkboxButton,
+                      isSelected && styles.checkboxButtonSelected,
+                    ]}
+                  >
+                    {isSelected && <Text style={styles.checkboxText}>✓</Text>}
+                  </PressableButton>
+                )}
+                <Text style={styles.expandIcon}>{isExpanded ? 'v' : '>>'}</Text>
               </View>
             </View>
-          )}
 
-          {!isUnlocked && <View style={styles.lockedOverlay}></View>}
-        </TouchableOpacity>
-      </PixelBorder>
+            {isExpanded && (
+              <View style={styles.expandedContent}>
+                <Text
+                  style={[
+                    styles.passDescription,
+                    {
+                      color: isUnlocked ? colors.gray.dark : colors.gray.light,
+                    },
+                  ]}
+                >
+                  {pass.description}
+                </Text>
+
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}
+                >
+                  <Image
+                    source={require('../../assets/images/emojis/lock.png')}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      resizeMode: 'contain',
+                      marginRight: 6,
+                    }}
+                  />
+                  <Text style={styles.unlockRequirement}>
+                    {pass.unlockRequirement}
+                  </Text>
+                </View>
+
+                <View style={styles.effectsContainer}>
+                  <Text style={styles.effectsTitle}>Effects:</Text>
+                  {pass.effects.map((effect, index) => (
+                    <Text
+                      key={index}
+                      style={[
+                        styles.effectText,
+                        {
+                          color: isUnlocked
+                            ? colors.brown.secondary
+                            : colors.gray.light,
+                        },
+                      ]}
+                    >
+                      • {effect.description}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {!isUnlocked && (
+              <View style={styles.lockedOverlay}>
+                <Image
+                  source={require('../../assets/images/emojis/lock.png')}
+                  style={styles.lockIcon}
+                />
+              </View>
+            )}
+          </PressableButton>
+        </PixelBorder>
+      </View>
     );
   };
 
@@ -277,12 +335,22 @@ export default function HallPassModal({
       modalStyle={styles.modalContainer}
     >
       <PixelBorder
-        borderColor="#d4a574"
+        borderColor={colors.brown.secondary}
         borderWidth={3}
-        backgroundColor="rgba(255, 255, 255, 0.95)"
-        innerPadding={24}
+        backgroundColor={colors.offWhite}
+        innerPadding={20}
       >
-        <Text style={styles.title}>Hall Passes</Text>
+        <View style={styles.headerContainer}>
+          <Image
+            source={require('../../assets/images/emojis/hallpass.png')}
+            style={styles.titleIcon}
+          />
+          <Text style={styles.title}>Hall Passes</Text>
+          <Image
+            source={require('../../assets/images/emojis/hallpass.png')}
+            style={styles.titleIcon}
+          />
+        </View>
         <Text style={styles.subtitle}>
           {isSelectionMode
             ? 'Choose Hall Passes to gain bonuses'
@@ -290,65 +358,65 @@ export default function HallPassModal({
         </Text>
         {isSelectionMode &&
           localSelectedIds.length > 0 &&
-          (() => {
-            const selectedPasses = allPasses.filter((p) =>
-              localSelectedIds.includes(p.id)
-            );
-            const modifiers = computeHallPassModifiers(selectedPasses);
-            return (
+          computedModifiers && (
               <PixelBorder
-                borderColor="#4a7c4a"
+                borderColor={colors.brown.secondary}
                 borderWidth={3}
-                backgroundColor="#e8f5e8"
-                innerPadding={12}
+                backgroundColor={colors.gold.beige}
+                innerPadding={14}
                 style={styles.accumulatedEffects}
               >
-                <Text style={styles.accumulatedTitle}>
-                  {localSelectedIds.length} pass
-                  {localSelectedIds.length !== 1 ? 'es' : ''} selected:
-                </Text>
-                {modifiers.salePriceBonusPercent > 0 && (
+                <View style={styles.accumulatedHeader}>
+                  <Text style={styles.accumulatedTitle}>
+                    ✨ {localSelectedIds.length} pass
+                    {localSelectedIds.length !== 1 ? 'es' : ''} selected
+                  </Text>
+                </View>
+                {computedModifiers.salePriceBonusPercent > 0 && (
                   <Text style={styles.accumulatedEffect}>
-                    💰 +{modifiers.salePriceBonusPercent * 5}% profit bonus on
+                    💰 +{computedModifiers.salePriceBonusPercent * 5}% profit bonus on
                     sales
                   </Text>
                 )}
-                {modifiers.inventoryBonusSlots > 0 && (
+                {computedModifiers.inventoryBonusSlots > 0 && (
                   <Text style={styles.accumulatedEffect}>
-                    🎒 +{modifiers.inventoryBonusSlots} inventory slots
+                    🎒 +{computedModifiers.inventoryBonusSlots} inventory slots
                   </Text>
                 )}
-                {modifiers.allowanceBonusPercent > 0 && (
+                {computedModifiers.allowanceBonusPercent > 0 && (
                   <Text style={styles.accumulatedEffect}>
-                    💵 +{modifiers.allowanceBonusPercent}% daily allowance
+                    💵 +{computedModifiers.allowanceBonusPercent}% daily allowance
                   </Text>
                 )}
-                {modifiers.jokerBonusCount > 0 && (
+                {computedModifiers.jokerBonusCount > 0 && (
                   <Text style={styles.accumulatedEffect}>
-                    🃏 +{modifiers.jokerBonusCount} joker
-                    {modifiers.jokerBonusCount !== 1 ? 's' : ''}
+                    🃏 +{computedModifiers.jokerBonusCount} joker
+                    {computedModifiers.jokerBonusCount !== 1 ? 's' : ''}
                   </Text>
                 )}
-                {modifiers.extraPeriodsPerDay > 0 && (
+                {computedModifiers.rerollBonusCount > 0 && (
                   <Text style={styles.accumulatedEffect}>
-                    ⏰ +{modifiers.extraPeriodsPerDay} period
-                    {modifiers.extraPeriodsPerDay !== 1 ? 's' : ''} per day
+                    🔄 +{computedModifiers.rerollBonusCount} reroll
+                    {computedModifiers.rerollBonusCount !== 1 ? 's' : ''}
                   </Text>
                 )}
               </PixelBorder>
-            );
-          })()}
+            )}
 
-        <ScrollView
+        <ScrollViewWithFade
+          fadeColor={colors.offWhite}
+          fadeHeight={10}
+          wrapperStyle={styles.scrollViewWrapper}
           style={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
         >
           {/* All passes */}
           {allPasses.map(renderPassCard)}
-        </ScrollView>
+        </ScrollViewWithFade>
 
+        {/* Button container - show different buttons based on mode */}
         <View style={styles.buttonContainer}>
-          {isSelectionMode ? (
+          {isSelectionMode && onConfirm ? (
+            // New game flow - show Cancel and Let's go buttons
             <>
               <PressableButton
                 onPress={onClose}
@@ -393,22 +461,24 @@ export default function HallPassModal({
               </PressableButton>
             </>
           ) : (
+            // Gallery mode - show Back button
             <PressableButton
               onPress={onClose}
-              shadowColor="rgba(123,169,101,1)"
-              shadowOffset={{ width: 0, height: 4 }}
-              shadowOpacity={0.5}
-              shadowRadius={5}
-              elevation={8}
+              shadowColor="#6b5a2d"
+              shadowOffset={{ width: 0, height: 3 }}
+              shadowOpacity={0.4}
+              shadowRadius={4}
+              elevation={6}
+              style={{ width: '100%' }}
             >
               <PixelBorder
-                borderColor="rgba(123,169,101,1)"
+                borderColor="#d1d5db"
                 borderWidth={3}
-                backgroundColor="rgba(154,193,118,1)"
+                backgroundColor="#f3f4f6"
                 innerPadding={0}
               >
-                <View style={styles.confirmButtonInner}>
-                  <Text style={styles.confirmText}>Close</Text>
+                <View style={styles.cancelButtonInner}>
+                  <Text style={styles.cancelText}>Back</Text>
                 </View>
               </PixelBorder>
             </PressableButton>
@@ -425,35 +495,50 @@ export default function HallPassModal({
 
 const styles = StyleSheet.create({
   modalContainer: {
-    borderRadius: 24,
+    borderRadius: 36,
     width: '95%',
     maxWidth: 500,
     maxHeight: '90%',
-    shadowColor: '#8b4513',
-    shadowOffset: { width: 2, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowColor: colors.brown.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  titleIcon: {
+    width: 36,
+    height: 36,
+    resizeMode: 'contain',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    color: '#333',
+    color: colors.brown.primary,
     textAlign: 'center',
-    marginBottom: 8,
+    textShadowColor: 'rgba(139, 111, 71, 0.2)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'PixeloidMono',
-    color: '#666',
+    color: colors.brown.primary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 20,
   },
   selectedCount: {
     fontSize: 14,
     fontFamily: 'PixeloidMono',
-    color: '#2196F3',
+    color: colors.orange.primary,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 16,
@@ -464,29 +549,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.gold.beige,
     borderRadius: 8,
   },
   currentLabel: {
     fontSize: 16,
     fontFamily: 'PixeloidMono',
-    color: '#666',
+    color: colors.gray.medium,
     marginRight: 8,
   },
   currentPass: {
     fontSize: 16,
     fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.gray.dark,
+  },
+  scrollViewWrapper: {
+    position: 'relative',
+    maxHeight: 320,
+    marginBottom: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   scrollContainer: {
-    maxHeight: 300,
-    marginBottom: 16,
+    maxHeight: 320,
+    paddingHorizontal: 8,
+    paddingTop: 8,
   },
   noneOption: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.gold.beige,
     marginBottom: 12,
     position: 'relative',
   },
@@ -494,21 +587,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    color: '#333',
+    color: colors.gray.dark,
     marginBottom: 4,
   },
   noneDescription: {
     fontSize: 14,
     fontFamily: 'PixeloidMono',
-    color: '#666',
+    color: colors.gray.medium,
   },
   passCardWrapper: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   passCard: {
-    padding: 6,
-    paddingHorizontal: 10,
+    padding: 10,
+    paddingHorizontal: 12,
     position: 'relative',
+    textShadowRadius: 0,
   },
   passHeader: {
     flexDirection: 'row',
@@ -516,24 +610,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   hallPassIcon: {
-    width: 32,
-    height: 32,
-    marginRight: 8,
+    width: 40,
+    height: 40,
+    marginRight: 10,
   },
   headerTextContainer: {
     flex: 1,
   },
   passName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    marginBottom: 1,
+    marginBottom: 2,
+    textShadowRadius: 0,
   },
   passRarity: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   passDescription: {
     fontSize: 12,
@@ -549,7 +644,7 @@ const styles = StyleSheet.create({
   },
   expandIcon: {
     fontSize: 12,
-    color: '#666',
+    color: colors.gray.medium,
     fontFamily: 'PixeloidMono',
   },
   checkboxButton: {
@@ -557,17 +652,17 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#999',
-    backgroundColor: '#fff',
+    borderColor: colors.gray.light,
+    backgroundColor: colors.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxButtonSelected: {
-    backgroundColor: '#2196F3',
-    borderColor: '#2196F3',
+    backgroundColor: colors.green.success,
+    borderColor: colors.green.success,
   },
   checkboxText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 14,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
@@ -577,7 +672,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'PixeloidMono',
     fontStyle: 'italic',
-    color: '#666',
+    color: colors.gray.medium,
   },
   effectsContainer: {
     marginTop: 4,
@@ -586,7 +681,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.gray.dark,
     marginBottom: 4,
   },
   effectText: {
@@ -596,36 +691,40 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   selectedIndicator: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.orange.primary,
     width: 24,
     height: 24,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: colors.white,
   },
   selectedText: {
-    color: 'white',
+    color: colors.white,
     fontSize: 14,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
   },
   accumulatedEffects: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  accumulatedTitle: {
-    fontSize: 12,
-    fontFamily: 'PixeloidMono',
-    fontWeight: 'bold',
-    color: '#2d5f2d',
+  accumulatedHeader: {
     marginBottom: 8,
   },
-  accumulatedEffect: {
-    fontSize: 12,
+  accumulatedTitle: {
+    fontSize: 14,
     fontFamily: 'PixeloidMono',
-    color: '#2d5f2d',
-    marginBottom: 4,
+    fontWeight: 'bold',
+    color: colors.brown.primary,
+    textAlign: 'center',
+  },
+  accumulatedEffect: {
+    fontSize: 13,
+    fontFamily: 'PixeloidMono',
+    color: colors.brown.secondary,
+    marginBottom: 6,
+    lineHeight: 18,
   },
   lockedOverlay: {
     position: 'absolute',
@@ -633,14 +732,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 12,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  lockedText: {
-    fontSize: 32,
-    opacity: 0.7,
+  lockIcon: {
+    width: 48,
+    height: 48,
+    resizeMode: 'contain',
+    opacity: 0.6,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -662,23 +762,21 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontFamily: 'PixeloidMono',
-    color: '#374151',
+    color: colors.gray.dark,
     fontWeight: '700',
   },
   confirmText: {
     fontSize: 16,
     fontFamily: 'PixeloidMono',
-    color: '#ffffff',
+    color: colors.white,
     fontWeight: '800',
-    textShadowColor: '#166534',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   unlockedCount: {
     textAlign: 'center',
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'PixeloidMono',
-    color: '#666',
-    marginTop: 8,
+    color: colors.brown.secondary,
+    marginTop: 12,
+    fontWeight: '600',
   },
 });

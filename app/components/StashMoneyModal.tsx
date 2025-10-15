@@ -4,11 +4,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useWallet } from '../../src/hooks/useWallet';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
+import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 import colors from '../../src/constants/colors';
 
@@ -89,7 +90,24 @@ export default function StashMoneyModal({
         </View>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
+          <PressableButton
+            onPress={handleConfirm}
+            disabled={
+              !stashAmount ||
+              parseFloat(stashAmount) <= 0 ||
+              parseFloat(stashAmount) > balance
+            }
+            shadowColor="rgba(123,169,101,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={
+              !stashAmount ||
+              parseFloat(stashAmount) <= 0 ||
+              parseFloat(stashAmount) > balance
+                ? 0.2
+                : 0.5
+            }
+            shadowRadius={5}
+            elevation={8}
             style={[
               styles.confirmButton,
               (!stashAmount ||
@@ -97,38 +115,50 @@ export default function StashMoneyModal({
                 parseFloat(stashAmount) > balance) &&
                 styles.disabledButton,
             ]}
-            onPress={handleConfirm}
-            disabled={
-              !stashAmount ||
-              parseFloat(stashAmount) <= 0 ||
-              parseFloat(stashAmount) > balance
-            }
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+            <PixelBorder
+              borderColor="rgba(123,169,101,1)"
+              borderWidth={3}
+              backgroundColor="rgba(154,193,118,1)"
+              innerPadding={0}
             >
-              <Image
-                source={require('../../assets/images/emojis/good.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                  resizeMode: 'contain',
-                  marginRight: 6,
-                }}
-              />
-              <Text style={styles.confirmText}>
-                Stash ${stashAmount || '0.00'}
-              </Text>
-            </View>
-          </TouchableOpacity>
+              <View style={styles.confirmButtonInner}>
+                <Image
+                  source={require('../../assets/images/emojis/good.png')}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    resizeMode: 'contain',
+                    marginRight: 6,
+                  }}
+                />
+                <Text style={styles.confirmText}>
+                  Stash ${stashAmount || '0.00'}
+                </Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
 
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelText}>Wait, I changed my mind</Text>
-          </TouchableOpacity>
+          <PressableButton
+            onPress={onClose}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.cancelButton}
+          >
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.cancelButtonInner}>
+                <Text style={styles.cancelText}>Wait, I changed my mind</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </View>
       </>
     </FastModal>
@@ -169,25 +199,33 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   confirmButton: {
-    backgroundColor: colors.green.success,
-    borderRadius: 12,
-    padding: 16,
+    width: '100%',
+  },
+  confirmButtonInner: {
+    paddingVertical: 15,
+    paddingHorizontal: 25,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   confirmText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: 'PixeloidMono',
+    color: '#ffffff',
   },
   cancelButton: {
-    backgroundColor: '#e9ecef',
-    borderRadius: 12,
-    padding: 16,
+    width: '100%',
+  },
+  cancelButtonInner: {
+    paddingVertical: 15,
+    paddingHorizontal: 25,
     alignItems: 'center',
   },
   cancelText: {
     fontSize: 16,
-    color: colors.gray.medium,
+    fontFamily: 'PixeloidMono',
+    color: '#ffffff',
   },
   inputContainer: {
     marginBottom: 20,
@@ -212,6 +250,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.offWhite,
   },
   disabledButton: {
-    backgroundColor: colors.gray.border,
+    opacity: 0.6,
   },
 });

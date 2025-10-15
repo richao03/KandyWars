@@ -27,7 +27,13 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
+import { resetFirebaseSession } from '../components/CandyWarsTitleScreen';
 import colors from '../../src/constants/colors';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { updateCachedUserObject, clearCachedUserObject } from '../../src/store/slices/userObjectSlice';
+import { setWonDifficulties, setTotalCompletions } from '../../src/store/slices/scoreboardSlice';
+import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
+import { forceSave } from '../../src/store/store';
 
 
 function Settings() {
@@ -38,13 +44,15 @@ function Settings() {
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
   const { resetPlaythrough } = useDailyStats();
+  const dispatch = useAppDispatch();
+  const cachedUser = useAppSelector((state) => state.userObject.cachedUser);
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
   const initializeWallet = walletContext?.initializeWallet || (() => {});
   const setPlayerName = walletContext?.setPlayerName || (() => {});
   const currentDifficulty = walletContext?.difficulty;
-  const currentPlayerName = walletContext?.playerName;
+  const currentPlayerName = cachedUser?.playerName || walletContext?.playerName || 'Player';
   const [isRestarting, setIsRestarting] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -215,60 +223,37 @@ function Settings() {
       return;
     }
 
-    // Validate name uniqueness
     setIsValidatingName(true);
     setNameValidationError(null);
 
     try {
-      // Initialize Firebase services
-      await scoreboardService.initialize();
+      // Update Redux cache with new player name
+      dispatch(updateCachedUserObject({ playerName: trimmedName }));
+      console.log('✅ Player name updated in Redux:', trimmedName);
 
-      // Get player ID from wallet context
-      const currentPlayerId = walletContext?.playerId;
-      if (!currentPlayerId) {
-        Alert.alert('Error', 'Player ID not found. Please restart the game.');
-        setIsValidatingName(false);
-        return;
+      // Get updated user object from Redux and sync to service cache
+      const updatedUser = cachedUser ? { ...cachedUser, playerName: trimmedName } : null;
+      if (updatedUser) {
+        scoreboardService.setCachedUserObject(updatedUser);
+        console.log('✅ Player name synced to service cache:', updatedUser);
+
+        // Also ensure scoreboard slice is in sync with userObject
+        dispatch(setWonDifficulties(updatedUser.difficultyWon));
+        dispatch(setTotalCompletions(updatedUser.totalWinCount));
+        console.log('✅ Scoreboard slice synced:', updatedUser.difficultyWon, updatedUser.totalWinCount);
       }
 
-      // Check if name is available
-      const isAvailable = await nameValidationService.isNameAvailable(
-        trimmedName,
-        currentPlayerId
+      // Also update wallet context for backward compatibility
+      setPlayerName(trimmedName);
+
+      setEditingName(false);
+      setNewPlayerName('');
+      setNameValidationError(null);
+
+      Alert.alert(
+        'Name Updated',
+        `Your name has been changed to "${trimmedName}". It will be saved to the server when you complete a game.`
       );
-
-      if (!isAvailable) {
-        setNameValidationError(
-          'This name is already taken. Please choose a different name.'
-        );
-        setIsValidatingName(false);
-        return;
-      }
-
-      // Update name in Firebase
-      const nameUpdated = await nameValidationService.updatePlayerName(
-        currentPlayerName || '',
-        trimmedName,
-        currentPlayerId
-      );
-
-      if (nameUpdated) {
-        // Update local state
-        setPlayerName(trimmedName);
-        setEditingName(false);
-        setNewPlayerName('');
-        setNameValidationError(null);
-
-        Alert.alert(
-          'Name Updated',
-          `Your name has been changed to "${trimmedName}".`
-        );
-      } else {
-        Alert.alert(
-          'Update Failed',
-          'Failed to update your name. Please try again.'
-        );
-      }
     } catch (error) {
       console.error('Error updating name:', error);
       Alert.alert('Error', 'Unable to update name. Please try again.');
@@ -298,9 +283,19 @@ function Settings() {
         setIsRestarting(true);
 
         try {
-          // Get the current player ID before clearing
+          // Get the current user object before clearing
           const currentPlayerId = walletContext?.playerId;
           const currentPlayerName = walletContext?.playerName;
+
+          // Delete user document from Firebase
+          console.log('🗑️ Deleting user document from Firebase...');
+          try {
+            await scoreboardService.initializeAuth();
+            await scoreboardService.deleteUserObject();
+            console.log('✅ User document deleted from Firebase');
+          } catch (error) {
+            console.error('❌ Failed to delete user document from Firebase:', error);
+          }
 
           // Clear the Firebase name association if we have a player ID
           if (currentPlayerId && currentPlayerName) {
@@ -318,7 +313,28 @@ function Settings() {
             }
           }
 
-          // Clear ALL AsyncStorage data
+          // STEP 1: Reset all Redux slices FIRST (in memory)
+          dispatch(resetHallPasses());
+          dispatch(clearCachedUserObject());
+          dispatch(setWonDifficulties([]));
+          dispatch(setTotalCompletions(0));
+          console.log('✅ All Redux slices reset in memory');
+
+          // STEP 2: Reset all game contexts
+          await resetGame();
+          resetWallet();
+          resetInventory();
+          resetJokers();
+          resetFlavorText();
+          resetPlaythrough();
+          console.log('✅ All game contexts reset');
+
+          // STEP 3: Clear service cache and Firebase session
+          scoreboardService.clearUserObjectCache();
+          resetFirebaseSession(); // Reset session flag so Firebase re-initializes
+          console.log('✅ Service cache and Firebase session cleared');
+
+          // STEP 4: Clear ALL AsyncStorage data
           const allKeys = await AsyncStorage.getAllKeys();
           console.log('🗑️ Found keys to clear:', allKeys);
           await AsyncStorage.multiRemove(allKeys);
@@ -334,17 +350,11 @@ function Settings() {
             'inventory',
             'jokers',
             'flavor_text_shown',
+            'persist:root', // Redux persist key
           ];
 
           await AsyncStorage.multiRemove(specificKeys);
-
-          // Reset all game contexts
-          await resetGame();
-          resetWallet();
-          resetInventory();
-          resetJokers();
-          resetFlavorText();
-          resetPlaythrough();
+          console.log('✅ AsyncStorage cleared');
 
           // Generate new seed
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -669,24 +679,15 @@ function Settings() {
               >
                 <TouchableOpacity
                   style={styles.debugButton}
-                  onPress={async () => {
-                    console.log('🔧 DEBUG: Fetching total completions from Firebase...');
-                    try {
-                      const total = await scoreboardService.getTotalCompletions();
-                      console.log('🏆 TOTAL COMPLETIONS FROM FIREBASE:', total);
-                      Alert.alert(
-                        'Total Completions',
-                        `You have completed ${total} game(s)`,
-                        [{ text: 'OK' }]
-                      );
-                    } catch (error) {
-                      console.error('❌ Failed to fetch completions:', error);
-                      Alert.alert(
-                        'Error',
-                        'Failed to fetch completions - check console',
-                        [{ text: 'OK' }]
-                      );
-                    }
+                  onPress={() => {
+                    console.log('🔧 DEBUG: Getting total completions from cache...');
+                    const total = scoreboardService.getTotalWinCount();
+                    console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
+                    Alert.alert(
+                      'Total Win Count',
+                      `You have won ${total} game(s)`,
+                      [{ text: 'OK' }]
+                    );
                   }}
                 >
                   <Text style={styles.debugButtonText}>

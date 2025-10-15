@@ -19,6 +19,8 @@ import FastModal from '../components/FastModal';
 import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
 import JokerConfirmationModal from '../components/JokerConfirmationModal';
+import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 import colors from '../../src/constants/colors';
 
@@ -80,6 +82,47 @@ function JokersPage() {
 
   // Debug mode state
   const [debugMode, setDebugMode] = useState(false);
+  const [debugTapCount, setDebugTapCount] = useState(0);
+  const debugToggleRef = React.useRef(false);
+
+  // Handle debug mode activation (5 taps on joker icon)
+  const handleDebugTap = () => {
+    if (!__DEV__) return;
+
+    // If debug mode is already on, toggle it off
+    if (debugMode) {
+      // Prevent multiple rapid toggles
+      if (debugToggleRef.current) return;
+      debugToggleRef.current = true;
+
+      setDebugMode(false);
+      console.log('🐛 Debug mode toggled OFF');
+
+      setTimeout(() => {
+        debugToggleRef.current = false;
+      }, 500);
+      return;
+    }
+
+    const newCount = debugTapCount + 1;
+    setDebugTapCount(newCount);
+    console.log('🐛 Debug tap count:', newCount);
+
+    if (newCount >= 5) {
+      setDebugMode(true);
+      console.log('🐛 Debug mode ENABLED');
+      handleShowConfirmation(
+        'Debug Mode Enabled!',
+        'Tap any joker in the "All" tab to add it to your inventory.',
+        '🐛',
+        () => {}
+      );
+      setDebugTapCount(0);
+    } else if (newCount === 1) {
+      // Reset counter after 2 seconds if not continuing
+      setTimeout(() => setDebugTapCount(0), 2000);
+    }
+  };
 
   // State for Master Negotiator candy conversion
   const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(
@@ -560,10 +603,12 @@ function JokersPage() {
       <View style={headerStyles}>
         <View style={styles.headerTop}>
           <View style={styles.titleRow}>
-            <Image
-              source={require('../../assets/images/emojis/joker.png')}
-              style={styles.titleIcon}
-            />
+            <TouchableOpacity onPress={handleDebugTap} activeOpacity={0.7}>
+              <Image
+                source={require('../../assets/images/emojis/joker.png')}
+                style={styles.titleIcon}
+              />
+            </TouchableOpacity>
             <Text style={titleStyles}> Jokers</Text>
           </View>
           <View style={styles.countBadge}>
@@ -574,9 +619,11 @@ function JokersPage() {
         </View>
 
         <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
+          <PressableButton
             onPress={() => setActiveTab('inventory')}
+            shadowOpacity={0}
+            elevation={0}
+            style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
           >
             <TextWithEmojis
               imageSize={20}
@@ -587,26 +634,13 @@ function JokersPage() {
             >
               {`🎒 Owned (${jokers.length})`}
             </TextWithEmojis>
-          </TouchableOpacity>
+          </PressableButton>
 
-          <TouchableOpacity
-            style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
+          <PressableButton
             onPress={() => setActiveTab('see-all')}
-            onLongPress={
-              __DEV__
-                ? () => {
-                    // Debug mode: Toggle debug mode
-                    setDebugMode(!debugMode);
-                    handleShowConfirmation(
-                      'Debug Mode',
-                      debugMode
-                        ? 'Debug mode disabled'
-                        : 'Debug mode enabled! Tap any joker to add it to inventory',
-                      '🐛'
-                    );
-                  }
-                : undefined
-            }
+            shadowOpacity={0}
+            elevation={0}
+            style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
           >
             <Text
               style={[
@@ -616,7 +650,7 @@ function JokersPage() {
             >
               {debugMode && __DEV__ ? '🐛 ' : ''}📖 All ({allJokersCount})
             </Text>
-          </TouchableOpacity>
+          </PressableButton>
         </View>
       </View>
 
@@ -746,24 +780,52 @@ function JokersPage() {
             // For target selection (after source is selected), show all candies
             return true;
           }).map((candyType) => (
-            <TouchableOpacity
+            <PressableButton
               key={candyType}
-              style={styles.candyButton}
               onPress={() => handleCandySelection(candyType)}
+              shadowColor="rgba(123,169,101,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
+              style={styles.candyButton}
             >
-              <Text style={styles.candyButtonText}>{candyType}</Text>
-            </TouchableOpacity>
+              <PixelBorder
+                borderColor="rgba(123,169,101,1)"
+                borderWidth={3}
+                backgroundColor="rgba(154,193,118,1)"
+                innerPadding={0}
+              >
+                <View style={styles.candyButtonInner}>
+                  <Text style={styles.candyButtonText}>{candyType}</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           ))}
 
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <PressableButton
             onPress={() => {
               setCandySelectorModal({ visible: false, joker: null });
               setSelectedSourceCandy(null); // Reset source candy selection
             }}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.cancelButton}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.cancelButtonInner}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </>
       </FastModal>
 
@@ -790,15 +852,29 @@ function JokersPage() {
             jokers
               .filter((j) => j.name !== 'Glitch in the Matrix')
               .map((availableJoker) => (
-                <TouchableOpacity
+                <PressableButton
                   key={availableJoker.id}
-                  style={styles.candyButton}
                   onPress={() => handleJokerSelection(availableJoker)}
+                  shadowColor="rgba(123,169,101,1)"
+                  shadowOffset={{ width: 0, height: 4 }}
+                  shadowOpacity={0.5}
+                  shadowRadius={5}
+                  elevation={8}
+                  style={styles.candyButton}
                 >
-                  <TextWithEmojis style={styles.candyButtonText} imageSize={24}>
-                    {`${availableJoker.name} ${availableJoker.type === 'persistent' ? '🔮' : '⚡'}`}
-                  </TextWithEmojis>
-                </TouchableOpacity>
+                  <PixelBorder
+                    borderColor="rgba(123,169,101,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(154,193,118,1)"
+                    innerPadding={0}
+                  >
+                    <View style={styles.candyButtonInner}>
+                      <TextWithEmojis style={styles.candyButtonText} imageSize={24}>
+                        {`${availableJoker.name} ${availableJoker.type === 'persistent' ? '🔮' : '⚡'}`}
+                      </TextWithEmojis>
+                    </View>
+                  </PixelBorder>
+                </PressableButton>
               ))
           ) : (
             <View style={{ alignItems: 'center', padding: 20 }}>
@@ -813,14 +889,28 @@ function JokersPage() {
             </View>
           )}
 
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <PressableButton
             onPress={() =>
               setJokerSelectorModal({ visible: false, joker: null })
             }
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.cancelButton}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.cancelButtonInner}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </>
       </FastModal>
     </View>
@@ -1057,31 +1147,29 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   candyButton: {
-    backgroundColor: colors.darkGray2,
-    borderRadius: 8,
+    marginVertical: 4,
+    width: '100%',
+  },
+  candyButtonInner: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginVertical: 4,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3a3a3a',
   },
   candyButtonText: {
-    color: colors.gold.medium,
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
     letterSpacing: 0.5,
   },
   cancelButton: {
-    backgroundColor: colors.red.error,
-    borderRadius: 8,
+    marginTop: 12,
+    width: '100%',
+  },
+  cancelButtonInner: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    marginTop: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.red.dark,
   },
   cancelButtonText: {
     color: colors.white,

@@ -89,17 +89,58 @@ export default function LeaderboardScreen() {
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
 
-  const getDifficultyColor = (difficulty: string): string => {
-    switch (difficulty) {
-      case 'easy':
-        return '#22c55e';
-      case 'medium':
-        return '#f59e0b';
-      case 'hard':
-        return '#ef4444';
+  const getDifficultyName = (level: number | string): string => {
+    // Convert string to number if needed
+    const levelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+
+    switch (levelNum) {
+      case 1:
+        return 'Tutorial';
+      case 2:
+        return 'Easy';
+      case 3:
+        return 'Simple';
+      case 4:
+        return 'Normal';
+      case 5:
+        return 'Medium';
+      case 6:
+        return 'Hard';
+      case 7:
+        return 'Challenging';
+      case 8:
+        return 'Expert';
+      case 9:
+        return 'Difficult';
+      case 10:
+        return 'Master';
+      case 11:
+        return 'Extreme';
+      case 12:
+        return 'Insane';
+      case 13:
+        return 'Brutal';
+      case 14:
+        return 'Nightmare';
+      case 15:
+        return 'Hell';
+      case 16:
+        return 'Impossible';
       default:
-        return '#6b7280';
+        return 'Unknown';
     }
+  };
+
+  const getDifficultyColor = (level: number | string): string => {
+    // Convert string to number if needed
+    const levelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+
+    // Color based on difficulty level ranges
+    if (levelNum <= 2) return '#22c55e'; // Green for Tutorial/Easy
+    if (levelNum <= 5) return '#3b82f6'; // Blue for Simple/Normal/Medium
+    if (levelNum <= 8) return '#f59e0b'; // Yellow for Hard/Challenging/Expert
+    if (levelNum <= 12) return '#ef4444'; // Red for Difficult/Master/Extreme/Insane
+    return '#9333ea'; // Purple for Brutal+
   };
 
   const getRankDisplay = (index: number): string => {
@@ -168,7 +209,7 @@ export default function LeaderboardScreen() {
                     ]}
                   >
                     <Text style={styles.difficultyText}>
-                      {score.difficulty?.toUpperCase()}
+                      {getDifficultyName(score.difficulty).toUpperCase()}
                     </Text>
                   </View>
                 </View>
@@ -267,7 +308,7 @@ export default function LeaderboardScreen() {
     <View style={styles.container}>
       <StatusBar
         barStyle="light-content"
-        backgroundColor="#1a1a1a"
+        backgroundColor="#D2691E"
         translucent={true}
       />
 
@@ -279,6 +320,8 @@ export default function LeaderboardScreen() {
         >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>🏆 Leaderboard</Text>
+        <View style={{ width: 80 }} />
       </View>
 
       {/* Tab Bar */}
@@ -321,7 +364,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.darkGray1,
+    backgroundColor: '#D2691E',
   },
   header: {
     flexDirection: 'row',
@@ -330,9 +373,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: colors.darkGray1,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3a3a3a',
+    backgroundColor: '#D2691E',
+    borderBottomWidth: 3,
+    borderBottomColor: '#d4a574',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    fontFamily: 'PixeloidMono',
   },
   backButton: {
     padding: 8,
@@ -356,9 +406,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: colors.darkGray2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3a3a3a',
+    backgroundColor: 'rgba(212, 165, 116, 0.3)',
+    borderBottomWidth: 3,
+    borderBottomColor: '#F4A460',
   },
   tab: {
     flex: 1,
@@ -368,48 +418,54 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: colors.blue.primary,
+    borderBottomColor: '#F4A460',
   },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#9ca3af',
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontFamily: 'PixeloidMono',
   },
   activeTabText: {
-    color: colors.blue.primary,
+    color: '#F4A460',
   },
   tabContent: {
     flex: 1,
   },
   infoSection: {
     padding: 20,
-    backgroundColor: colors.darkGray2,
+    backgroundColor: 'rgba(212, 165, 116, 0.3)',
     margin: 16,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#d4a574',
   },
   infoTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.green.success,
+    color: '#32CD32',
     marginBottom: 8,
+    fontFamily: 'PixeloidMono',
   },
   infoSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#ffffff',
     textAlign: 'center',
     marginBottom: 12,
+    fontFamily: 'PixeloidMono',
   },
   rankBadge: {
-    backgroundColor: colors.blue.primary,
+    backgroundColor: '#F4A460',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   rankText: {
-    color: colors.white,
+    color: '#8B4513',
     fontWeight: 'bold',
     fontSize: 14,
+    fontFamily: 'PixeloidMono',
   },
   leaderboardSection: {
     padding: 16,
@@ -417,9 +473,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.white,
+    color: '#ffffff',
     marginBottom: 16,
     textAlign: 'center',
+    fontFamily: 'PixeloidMono',
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -458,16 +515,18 @@ const styles = StyleSheet.create({
   },
   leaderboardItem: {
     flexDirection: 'row',
-    backgroundColor: colors.darkGray2,
+    backgroundColor: 'rgba(244, 164, 96, 0.2)',
     marginBottom: 12,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#d4a574',
   },
   topThreeItem: {
-    backgroundColor: '#3a2a1a',
-    borderWidth: 1,
-    borderColor: '#fbbf24',
+    backgroundColor: 'rgba(255, 215, 0, 0.3)',
+    borderWidth: 3,
+    borderColor: '#F4A460',
   },
   rankContainer: {
     marginRight: 16,
@@ -494,8 +553,9 @@ const styles = StyleSheet.create({
   finalBalance: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: colors.green.success,
+    color: '#32CD32',
     marginRight: 12,
+    fontFamily: 'PixeloidMono',
   },
   difficultyBadge: {
     paddingHorizontal: 8,
@@ -513,9 +573,11 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     padding: 16,
-    backgroundColor: colors.darkGray2,
+    backgroundColor: 'rgba(222, 184, 135, 0.3)',
     margin: 16,
     borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#DEB887',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -527,44 +589,52 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.blue.primary,
+    color: '#F4A460',
+    fontFamily: 'PixeloidMono',
   },
   statLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#ffffff',
     marginTop: 4,
+    fontFamily: 'PixeloidMono',
   },
   analyticsSection: {
     padding: 16,
   },
   analyticsItem: {
     flexDirection: 'row',
-    backgroundColor: colors.darkGray2,
+    backgroundColor: 'rgba(205, 133, 63, 0.2)',
     marginBottom: 8,
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#CD853F',
   },
   analyticsRank: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#fbbf24',
+    color: '#F4A460',
     marginRight: 12,
     minWidth: 30,
+    fontFamily: 'PixeloidMono',
   },
   analyticsName: {
     flex: 1,
     fontSize: 16,
-    color: colors.white,
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
   },
   analyticsCount: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#DEB887',
+    fontFamily: 'PixeloidMono',
   },
   emptyAnalyticsText: {
-    color: '#9ca3af',
+    color: '#ffffff',
     textAlign: 'center',
     padding: 20,
     fontStyle: 'italic',
+    fontFamily: 'PixeloidMono',
   },
 });

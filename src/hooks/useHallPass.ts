@@ -37,9 +37,14 @@ export const useHallPass = () => {
 
   // Initialize hall passes on mount to refresh definitions from static data
   useEffect(() => {
-    console.log('🎓 useHallPass: Dispatching initializeHallPasses');
-    dispatch(initializeHallPasses());
-  }, [dispatch]);
+    // Only initialize if not already loaded to prevent duplicate calls
+    if (!hallPassState.isLoaded) {
+      console.log('🎓 useHallPass: Dispatching initializeHallPasses');
+      dispatch(initializeHallPasses());
+    } else {
+      console.log('🎓 useHallPass: Already initialized, skipping');
+    }
+  }, [dispatch, hallPassState.isLoaded]);
 
   const unlockPass = useCallback(
     (passId: string) => {
@@ -156,10 +161,12 @@ export const useHallPass = () => {
         finalProfit: number;
         difficulty: number;
         completionTime?: number;
-        perfectAttendance?: boolean;
         studyStreak?: boolean;
         noJokers?: boolean;
         totalCandySold?: number;
+        confiscationCount?: number;
+        stashedAmount?: number;
+        jokerCount?: number;
       },
       minigameTrackingData?: {
         hasPlayedAllMinigames: boolean;
@@ -199,11 +206,8 @@ export const useHallPass = () => {
           case 'candy_kingpin':
             if (gameStats.completions >= 10) newUnlocks.push(pass.id);
             break;
-          case 'speed_demon':
-            if (
-              gameStats.completionTime &&
-              gameStats.completionTime < 10 * 60 * 1000
-            )
+          case 'forged_pass':
+            if (gameStats.jokerCount && gameStats.jokerCount >= 8)
               newUnlocks.push(pass.id);
             break;
           case 'minimalist_master':
@@ -217,6 +221,14 @@ export const useHallPass = () => {
             break;
           case 'perfect_scholar':
             if (gameStats.difficulty >= 6) newUnlocks.push(pass.id);
+            break;
+          case 'teachers_pet':
+            if (gameStats.confiscationCount && gameStats.confiscationCount >= 3)
+              newUnlocks.push(pass.id);
+            break;
+          case 'finance_club':
+            if (gameStats.stashedAmount && gameStats.stashedAmount >= 35000)
+              newUnlocks.push(pass.id);
             break;
         }
       });

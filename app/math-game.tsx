@@ -1,10 +1,15 @@
-import React from 'react';
 import { router } from 'expo-router';
+import React from 'react';
 import { useGame } from '../src/hooks/useGame';
 import MathGame from './minigames/MathGame';
 
 export default function MathGameScreen() {
-  const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
+  const {
+    markStudiedTonight,
+    markLunchMinigamePlayed,
+    minigameContext,
+    setMinigameContext,
+  } = useGame();
 
   const navigateBack = () => {
     // Since we use router.push() to get here, we can use router.back() to return
@@ -24,8 +29,10 @@ export default function MathGameScreen() {
       console.log('Lunch minigame finished.');
     }
 
-    // Clear context
     setMinigameContext(null);
+
+    // Clear context
+    // setMinigameContext(null);
 
     // Use setTimeout to ensure state updates are flushed before navigation
     // Increased delay to give Redux time to propagate the state change

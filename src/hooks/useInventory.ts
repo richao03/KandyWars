@@ -66,7 +66,6 @@ export const useInventory = () => {
   // Use pre-computed inventory limit from Redux instead of calculating every time
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const jokerState = useAppSelector(state => state.joker);
-  const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
 
   // Ensure joker state is properly migrated on first use

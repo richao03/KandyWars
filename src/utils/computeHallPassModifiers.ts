@@ -18,7 +18,7 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
     inventoryBonusSlots: 0,
     allowanceBonusPercent: 0,
     jokerBonusCount: 0,
-    extraPeriodsPerDay: 0,
+    rerollBonusCount: 0,
   };
 
   // Accumulate effects from all selected passes
@@ -45,10 +45,11 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
           break;
         case 'special':
           // Check description for special effects
-          if (effect.description.includes('extra period')) {
-            modifiers.extraPeriodsPerDay += effect.value;
-            console.log(`  ✓ special (extra period): +${effect.value} periods (total: ${modifiers.extraPeriodsPerDay} periods)`);
+          if (effect.description.includes('reroll')) {
+            modifiers.rerollBonusCount += effect.value;
+            console.log(`  ✓ special (reroll): +${effect.value} rerolls (total: ${modifiers.rerollBonusCount} rerolls)`);
           }
+          // Add more special effect handling here as needed
           break;
         default:
           console.warn(`  ⚠️ Unknown effect type: ${effect.type}`);

@@ -1,7 +1,7 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ImageBackground,
   StyleSheet,
@@ -9,6 +9,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import colors from '../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../src/constants/jokerIds';
 import { useFlavorText } from '../src/context/FlavorTextContext';
 import { useGame } from '../src/hooks/useGame';
@@ -17,9 +26,8 @@ import { useWallet } from '../src/hooks/useWallet';
 import ConfirmationModal from './components/ConfirmationModal';
 import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
+import PressableButton from './components/PressableButton';
 import TextWithEmojis from './components/TextWithEmojis';
-import colors from '../src/constants/colors';
-
 
 interface PiggyBankPageProps {
   onBack?: () => void;
@@ -47,10 +55,91 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
     onConfirm: () => {},
   });
 
+  // Animation state for stashed amount change indicator
+  const [stashedChange, setStashedChange] = useState<number | null>(null);
+  const previousStashed = useRef<number | null>(null);
+  const isInitialized = useRef(false);
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const scale = useSharedValue(0.8);
+  const shakeX = useSharedValue(0);
+
   // Set piggy bank flavor text when component loads
   useEffect(() => {
     setEvent('PIGGY_BANK');
   }, [setEvent]);
+
+  // Initialize previous stashed amount on first render
+  useEffect(() => {
+    if (!isInitialized.current) {
+      previousStashed.current = stashedAmount;
+      isInitialized.current = true;
+    }
+  }, []);
+
+  // Detect stashed amount changes and trigger animation
+  useEffect(() => {
+    if (!isInitialized.current || previousStashed.current === null) {
+      return;
+    }
+
+    const change = stashedAmount - previousStashed.current;
+
+    if (change !== 0) {
+      // Set the change amount
+      setStashedChange(change);
+
+      // Start animation sequence
+      translateY.value = 0;
+      opacity.value = 0;
+      scale.value = 0.8;
+      shakeX.value = 0;
+
+      // Animate in, hold, then fade out
+      translateY.value = withSequence(
+        withSpring(-40, { damping: 15, stiffness: 200 }),
+        withTiming(-50, { duration: 1000 }),
+        withTiming(-60, { duration: 300 })
+      );
+
+      opacity.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(1, { duration: 1000 }),
+        withTiming(0, { duration: 300 }, () => {
+          runOnJS(setStashedChange)(null);
+        })
+      );
+
+      scale.value = withSequence(
+        withSpring(1.2, { damping: 12, stiffness: 200 }),
+        withSpring(1, { damping: 15, stiffness: 150 })
+      );
+
+      // Shake the piggy bank container
+      shakeX.value = withSequence(
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(4, { duration: 50 }),
+        withTiming(-4, { duration: 50 }),
+        withTiming(0, { duration: 50 })
+      );
+    }
+
+    previousStashed.current = stashedAmount;
+  }, [stashedAmount]);
+
+  // Animated style for stashed change indicator
+  const animatedStashedChangeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  // Animated style for piggy bank shake
+  const animatedPiggyBankStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+  }));
 
   const maxAmount =
     mode === 'deposit' ? Math.max(0, balance) : Math.max(0, stashedAmount);
@@ -96,28 +185,8 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
         : withdrawFromStash(amount);
 
     if (success) {
-      const depositMessage = bonusApplied
-        ? `You've stashed $${amount.toFixed(2)} + 10% bonus ($${(finalAmount - amount).toFixed(2)}) = $${finalAmount.toFixed(2)} in your piggy bank!`
-        : `You've safely stashed $${amount.toFixed(2)} in your piggy bank!`;
-
-      setConfirmModal({
-        visible: true,
-        title:
-          mode === 'deposit'
-            ? bonusApplied
-              ? '💰 Bonus Deposit!'
-              : 'Money Stashed!'
-            : 'Money Withdrawn!',
-        message:
-          mode === 'deposit'
-            ? depositMessage
-            : `You've withdrawn $${amount.toFixed(2)} from your piggy bank!`,
-        emoji: mode === 'deposit' ? (bonusApplied ? '🎉' : '💰') : '💸',
-        onConfirm: () => {
-          setAmount(0);
-          setConfirmModal((prev) => ({ ...prev, visible: false }));
-        },
-      });
+      // Just reset the amount, no modal needed - animation will show the change
+      setAmount(0);
     } else {
       // Show error if transaction failed
       setConfirmModal({
@@ -156,20 +225,44 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
               style={{ marginBottom: 12 }}
               innerPadding={0}
             >
-              <View style={styles.piggyBankContainer}>
-                <View style={styles.piggyBankInfo}>
-                  <Text style={styles.piggyBankLabel}>Stashed Away</Text>
-                  <Text
+              <View style={{ position: 'relative' }}>
+                <Animated.View
+                  style={[styles.piggyBankContainer, animatedPiggyBankStyle]}
+                >
+                  <View style={styles.piggyBankInfo}>
+                    <Text style={styles.piggyBankLabel}>Stashed Away</Text>
+                    <Text
+                      style={[
+                        styles.piggyBankAmount,
+                        { fontSize: stashedAmountFontSize },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {stashedAmountText}
+                    </Text>
+                  </View>
+                </Animated.View>
+                {/* Animated change indicator positioned absolutely relative to container */}
+                {stashedChange !== null && (
+                  <Animated.View
                     style={[
-                      styles.piggyBankAmount,
-                      { fontSize: stashedAmountFontSize },
+                      styles.stashedChangeIndicator,
+                      animatedStashedChangeStyle,
                     ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
                   >
-                    {stashedAmountText}
-                  </Text>
-                </View>
+                    <Text
+                      style={[
+                        styles.stashedChangeText,
+                        {
+                          color: stashedChange > 0 ? '#4ade80' : '#f87171',
+                        },
+                      ]}
+                    >
+                      {stashedChange > 0 ? '+' : ''}${stashedChange.toFixed(2)}
+                    </Text>
+                  </Animated.View>
+                )}
               </View>
             </PixelBorder>
 
@@ -261,54 +354,85 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
                 />
 
                 {/* Action Button inside container */}
-                <TouchableOpacity
-                  style={[
-                    styles.inlineActionButton,
-                    {
-                      backgroundColor:
-                        mode === 'deposit' ? '#4ade80' : '#f87171',
-                    },
-                    amount === 0 && styles.actionButtonDisabled,
-                  ]}
+                <PressableButton
                   onPress={handleTransaction}
                   disabled={amount === 0}
+                  shadowColor={
+                    mode === 'deposit'
+                      ? 'rgba(123,169,101,1)'
+                      : 'rgba(185,28,28,1)'
+                  }
+                  shadowOffset={{ width: 0, height: 4 }}
+                  shadowOpacity={0.5}
+                  shadowRadius={5}
+                  elevation={8}
+                  style={{ marginTop: 10, width: '100%' }}
                 >
-                  <TextWithEmojis
-                    style={styles.actionButtonText}
-                    imageSize={28}
+                  <PixelBorder
+                    borderColor={
+                      mode === 'deposit'
+                        ? 'rgba(123,169,101,1)'
+                        : 'rgba(185,28,28,1)'
+                    }
+                    borderWidth={3}
+                    backgroundColor={
+                      mode === 'deposit'
+                        ? 'rgba(154,193,118,1)'
+                        : 'rgba(239,68,68,1)'
+                    }
+                    innerPadding={0}
                   >
-                    {mode === 'deposit'
-                      ? '💰 Deposit Money'
-                      : '💸 Withdraw Money'}
-                  </TextWithEmojis>
-                </TouchableOpacity>
+                    <View
+                      style={[
+                        styles.inlineActionButtonInner,
+                        amount === 0 && styles.actionButtonDisabled,
+                      ]}
+                    >
+                      <TextWithEmojis
+                        style={styles.actionButtonText}
+                        imageSize={28}
+                      >
+                        {mode === 'deposit'
+                          ? '💰 Deposit Money'
+                          : '💸 Withdraw Money'}
+                      </TextWithEmojis>
+                    </View>
+                  </PixelBorder>
+                </PressableButton>
               </View>
             </PixelBorder>
 
             {/* Back to After School Button */}
-            <PixelBorder
-              style={{ marginTop: 20 }}
-              borderWidth={3}
-              borderColor="rgba(247, 233, 142, 0.8)"
-              innerPadding={0}
+            <PressableButton
+              onPress={() => {
+                // Trigger success haptic feedback when going back to after school
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success
+                );
+                if (onBack) {
+                  onBack();
+                } else {
+                  router.replace('/(tabs)/after-school');
+                }
+              }}
+              shadowColor="rgba(185,28,28,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
+              style={{ marginTop: 0 }}
             >
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => {
-                  // Trigger success haptic feedback when going back to after school
-                  Haptics.notificationAsync(
-                    Haptics.NotificationFeedbackType.Success
-                  );
-                  if (onBack) {
-                    onBack();
-                  } else {
-                    router.replace('/(tabs)/after-school');
-                  }
-                }}
+              <PixelBorder
+                borderColor="rgba(185,28,28,1)"
+                borderWidth={3}
+                backgroundColor="rgba(239,68,68,1)"
+                innerPadding={0}
               >
-                <Text style={styles.backButtonText}>← Back</Text>
-              </TouchableOpacity>
-            </PixelBorder>
+                <View style={styles.backButtonInner}>
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
           </View>
         </ImageBackground>
       </View>
@@ -345,7 +469,7 @@ const styles = StyleSheet.create({
   piggyBankContainer: {
     padding: 8,
     borderRadius: 15,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     alignItems: 'center',
   },
   piggyBankInfo: {
@@ -353,33 +477,30 @@ const styles = StyleSheet.create({
   },
   piggyBankLabel: {
     fontSize: 16,
-    color: colors.purple.light,
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     marginBottom: 5,
+    textShadowColor: 'rgba(0, 0, 0, 1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   piggyBankAmount: {
     fontSize: 28,
     fontWeight: '700',
     color: colors.gold.light,
     fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(247, 233, 142, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 1)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  balanceContainer: {
-    backgroundColor: 'rgba(184, 169, 201, 0.2)',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.purple.light,
-  },
   balanceLabel: {
     fontSize: 14,
-    color: colors.purple.light,
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     marginBottom: 5,
+    textShadowColor: 'rgba(0, 0, 0, 1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   balanceAmount: {
     fontSize: 24,
@@ -389,7 +510,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, .8)',
+    backgroundColor: 'rgba(0, 0, 0, .2)',
     padding: 2,
     borderRadius: 15,
   },
@@ -401,20 +522,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: 'rgba(0,0,0,1)',
+    backgroundColor: 'rgba(0,0,0,.4)',
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.purple.light,
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   tabTextActive: {
     color: colors.gold.light,
   },
   amountSection: {
     borderRadius: 15,
-    backgroundColor: 'rgba(0,0,0, 0.8)',
+    backgroundColor: 'rgba(0,0,0, 0.2)',
     padding: 12,
   },
   amountLabel: {
@@ -437,8 +561,11 @@ const styles = StyleSheet.create({
   },
   maxAmount: {
     fontSize: 14,
-    color: colors.purple.light,
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   slider: {
     width: '100%',
@@ -465,42 +592,58 @@ const styles = StyleSheet.create({
   actionButtonDisabled: {
     opacity: 0.5,
   },
-  inlineActionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+  inlineActionButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
+    backgroundColor: 'transparent',
   },
   actionButtonText: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   infoText: {
     fontSize: 14,
-    color: colors.purple.light,
+    color: colors.offWhite,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontStyle: 'italic',
+    textShadowColor: 'rgba(0, 0, 0, 1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  backButton: {
-    backgroundColor: 'rgba(0,0,0, 0.7)',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 15,
+  backButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   backButtonText: {
-    color: colors.gold.light,
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+  },
+  stashedChangeIndicator: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  stashedChangeText: {
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
 });

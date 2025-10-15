@@ -26,13 +26,13 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
+import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch } from '../../src/store/hooks';
 import { setTotalCompletions } from '../../src/store/slices/gameSlice';
 import { forceSave } from '../../src/store/store';
 import CustomCopilotTooltip from '../components/CustomCopilotTooltip';
-import GameEndModal from '../components/GameEndModal';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import InventoryModal from '../components/InventoryModal';
@@ -82,20 +82,19 @@ function AfterSchoolPage() {
   const { checkUnlockRequirements } = useHallPass();
   const { hasPlayedAllMinigames } = useMinigameTracking();
   const { totalCandiesSold } = useCandySales();
+  const { gameData } = useSeed();
   const { start, copilotEvents, eventEmitter } = useCopilot();
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
   const [goingToSchoolModalVisible, setGoingToSchoolModalVisible] =
     useState(false);
-  const [gameEndModalVisible, setGameEndModalVisible] = useState(false);
-  const [gameResult, setGameResult] = useState<'won' | 'lost' | null>(null);
   const [allowanceAmount, setAllowanceAmount] = useState(0);
+  const [guaranteedEventWarnings, setGuaranteedEventWarnings] = useState<string[]>([]);
   const [showStudySubjects, setShowStudySubjects] = useState(false);
   const [showStash, setShowStash] = useState(false);
   const [showDeli, setShowDeli] = useState(false);
   const [showInventory, setShowInventory] = useState(false);
-  const [unlockedHallPasses, setUnlockedHallPasses] = useState<string[]>([]);
-  const [totalCompletionsForModal, setTotalCompletionsForModal] = useState(0);
+  const [hasTriggeredGameEnd, setHasTriggeredGameEnd] = useState(false);
 
   // Set afternoon flavor text when component loads and track active view
   useEffect(() => {
@@ -104,30 +103,28 @@ function AfterSchoolPage() {
     setLastActiveView('after-school');
   }, [setEvent, setLastActiveView]);
 
-  // Check if game should end (when entering after-school on day 5)
+  // Check if game should end (only via periodCount >= 40, handled in market.tsx)
   useEffect(() => {
-    console.log(
-      `🎯 After-school useEffect: day=${day}, gameEndModalVisible=${gameEndModalVisible}`
-    );
-    if (day === 5 && !gameEndModalVisible) {
+    console.log(`🎯 After-school useEffect: day=${day}, hasTriggeredGameEnd=${hasTriggeredGameEnd}`);
+    // Removed premature day 5 check - game should end after ALL periods complete (periodCount >= 40)
+    if (false && day === 5 && !hasTriggeredGameEnd) {
+      setHasTriggeredGameEnd(true);
       console.log('🎯 Game End: Condition met - starting game end sequence');
       const handleGameEnd = async () => {
         console.log('🎯 Game End: Entered handleGameEnd function');
 
         // Calculate final score
         const finalScore = balance + stashedAmount;
-        const targetScore = adoptionFee;
+        const targetScore = 0; // Win condition: net worth >= 0 (debt paid off)
 
         console.log('🎯 Final Score:', finalScore, 'Target:', targetScore);
 
-        // Determine win/lose
-        const hasWon = finalScore >= targetScore;
+        // Determine win/lose (net worth >= 0 means debt is paid)
+        const hasWon = finalScore >= 0;
         if (hasWon) {
           console.log('🎉 Player WON! Score exceeds adoption fee');
-          setGameResult('won');
         } else {
           console.log('😢 Player LOST! Score below adoption fee');
-          setGameResult('lost');
         }
 
         // Get total completions count
@@ -140,13 +137,12 @@ function AfterSchoolPage() {
             totalCompletions =
               await scoreboardService.incrementGameCompletions();
             dispatch(setTotalCompletions(totalCompletions));
-            setTotalCompletionsForModal(totalCompletions);
             console.log('🏆 Total completions:', totalCompletions);
           } else {
             console.log(
-              '😢 Player lost - fetching total completions for hall pass checks...'
+              '😢 Player lost - getting total completions from cache...'
             );
-            totalCompletions = await scoreboardService.getTotalCompletions();
+            totalCompletions = scoreboardService.getTotalWinCount();
             console.log('🏆 Total completions (lost game):', totalCompletions);
           }
         } catch (error) {
@@ -161,7 +157,6 @@ function AfterSchoolPage() {
             finalProfit: finalScore, // Total profit from this game
             difficulty: difficultyLevel,
             completionTime: periodCount, // Number of periods played
-            perfectAttendance: periodCount >= 40, // 5 days * 8 periods
             totalCandySold: totalCandiesSold,
             noJokers: jokers.length === 0, // For minimalist_master
           };
@@ -181,10 +176,8 @@ function AfterSchoolPage() {
             minigameTrackingData
           );
           console.log('🎓 Newly unlocked Hall Passes:', unlocked);
-          setUnlockedHallPasses(unlocked);
         } catch (error) {
           console.error('❌ Error checking Hall Pass unlocks:', error);
-          setUnlockedHallPasses([]);
         }
 
         // Track game completion in leaderboard
@@ -194,8 +187,9 @@ function AfterSchoolPage() {
           console.error('❌ Error tracking game completion:', error);
         }
 
-        // Show game end modal
-        setGameEndModalVisible(true);
+        // Navigate to game end screen
+        console.log('🎮 Navigating to game end screen');
+        router.push('/game-end');
 
         // Clear game state so there's no continue option available after game ends
         setIsInitialized(false);
@@ -208,7 +202,6 @@ function AfterSchoolPage() {
     }
   }, [
     day,
-    gameEndModalVisible,
     balance,
     stashedAmount,
     adoptionFee,
@@ -411,6 +404,20 @@ function AfterSchoolPage() {
     // Track allowance in daily stats
     addAllowanceToStats(receivedAllowance);
 
+    // Find guaranteed events for the next day
+    const nextDayStart = Math.floor(periodCount / 8) * 8 + 8 + 1; // Start of next day (1-indexed)
+    const nextDayEnd = nextDayStart + 7; // End of next day
+    const guaranteedEventsForTomorrow = gameData.periodEvents.filter(
+      (event) =>
+        event.isGuaranteedEvent &&
+        event.period >= nextDayStart &&
+        event.period <= nextDayEnd
+    );
+
+    const warnings = guaranteedEventsForTomorrow.map((event) => event.hint);
+    setGuaranteedEventWarnings(warnings);
+    console.log('🚨 Guaranteed events for tomorrow:', warnings);
+
     setGoingToSchoolModalVisible(true);
   };
 
@@ -426,12 +433,14 @@ function AfterSchoolPage() {
     // Close the interstitial
     setGoingToSchoolModalVisible(false);
 
-    // Game end is now handled when entering after-school on day 5
-    // This function should never be called on day 5 anymore
-    if (day >= 5) {
+    // Check if starting a new day would complete the game (day 6 = periodCount 40)
+    const nextPeriodCount = Math.floor(periodCount / 8) * 8 + 8;
+    if (nextPeriodCount >= 40) {
       console.log(
-        '🎯 Game already ended - sleep button should not be accessible on day 5'
+        '🎯 Day 5 complete - navigating to game end screen instead of starting day 6'
       );
+      console.log('🎯 Current periodCount:', periodCount, 'Next would be:', nextPeriodCount);
+      router.push('/game-end');
       return;
     }
 
@@ -457,6 +466,7 @@ function AfterSchoolPage() {
     resetDailyStats,
     startNewDay,
     setIsInitialized,
+    periodCount,
   ]);
 
   const handleSleepCancel = () => {
@@ -464,31 +474,6 @@ function AfterSchoolPage() {
     setSleepConfirmModalVisible(false);
   };
 
-  const handleGameRestart = () => {
-    // Close game end modal and navigate to title screen
-    setGameEndModalVisible(false);
-    setGameResult(null);
-    setUnlockedHallPasses([]);
-
-    // Reset all game state
-    resetGame();
-    setIsInitialized(false);
-    console.log('🔄 Complete game reset performed for restart');
-
-    router.push('/title-screen');
-  };
-
-  const handleGameEndModalClose = () => {
-    // Close game end modal but stay in current screen
-    setGameEndModalVisible(false);
-    setGameResult(null);
-    setUnlockedHallPasses([]);
-
-    // Reset all game state so no continue option is available
-    resetGame();
-    setIsInitialized(false);
-    console.log('🔄 Game state cleared after closing game end modal');
-  };
 
   const options = useMemo(() => {
     const allOptions = [
@@ -521,13 +506,13 @@ function AfterSchoolPage() {
       },
     ];
 
-    // Don't show sleep button on day 5 (game ends when entering after-school)
-    if (day >= 5) {
+    // Don't show sleep button after game ends (periodCount >= 40)
+    if (periodCount >= 40) {
       return allOptions.filter((opt) => opt.id !== 'sleep');
     }
 
     return allOptions;
-  }, [hasStudiedTonight, handleStudy, day]);
+  }, [hasStudiedTonight, handleStudy, periodCount]);
 
   const renderMainOptions = useMemo(() => {
     const shouldShowTutorial = day === 1 && !hasCompletedAfterSchoolTutorial;
@@ -694,21 +679,7 @@ function AfterSchoolPage() {
         visible={goingToSchoolModalVisible}
         allowanceAmount={allowanceAmount}
         onComplete={handleGoingToSchoolComplete}
-      />
-
-      <GameEndModal
-        visible={gameEndModalVisible}
-        gameResult={gameResult || 'lost'}
-        finalScore={balance + stashedAmount}
-        balance={balance}
-        stashedAmount={stashedAmount}
-        adoptionFee={adoptionFee}
-        difficultyLevel={difficultyLevel || 1}
-        unlockedHallPasses={unlockedHallPasses}
-        totalCompletions={totalCompletionsForModal}
-        totalCandiesSold={totalCandiesSold}
-        onRestart={handleGameRestart}
-        onClose={handleGameEndModalClose}
+        guaranteedEventWarnings={guaranteedEventWarnings}
       />
 
       <InventoryModal

@@ -26,6 +26,7 @@ interface PlaythroughStats {
   totalSpentOnCandy: number;
   totalAllowance: number;
   totalCandiesSold: number;
+  confiscationCount: number; // Track STASH_LOCKED events
 }
 
 interface DailyStatsState {
@@ -53,6 +54,7 @@ const initialState: DailyStatsState = {
     totalSpentOnCandy: 0,
     totalAllowance: 0,
     totalCandiesSold: 0,
+    confiscationCount: 0,
   },
 };
 
@@ -114,12 +116,17 @@ const dailyStatsSlice = createSlice({
     recordAllowance: (state, action: PayloadAction<{ amount: number }>) => {
       state.playthroughStats.totalAllowance += action.payload.amount;
     },
+    recordConfiscation: (state) => {
+      state.playthroughStats.confiscationCount += 1;
+      console.log('📊 Confiscation recorded, total:', state.playthroughStats.confiscationCount);
+    },
     resetPlaythroughStats: (state) => {
       state.playthroughStats = {
         totalProfit: 0,
         totalSpentOnCandy: 0,
         totalAllowance: 0,
         totalCandiesSold: 0,
+        confiscationCount: 0,
       };
     },
     resetDailyStats: () => initialState,
@@ -138,6 +145,7 @@ export const {
   recordSale,
   recordPurchase,
   recordAllowance,
+  recordConfiscation,
   resetPlaythroughStats,
   resetDailyStats,
 } = dailyStatsSlice.actions;

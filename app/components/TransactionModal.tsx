@@ -2,11 +2,20 @@ import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
+import { scoreboardService } from '../../src/services/firebase';
 import { Candy } from '../../src/types/candy';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
@@ -69,16 +78,6 @@ function TransactionModal({
   const clampedMaxSellQuantity = maxSellQuantity < 0 ? 0 : maxSellQuantity;
   const maxQuantity =
     mode === 'Buy' ? clampedMaxBuyQuantity : clampedMaxSellQuantity;
-
-  // Debug logging for sell mode
-  if (mode === 'Sell') {
-    console.log(`📊 TransactionModal SELL mode:`);
-    console.log(
-      `📊 maxSellQuantity=${maxSellQuantity}, clamped=${clampedMaxSellQuantity}`
-    );
-    console.log(`📊 candy=${candy.name}, quantityOwned=${candy.quantityOwned}`);
-    console.log(`📊 maxQuantity=${maxQuantity}`);
-  }
 
   const inventoryLimit = useMemo(
     () => getInventoryLimit(),
@@ -217,7 +216,28 @@ function TransactionModal({
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
-      onConfirm(quantity, mode);
+      // Track highest single sale for SELL transactions
+      if (mode === 'Sell' && priceBreakdown) {
+        const saleRevenue = priceBreakdown.finalPrice * quantity;
+        console.log('💰 Sale revenue:', saleRevenue);
+
+        const userObject = scoreboardService.getCachedUserObject();
+        if (!userObject) {
+          console.warn('⚠️ User object not cached, cannot track highest single sale');
+        } else if (saleRevenue > userObject.highestSingleSale) {
+          console.log(
+            '🎉 New highest single sale!',
+            saleRevenue,
+            'Previous:',
+            userObject.highestSingleSale
+          );
+          scoreboardService.updateLocalUserObject({
+            highestSingleSale: saleRevenue,
+          });
+        }
+      }
+
+      onConfirm(quantity, mode.toLowerCase() as 'buy' | 'sell');
     }
   };
 
@@ -244,6 +264,944 @@ function TransactionModal({
     // Ensure quantity never goes below 0
     setQuantity(Math.max(0, Math.round(value)));
   };
+
+  // Calculate number of sparks based on transaction value - dramatic tiers
+  const numSparks = useMemo(() => {
+    if (mode === 'Sell') {
+      const totalValue = parseFloat(pocketValue);
+
+      // Dramatic tiers with exponential growth
+      if (totalValue < 100) return 0;
+      if (totalValue < 500) return 3; // $100-$499: 6 particles
+      // $2000-$4999: 18 particles (+29%)
+      if (totalValue < 1000) return 5;
+      if (totalValue < 5000) return 7;
+      if (totalValue < 10000) return 12; // $5000-$9999: 21 particles (+17%)
+      if (totalValue < 30000) return 20;
+      return 24; // $10000+: 24 particles (max)
+    }
+    return 0;
+  }, [mode, pocketValue]);
+
+  // Calculate border color based on profit tiers - green to blue gradient
+  const buttonBorderColor = useMemo(() => {
+    if (mode === 'Sell') {
+      const totalValue = parseFloat(pocketValue);
+
+      if (totalValue >= 20000) return '#0066ff'; // Bright blue
+      if (totalValue >= 15000) return '#00cccc'; // Cyan
+      if (totalValue >= 10000) return '#00ffcc'; // Aquamarine
+      if (totalValue >= 5000) return '#00ff99'; // Spring green
+      if (totalValue >= 2000) return '#2ecc71'; // Emerald
+      if (totalValue >= 1000) return '#4caf50'; // Material green
+      return 'rgba(123,169,101,1)'; // Button border green
+    }
+    return 'rgba(123,169,101,1)';
+  }, [mode, pocketValue]);
+
+  const buttonBackgroundColor = useMemo(() => {
+    if (mode === 'Sell') {
+      const totalValue = parseFloat(pocketValue);
+
+      if (totalValue >= 20000) return 'rgba(0, 102, 255, 0.3)'; // Blue tint
+      if (totalValue >= 15000) return 'rgba(0, 204, 204, 0.3)'; // Cyan tint
+      if (totalValue >= 10000) return 'rgba(0, 255, 204, 0.3)'; // Aquamarine tint
+      if (totalValue >= 5000) return 'rgba(0, 255, 153, 0.3)'; // Spring green tint
+      if (totalValue >= 2000) return 'rgba(46, 204, 113, 0.3)'; // Emerald tint
+      if (totalValue >= 1000) return 'rgba(76, 175, 80, 0.3)'; // Material green tint
+      return 'rgba(154,193,118,1)'; // Default button green
+    }
+    return 'rgba(154,193,118,1)';
+  }, [mode, pocketValue]);
+
+  // Calculate color palette based on profit tiers - green to blue gradient
+  const sparkColors = useMemo(() => {
+    if (mode === 'Sell') {
+      const totalValue = parseFloat(pocketValue);
+
+      if (totalValue >= 20000) {
+        // $20000+: Deep vibrant blues
+        return [
+          '#0066ff', // Bright blue
+          '#0080ff', // Azure
+          '#0099ff', // Sky blue
+          '#00b3ff', // Light blue
+          '#1e90ff', // Dodger blue
+          '#4169e1', // Royal blue
+          '#5a7fff', // Lighter royal blue
+          '#00bfff', // Deep sky blue
+        ];
+      } else if (totalValue >= 15000) {
+        // $15000-$19999: Blue-cyan range
+        return [
+          '#00cccc', // Cyan
+          '#00e6e6', // Bright cyan
+          '#00d9ff', // Vivid cyan
+          '#00c3ff', // Cyan-blue
+          '#00b0ff', // Light blue
+          '#009fff', // Sky cyan
+          '#1e90ff', // Dodger blue
+          '#4db8ff', // Light dodger blue
+        ];
+      } else if (totalValue >= 10000) {
+        // $10000-$14999: Cyan-teal range
+        return [
+          '#00ffcc', // Aquamarine
+          '#00ffb3', // Bright aqua
+          '#00e6cc', // Turquoise
+          '#00d9e6', // Cyan-teal
+          '#00cccc', // Cyan
+          '#00b8d4', // Dark cyan
+          '#26c6da', // Light cyan
+          '#4dd0e1', // Bright turquoise
+        ];
+      } else if (totalValue >= 5000) {
+        // $5000-$9999: Teal-green range
+        return [
+          '#00ff99', // Spring green
+          '#00e68a', // Mint green
+          '#00cc88', // Emerald green
+          '#00b894', // Teal green
+          '#1abc9c', // Turquoise
+          '#16a085', // Dark turquoise
+          '#26d9a0', // Sea green
+          '#2ecc71', // Bright emerald
+        ];
+      } else if (totalValue >= 2000) {
+        // $2000-$4999: Green-teal transition
+        return [
+          '#3dff88', // Bright mint
+          '#2ecc71', // Emerald
+          '#27ae60', // Nephritis
+          '#16a085', // Dark turquoise
+          '#1abc9c', // Turquoise
+          '#20c997', // Teal
+        ];
+      } else if (totalValue >= 1000) {
+        // $1000-$1999: Bright greens
+        return [
+          '#4caf50', // Material green
+          '#43a047', // Forest green
+          '#388e3c', // Deep green
+          '#2e7d32', // Dark green
+        ];
+      } else if (totalValue >= 500) {
+        // $500-$999: Medium greens (starting point)
+        return [
+          '#5ced00', // Vivid green
+          '#4caf50', // Material green
+          '#43a047', // Forest green
+        ];
+      } else {
+        // $100-$499: Base button greens
+        return [
+          'rgba(123,169,101,1)', // Button border green
+          '#7ba965', // Slightly brighter
+          '#6a9a54', // Forest tint
+        ];
+      }
+    }
+    return ['rgba(123,169,101,1)', '#7ba965', '#6a9a54'];
+  }, [mode, pocketValue]);
+
+  // Spark/particle animation for sell button - dynamic number based on value (max 24 for performance)
+  const spark0Y = useSharedValue(0);
+  const spark0X = useSharedValue(0);
+  const spark0Opacity = useSharedValue(0);
+  const spark0Scale = useSharedValue(1);
+  const spark0ColorProgress = useSharedValue(0);
+
+  const spark1Y = useSharedValue(0);
+  const spark1X = useSharedValue(0);
+  const spark1Opacity = useSharedValue(0);
+  const spark1Scale = useSharedValue(1);
+  const spark1ColorProgress = useSharedValue(0);
+
+  const spark2Y = useSharedValue(0);
+  const spark2X = useSharedValue(0);
+  const spark2Opacity = useSharedValue(0);
+  const spark2Scale = useSharedValue(1);
+  const spark2ColorProgress = useSharedValue(0);
+
+  const spark3Y = useSharedValue(0);
+  const spark3X = useSharedValue(0);
+  const spark3Opacity = useSharedValue(0);
+  const spark3Scale = useSharedValue(1);
+  const spark3ColorProgress = useSharedValue(0);
+
+  const spark4Y = useSharedValue(0);
+  const spark4X = useSharedValue(0);
+  const spark4Opacity = useSharedValue(0);
+  const spark4Scale = useSharedValue(1);
+  const spark4ColorProgress = useSharedValue(0);
+
+  const spark5Y = useSharedValue(0);
+  const spark5X = useSharedValue(0);
+  const spark5Opacity = useSharedValue(0);
+  const spark5Scale = useSharedValue(1);
+  const spark5ColorProgress = useSharedValue(0);
+
+  const spark6Y = useSharedValue(0);
+  const spark6X = useSharedValue(0);
+  const spark6Opacity = useSharedValue(0);
+  const spark6Scale = useSharedValue(1);
+  const spark6ColorProgress = useSharedValue(0);
+
+  const spark7Y = useSharedValue(0);
+  const spark7X = useSharedValue(0);
+  const spark7Opacity = useSharedValue(0);
+  const spark7Scale = useSharedValue(1);
+  const spark7ColorProgress = useSharedValue(0);
+
+  const spark8Y = useSharedValue(0);
+  const spark8X = useSharedValue(0);
+  const spark8Opacity = useSharedValue(0);
+  const spark8Scale = useSharedValue(1);
+  const spark8ColorProgress = useSharedValue(0);
+
+  const spark9Y = useSharedValue(0);
+  const spark9X = useSharedValue(0);
+  const spark9Opacity = useSharedValue(0);
+  const spark9Scale = useSharedValue(1);
+  const spark9ColorProgress = useSharedValue(0);
+
+  const spark10Y = useSharedValue(0);
+  const spark10X = useSharedValue(0);
+  const spark10Opacity = useSharedValue(0);
+  const spark10Scale = useSharedValue(1);
+  const spark10ColorProgress = useSharedValue(0);
+
+  const spark11Y = useSharedValue(0);
+  const spark11X = useSharedValue(0);
+  const spark11Opacity = useSharedValue(0);
+  const spark11Scale = useSharedValue(1);
+  const spark11ColorProgress = useSharedValue(0);
+
+  const spark12Y = useSharedValue(0);
+  const spark12X = useSharedValue(0);
+  const spark12Opacity = useSharedValue(0);
+  const spark12Scale = useSharedValue(1);
+  const spark12ColorProgress = useSharedValue(0);
+
+  const spark13Y = useSharedValue(0);
+  const spark13X = useSharedValue(0);
+  const spark13Opacity = useSharedValue(0);
+  const spark13Scale = useSharedValue(1);
+  const spark13ColorProgress = useSharedValue(0);
+
+  const spark14Y = useSharedValue(0);
+  const spark14X = useSharedValue(0);
+  const spark14Opacity = useSharedValue(0);
+  const spark14Scale = useSharedValue(1);
+  const spark14ColorProgress = useSharedValue(0);
+
+  const spark15Y = useSharedValue(0);
+  const spark15X = useSharedValue(0);
+  const spark15Opacity = useSharedValue(0);
+  const spark15Scale = useSharedValue(1);
+  const spark15ColorProgress = useSharedValue(0);
+
+  const spark16Y = useSharedValue(0);
+  const spark16X = useSharedValue(0);
+  const spark16Opacity = useSharedValue(0);
+  const spark16Scale = useSharedValue(1);
+  const spark16ColorProgress = useSharedValue(0);
+
+  const spark17Y = useSharedValue(0);
+  const spark17X = useSharedValue(0);
+  const spark17Opacity = useSharedValue(0);
+  const spark17Scale = useSharedValue(1);
+  const spark17ColorProgress = useSharedValue(0);
+
+  const spark18Y = useSharedValue(0);
+  const spark18X = useSharedValue(0);
+  const spark18Opacity = useSharedValue(0);
+  const spark18Scale = useSharedValue(1);
+  const spark18ColorProgress = useSharedValue(0);
+
+  const spark19Y = useSharedValue(0);
+  const spark19X = useSharedValue(0);
+  const spark19Opacity = useSharedValue(0);
+  const spark19Scale = useSharedValue(1);
+  const spark19ColorProgress = useSharedValue(0);
+
+  const spark20Y = useSharedValue(0);
+  const spark20X = useSharedValue(0);
+  const spark20Opacity = useSharedValue(0);
+  const spark20Scale = useSharedValue(1);
+  const spark20ColorProgress = useSharedValue(0);
+
+  const spark21Y = useSharedValue(0);
+  const spark21X = useSharedValue(0);
+  const spark21Opacity = useSharedValue(0);
+  const spark21Scale = useSharedValue(1);
+  const spark21ColorProgress = useSharedValue(0);
+
+  const spark22Y = useSharedValue(0);
+  const spark22X = useSharedValue(0);
+  const spark22Opacity = useSharedValue(0);
+  const spark22Scale = useSharedValue(1);
+  const spark22ColorProgress = useSharedValue(0);
+
+  const spark23Y = useSharedValue(0);
+  const spark23X = useSharedValue(0);
+  const spark23Opacity = useSharedValue(0);
+  const spark23Scale = useSharedValue(1);
+  const spark23ColorProgress = useSharedValue(0);
+
+  // Group into arrays for easier iteration
+  const sparkYValues = [
+    spark0Y,
+    spark1Y,
+    spark2Y,
+    spark3Y,
+    spark4Y,
+    spark5Y,
+    spark6Y,
+    spark7Y,
+    spark8Y,
+    spark9Y,
+    spark10Y,
+    spark11Y,
+    spark12Y,
+    spark13Y,
+    spark14Y,
+    spark15Y,
+    spark16Y,
+    spark17Y,
+    spark18Y,
+    spark19Y,
+    spark20Y,
+    spark21Y,
+    spark22Y,
+    spark23Y,
+  ];
+  const sparkXValues = [
+    spark0X,
+    spark1X,
+    spark2X,
+    spark3X,
+    spark4X,
+    spark5X,
+    spark6X,
+    spark7X,
+    spark8X,
+    spark9X,
+    spark10X,
+    spark11X,
+    spark12X,
+    spark13X,
+    spark14X,
+    spark15X,
+    spark16X,
+    spark17X,
+    spark18X,
+    spark19X,
+    spark20X,
+    spark21X,
+    spark22X,
+    spark23X,
+  ];
+  const sparkOpacityValues = [
+    spark0Opacity,
+    spark1Opacity,
+    spark2Opacity,
+    spark3Opacity,
+    spark4Opacity,
+    spark5Opacity,
+    spark6Opacity,
+    spark7Opacity,
+    spark8Opacity,
+    spark9Opacity,
+    spark10Opacity,
+    spark11Opacity,
+    spark12Opacity,
+    spark13Opacity,
+    spark14Opacity,
+    spark15Opacity,
+    spark16Opacity,
+    spark17Opacity,
+    spark18Opacity,
+    spark19Opacity,
+    spark20Opacity,
+    spark21Opacity,
+    spark22Opacity,
+    spark23Opacity,
+  ];
+  const sparkScaleValues = [
+    spark0Scale,
+    spark1Scale,
+    spark2Scale,
+    spark3Scale,
+    spark4Scale,
+    spark5Scale,
+    spark6Scale,
+    spark7Scale,
+    spark8Scale,
+    spark9Scale,
+    spark10Scale,
+    spark11Scale,
+    spark12Scale,
+    spark13Scale,
+    spark14Scale,
+    spark15Scale,
+    spark16Scale,
+    spark17Scale,
+    spark18Scale,
+    spark19Scale,
+    spark20Scale,
+    spark21Scale,
+    spark22Scale,
+    spark23Scale,
+  ];
+  const sparkColorProgress = [
+    spark0ColorProgress,
+    spark1ColorProgress,
+    spark2ColorProgress,
+    spark3ColorProgress,
+    spark4ColorProgress,
+    spark5ColorProgress,
+    spark6ColorProgress,
+    spark7ColorProgress,
+    spark8ColorProgress,
+    spark9ColorProgress,
+    spark10ColorProgress,
+    spark11ColorProgress,
+    spark12ColorProgress,
+    spark13ColorProgress,
+    spark14ColorProgress,
+    spark15ColorProgress,
+    spark16ColorProgress,
+    spark17ColorProgress,
+    spark18ColorProgress,
+    spark19ColorProgress,
+    spark20ColorProgress,
+    spark21ColorProgress,
+    spark22ColorProgress,
+    spark23ColorProgress,
+  ];
+
+  useEffect(() => {
+    if (mode === 'Sell' && numSparks > 0) {
+      // Animate only the number of sparks based on value
+      sparkYValues.forEach((sparkY, index) => {
+        if (index < numSparks) {
+          const delay = index * 10; // Stagger each spark by 10ms (faster spawning)
+          const duration = 700 + (index % 5) * 50;
+          const riseHeight = -36 - (index % 7) * 4; // Vary height between -36 and -60 (2x higher)
+
+          sparkY.value = withRepeat(
+            withSequence(
+              withTiming(0, { duration: delay }),
+              withTiming(riseHeight, {
+                duration: duration,
+                easing: Easing.out(Easing.ease),
+              }),
+              withTiming(riseHeight, { duration: 0 }) // Stay at top
+            ),
+            -1,
+            false
+          );
+        } else {
+          // Reset unused sparks to invisible
+          sparkY.value = 0;
+        }
+      });
+
+      // Add wavy horizontal movement (fire-like)
+      sparkXValues.forEach((sparkX, index) => {
+        if (index < numSparks) {
+          const delay = index * 10;
+          const duration = 700 + (index % 5) * 50;
+          const waveAmplitude = 8 + (index % 3) * 3; // Vary wave size between 8-14
+          const waveDirection = index % 2 === 0 ? 1 : -1; // Alternate left/right
+
+          sparkX.value = withRepeat(
+            withSequence(
+              withTiming(0, { duration: delay }),
+              withTiming(waveDirection * waveAmplitude, {
+                duration: duration / 2,
+                easing: Easing.inOut(Easing.ease),
+              }),
+              withTiming(-waveDirection * waveAmplitude, {
+                duration: duration / 2,
+                easing: Easing.inOut(Easing.ease),
+              }),
+              withTiming(0, { duration: 0 }) // Reset
+            ),
+            -1,
+            false
+          );
+        } else {
+          sparkX.value = 0;
+        }
+      });
+
+      sparkOpacityValues.forEach((opacity, index) => {
+        if (index < numSparks) {
+          const delay = index * 10;
+          const duration = 700 + (index % 5) * 50;
+
+          opacity.value = withRepeat(
+            withSequence(
+              withTiming(0, { duration: delay }),
+              withTiming(1, { duration: 150 }),
+              withTiming(0, { duration: duration - 150 }),
+              withTiming(0, { duration: 0 }) // Stay invisible
+            ),
+            -1,
+            false
+          );
+        } else {
+          // Keep unused sparks invisible
+          opacity.value = 0;
+        }
+      });
+
+      sparkScaleValues.forEach((scale, index) => {
+        if (index < numSparks) {
+          const delay = index * 10;
+          const duration = 700 + (index % 5) * 50;
+
+          scale.value = withRepeat(
+            withSequence(
+              withTiming(1, { duration: delay + 200 }),
+              withTiming(0.5, { duration: duration - 200 }),
+              withTiming(0.5, { duration: 0 }) // Stay at final scale
+            ),
+            -1,
+            false
+          );
+        } else {
+          scale.value = 0;
+        }
+      });
+
+      // Animate color transition from button border color to final colors
+      sparkColorProgress.forEach((colorProgress, index) => {
+        if (index < numSparks) {
+          const delay = index * 10;
+          const duration = 700 + (index % 5) * 50;
+
+          colorProgress.value = withRepeat(
+            withSequence(
+              withTiming(0, { duration: delay }), // Start with button border color
+              withTiming(1, {
+                duration: duration,
+                easing: Easing.out(Easing.ease),
+              }), // Transition to final color
+              withTiming(1, { duration: 0 }) // Stay at final color
+            ),
+            -1,
+            false
+          );
+        } else {
+          colorProgress.value = 0;
+        }
+      });
+    } else {
+      // Reset all sparks when not in sell mode
+      sparkYValues.forEach((sparkY) => (sparkY.value = 0));
+      sparkXValues.forEach((sparkX) => (sparkX.value = 0));
+      sparkOpacityValues.forEach((opacity) => (opacity.value = 0));
+      sparkScaleValues.forEach((scale) => (scale.value = 0));
+      sparkColorProgress.forEach((colorProgress) => (colorProgress.value = 0));
+    }
+  }, [mode, numSparks]);
+
+  // Create animated styles for all sparks with wavy movement - must be at top level
+  const animatedSpark0 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark0Y.value },
+      { translateX: spark0X.value },
+      { scale: spark0Scale.value },
+    ],
+    opacity: spark0Opacity.value,
+  }));
+  const animatedSpark1 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark1Y.value },
+      { translateX: spark1X.value },
+      { scale: spark1Scale.value },
+    ],
+    opacity: spark1Opacity.value,
+  }));
+  const animatedSpark2 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark2Y.value },
+      { translateX: spark2X.value },
+      { scale: spark2Scale.value },
+    ],
+    opacity: spark2Opacity.value,
+  }));
+  const animatedSpark3 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark3Y.value },
+      { translateX: spark3X.value },
+      { scale: spark3Scale.value },
+    ],
+    opacity: spark3Opacity.value,
+  }));
+  const animatedSpark4 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark4Y.value },
+      { translateX: spark4X.value },
+      { scale: spark4Scale.value },
+    ],
+    opacity: spark4Opacity.value,
+  }));
+  const animatedSpark5 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark5Y.value },
+      { translateX: spark5X.value },
+      { scale: spark5Scale.value },
+    ],
+    opacity: spark5Opacity.value,
+  }));
+  const animatedSpark6 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark6Y.value },
+      { translateX: spark6X.value },
+      { scale: spark6Scale.value },
+    ],
+    opacity: spark6Opacity.value,
+  }));
+  const animatedSpark7 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark7Y.value },
+      { translateX: spark7X.value },
+      { scale: spark7Scale.value },
+    ],
+    opacity: spark7Opacity.value,
+  }));
+  const animatedSpark8 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark8Y.value },
+      { translateX: spark8X.value },
+      { scale: spark8Scale.value },
+    ],
+    opacity: spark8Opacity.value,
+  }));
+  const animatedSpark9 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark9Y.value },
+      { translateX: spark9X.value },
+      { scale: spark9Scale.value },
+    ],
+    opacity: spark9Opacity.value,
+  }));
+  const animatedSpark10 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark10Y.value },
+      { translateX: spark10X.value },
+      { scale: spark10Scale.value },
+    ],
+    opacity: spark10Opacity.value,
+  }));
+  const animatedSpark11 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark11Y.value },
+      { translateX: spark11X.value },
+      { scale: spark11Scale.value },
+    ],
+    opacity: spark11Opacity.value,
+  }));
+  const animatedSpark12 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark12Y.value },
+      { translateX: spark12X.value },
+      { scale: spark12Scale.value },
+    ],
+    opacity: spark12Opacity.value,
+  }));
+  const animatedSpark13 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark13Y.value },
+      { translateX: spark13X.value },
+      { scale: spark13Scale.value },
+    ],
+    opacity: spark13Opacity.value,
+  }));
+  const animatedSpark14 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark14Y.value },
+      { translateX: spark14X.value },
+      { scale: spark14Scale.value },
+    ],
+    opacity: spark14Opacity.value,
+  }));
+  const animatedSpark15 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark15Y.value },
+      { translateX: spark15X.value },
+      { scale: spark15Scale.value },
+    ],
+    opacity: spark15Opacity.value,
+  }));
+  const animatedSpark16 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark16Y.value },
+      { translateX: spark16X.value },
+      { scale: spark16Scale.value },
+    ],
+    opacity: spark16Opacity.value,
+  }));
+  const animatedSpark17 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark17Y.value },
+      { translateX: spark17X.value },
+      { scale: spark17Scale.value },
+    ],
+    opacity: spark17Opacity.value,
+  }));
+  const animatedSpark18 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark18Y.value },
+      { translateX: spark18X.value },
+      { scale: spark18Scale.value },
+    ],
+    opacity: spark18Opacity.value,
+  }));
+  const animatedSpark19 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark19Y.value },
+      { translateX: spark19X.value },
+      { scale: spark19Scale.value },
+    ],
+    opacity: spark19Opacity.value,
+  }));
+  const animatedSpark20 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark20Y.value },
+      { translateX: spark20X.value },
+      { scale: spark20Scale.value },
+    ],
+    opacity: spark20Opacity.value,
+  }));
+  const animatedSpark21 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark21Y.value },
+      { translateX: spark21X.value },
+      { scale: spark21Scale.value },
+    ],
+    opacity: spark21Opacity.value,
+  }));
+  const animatedSpark22 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark22Y.value },
+      { translateX: spark22X.value },
+      { scale: spark22Scale.value },
+    ],
+    opacity: spark22Opacity.value,
+  }));
+  const animatedSpark23 = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: spark23Y.value },
+      { translateX: spark23X.value },
+      { scale: spark23Scale.value },
+    ],
+    opacity: spark23Opacity.value,
+  }));
+
+  const animatedSparkStyles = [
+    animatedSpark0,
+    animatedSpark1,
+    animatedSpark2,
+    animatedSpark3,
+    animatedSpark4,
+    animatedSpark5,
+    animatedSpark6,
+    animatedSpark7,
+    animatedSpark8,
+    animatedSpark9,
+    animatedSpark10,
+    animatedSpark11,
+    animatedSpark12,
+    animatedSpark13,
+    animatedSpark14,
+    animatedSpark15,
+    animatedSpark16,
+    animatedSpark17,
+    animatedSpark18,
+    animatedSpark19,
+    animatedSpark20,
+    animatedSpark21,
+    animatedSpark22,
+    animatedSpark23,
+  ];
+
+  // Create animated color styles for all sparks - text color only, no background
+  const animatedColor0 = useAnimatedStyle(() => {
+    const progress = spark0ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[0 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor1 = useAnimatedStyle(() => {
+    const progress = spark1ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[1 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor2 = useAnimatedStyle(() => {
+    const progress = spark2ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[2 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor3 = useAnimatedStyle(() => {
+    const progress = spark3ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[3 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor4 = useAnimatedStyle(() => {
+    const progress = spark4ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[4 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor5 = useAnimatedStyle(() => {
+    const progress = spark5ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[5 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor6 = useAnimatedStyle(() => {
+    const progress = spark6ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[6 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor7 = useAnimatedStyle(() => {
+    const progress = spark7ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[7 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor8 = useAnimatedStyle(() => {
+    const progress = spark8ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[8 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor9 = useAnimatedStyle(() => {
+    const progress = spark9ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[9 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor10 = useAnimatedStyle(() => {
+    const progress = spark10ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[10 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor11 = useAnimatedStyle(() => {
+    const progress = spark11ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[11 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor12 = useAnimatedStyle(() => {
+    const progress = spark12ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[12 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor13 = useAnimatedStyle(() => {
+    const progress = spark13ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[13 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor14 = useAnimatedStyle(() => {
+    const progress = spark14ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[14 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor15 = useAnimatedStyle(() => {
+    const progress = spark15ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[15 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor16 = useAnimatedStyle(() => {
+    const progress = spark16ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[16 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor17 = useAnimatedStyle(() => {
+    const progress = spark17ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[17 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor18 = useAnimatedStyle(() => {
+    const progress = spark18ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[18 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor19 = useAnimatedStyle(() => {
+    const progress = spark19ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[19 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor20 = useAnimatedStyle(() => {
+    const progress = spark20ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[20 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor21 = useAnimatedStyle(() => {
+    const progress = spark21ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[21 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor22 = useAnimatedStyle(() => {
+    const progress = spark22ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[22 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+  const animatedColor23 = useAnimatedStyle(() => {
+    const progress = spark23ColorProgress.value;
+    const buttonBorderColor = 'rgba(123,169,101,1)';
+    const finalColor = sparkColors[23 % sparkColors.length];
+    return { color: progress < 0.3 ? buttonBorderColor : finalColor };
+  });
+
+  const animatedSparkColorStyles = [
+    animatedColor0,
+    animatedColor1,
+    animatedColor2,
+    animatedColor3,
+    animatedColor4,
+    animatedColor5,
+    animatedColor6,
+    animatedColor7,
+    animatedColor8,
+    animatedColor9,
+    animatedColor10,
+    animatedColor11,
+    animatedColor12,
+    animatedColor13,
+    animatedColor14,
+    animatedColor15,
+    animatedColor16,
+    animatedColor17,
+    animatedColor18,
+    animatedColor19,
+    animatedColor20,
+    animatedColor21,
+    animatedColor22,
+    animatedColor23,
+  ];
 
   return (
     <FastModal
@@ -419,15 +1377,13 @@ function TransactionModal({
                   >
                     <View style={styles.priceBreakdownContainer}>
                       {activeEffects.map((effect, index) => (
-                        <>
-                          <TextWithEmojis
-                            key={index}
-                            style={styles.slowCookerText}
-                            imageSize={24}
-                          >
-                            {`${effect.emoji} ${effect.text} ${effect.amount}`}
-                          </TextWithEmojis>
-                        </>
+                        <TextWithEmojis
+                          key={index}
+                          style={styles.slowCookerText}
+                          imageSize={24}
+                        >
+                          {`${effect.emoji} ${effect.text}${effect.amount ? ' ' + effect.amount : ''}`}
+                        </TextWithEmojis>
                       ))}
                     </View>
                   </PixelBorder>
@@ -539,20 +1495,6 @@ function TransactionModal({
               </View>
             )}
 
-            {/* Afternoon Sale Bonus Notification */}
-            {qualifiesForAfternoonBonus && mode === 'Sell' && (
-              <View style={styles.afternoonBonusContainer}>
-                <View style={styles.afternoonBonusContent}>
-                  <Text style={styles.afternoonBonusLabel}>
-                    Afternoon Bonus Applied!
-                  </Text>
-                  <Text style={styles.afternoonBonusLabel}>
-                    You Earn: ${(quantity * candy.cost * 0.1).toFixed(2)} extra
-                  </Text>
-                </View>
-              </View>
-            )}
-
             {/* Combined Bulk Discount Notification */}
             {qualifiesForBulkDiscount && mode === 'Buy' && (
               <View style={styles.bulkDiscountContainer}>
@@ -615,23 +1557,56 @@ function TransactionModal({
             </PressableButton>
             <PressableButton
               onPress={handleConfirm}
-              shadowColor="rgba(123,169,101,1)"
+              shadowColor={buttonBorderColor}
               shadowOffset={{ width: 0, height: 4 }}
               shadowOpacity={0.5}
               shadowRadius={5}
               elevation={8}
               style={{ flex: 1 }}
             >
-              <PixelBorder
-                borderColor="rgba(123,169,101,1)"
-                borderWidth={3}
-                backgroundColor="rgba(154,193,118,1)"
-                innerPadding={0}
-              >
-                <View style={styles.confirmButton}>
-                  <Text style={styles.confirmButtonText}>{mode}</Text>
-                </View>
-              </PixelBorder>
+              <View style={{ position: 'relative' }}>
+                {mode === 'Sell' && (
+                  <View style={styles.sparkContainerBehind}>
+                    {animatedSparkStyles.map((animatedStyle, index) => {
+                      if (index >= numSparks) return null; // Don't render unused particles
+
+                      // Evenly space particles across the button width
+                      const spacing = 100 / (numSparks + 1);
+                      const leftPosition = `${spacing * (index + 1)}%`;
+                      const sizes = [14, 16, 18, 20]; // Larger, legible $ signs
+                      const size = sizes[index % sizes.length];
+
+                      return (
+                        <Animated.Text
+                          key={index}
+                          style={[
+                            styles.sparkText,
+                            {
+                              left: leftPosition,
+                              fontSize: size,
+                            },
+                            animatedStyle,
+                            animatedSparkColorStyles[index],
+                          ]}
+                        >
+                          $
+                        </Animated.Text>
+                      );
+                    })}
+                  </View>
+                )}
+                <PixelBorder
+                  borderColor={buttonBorderColor}
+                  borderWidth={3}
+                  backgroundColor={buttonBackgroundColor}
+                  innerPadding={0}
+                  style={{ overflow: 'visible' }}
+                >
+                  <View style={styles.confirmButton}>
+                    <Text style={styles.confirmButtonText}>{mode}</Text>
+                  </View>
+                </PixelBorder>
+              </View>
             </PressableButton>
           </View>
         </View>
@@ -956,11 +1931,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     alignItems: 'center',
     backgroundColor: 'transparent',
+    position: 'relative',
+    overflow: 'visible',
   },
   confirmButtonText: {
     color: colors.white,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
+    zIndex: 10,
+  },
+  sparkContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 30,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  sparkContainerBehind: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    pointerEvents: 'none',
+    zIndex: -1,
+  },
+  spark: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 0, // Square pixels
+    bottom: 0,
+    shadowColor: '#ffd700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  sparkText: {
+    position: 'absolute',
+    bottom: 0,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '700',
+    backgroundColor: 'transparent',
   },
 });

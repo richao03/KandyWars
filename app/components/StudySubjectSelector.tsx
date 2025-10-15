@@ -1,20 +1,57 @@
+import colors from '@/src/constants/colors';
 import { router } from 'expo-router';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 
 const subjects = [
-  { name: 'Math', color: { bg: '#e6f7ff', border: '#1890ff' }, icon: require('../../assets/images/emojis/math.png') },
-  { name: 'Gym', color: { bg: '#e6f2ff', border: '#4169e1' }, icon: require('../../assets/images/emojis/gym.png') },
-  { name: 'Cooking', color: { bg: '#f6ffed', border: '#52c41a' }, icon: require('../../assets/images/emojis/cooking.png') },
-  { name: 'Economy', color: { bg: '#fff1f0', border: '#f5222d' }, icon: require('../../assets/images/emojis/economy.png') },
-  { name: 'Logic', color: { bg: '#f9f0ff', border: '#722ed1' }, icon: require('../../assets/images/emojis/logic.png') },
-  { name: 'Recess', color: { bg: '#fff0f6', border: '#eb2f96' }, icon: require('../../assets/images/emojis/recess.png') },
-  { name: 'Comp Sci', color: { bg: '#f0f5ff', border: '#2f54eb' }, icon: require('../../assets/images/emojis/computer.png') },
-  { name: 'Art', color: { bg: '#feffe6', border: '#a0d911' }, icon: require('../../assets/images/emojis/art.png') },
-  { name: 'Geography', color: { bg: '#e6f3ff', border: '#3182ce' }, icon: require('../../assets/images/emojis/geography.png') },
+  {
+    name: 'Math',
+    color: { bg: '#e6f7ff', border: '#1890ff' },
+    icon: require('../../assets/images/emojis/math.png'),
+  },
+  {
+    name: 'Gym',
+    color: { bg: '#e6f2ff', border: '#4169e1' },
+    icon: require('../../assets/images/emojis/gym.png'),
+  },
+  {
+    name: 'Cooking',
+    color: { bg: '#f6ffed', border: '#52c41a' },
+    icon: require('../../assets/images/emojis/cooking.png'),
+  },
+  {
+    name: 'Economy',
+    color: { bg: '#fff1f0', border: '#f5222d' },
+    icon: require('../../assets/images/emojis/economy.png'),
+  },
+  {
+    name: 'Logic',
+    color: { bg: '#f9f0ff', border: '#722ed1' },
+    icon: require('../../assets/images/emojis/logic.png'),
+  },
+  {
+    name: 'Playground',
+    color: { bg: '#fff0f6', border: '#eb2f96' },
+    icon: require('../../assets/images/emojis/recess.png'),
+  },
+  {
+    name: 'Comp Sci',
+    color: { bg: '#f0f5ff', border: '#2f54eb' },
+    icon: require('../../assets/images/emojis/computer.png'),
+  },
+  {
+    name: 'Art',
+    color: { bg: '#feffe6', border: '#a0d911' },
+    icon: require('../../assets/images/emojis/art.png'),
+  },
+  {
+    name: 'Geography',
+    color: { bg: '#e6f3ff', border: '#3182ce' },
+    icon: require('../../assets/images/emojis/geography.png'),
+  },
 ];
 
 interface StudySubjectSelectorProps {
@@ -22,6 +59,7 @@ interface StudySubjectSelectorProps {
   disabled?: boolean;
   disabledMessage?: string;
   isLunchPeriod?: boolean;
+  hasPlayedLunchMinigame?: boolean;
 }
 
 const StudySubjectSelector = React.memo(function StudySubjectSelector({
@@ -29,6 +67,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
   disabled = false,
   disabledMessage = "You've already studied tonight! Rest up for tomorrow.",
   isLunchPeriod = false,
+  hasPlayedLunchMinigame = false,
 }: StudySubjectSelectorProps) {
   console.log(
     '🎮 StudySubjectSelector rendering - isLunchPeriod:',
@@ -40,7 +79,8 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
   console.log('🎮 StudySubjectSelector after useGame - period:', period);
 
   const handleSubjectSelect = (subject: string) => {
-    if (disabled) {
+    // During lunch, check if a game has already been played
+    if (disabled || (isLunchPeriod && hasPlayedLunchMinigame)) {
       return;
     }
 
@@ -49,11 +89,8 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     // Set the context for where this minigame was started
     setMinigameContext(isLunchPeriod ? 'lunch' : 'after-school');
 
-    // If this is during lunch period, mark that we've played the minigame
-    if (isLunchPeriod) {
-      console.log('🍔 Marking lunch minigame as played');
-      markLunchMinigamePlayed();
-    }
+    // Don't mark as played yet - only mark when they complete the game
+    // This allows them to return to the minigame selection view after finishing
 
     // Navigate to specific minigame based on subject
     // Use push so we can navigate back to the tab
@@ -73,7 +110,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       case 'Logic':
         router.push('/logic-game');
         break;
-      case 'Recess':
+      case 'Playground':
         router.push('/recess-game');
         break;
       case 'Comp Sci':
@@ -90,16 +127,19 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     }
   };
 
+  // Calculate if buttons should be disabled
+  const buttonsDisabled = disabled || (isLunchPeriod && hasPlayedLunchMinigame);
+  const displayMessage =
+    isLunchPeriod && hasPlayedLunchMinigame
+      ? 'Game Complete!'
+      : disabledMessage;
+
   return (
     <View style={styles.studyContainer}>
       <View style={styles.studyHeader}>
-        {disabled && (
+        {buttonsDisabled && isLunchPeriod && (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image
-              source={require('../../assets/images/emojis/book.png')}
-              style={{ width: 14, height: 14, resizeMode: 'contain', marginRight: 4 }}
-            />
-            <Text style={styles.alreadyStudiedText}>{disabledMessage}</Text>
+            <Text style={styles.alreadyStudiedText}>{displayMessage}</Text>
           </View>
         )}
       </View>
@@ -111,8 +151,8 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
             <PressableButton
               key={subject.name}
               onPress={() => handleSubjectSelect(subject.name)}
-              disabled={disabled}
-              shadowColor={disabled ? '#999' : subject.color.border}
+              disabled={buttonsDisabled}
+              shadowColor={subject.color.border}
               shadowOffset={{ width: 0, height: 3 }}
               shadowOpacity={0.4}
               shadowRadius={4}
@@ -124,26 +164,29 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               }
             >
               <PixelBorder
-                borderColor={disabled ? '#999' : subject.color.border}
+                borderColor={subject.color.border}
                 borderWidth={3}
-                backgroundColor={disabled ? '#ccc' : subject.color.bg}
+                backgroundColor={subject.color.bg}
                 innerPadding={0}
               >
                 <View
                   style={[
                     styles.subjectButtonInner,
-                    disabled && styles.disabledSubjectButton,
+                    buttonsDisabled && styles.disabledSubjectButton,
                   ]}
                 >
                   <Image
                     source={subject.icon}
                     style={[
                       styles.subjectIcon,
-                      disabled && styles.disabledIcon,
+                      buttonsDisabled && styles.disabledIcon,
                     ]}
                   />
                   <Text
-                    style={[styles.subjectText, disabled && styles.disabledText]}
+                    style={[
+                      styles.subjectText,
+                      buttonsDisabled && styles.disabledText,
+                    ]}
                   >
                     {subject.name}
                   </Text>
@@ -159,8 +202,8 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
             <PressableButton
               key={subject.name}
               onPress={() => handleSubjectSelect(subject.name)}
-              disabled={disabled}
-              shadowColor={disabled ? '#999' : subject.color.border}
+              disabled={buttonsDisabled}
+              shadowColor={subject.color.border}
               shadowOffset={{ width: 0, height: 3 }}
               shadowOpacity={0.4}
               shadowRadius={4}
@@ -172,26 +215,29 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               }
             >
               <PixelBorder
-                borderColor={disabled ? '#999' : subject.color.border}
+                borderColor={subject.color.border}
                 borderWidth={3}
-                backgroundColor={disabled ? '#ccc' : subject.color.bg}
+                backgroundColor={subject.color.bg}
                 innerPadding={0}
               >
                 <View
                   style={[
                     styles.subjectButtonInner,
-                    disabled && styles.disabledSubjectButton,
+                    buttonsDisabled && styles.disabledSubjectButton,
                   ]}
                 >
                   <Image
                     source={subject.icon}
                     style={[
                       styles.subjectIcon,
-                      disabled && styles.disabledIcon,
+                      buttonsDisabled && styles.disabledIcon,
                     ]}
                   />
                   <Text
-                    style={[styles.subjectText, disabled && styles.disabledText]}
+                    style={[
+                      styles.subjectText,
+                      buttonsDisabled && styles.disabledText,
+                    ]}
                   >
                     {subject.name}
                   </Text>
@@ -207,8 +253,8 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
             <PressableButton
               key={subject.name}
               onPress={() => handleSubjectSelect(subject.name)}
-              disabled={disabled}
-              shadowColor={disabled ? '#999' : subject.color.border}
+              disabled={buttonsDisabled}
+              shadowColor={subject.color.border}
               shadowOffset={{ width: 0, height: 3 }}
               shadowOpacity={0.4}
               shadowRadius={4}
@@ -220,26 +266,29 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               }
             >
               <PixelBorder
-                borderColor={disabled ? '#999' : subject.color.border}
+                borderColor={subject.color.border}
                 borderWidth={3}
-                backgroundColor={disabled ? '#ccc' : subject.color.bg}
+                backgroundColor={subject.color.bg}
                 innerPadding={0}
               >
                 <View
                   style={[
                     styles.subjectButtonInner,
-                    disabled && styles.disabledSubjectButton,
+                    buttonsDisabled && styles.disabledSubjectButton,
                   ]}
                 >
                   <Image
                     source={subject.icon}
                     style={[
                       styles.subjectIcon,
-                      disabled && styles.disabledIcon,
+                      buttonsDisabled && styles.disabledIcon,
                     ]}
                   />
                   <Text
-                    style={[styles.subjectText, disabled && styles.disabledText]}
+                    style={[
+                      styles.subjectText,
+                      buttonsDisabled && styles.disabledText,
+                    ]}
                   >
                     {subject.name}
                   </Text>
@@ -253,28 +302,21 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       {!isLunchPeriod && (
         <PressableButton
           onPress={onBack}
-          shadowColor="#6b5a2d"
-          shadowOffset={{ width: 0, height: 3 }}
-          shadowOpacity={0.4}
-          shadowRadius={4}
-          elevation={6}
-          style={{ marginBottom: 20 }}
+          shadowColor="rgba(185,28,28,1)"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.5}
+          shadowRadius={5}
+          elevation={8}
+          style={{ marginBottom: 20, width: '100%' }}
         >
           <PixelBorder
-            borderColor={isLunchPeriod ? 'rgba(90,99,127, 0.8)' : '#f7e98e'}
+            borderColor="rgba(185,28,28,1)"
             borderWidth={3}
-            backgroundColor={isLunchPeriod ? '#f7e98e' : 'rgba(90,99,127, 0.8)'}
+            backgroundColor="rgba(239,68,68,1)"
             innerPadding={0}
           >
             <View style={styles.backButtonInner}>
-              <Text
-                style={{
-                  fontFamily: 'PixeloidMono',
-                  color: isLunchPeriod ? 'rgba(90,99,127, 0.8)' : '#f7e98e',
-                }}
-              >
-                ← Back
-              </Text>
+              <Text style={styles.backButtonText}>Back</Text>
             </View>
           </PixelBorder>
         </PressableButton>
@@ -293,15 +335,23 @@ const styles = StyleSheet.create({
   },
   studyHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 4,
+    borderRadius: 3,
+    borderWidth: 3,
+    borderColor: colors.gold.light,
+    padding: 4,
+    marginTop: 4,
+    backgroundColor: 'white',
   },
   alreadyStudiedText: {
-    fontSize: 14,
-    color: '#b8a9c9',
+    color: colors.brown.primary,
+    fontSize: 18,
+    fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
+    textShadowColor: 'rgba(125,125,125,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   subjectsContainer: {
     flex: 1,
@@ -316,8 +366,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   subjectDayTimeButtonWrapper: {
-    height: 80,
-    width: 80,
+    height: 100,
+    width: 100,
     margin: 5,
   },
   subjectButtonWrapper: {
@@ -356,13 +406,14 @@ const styles = StyleSheet.create({
   },
   backButtonInner: {
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 30,
+    alignItems: 'center',
     backgroundColor: 'transparent',
   },
   backButtonText: {
-    color: '#f7e98e',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     textShadowColor: 'rgba(125,125,125,0.3)',

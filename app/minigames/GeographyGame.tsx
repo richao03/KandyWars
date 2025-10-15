@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GEOGRAPHY_JOKERS } from '../../src/utils/jokerEffectEngine';
@@ -16,9 +17,8 @@ import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
+import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 interface GeographyGameProps {
   onComplete: () => void;
@@ -27,13 +27,21 @@ interface GeographyGameProps {
 // Available dog images for puzzles
 const DOG_IMAGES = [
   require('../../assets/images/doggs/afghan.png'),
+  require('../../assets/images/doggs/beardedDragon.png'),
   require('../../assets/images/doggs/brussleGriffon.png'),
   require('../../assets/images/doggs/byul.png'),
   require('../../assets/images/doggs/caneCorso.png'),
+  require('../../assets/images/doggs/chicken.png'),
+  require('../../assets/images/doggs/clownfish.png'),
+  require('../../assets/images/doggs/dragon.png'),
   require('../../assets/images/doggs/evee.png'),
   require('../../assets/images/doggs/germanShepard.png'),
+  require('../../assets/images/doggs/hamster.png'),
+  require('../../assets/images/doggs/parrot.png'),
+  require('../../assets/images/doggs/petHorse.png'),
   require('../../assets/images/doggs/pitbull.png'),
   require('../../assets/images/doggs/pug.png'),
+  require('../../assets/images/doggs/rock.png'),
 ];
 
 const DOG_NAMES = [
@@ -372,11 +380,18 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     if (timerRef.current) clearInterval(timerRef.current);
     if (scrambleTimeoutRef.current) clearTimeout(scrambleTimeoutRef.current);
 
-    if (gameState === 'playing') {
-      showModal('Leave Geography?', "You'll lose your progress!", '🗺️', () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        router.back();
-      }, false, true);
+    if (gameState === 'playing' || gameState === 'preview' || gameState === 'scrambling') {
+      showModal(
+        'Leave Geography?',
+        "You'll lose your progress!",
+        '🗺️',
+        () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          router.back();
+        },
+        false,
+        true
+      );
     } else {
       router.back();
     }
@@ -470,30 +485,47 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             </View>
           </PixelBorder>
 
-          <PixelBorder
-            borderColor="#4a5568"
-            borderWidth={3}
-            backgroundColor="#3182ce"
-            innerPadding={0}
-            style={{ marginBottom: 16 }}
+          <PressableButton
+            onPress={startGame}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginBottom: 16, width: '100%' }}
           >
-            <TouchableOpacity
-              style={styles.pixelButtonInner}
-              onPress={startGame}
+            <PixelBorder
+              borderColor="#4a5568"
+              borderWidth={3}
+              backgroundColor="#3182ce"
+              innerPadding={0}
             >
-              <Text style={styles.startGameButtonText}>Start Puzzle!</Text>
-            </TouchableOpacity>
-          </PixelBorder>
+              <View style={styles.pixelButtonInner}>
+                <Text style={styles.startGameButtonText}>Start Puzzle!</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
 
-          <TouchableOpacity
-            style={styles.pixelButtonInner}
+          <PressableButton
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.backButton}
           >
-            <Text style={styles.startGameButtonText}>Back</Text>
-          </TouchableOpacity>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
         </View>
       </View>
     );
@@ -660,6 +692,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  backButton: {
+    marginTop: 16,
+    width: '100%',
+  },
+  backButtonInner: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   puzzleContainer: {
     flex: 1,

@@ -26,6 +26,7 @@ interface JokerState {
   lockedJokerIds: string[];
   activeEffects: any[]; // Legacy activeEffects for compatibility
   computedEffects: ComputedJokerEffects;
+  vacuumSealerBonus: number; // One-time bonus from Vacuum Sealer, added to base inventory
 }
 
 const initialComputedEffects: ComputedJokerEffects = {
@@ -43,6 +44,7 @@ const initialState: JokerState = {
   lockedJokerIds: [],
   activeEffects: [],
   computedEffects: initialComputedEffects,
+  vacuumSealerBonus: 0,
 };
 
 const jokerSlice = createSlice({
@@ -96,17 +98,23 @@ const jokerSlice = createSlice({
         const { baseInventoryLimit, periodCount } = action.payload;
         const jokerService = JokerService.getInstance();
 
+        // Add Vacuum Sealer bonus to base BEFORE applying other joker effects
+        const adjustedBaseInventory = baseInventoryLimit + state.vacuumSealerBonus;
+
         // Initialize the engine once with all jokers to avoid redundant clearing/adding
+        // Filter out Vacuum Sealer since we've already applied its effect to the base
+        const jokersToApply = state.jokers.filter(j => j.id.toString() !== '12');
+
         jokerService.initializeEngineForComputation(
-          state.jokers,
+          jokersToApply,
           periodCount,
-          baseInventoryLimit,
+          adjustedBaseInventory,
           state.activeEffects
         );
 
         // Now compute all effects efficiently without re-initializing
         const inventoryLimit = jokerService.computeEffect(
-          baseInventoryLimit,
+          adjustedBaseInventory,
           'inventory_limit',
           periodCount
         );
@@ -157,6 +165,10 @@ const jokerSlice = createSlice({
     removeActiveEffect: (state, action: PayloadAction<number>) => {
       state.activeEffects = state.activeEffects.filter(effect => effect.jokerId !== action.payload);
     },
+    setVacuumSealerBonus: (state, action: PayloadAction<number>) => {
+      console.log('🔧 Vacuum Sealer: Setting one-time bonus to', action.payload);
+      state.vacuumSealerBonus = action.payload;
+    },
     clearAllActiveEffects: (state) => {
       state.activeEffects = [];
     },
@@ -180,6 +192,7 @@ export const {
   setActiveEffects,
   addActiveEffect,
   removeActiveEffect,
+  setVacuumSealerBonus,
   clearAllActiveEffects,
   resetJokers,
 } = jokerSlice.actions;

@@ -74,6 +74,7 @@ const locationNames = {
   'science lab': 'Science Lab',
   'school yard': 'School Yard',
   bathroom: 'Bathroom',
+  'music room': 'Music Room',
 } as const;
 
 interface GameHUDProps {
@@ -85,6 +86,8 @@ interface GameHUDProps {
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
   inventoryWrapper?: (children: React.ReactNode) => React.ReactNode;
   onInventoryPress?: () => void;
+  disableBalanceAnimation?: boolean;
+  showLunchMinigames: boolean;
 }
 
 function GameHUD({
@@ -96,6 +99,8 @@ function GameHUD({
   flavorTextWrapper,
   inventoryWrapper,
   onInventoryPress,
+  showLunchMinigames,
+  disableBalanceAnimation = false,
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
@@ -111,11 +116,28 @@ function GameHUD({
   const scale = useSharedValue(0.8);
   const shakeX = useSharedValue(0);
 
+  // Animation state for stashed amount change indicator (piggy bank)
+  const [stashedChange, setStashedChange] = useState<number | null>(null);
+  const previousStashed = useRef<number | null>(null);
+  const isStashedInitialized = useRef(false);
+  const stashedTranslateY = useSharedValue(0);
+  const stashedOpacity = useSharedValue(0);
+  const stashedScale = useSharedValue(0.8);
+  const piggyShakeX = useSharedValue(0);
+
   // Initialize previous balance on first render
   useEffect(() => {
     if (!isInitialized.current) {
       previousBalance.current = balance;
       isInitialized.current = true;
+    }
+  }, []);
+
+  // Initialize previous stashed amount on first render
+  useEffect(() => {
+    if (!isStashedInitialized.current) {
+      previousStashed.current = stashedAmount;
+      isStashedInitialized.current = true;
     }
   }, []);
 
@@ -172,6 +194,59 @@ function GameHUD({
     previousBalance.current = balance;
   }, [balance]);
 
+  // Detect stashed amount changes and trigger animation
+  useEffect(() => {
+    if (!isStashedInitialized.current || previousStashed.current === null) {
+      return;
+    }
+
+    const change = stashedAmount - previousStashed.current;
+
+    if (change !== 0) {
+      // Set the change amount
+      setStashedChange(change);
+
+      // Start animation sequence
+      stashedTranslateY.value = 0;
+      stashedOpacity.value = 0;
+      stashedScale.value = 0.8;
+      piggyShakeX.value = 0;
+
+      // Animate in, hold, then fade out
+      stashedTranslateY.value = withSequence(
+        withSpring(-40, { damping: 15, stiffness: 200 }),
+        withTiming(-50, { duration: 1000 }),
+        withTiming(-60, { duration: 300 })
+      );
+
+      stashedOpacity.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(1, { duration: 1000 }),
+        withTiming(0, { duration: 300 }, () => {
+          runOnJS(setStashedChange)(null);
+        })
+      );
+
+      stashedScale.value = withSequence(
+        withSpring(1.2, { damping: 12, stiffness: 200 }),
+        withSpring(1, { damping: 15, stiffness: 150 })
+      );
+
+      // Shake the piggy bank container
+      piggyShakeX.value = withSequence(
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(4, { duration: 50 }),
+        withTiming(-4, { duration: 50 }),
+        withTiming(0, { duration: 50 })
+      );
+    }
+
+    previousStashed.current = stashedAmount;
+  }, [stashedAmount]);
+
   // Animated style for money change indicator
   const animatedMoneyChangeStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
@@ -181,6 +256,30 @@ function GameHUD({
   // Animated style for wallet shake
   const animatedWalletStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
+  }));
+
+  // Animated style for stashed change indicator
+  const animatedStashedChangeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: stashedTranslateY.value },
+      { scale: stashedScale.value },
+    ],
+    opacity: stashedOpacity.value,
+  }));
+
+  // Animated style for piggy bank shake
+  const animatedPiggyBankStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: piggyShakeX.value }],
+  }));
+
+  // Animation state for location badge bounce
+  const previousLocation = useRef<string | null>(null);
+  const isLocationInitialized = useRef(false);
+  const locationBounceScale = useSharedValue(1);
+
+  // Animated style for location badge bounce
+  const animatedLocationBadgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: locationBounceScale.value }],
   }));
 
   const totalInventory = getTotalInventoryCount();
@@ -196,9 +295,41 @@ function GameHUD({
     theme === 'evening' ? styles.eveningStatTitle : styles.statTitle;
 
   const headerText =
-    customHeaderText || `Day ${day || 1} • Period ${period || 1}`;
+    customHeaderText ||
+    `Day ${day || 1} • ${showLunchMinigames ? 'Lunch' : `Period ${period || 1}`}`;
   const locationText =
     customLocationText || locationNames[currentLocation] || 'Home Room';
+
+  // Initialize previous location on first render
+  useEffect(() => {
+    if (!isLocationInitialized.current) {
+      previousLocation.current = locationText;
+      isLocationInitialized.current = true;
+    }
+  }, [locationText]);
+
+  // Detect location changes and trigger bounce animation
+  useEffect(() => {
+    if (!isLocationInitialized.current || previousLocation.current === null) {
+      return;
+    }
+
+    if (locationText !== previousLocation.current) {
+      console.log(
+        '🎯 Location changed from',
+        previousLocation.current,
+        'to',
+        locationText
+      );
+      // Trigger quick bounce animation
+      locationBounceScale.value = withSequence(
+        withSpring(1.2, { damping: 20, stiffness: 400, mass: 0.5 }),
+        withSpring(1, { damping: 20, stiffness: 300, mass: 0.5 })
+      );
+    }
+
+    previousLocation.current = locationText;
+  }, [locationText]);
 
   // Calculate dynamic font size for piggy bank amount based on text length
   const piggyAmountText = `$${(stashedAmount || 0).toFixed(2)}`;
@@ -250,7 +381,9 @@ function GameHUD({
 
       {/* Stats in crayon boxes */}
       <View style={styles.statsRow}>
-        <Animated.View style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}>
+        <Animated.View
+          style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}
+        >
           <PixelBorder
             borderColor="#4a7c4a"
             borderWidth={3}
@@ -260,12 +393,17 @@ function GameHUD({
           >
             <View style={[styles.statBox, styles.cashBox]}>
               <Text style={statTitleStyle}>Wallet</Text>
-              <Text style={styles.cashAmount}>${(balance || 0).toFixed(2)}</Text>
+              <Text style={styles.cashAmount}>
+                ${(balance || 0).toFixed(2)}
+              </Text>
 
               {/* Animated money change indicator */}
               {moneyChange !== null && (
                 <Animated.View
-                  style={[styles.moneyChangeIndicator, animatedMoneyChangeStyle]}
+                  style={[
+                    styles.moneyChangeIndicator,
+                    animatedMoneyChangeStyle,
+                  ]}
                 >
                   <Text
                     style={[
@@ -282,20 +420,42 @@ function GameHUD({
           </PixelBorder>
         </Animated.View>
 
-        <PixelBorder
-          borderColor="#b85c8a"
-          borderWidth={3}
-          backgroundColor="#ffd6e8"
-          innerPadding={0}
-          style={{ flex: 1 }}
-        >
-          <View style={[styles.statBox, styles.piggyBox]}>
-            <Text style={statTitleStyle}>Piggy Bank</Text>
-            <Text style={[styles.piggyAmount, { fontSize: piggyFontSize }]}>
-              {piggyAmountText}
-            </Text>
-          </View>
-        </PixelBorder>
+        <Animated.View style={[{ flex: 1 }, animatedPiggyBankStyle]}>
+          <PixelBorder
+            borderColor="#b85c8a"
+            borderWidth={3}
+            backgroundColor="#ffd6e8"
+            innerPadding={0}
+            style={{ overflow: 'visible' }}
+          >
+            <View style={[styles.statBox, styles.piggyBox]}>
+              <Text style={statTitleStyle}>Piggy Bank</Text>
+              <Text style={[styles.piggyAmount, { fontSize: piggyFontSize }]}>
+                {piggyAmountText}
+              </Text>
+
+              {/* Animated stashed change indicator */}
+              {stashedChange !== null && (
+                <Animated.View
+                  style={[
+                    styles.moneyChangeIndicator,
+                    animatedStashedChangeStyle,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.moneyChangeText,
+                      stashedChange > 0 ? styles.moneyGain : styles.moneyLoss,
+                    ]}
+                  >
+                    {stashedChange > 0 ? '+' : '-'}$
+                    {Math.abs(stashedChange).toFixed(2)}
+                  </Text>
+                </Animated.View>
+              )}
+            </View>
+          </PixelBorder>
+        </Animated.View>
 
         <PixelBorder
           borderColor="#5c7cb8"
@@ -338,7 +498,7 @@ function GameHUD({
       </View>
 
       {/* Location badge */}
-      <View style={styles.locationRow}>
+      <Animated.View style={[styles.locationRow, animatedLocationBadgeStyle]}>
         <PixelBorder
           borderColor="#cc7a00"
           borderWidth={3}
@@ -349,7 +509,7 @@ function GameHUD({
             <Text style={styles.locationText}>@ {locationText}</Text>
           </View>
         </PixelBorder>
-      </View>
+      </Animated.View>
 
       {/* Flavor text scroll */}
       {text &&

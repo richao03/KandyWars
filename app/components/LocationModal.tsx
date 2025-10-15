@@ -15,7 +15,8 @@ export type Location =
   | 'library'
   | 'science lab'
   | 'school yard'
-  | 'bathroom';
+  | 'bathroom'
+  | 'music room';
 
 interface LocationModalProps {
   visible: boolean;
@@ -32,6 +33,7 @@ const locations: Location[] = [
   'science lab',
   'school yard',
   'bathroom',
+  'music room',
 ];
 
 const locationColors: Record<Location, { bg: string; border: string }> = {
@@ -42,6 +44,7 @@ const locationColors: Record<Location, { bg: string; border: string }> = {
   'science lab': { bg: '#ffffcc', border: '#ffff66' }, // Light yellow
   'school yard': { bg: '#e6ffcc', border: '#a3ff66' }, // Light lime
   bathroom: { bg: '#ffcc99', border: '#ff9933' }, // Light orange
+  'music room': { bg: '#ffe6f0', border: '#ff66b3' }, // Light pink
 };
 
 const locationIcons: Record<Location, any> = {
@@ -52,6 +55,7 @@ const locationIcons: Record<Location, any> = {
   'science lab': require('../../assets/images/emojis/lab.png'),
   'school yard': require('../../assets/images/emojis/recess.png'),
   bathroom: require('../../assets/images/emojis/bathroom.png'),
+  'music room': require('../../assets/images/emojis/msuic.png'),
 };
 
 function LocationModal({
@@ -104,6 +108,7 @@ function LocationModal({
       animationType="spring"
       backdropOpacity={0.5}
       modalStyle={styles.modal}
+      position="bottom"
     >
       <Text style={styles.title}>Where to next?</Text>
 
@@ -170,7 +175,7 @@ function LocationModal({
       >
         <PixelBorder
           borderColor="#999"
-          borderWidth={2}
+          borderWidth={3}
           backgroundColor="#f0f0f0"
           innerPadding={0}
         >
@@ -184,25 +189,14 @@ function LocationModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    justifyContent: 'center',
-    margin: 20,
-  },
   modal: {
     backgroundColor: '#fefaf5', // Warm paper background
     borderRadius: 24,
     padding: 24,
     maxWidth: 380,
-    alignSelf: 'center',
-    width: '100%',
+    width: '90%',
     borderWidth: 3,
+    alignSelf: 'center',
     borderColor: '#d4a574', // Brown crayon border
     shadowColor: colors.brown.secondary,
     shadowOffset: { width: 2, height: 4 },
@@ -214,7 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     color: colors.brown.primary, // Dark brown
     textShadow: '1px 1px 0px #e6d4b7',
     fontFamily: 'PixeloidMono',
@@ -223,7 +217,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 4,
   },
   locationButtonWrapper: {
     width: '45%',

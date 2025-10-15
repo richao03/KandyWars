@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import colors from '../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../src/constants/jokerIds';
 import { useGame } from '../src/hooks/useGame';
 import { useInventory } from '../src/hooks/useInventory';
@@ -20,8 +21,6 @@ import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
 import TransactionModal from './components/TransactionModal';
 import { Candy } from './types';
-import colors from '../src/constants/colors';
-
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -140,7 +139,9 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
         }
 
         // Get inventory information for this candy
-        const inventoryItem = inventory.find((item) => item.name === candy.name);
+        const inventoryItem = inventory.find(
+          (item) => item.name === candy.name
+        );
 
         return {
           ...candy,
@@ -282,32 +283,22 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
         />
 
         <View style={styles.buttonContainer}>
-          <Animated.View
-            style={{
-              shadowColor: colors.orange.primary,
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: shadowOpacity,
-              shadowRadius: shadowRadius,
-              elevation: 10,
-            }}
+          <PixelBorder
+            borderColor="#ff6b35"
+            borderWidth={4}
+            backgroundColor="rgba(13, 51, 81, 0.95)"
+            innerPadding={12}
+            style={styles.header}
           >
-            <PixelBorder
-              borderColor="#ff6b35"
-              borderWidth={4}
-              backgroundColor="rgba(13, 51, 81, 0.95)"
-              innerPadding={12}
-              style={styles.header}
-            >
-              <View style={styles.signContainer}>
-                <View style={styles.storeBranding}></View>
-                <Text style={styles.title}>CORNER DELI</Text>
-                <View style={styles.neonStrip} />
-                <Text style={styles.subtitle}>
-                  CANDY • STEADY PRICES • ALWAYS OPEN
-                </Text>
-              </View>
-            </PixelBorder>
-          </Animated.View>
+            <View style={styles.signContainer}>
+              <View style={styles.storeBranding}></View>
+              <Text style={styles.title}>CORNER DELI</Text>
+              <View style={styles.neonStrip} />
+              <Text style={styles.subtitle}>
+                CANDY • STEADY PRICES • ALWAYS OPEN
+              </Text>
+            </View>
+          </PixelBorder>
           <PixelBorder
             borderColor="rgba(185,28,28,1)"
             borderWidth={3}

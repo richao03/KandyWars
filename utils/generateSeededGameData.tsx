@@ -20,35 +20,36 @@ export type JokerDraft = { day: number; subject: string; jokers: string[] };
 
 export type SpecialEventEffect = {
   period: number;
-  description?: string;
-  candy?: string;
   effect:
     | 'PRICE_DROP'
     | 'PRICE_SPIKE'
-    | 'resale_bonus'
-    | 'STASH_LOCKED'
     | 'FOUND_MONEY'
-    | 'LOSE_MONEY';
-  multiplier?: number;
-  location?:
-    | 'gym'
-    | 'cafeteria'
-    | 'home room'
-    | 'library'
-    | 'science lab'
-    | 'school yard'
-    | 'bathroom';
-  priceOverride?: number; // For setting specific prices like 0.01
-  hint?: string; // Hint to show in previous period
+    | 'LOSE_MONEY'
+    | 'STASH_LOCKED';
 
-  // Modal display properties
-  category: 'good' | 'neutral' | 'bad';
-  heading: string;
-  title: string;
-  subtitle: string;
-  dollarAmount?: number;
-  backgroundImage: any;
-  dismissText?: string;
+  // Common properties
+  hint: string; // Text shown in period before
+  isUniversal: boolean; // True = period-only trigger, False = location+period trigger
+  location?: string; // Required if isUniversal=false
+  isGuaranteedEvent?: boolean; // True = shown at day start, no period hints
+
+  // Major event properties (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED)
+  category?: 'good' | 'neutral' | 'bad';
+  heading?: string; // Modal heading
+  title?: string; // Modal title
+  subtitle?: string; // Modal subtitle
+  backgroundImage?: any; // Modal background
+  dismissText?: string; // Modal button text
+  dollarAmount?: number; // For money events
+
+  // Minor event properties (PRICE_SPIKE, PRICE_DROP)
+  candy?: string; // Which candy is affected
+  multiplier?: number; // Price multiplier
+  flavorText?: string; // Text shown when triggered (no modal)
+
+  // Legacy (for compatibility)
+  description?: string;
+  priceOverride?: number;
 };
 
 // [minPrice, maxPrice, floorPrice]
@@ -72,334 +73,383 @@ const subjects = [
   'English',
   'Geography',
 ];
-const allJokers = [
-  'Compounder',
-  'Addict',
-  'Predictor',
-  'Trader',
-  'Flashback',
-  'Deal With It',
-  'Collector',
-  'Scout',
-  'Hoarder',
-  'Sneak',
+
+// Locations
+const locations = [
+  'gym',
+  'cafeteria',
+  'home room',
+  'library',
+  'science lab',
+  'school yard',
+  'bathroom',
+  'music room',
+] as const;
+
+// Actor pools for major events
+const teachers = ['Mrs. Johnson', 'Mr. Smith', 'The Principal', 'The Dean'];
+const bullies = ['A bully', 'The lunch thief', 'Some tough kid'];
+const foundMoneySubjects = ['Somebody', 'A student', 'Someone'];
+
+// Hint templates for major events (5 variations each)
+const stashLockedHints = [
+  (teacher: string, loc?: string) =>
+    `👀 ${teacher} heard about your stash and is looking for you${loc ? ` in the ${loc}` : ''} 👀`,
+  (teacher: string, loc?: string) =>
+    `👀 ${teacher} is doing inspections${loc ? ` in the ${loc}` : ''} 👀`,
+  (teacher: string, loc?: string) =>
+    `👀 Word is ${teacher} is cracking down${loc ? ` in the ${loc}` : ''} 👀`,
+  (teacher: string, loc?: string) =>
+    `👀 ${teacher} has been tipped off and is searching${loc ? ` ${loc}` : ''} 👀`,
+  (teacher: string, loc?: string) =>
+    `👀 Heads up! ${teacher} is on a confiscation spree${loc ? ` in the ${loc}` : ''} 👀`,
+];
+
+const loseMoneyHints = [
+  (bully: string, loc?: string) =>
+    `👀 ${bully} is hungry and has no lunch money, he's looking for you${loc ? ` in the ${loc}` : ''} 👀`,
+  (bully: string, loc?: string) =>
+    `👀 ${bully} is shaking kids down${loc ? ` in the ${loc}` : ''} 👀`,
+  (bully: string, loc?: string) =>
+    `👀 Watch out! ${bully} is hunting for cash${loc ? ` in the ${loc}` : ''} 👀`,
+  (bully: string, loc?: string) =>
+    `👀 ${bully} is broke and looking for victims${loc ? ` in the ${loc}` : ''} 👀`,
+  (bully: string, loc?: string) =>
+    `👀 ${bully} needs money and he's prowling${loc ? ` ${loc}` : ''} 👀`,
+];
+
+const foundMoneyHints = [
+  (subject: string, loc?: string) =>
+    `👀 ${subject} lost some money${loc ? ` in the ${loc}` : ''} 👀`,
+  (subject: string, loc?: string) =>
+    `👀 Word is there's cash lying around${loc ? ` in the ${loc}` : ''} 👀`,
+  (subject: string, loc?: string) =>
+    `👀 ${subject} dropped their wallet${loc ? ` in the ${loc}` : ''} 👀`,
+  (subject: string, loc?: string) =>
+    `👀 I heard ${subject} lost a wad of cash${loc ? ` in the ${loc}` : ''} 👀`,
+  (subject: string, loc?: string) =>
+    `👀 There's money on the ground${loc ? ` in the ${loc}` : ''} apparently 👀`,
+];
+
+// Modal title templates (5 variations each - no location)
+const stashLockedTitles = [
+  (teacher: string) => `${teacher} confiscated your stash!`,
+  (teacher: string) => `Your candy was found by ${teacher}!`,
+  (teacher: string) => `${teacher} busted you!`,
+  (teacher: string) => `Caught by ${teacher}!`,
+  (teacher: string) => `${teacher} took everything!`,
+];
+
+const loseMoneyTitles = [
+  (bully: string) => `${bully} took your lunch money!`,
+  (bully: string) => `Robbed by ${bully}!`,
+  (bully: string) => `${bully} shook you down!`,
+  (bully: string) => `${bully} emptied your pockets!`,
+  (bully: string) => `You got jumped by ${bully}!`,
+];
+
+const foundMoneyTitles = [
+  () => 'You found some cash!',
+  () => 'Money on the ground!',
+  () => 'Easy money!',
+  () => 'Jackpot!',
+  () => 'Finders keepers!',
+];
+
+// Modal subtitle templates (5 variations each)
+const stashLockedSubtitles = [
+  'Sometimes it be your own teachers... Your inventory has been cleared!',
+  'All your candy is gone. Time to rebuild.',
+  'Confiscated! Better luck hiding it next time.',
+  'Your entrepreneurial empire just took a hit.',
+  'Clean sweep! Your stash is history.',
+];
+
+const loseMoneySubtitles = [
+  'Better hit the weights to get your weight up!',
+  'Half your money is gone. Stay alert out there.',
+  'That hurt. Keep your head on a swivel.',
+  'Lesson learned: watch your back.',
+  'Ouch. Time to earn it back.',
+];
+
+const foundMoneySubtitles = [
+  'Street rules: Finders Keepers!',
+  'Your lucky day! Cha-ching!',
+  "Score! Someone's loss is your gain.",
+  'Nothing like free money.',
+  "Today's your day!",
 ];
 
 export function generateSeededGameData(seed: string, totalPeriods = 40) {
   const rng = seedrandom(seed);
 
+  // Helper to pick random from array (supports both mutable and readonly arrays)
+  const pickRandom = <T,>(arr: readonly T[]): T =>
+    arr[Math.floor(rng() * arr.length)];
+
   // Price table (0-indexed: periods 0-39 for internal array indexing)
-  // Note: Events use 1-based period numbers (1-40), so subtract 1 when looking up prices
   const candyPrices: CandyPriceTable = {};
-  Object.entries(candyBasePrices).forEach(([candy, [min, max, floorPrice]]) => {
-    candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
-      const roll = rng();
-      let price: number;
-
-      if (roll < 0.1) {
-        // Crash event (super cheap)
-        const crashFactor = rng() * 0.4 + 0.1; // 0.1x–0.5x min
-        price = min * crashFactor;
-      } else if (roll < 0.2) {
-        // Spike event (super expensive)
-        const spikeFactor = rng() * 10 + 4; // 4x–8x max
-        price = max * spikeFactor;
-      } else {
-        // Aggressive normal range
-        const low = min * 0.5;
-        const high = max * 10;
-        price = rng() * (high - low) + low;
-      }
-
-      // Enforce candy-specific minimum floor price
-      price = Math.max(price, floorPrice);
-
-      return parseFloat(price.toFixed(2));
-    });
-  });
-
-  // Special events with location-specific events
-  const locations = [
-    'gym',
-    'cafeteria',
-    'home room',
-    'library',
-    'science lab',
-    'school yard',
-    'bathroom',
-  ] as const;
-
-  const eventTemplates: (() => Omit<SpecialEventEffect, 'period'>)[] = [
-    () => ({
-      description: 'Snickers discount at the vending machine!',
-      candy: 'Snickers',
-      effect: 'PRICE_DROP',
-      category: 'neutral',
-      multiplier: 0.2,
-      location: 'cafeteria',
-      heading: 'Hot Sale!',
-      title: 'Snickers flood the market!',
-      subtitle: 'How did the new kid have so many snickers?',
-      hint: '👀 Theres rumbling that the vending machine in cafeteria is giving out cheap snickers...👀',
-      backgroundImage: 'pricedrop',
-    }),
-    () => ({
-      description: 'Bullying is an epidemic',
-      effect: 'LOSE_MONEY',
-      category: 'bad',
-      heading: 'Give me your lunch money!',
-      title: 'A bully took half your money',
-      subtitle: 'Better hit the weights to get your weight up!',
-      hint: '👀 Rumor is someone is out looking for you....👀',
-      backgroundImage: 'bully',
-    }),
-    () => ({
-      description: 'Found some money!',
-      effect: 'FOUND_MONEY',
-      location: 'home room',
-      category: 'good',
-      heading: 'Lucky!',
-      title: 'You found some money laying around!',
-      subtitle: 'Street rules: Finders Keepers',
-      dollarAmount: 50,
-      hint: '👀 Someone said they left some money in the homeroom... 👀',
-      backgroundImage: 'foundmoney',
-    }),
-    () => ({
-      description: 'Skittles are popular in the school yard!',
-      candy: 'Skittles',
-      effect: 'PRICE_SPIKE',
-      multiplier: 5,
-      location: 'school yard',
-      category: 'neutral',
-      heading: 'Hut Hut Price HIKE!!',
-      title: 'Skittles prices rockets!',
-      subtitle:
-        'The football player wants to eat Skittles like their fravorite NFL running back',
-      backgroundImage: 'pricehike',
-      hint: '👀 psst, come to the school yard next period... make sure you bring skittles... lots of them... 👀',
-    }),
-    () => ({
-      effect: 'STASH_LOCKED',
-      location: 'home room',
-      category: 'bad',
-      heading: '🚨 BUSTED!',
-      title: 'Your candy inventory has been confiscated!',
-      subtitle: 'Sometimes it be your own teachers...',
-      backgroundImage: 'confiscate',
-      dismissText: '😤 Dang it!',
-      hint: '👀 The dean is making rounds confiscating any and all candies, better avoid the home room next period... 👀',
-    }),
-    () => ({
-      description: 'Science lab experiment creates demand for Warheads!',
-      candy: 'Warheads',
-      effect: 'PRICE_SPIKE',
-      multiplier: 5,
-      location: 'science lab',
-      category: 'neutral',
-      heading: 'Warheads to the moon!',
-      title: 'The jolt they need',
-      subtitle:
-        'Our lab friends are falling asleep, this spike of sour sugar is just what they need',
-      backgroundImage: 'pricehike',
-      hint: "👀 The lab folks can use some Warhead wake-me-ups next period, and they're willing to pay... 👀",
-    }),
-    () => ({
-      description: 'Bubble Gum chewing contest in the library!',
-      candy: 'Bubble Gum',
-      effect: 'PRICE_SPIKE',
-      multiplier: 4,
-      location: 'library',
-      category: 'neutral',
-      heading: 'Pop Off!',
-      title: 'Bubble Gum demand explodes!',
-      subtitle: 'Who can blow the biggest bubble? Everyone’s buying in!',
-      backgroundImage: 'pricehike',
-      hint: '👀 Heard the library is hosting a "silent" bubble blowing contest next period... bring gum! 👀',
-    }),
-    () => ({
-      description: 'Teacher gives out free M&Ms in class!',
-      candy: 'M&Ms',
-      effect: 'PRICE_DROP',
-      multiplier: 0.3,
-      location: 'home room',
-      category: 'neutral',
-      heading: 'Too Many M&Ms!',
-      title: 'Candy rains from above!',
-      subtitle: 'The teacher brought a giant bag... now the price is tanking!',
-      backgroundImage: 'pricedrop',
-      hint: "👀 M&Ms are falling into everyone's hands in homeroom... 👀",
-    }),
-    () => ({
-      description: 'Someone drops their lunch money in the hallway!',
-      effect: 'FOUND_MONEY',
-      category: 'good',
-      heading: 'Jackpot!',
-      title: 'Cash on the floor!',
-      subtitle: 'Quick pocket move, nobody saw a thing.',
-      dollarAmount: 250,
-      backgroundImage: 'foundmoney',
-      hint: "👀 There's a commotion in the hallway... someone's missing cash. 👀",
-    }),
-
-    () => ({
-      description: 'Sour Patch Kids banned in gym class!',
-      candy: 'Sour Patch Kids',
-      effect: 'PRICE_DROP',
-      multiplier: 0.5,
-      location: 'gym',
-      category: 'bad',
-      heading: 'Coach Says No!',
-      title: 'Candy ban after sticky shoes incident!',
-      subtitle: 'The floor’s still sticky... prices plummet!',
-      backgroundImage: 'pricedrop',
-      hint: '👀 Coach is confiscating Sour Patch at the gym doors... 👀',
-    }),
-
-    () => ({
-      description: 'Bathroom Skittle Project!',
-      candy: 'Skittles',
-      effect: 'PRICE_SPIKE',
-      multiplier: 3.5,
-      location: 'bathroom',
-      category: 'neutral',
-      heading: 'Sweet Colors!',
-      title: 'Artists paying top dollar!',
-      subtitle: 'Skittles aren’t just for eating — they’re for painting!',
-      backgroundImage: 'pricehike',
-      hint: '👀 Bathroom is buying Skittles for some "non-edible" art next period... 👀',
-    }),
-
-    () => ({
-      description: 'Student Council fundraiser in cafeteria!',
-      candy: 'Snickers',
-      effect: 'PRICE_SPIKE',
-      multiplier: 2.5,
-      location: 'cafeteria',
-      category: 'neutral',
-      heading: 'Snack for a Cause!',
-      title: 'Buy candy, fund the trip!',
-      subtitle: 'Suddenly, Snickers are selling like crazy.',
-      backgroundImage: 'pricehike',
-      hint: "👀 The student council's hoarding Snickers for the bake sale, next period... 👀",
-    }),
-    () => ({
-      description: 'Principal checks lockers during lunch!',
-      effect: 'STASH_LOCKED',
-      category: 'bad',
-      heading: 'Locker Check!',
-      title: 'Your stash is confiscated',
-      subtitle: 'Your stash was in the wrong place at the wrong time.',
-      backgroundImage: 'confiscate',
-      dismissText: '😩 Busted again!',
-      hint: '👀 Principal\'s patrolling lockers this lunch period... 👀',
-    }),
-    () => ({
-      description: 'Library study group wants brain food!',
-      candy: 'M&Ms',
-      effect: 'PRICE_SPIKE',
-      multiplier: 4,
-      category: 'neutral',
-      location: 'library',
-      heading: 'M&M Trending',
-      title: '"The Finer Things Club"',
-      subtitle:
-        '"M&Ms goes perfectly with out afternoon juice" - a club member',
-      backgroundImage: 'pricehike',
-      hint: '👀 Theres a secret club M&Meeting in the library next period... 👀',
-    }),
-
-    // General events without location requirements
-    () => {
-      const candies = Object.keys(candyBasePrices);
-      const randomCandy = candies[Math.floor(rng() * candies.length)];
-      return {
-        description: `Rare batch of ${randomCandy} released!`,
-        candy: randomCandy,
-        effect: 'PRICE_SPIKE' as const,
-        multiplier: 5,
-        category: 'neutral',
-        heading: `Price Hike!!`,
-        title: `${randomCandy} is like so hot right now!`,
-        subtitle: `People cant get enough of it`,
-        backgroundImage: 'pricehike',
-        hint: `👀 Psst, I cannot tell you what, or where, but you'll need some ${randomCandy}... 👀`,
-      };
-    },
-  ];
+  Object.entries(candyBasePrices).forEach(
+    ([candy, [min, max, _unusedFloorPrice]]) => {
+      candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
+        const maxSpikePrice = max * 14;
+        const floorPrice = Math.max(maxSpikePrice * 0.03, 0.01);
+        const price = rng() * (maxSpikePrice - floorPrice) + floorPrice;
+        return parseFloat(price.toFixed(2));
+      });
+    }
+  );
 
   const periodEvents: SpecialEventEffect[] = [];
+  const numDays = Math.floor(totalPeriods / 8); // 5 days
 
-  // Calculate number of school days (8 periods per day)
-  const numDays = Math.floor(totalPeriods / 8);
-
-  // Generate 2-6 events per day
+  // Generate events for each day
   for (let day = 0; day < numDays; day++) {
-    const eventsThisDay = Math.floor(rng() * 5) + 2; // Random between 2 and 6
-    const dayStartPeriod = day * 8 + 1; // Start at period 1 for day 0, period 9 for day 1, etc.
-    const dayEndPeriod = dayStartPeriod + 8;
+    const dayStartPeriod = day * 8 + 1; // 1, 9, 17, 25, 33
 
-    // Get available periods for this day (exclude first period and lunch period of each day)
-    const availablePeriodsThisDay = Array.from(
-      { length: 8 },
-      (_, i) => dayStartPeriod + i
-    ).filter(
-      (period) =>
-        (period - 1) % 8 !== 0 && // Exclude period 1 of each day (first period)
-        (period - 1) % 8 !== 4 && // Exclude lunch period (5th period of each day)
-        !periodEvents.some((e) => e.period === period) // Exclude already used periods
-    );
+    // Available periods (exclude first period of each day)
+    const availablePeriods = Array.from(
+      { length: 7 },
+      (_, i) => dayStartPeriod + 1 + i
+    ); // 2-8, 10-16, etc.
 
-    console.log('availablePeriodsThisDay', availablePeriodsThisDay);
-    // Shuffle available periods for this day
-    for (let i = availablePeriodsThisDay.length - 1; i > 0; i--) {
+    // Decide number of major events (1-3)
+    const numMajorEvents = Math.floor(rng() * 3) + 1; // 1, 2, or 3
+
+    // Decide if one major event is universal (50% chance)
+    const hasUniversalEvent = rng() < 0.5 && numMajorEvents > 0;
+
+    // Decide number of minor events (0-3)
+    const numMinorEvents = Math.floor(rng() * 4); // 0, 1, 2, or 3
+
+    // Total events for this day
+    const totalEventsThisDay = numMajorEvents + numMinorEvents;
+
+    // Shuffle available periods
+    const shuffledPeriods = [...availablePeriods];
+    for (let i = shuffledPeriods.length - 1; i > 0; i--) {
       const j = Math.floor(rng() * (i + 1));
-      [availablePeriodsThisDay[i], availablePeriodsThisDay[j]] = [
-        availablePeriodsThisDay[j],
-        availablePeriodsThisDay[i],
+      [shuffledPeriods[i], shuffledPeriods[j]] = [
+        shuffledPeriods[j],
+        shuffledPeriods[i],
       ];
     }
 
-    // Add events for this day
+    // Select periods for events (ensure no overlap)
+    const selectedPeriods = shuffledPeriods.slice(
+      0,
+      Math.min(totalEventsThisDay, shuffledPeriods.length)
+    );
+
+    let eventIndex = 0;
+
+    // Generate major events
     for (
       let i = 0;
-      i < Math.min(eventsThisDay, availablePeriodsThisDay.length);
+      i < numMajorEvents && eventIndex < selectedPeriods.length;
       i++
     ) {
-      const period = availablePeriodsThisDay[i];
-      const template =
-        eventTemplates[Math.floor(rng() * eventTemplates.length)];
-      const event = { ...template(), period };
+      const period = selectedPeriods[eventIndex++];
+      const isUniversal = hasUniversalEvent && i === 0; // First major event can be universal
+      const location = isUniversal ? undefined : pickRandom(locations);
 
-      // Only add generic hint for events without location if they don't have one
-      if (!event.location && !event.hint && period > 1) {
-        event.hint = `You overhear students talking about something happening next period...`;
+      // Pick random major event type
+      const majorEventTypes = [
+        'STASH_LOCKED',
+        'LOSE_MONEY',
+        'FOUND_MONEY',
+      ] as const;
+      const eventType = pickRandom(majorEventTypes);
+
+      let event: SpecialEventEffect;
+
+      if (eventType === 'STASH_LOCKED') {
+        const teacher = pickRandom(teachers);
+        const hintTemplate = pickRandom(stashLockedHints);
+        const titleTemplate = pickRandom(stashLockedTitles);
+        const subtitle = pickRandom(stashLockedSubtitles);
+
+        event = {
+          period,
+          effect: 'STASH_LOCKED',
+          isUniversal,
+          location,
+          hint: hintTemplate(teacher, location),
+          category: 'bad',
+          heading: 'BUSTED!',
+          title: titleTemplate(teacher),
+          subtitle,
+          backgroundImage: getBackgroundImage('confiscate'),
+          dismissText: '😤 Dang it!',
+        };
+      } else if (eventType === 'LOSE_MONEY') {
+        const bully = pickRandom(bullies);
+        const hintTemplate = pickRandom(loseMoneyHints);
+        const titleTemplate = pickRandom(loseMoneyTitles);
+        const subtitle = pickRandom(loseMoneySubtitles);
+
+        event = {
+          period,
+          effect: 'LOSE_MONEY',
+          isUniversal,
+          location,
+          hint: hintTemplate(bully, location),
+          category: 'bad',
+          heading: 'Robbed!',
+          title: titleTemplate(bully),
+          subtitle,
+          backgroundImage: getBackgroundImage('bully'),
+        };
+      } else {
+        // FOUND_MONEY
+        const subject = pickRandom(foundMoneySubjects);
+        const hintTemplate = pickRandom(foundMoneyHints);
+        const titleTemplate = pickRandom(foundMoneyTitles);
+        const subtitle = pickRandom(foundMoneySubtitles);
+        const amount = Math.floor(rng() * 401) + 100; // 100-500
+
+        event = {
+          period,
+          effect: 'FOUND_MONEY',
+          isUniversal,
+          location,
+          hint: hintTemplate(subject, location),
+          category: 'good',
+          heading: 'Lucky!',
+          title: titleTemplate(),
+          subtitle,
+          dollarAmount: amount,
+          backgroundImage: getBackgroundImage('foundmoney'),
+        };
       }
 
-      console.log(`📅 Generated event for day ${day}, period ${period}:`, {
-        effect: event.effect,
-        candy: event.candy,
-        location: event.location,
-        multiplier: event.multiplier,
-      });
+      periodEvents.push(event);
+      console.log(
+        `📅 Day ${day + 1}, Period ${period}: ${eventType} (${isUniversal ? 'Universal' : location})`
+      );
+    }
+
+    // Generate minor events (price changes)
+    const candies = Object.keys(candyBasePrices);
+    for (
+      let i = 0;
+      i < numMinorEvents && eventIndex < selectedPeriods.length;
+      i++
+    ) {
+      const period = selectedPeriods[eventIndex++];
+      const location = pickRandom(locations);
+      const candy = pickRandom(candies);
+
+      // Pick spike or drop
+      const isSpike = rng() < 0.5;
+      const effect = isSpike ? 'PRICE_SPIKE' : 'PRICE_DROP';
+      const multiplier = isSpike ? 5 : 0.2;
+      const verb = isSpike ? 'spike' : 'drop';
+      const verbPresent = isSpike ? 'spiking' : 'dropping';
+
+      const event: SpecialEventEffect = {
+        period,
+        effect,
+        isUniversal: false,
+        location,
+        candy,
+        multiplier,
+        hint: `${candy} is going to ${verb} in ${location}`,
+        flavorText: `${candy} is ${verbPresent} in ${location}`,
+        category: 'neutral',
+      };
 
       periodEvents.push(event);
+      console.log(
+        `📅 Day ${day + 1}, Period ${period}: ${effect} - ${candy} in ${location}`
+      );
     }
   }
 
-  console.log(`📊 Total events generated: ${periodEvents.length}`);
+  // Generate guaranteed unavoidable events (0-1 bully, 0-1 stash lock)
+  // These events happen on days 2-5 (not day 1) and are always universal
+  const guaranteedBully = rng() < 0.5; // 50% chance
+  const guaranteedStashLock = rng() < 0.5; // 50% chance
 
-  // Pre-calculate event prices for hybrid lookup (Option 3)
-  // Structure: eventPrices[period][location][candyName] = finalPrice
-  const eventPrices: Record<number, Record<string, Record<string, number>>> = {};
+  if (guaranteedBully) {
+    // Pick a random day from 2-5 (days 1-4 in 0-indexed)
+    const dayIndex = Math.floor(rng() * 4) + 1; // 1, 2, 3, or 4
+    const dayStartPeriod = dayIndex * 8 + 1;
+    // Pick a random period from that day (2-8 within the day)
+    const periodOffset = Math.floor(rng() * 7) + 1; // 1-7
+    const period = dayStartPeriod + periodOffset;
+
+    const bully = pickRandom(bullies);
+    const titleTemplate = pickRandom(loseMoneyTitles);
+    const subtitle = pickRandom(loseMoneySubtitles);
+
+    const guaranteedBullyEvent: SpecialEventEffect = {
+      period,
+      effect: 'LOSE_MONEY',
+      isUniversal: true,
+      isGuaranteedEvent: true,
+      hint: `🚨 ${bully} said he's going to find you today no matter what! 🚨`,
+      category: 'bad',
+      heading: 'Robbed!',
+      title: titleTemplate(bully),
+      subtitle,
+      backgroundImage: getBackgroundImage('bully'),
+    };
+
+    periodEvents.push(guaranteedBullyEvent);
+    console.log(`🎯 Guaranteed bully event added on Day ${dayIndex + 1}, Period ${period}`);
+  }
+
+  if (guaranteedStashLock) {
+    // Pick a random day from 2-5 (days 1-4 in 0-indexed)
+    const dayIndex = Math.floor(rng() * 4) + 1; // 1, 2, 3, or 4
+    const dayStartPeriod = dayIndex * 8 + 1;
+    // Pick a random period from that day (2-8 within the day)
+    const periodOffset = Math.floor(rng() * 7) + 1; // 1-7
+    const period = dayStartPeriod + periodOffset;
+
+    const teacher = pickRandom(teachers);
+    const titleTemplate = pickRandom(stashLockedTitles);
+    const subtitle = pickRandom(stashLockedSubtitles);
+
+    const guaranteedStashEvent: SpecialEventEffect = {
+      period,
+      effect: 'STASH_LOCKED',
+      isUniversal: true,
+      isGuaranteedEvent: true,
+      hint: `🚨 ${teacher} caught wind of your operation and wants to speak with you today! 🚨`,
+      category: 'bad',
+      heading: 'BUSTED!',
+      title: titleTemplate(teacher),
+      subtitle,
+      backgroundImage: getBackgroundImage('confiscate'),
+      dismissText: '😤 Dang it!',
+    };
+
+    periodEvents.push(guaranteedStashEvent);
+    console.log(`🎯 Guaranteed stash lock event added on Day ${dayIndex + 1}, Period ${period}`);
+  }
+
+  console.log(`📊 Total events generated: ${periodEvents.length}`);
+  console.log(
+    `   Major events: ${periodEvents.filter((e) => ['STASH_LOCKED', 'LOSE_MONEY', 'FOUND_MONEY'].includes(e.effect)).length}`
+  );
+  console.log(
+    `   Minor events: ${periodEvents.filter((e) => ['PRICE_SPIKE', 'PRICE_DROP'].includes(e.effect)).length}`
+  );
+
+  // Pre-calculate event prices for hybrid lookup
+  const eventPrices: Record<
+    number,
+    Record<string, Record<string, number>>
+  > = {};
 
   periodEvents.forEach((event) => {
-    // Only pre-calculate for price events with candy specified
-    if (event.candy && (event.priceOverride !== undefined || event.multiplier !== undefined)) {
+    if (event.candy && event.multiplier !== undefined) {
       const period = event.period - 1; // Convert to 0-indexed
-      const location = event.location || 'any'; // 'any' means applies to all locations
+      const location = event.location || 'any';
 
-      // Initialize nested objects if they don't exist
       if (!eventPrices[period]) {
         eventPrices[period] = {};
       }
@@ -407,37 +457,26 @@ export function generateSeededGameData(seed: string, totalPeriods = 40) {
         eventPrices[period][location] = {};
       }
 
-      // Calculate the final event price
-      let finalPrice: number;
       const basePrice = candyPrices[event.candy][period];
+      let finalPrice = basePrice * event.multiplier;
 
-      if (event.priceOverride !== undefined) {
-        finalPrice = event.priceOverride;
-      } else if (event.multiplier !== undefined) {
-        const calculatedPrice = basePrice * event.multiplier;
-
-        // Apply caps based on event type
-        if (event.effect === 'PRICE_SPIKE' || event.effect === 'PRICE_HIKE') {
-          finalPrice = Math.min(calculatedPrice, 100);
-        } else if (event.effect === 'PRICE_DROP') {
-          finalPrice = Math.max(calculatedPrice, 0.01);
-        } else {
-          finalPrice = calculatedPrice;
-        }
-      } else {
-        finalPrice = basePrice;
+      // Apply caps
+      if (event.effect === 'PRICE_SPIKE') {
+        finalPrice = Math.min(finalPrice, 100);
+      } else if (event.effect === 'PRICE_DROP') {
+        finalPrice = Math.max(finalPrice, 0.01);
       }
 
-      eventPrices[period][location][event.candy] = parseFloat(finalPrice.toFixed(2));
-
-      console.log(`💰 Pre-calculated event price: Period ${event.period}, Location: ${location}, ${event.candy}: $${finalPrice.toFixed(2)} (base: $${basePrice.toFixed(2)})`);
+      eventPrices[period][location][event.candy] = parseFloat(
+        finalPrice.toFixed(2)
+      );
     }
   });
 
   return {
     candyPrices,
     periodEvents,
-    eventPrices, // Add pre-calculated event prices
+    eventPrices,
     totalPeriods,
   };
 }
