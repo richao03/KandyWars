@@ -180,16 +180,40 @@ const foundMoneySubtitles = [
   "Today's your day!",
 ];
 
-export function generateSeededGameData(seed: string, totalPeriods = 40) {
+export function generateSeededGameData(seed: string, totalPeriods = 40, difficultyLevel?: number) {
   const rng = seedrandom(seed);
 
   // Helper to pick random from array (supports both mutable and readonly arrays)
   const pickRandom = <T,>(arr: readonly T[]): T =>
     arr[Math.floor(rng() * arr.length)];
 
+  // For difficulty level > 3, shuffle price ranges between candies
+  let basePrices = { ...candyBasePrices };
+
+  if (difficultyLevel && difficultyLevel > 3) {
+    console.log('🎲 Difficulty > 3 detected: Shuffling candy price ranges');
+
+    // Extract candy names and price ranges separately
+    const candyNames = Object.keys(candyBasePrices);
+    const priceRanges = Object.values(candyBasePrices);
+
+    // Fisher-Yates shuffle using seeded RNG for reproducibility
+    for (let i = priceRanges.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [priceRanges[i], priceRanges[j]] = [priceRanges[j], priceRanges[i]];
+    }
+
+    // Rebuild basePrices with shuffled ranges
+    basePrices = {};
+    candyNames.forEach((name, index) => {
+      basePrices[name] = priceRanges[index];
+      console.log(`🍬 ${name}: [${priceRanges[index][0]}, ${priceRanges[index][1]}]`);
+    });
+  }
+
   // Price table (0-indexed: periods 0-39 for internal array indexing)
   const candyPrices: CandyPriceTable = {};
-  Object.entries(candyBasePrices).forEach(
+  Object.entries(basePrices).forEach(
     ([candy, [min, max, _unusedFloorPrice]]) => {
       candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
         const maxSpikePrice = max * 14;

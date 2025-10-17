@@ -289,7 +289,8 @@ export default function CandyWarsTitleScreen({
       console.log('🔄 New seed set:', newSeed);
 
       // Generate game data using the seed with hall pass-adjusted periods
-      const gameData = generateSeededGameData(newSeed, totalPeriods);
+      // Pass difficulty level to enable price range shuffling for level > 3
+      const gameData = generateSeededGameData(newSeed, totalPeriods, level);
       setGameData(gameData);
       console.log(
         '🎲 Generated game data with',
