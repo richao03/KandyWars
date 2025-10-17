@@ -972,7 +972,7 @@ function JokerCard({
 
   return (
     <>
-      <PixelBorder borderColor="#d4af37" borderWidth={2} innerPadding={0}>
+      <PixelBorder borderColor="#d4af37" borderWidth={3} innerPadding={0}>
         <CardWrapper style={styles.cardContainer} {...cardWrapperProps}>
           {/* Header Section */}
           <View style={styles.headerSection}>
@@ -1317,8 +1317,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: -8,
     marginHorizontal: -8,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   jokerName: {
     fontSize: 13,
