@@ -478,50 +478,48 @@ const EventModal = React.memo(function EventModal() {
                         </View>
                       )}
                       {currentEvent.protectedByMedievalShield && (
-                        <PixelBorder
-                          borderColor="#d4af37"
-                          borderWidth={3}
-                          backgroundColor="rgba(0, 0, 0, 0.2)"
-                          innerPadding={12}
-                          style={{ marginTop: 12 }}
-                        >
-                          <View style={styles.protectionContainer}>
-                            <Image
-                              source={require('../../assets/images/emojis/shield.png')}
-                              style={{
-                                width: 48,
-                                height: 48,
-                                resizeMode: 'contain',
-                                marginBottom: 8,
-                              }}
-                            />
-                            <Text style={styles.protectionText}>
-                              Medieval Shield Activated!
-                            </Text>
-                            <Text style={styles.protectionSubtext}>
-                              Your money is protected
-                            </Text>
-                          </View>
-                        </PixelBorder>
+                        <View style={styles.protectionContainer}>
+                          <Image
+                            source={require('../../assets/images/emojis/shield.png')}
+                            style={{
+                              width: 64,
+                              height: 64,
+                              resizeMode: 'contain',
+                              marginBottom: 8,
+                            }}
+                          />
+                          <Text style={styles.protectionText}>
+                            Medieval Shield Activated!
+                          </Text>
+                          <Text style={styles.protectionSubtext}>
+                            Your money is safe
+                          </Text>
+                          <Text style={styles.protectionSubtext}>
+                            Shield has been used
+                          </Text>
+                        </View>
                       )}
                       {currentEvent.protectedByCandyVault && (
-                        <PixelBorder
-                          borderColor="rgb(161,215,106)"
-                          borderWidth={3}
-                          backgroundColor="rgba(0, 0, 0, 0.2)"
-                          innerPadding={12}
-                          style={{ marginTop: 12 }}
-                        >
-                          <View style={styles.protectionContainer}>
-                            <Text style={styles.protectionEmoji}>🏦</Text>
-                            <Text style={styles.protectionText}>
-                              Candy Vault Activated!
-                            </Text>
-                            <Text style={styles.protectionSubtext}>
-                              Your candy is protected
-                            </Text>
-                          </View>
-                        </PixelBorder>
+                        <View style={styles.protectionContainer}>
+                          <Image
+                            source={require('../../assets/images/emojis/lock.png')}
+                            style={{
+                              width: 64,
+                              height: 64,
+                              resizeMode: 'contain',
+                              marginBottom: 8,
+                            }}
+                          />
+                          <Text style={styles.protectionText}>
+                            Candy Vault Activated!
+                          </Text>
+                          <Text style={styles.protectionSubtext}>
+                            Your candy is safe
+                          </Text>
+                          <Text style={styles.protectionSubtext}>
+                            Vault has been used
+                          </Text>
+                        </View>
                       )}
                       {currentEvent.protectedByHallMonitorBribe && (
                         <PixelBorder

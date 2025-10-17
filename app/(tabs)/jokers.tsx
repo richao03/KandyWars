@@ -535,7 +535,7 @@ function JokersPage() {
   const titleStyles = styles.title;
 
   const renderInventoryJokerRow = ({ item }: { item: any[] }) => (
-    <View style={styles.row}>
+    <View style={{ ...styles.row }}>
       {item.map((joker, index) => (
         <View key={joker.id} style={styles.jokerCardContainer}>
           <JokerCard
@@ -1034,38 +1034,20 @@ const styles = StyleSheet.create({
   activeTabTextAfterSchool: {
     color: colors.gold.light,
   },
-  dragHint: {
-    fontSize: 11,
-    color: colors.brown.secondary,
-    fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 4,
-    opacity: 0.7,
-  },
-  dragHintAfterSchool: {
-    color: colors.purple.light,
-  },
   list: {
     padding: 16,
     paddingTop: 4,
     paddingBottom: 20,
   },
-  inventoryList: {
-    padding: 16,
-    paddingTop: 4,
-    paddingBottom: 80,
-  },
+
   row: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingHorizontal: 8,
   },
   jokerCardContainer: {
     width: 160, // Fixed width for consistent sizing
     height: 180, // Fixed height to ensure all cards are the same size
-    marginBottom: 8,
     marginRight: 8,
     position: 'relative',
   },

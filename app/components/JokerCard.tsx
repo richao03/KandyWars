@@ -180,7 +180,10 @@ function JokerCard({
 
   const handleActivate = useCallback(() => {
     if (isActivating.current) {
-      console.log('🃏 Activation already in progress, ignoring duplicate call for:', joker.name);
+      console.log(
+        '🃏 Activation already in progress, ignoring duplicate call for:',
+        joker.name
+      );
       return;
     }
 
@@ -190,14 +193,22 @@ function JokerCard({
     }
 
     isActivating.current = true;
-    console.log('🃏 handleActivate called for joker:', joker.name, 'ID:', joker.id);
+    console.log(
+      '🃏 handleActivate called for joker:',
+      joker.name,
+      'ID:',
+      joker.id
+    );
 
     // Reset the flag after a short delay
     setTimeout(() => {
       isActivating.current = false;
     }, 1000); // Increased to 1 second
 
-    if (joker.id === JOKER_IDS.DOUBLE_UP || joker.effect === 'double_candy_price') {
+    if (
+      joker.id === JOKER_IDS.DOUBLE_UP ||
+      joker.effect === 'double_candy_price'
+    ) {
       // Show candy selector modal for Double Up
       onShowCandySelector?.(joker);
     } else if (joker.effect === 'revert_period') {
@@ -272,7 +283,9 @@ function JokerCard({
     } else if (joker.id === JOKER_IDS.LOST_AND_FOUND) {
       // Generate random amount for preview
       const baseAmount = Math.floor(Math.random() * 401) + 100; // 100 to 500
-      const hasHideAndSeek = jokers.some((j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK);
+      const hasHideAndSeek = jokers.some(
+        (j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK
+      );
       const finalAmount = hasHideAndSeek ? baseAmount * 3 : baseAmount;
 
       showConfirm(
@@ -354,14 +367,28 @@ function JokerCard({
       );
     } else {
       // Log unhandled instant joker activation
-      console.warn('⚠️ Unhandled instant joker activation:', joker.name, 'ID:', joker.id, 'Effect:', joker.effect);
+      console.warn(
+        '⚠️ Unhandled instant joker activation:',
+        joker.name,
+        'ID:',
+        joker.id,
+        'Effect:',
+        joker.effect
+      );
       showAlert(
         'Not Implemented',
         `The activation for "${joker.name}" is not yet implemented.`,
         '🚧'
       );
     }
-  }, [joker, disableActivation, onShowCandySelector, onShowJokerSelector, showConfirm, showAlert]);
+  }, [
+    joker,
+    disableActivation,
+    onShowCandySelector,
+    onShowJokerSelector,
+    showConfirm,
+    showAlert,
+  ]);
 
   const handleTimeRevert = async () => {
     const timeReverted = revertToPreviousPeriod();
@@ -609,10 +636,14 @@ function JokerCard({
       const baseAmount = Math.floor(Math.random() * 401) + 100; // 100 to 500
 
       // Check for Hide and Seek joker (triples found money)
-      const hasHideAndSeek = jokers.some((j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK);
+      const hasHideAndSeek = jokers.some(
+        (j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK
+      );
       const finalAmount = hasHideAndSeek ? baseAmount * 3 : baseAmount;
 
-      console.log(`🎒 Lost and Found: Found $${baseAmount}${hasHideAndSeek ? ` × 3 (Hide and Seek) = $${finalAmount}` : ''}`);
+      console.log(
+        `🎒 Lost and Found: Found $${baseAmount}${hasHideAndSeek ? ` × 3 (Hide and Seek) = $${finalAmount}` : ''}`
+      );
 
       // Trigger the found money event through the event handler
       if (onTriggerEvent) {
@@ -689,7 +720,11 @@ function JokerCard({
 
     try {
       // Activate the joker effect for current period
-      const activated = await activateJoker(Number(joker.id), undefined, periodCount);
+      const activated = await activateJoker(
+        Number(joker.id),
+        undefined,
+        periodCount
+      );
       console.log('🗣️ Pursuasion: Effect activated result:', activated);
       console.log('🗣️ Pursuasion: Effect activated for period', periodCount);
 
@@ -1035,7 +1070,12 @@ function JokerCard({
           <View style={{ alignItems: 'center' }}>
             <Image
               source={require('../../assets/images/emojis/refresh.png')}
-              style={{ width: 54, height: 54, resizeMode: 'contain', marginBottom: 12 }}
+              style={{
+                width: 54,
+                height: 54,
+                resizeMode: 'contain',
+                marginBottom: 12,
+              }}
             />
           </View>
           <TextWithEmojis style={styles.modalTitle} imageSize={24}>
@@ -1056,7 +1096,12 @@ function JokerCard({
                   {availableJoker.type === 'persistent' ? (
                     <Image
                       source={require('../../assets/images/emojis/refresh.png')}
-                      style={{ width: 14, height: 14, resizeMode: 'contain', marginLeft: 4 }}
+                      style={{
+                        width: 14,
+                        height: 14,
+                        resizeMode: 'contain',
+                        marginLeft: 4,
+                      }}
                     />
                   ) : (
                     <Text style={styles.jokerSelectButtonText}>⚡</Text>
@@ -1170,10 +1215,22 @@ function JokerCard({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 8,
+              }}
+            >
               <Image
                 source={require('../../assets/images/emojis/refresh.png')}
-                style={{ width: 20, height: 20, resizeMode: 'contain', marginRight: 8 }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  resizeMode: 'contain',
+                  marginRight: 8,
+                }}
               />
               <Text style={styles.modalTitle}>Convert to Which Candy?</Text>
             </View>
@@ -1249,12 +1306,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minHeight: 160,
     justifyContent: 'space-between',
-  },
-
-  bottomCorner: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
   },
   headerSection: {
     flexDirection: 'row',

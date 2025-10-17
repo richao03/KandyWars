@@ -11,6 +11,7 @@ import {
 } from '../store/slices/eventHandlerSlice';
 import { recordConfiscation } from '../store/slices/dailyStatsSlice';
 import { selectActiveEffects, consumeEffect } from '../store/slices/merchantSlice';
+import { removeJoker } from '../store/slices/jokerSlice';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
@@ -66,18 +67,20 @@ export const useEventHandler = () => {
 
       // Apply event effects immediately when event is triggered
       if (eventData.effect === 'LOSE_MONEY') {
-        // Check for 6th Grade Bodyguard protection (merchant item)
-        if (MerchantUtils.hasBodyguard(merchantEffects)) {
+        // Check for Medieval Shield protection (joker) - PRIORITY 1
+        if (hasMedievalShield) {
+          console.log('🛡️ Medieval Shield: Protected from money loss!');
+          // Add protection flag to event data
+          processedEventData.protectedByMedievalShield = true;
+          // Remove Medieval Shield from inventory (one-time use)
+          dispatch(removeJoker(JOKER_IDS.MEDIEVAL_SHIELD.toString()));
+        }
+        // Check for 6th Grade Bodyguard protection (merchant item) - PRIORITY 2
+        else if (MerchantUtils.hasBodyguard(merchantEffects)) {
           console.log('💪 6th Grade Bodyguard: Protected from bully!');
           processedEventData.protectedByBodyguard = true;
           // Consume one bodyguard
           dispatch(consumeEffect({ itemId: 'sixth_grade_bodyguard' }));
-        }
-        // Check for Medieval Shield protection (joker)
-        else if (hasMedievalShield) {
-          console.log('🛡️ Medieval Shield: Protected from money loss!');
-          // Add protection flag to event data
-          processedEventData.protectedByMedievalShield = true;
         } else {
           // Get CURRENT balance at time of execution, not stale closure value
           const currentBalance = wallet.balance;
@@ -120,18 +123,20 @@ export const useEventHandler = () => {
         processedEventData.dollarAmount = amountFound;
         wallet.add(amountFound);
       } else if (eventData.effect === 'STASH_LOCKED') {
-        // Check for Hall Monitor Bribe protection (merchant item)
-        if (MerchantUtils.hasHallMonitorBribe(merchantEffects)) {
+        // Check for Candy Vault protection (joker) - PRIORITY 1
+        if (hasCandyVault) {
+          console.log('🔒 Candy Vault: Protected from confiscation!');
+          // Add protection flag to event data
+          processedEventData.protectedByCandyVault = true;
+          // Remove Candy Vault from inventory (one-time use)
+          dispatch(removeJoker(JOKER_IDS.CANDY_VAULT.toString()));
+        }
+        // Check for Hall Monitor Bribe protection (merchant item) - PRIORITY 2
+        else if (MerchantUtils.hasHallMonitorBribe(merchantEffects)) {
           console.log('🤝 Hall Monitor Bribe: Protected from confiscation!');
           processedEventData.protectedByHallMonitorBribe = true;
           // Consume one bribe
           dispatch(consumeEffect({ itemId: 'hall_monitor_bribe' }));
-        }
-        // Check for Candy Vault protection (joker)
-        else if (hasCandyVault) {
-          console.log('🔒 Candy Vault: Protected from confiscation!');
-          // Add protection flag to event data
-          processedEventData.protectedByCandyVault = true;
         } else {
           // Check for Teachers Pet protection (reduces confiscation to 25%)
           const hasTeachersPet = selectedPassIds.includes('teachers_pet');
