@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useGame } from '../../src/hooks/useGame';
@@ -22,19 +23,22 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
+import {
+  setTotalCompletions,
+  setWonDifficulties,
+} from '../../src/store/slices/scoreboardSlice';
+import {
+  clearCachedUserObject,
+  updateCachedUserObject,
+} from '../../src/store/slices/userObjectSlice';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
+import { resetFirebaseSession } from '../components/CandyWarsTitleScreen';
 import ConfirmationModal from '../components/ConfirmationModal';
 import GameHUD from '../components/GameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
-import { resetFirebaseSession } from '../components/CandyWarsTitleScreen';
-import colors from '../../src/constants/colors';
-import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { updateCachedUserObject, clearCachedUserObject } from '../../src/store/slices/userObjectSlice';
-import { setWonDifficulties, setTotalCompletions } from '../../src/store/slices/scoreboardSlice';
-import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
-import { forceSave } from '../../src/store/store';
-
 
 function Settings() {
   const { resetGame, jumpToPeriod } = useGame();
@@ -52,7 +56,8 @@ function Settings() {
   const initializeWallet = walletContext?.initializeWallet || (() => {});
   const setPlayerName = walletContext?.setPlayerName || (() => {});
   const currentDifficulty = walletContext?.difficulty;
-  const currentPlayerName = cachedUser?.playerName || walletContext?.playerName || 'Player';
+  const currentPlayerName =
+    cachedUser?.playerName || walletContext?.playerName || 'Player';
   const [isRestarting, setIsRestarting] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -232,7 +237,9 @@ function Settings() {
       console.log('✅ Player name updated in Redux:', trimmedName);
 
       // Get updated user object from Redux and sync to service cache
-      const updatedUser = cachedUser ? { ...cachedUser, playerName: trimmedName } : null;
+      const updatedUser = cachedUser
+        ? { ...cachedUser, playerName: trimmedName }
+        : null;
       if (updatedUser) {
         scoreboardService.setCachedUserObject(updatedUser);
         console.log('✅ Player name synced to service cache:', updatedUser);
@@ -240,7 +247,11 @@ function Settings() {
         // Also ensure scoreboard slice is in sync with userObject
         dispatch(setWonDifficulties(updatedUser.difficultyWon));
         dispatch(setTotalCompletions(updatedUser.totalWinCount));
-        console.log('✅ Scoreboard slice synced:', updatedUser.difficultyWon, updatedUser.totalWinCount);
+        console.log(
+          '✅ Scoreboard slice synced:',
+          updatedUser.difficultyWon,
+          updatedUser.totalWinCount
+        );
       }
 
       // Also update wallet context for backward compatibility
@@ -294,7 +305,10 @@ function Settings() {
             await scoreboardService.deleteUserObject();
             console.log('✅ User document deleted from Firebase');
           } catch (error) {
-            console.error('❌ Failed to delete user document from Firebase:', error);
+            console.error(
+              '❌ Failed to delete user document from Firebase:',
+              error
+            );
           }
 
           // Clear the Firebase name association if we have a player ID
@@ -393,10 +407,7 @@ function Settings() {
 
   return (
     <View style={styles.container}>
-      <GameHUD
-        customHeaderText="Game Settings"
-        customLocationText="Principal's Office"
-      />
+      <GameHUD customHeaderText="Game Settings" customLocationText="Office" />
 
       <ScrollView
         style={styles.content}
@@ -680,7 +691,9 @@ function Settings() {
                 <TouchableOpacity
                   style={styles.debugButton}
                   onPress={() => {
-                    console.log('🔧 DEBUG: Getting total completions from cache...');
+                    console.log(
+                      '🔧 DEBUG: Getting total completions from cache...'
+                    );
                     const total = scoreboardService.getTotalWinCount();
                     console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
                     Alert.alert(

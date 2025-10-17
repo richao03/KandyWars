@@ -1,0 +1,390 @@
+import React, { useMemo } from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSelector } from 'react-redux';
+import { useCandySales } from '../../src/hooks/useCandySales';
+import { useGame } from '../../src/hooks/useGame';
+import { useInventory } from '../../src/hooks/useInventory';
+import { useJokers } from '../../src/hooks/useJokers';
+import { selectJokerActiveEffects } from '../../src/store/slices/jokerSlice';
+import {
+  selectActiveEffects,
+  selectOwnedLevel,
+} from '../../src/store/slices/merchantSlice';
+import TextWithEmojis from './TextWithEmojis';
+
+interface StatusIndicatorsProps {
+  theme?: 'school' | 'evening';
+  type?: 'merchant' | 'joker';
+}
+
+interface StatusIcon {
+  type: 'merchant' | 'joker';
+  icon: string | any;
+  key: string;
+  level?: number;
+  isImage?: boolean; // true if icon is an image source, false if emoji text
+}
+
+function StatusIndicators({
+  theme = 'school',
+  type = 'merchant',
+}: StatusIndicatorsProps) {
+  const merchantActiveEffects = useSelector(selectActiveEffects);
+  const jokerActiveEffects = useSelector(selectJokerActiveEffects);
+  const { jokers } = useJokers();
+  const { period } = useGame();
+  const { getTotalInventoryCount, getInventoryLimit } = useInventory();
+  const { consecutivePeriodSales, totalCandiesSold } = useCandySales();
+
+  // Get leveled item levels
+  const streetCredLevel = useSelector(selectOwnedLevel('street_cred'));
+  const fakeReportCardLevel = useSelector(selectOwnedLevel('fake_report_card'));
+  const metalDetectorLevel = useSelector(selectOwnedLevel('metal_detector'));
+  const hollowedTextbookLevel = useSelector(
+    selectOwnedLevel('hollowed_textbook')
+  );
+  const doubleSidedCoinLevel = useSelector(
+    selectOwnedLevel('double_sided_coin')
+  );
+
+  const { merchantIcons, jokerIcons } = useMemo(() => {
+    const merchantIcons: StatusIcon[] = [];
+    const jokerIcons: StatusIcon[] = [];
+
+    const totalInventory = getTotalInventoryCount();
+    const inventoryLimit = getInventoryLimit();
+
+    // MERCHANT ITEMS - Leveled (always show when owned)
+    if (streetCredLevel > 0) {
+      merchantIcons.push({
+        type: 'merchant',
+        icon: require('../../assets/images/icons/streetCred.png'),
+        key: 'streetcred',
+        level: streetCredLevel,
+      });
+    }
+
+    if (fakeReportCardLevel > 0) {
+      merchantIcons.push({
+        type: 'merchant',
+        icon: require('../../assets/images/icons/fakeReportCard.png'),
+        key: 'fakereportcard',
+        level: fakeReportCardLevel,
+      });
+    }
+
+    if (metalDetectorLevel > 0) {
+      merchantIcons.push({
+        type: 'merchant',
+        icon: require('../../assets/images/icons/metalDetector.png'),
+        key: 'metaldetector',
+        level: metalDetectorLevel,
+      });
+    }
+
+    if (hollowedTextbookLevel > 0) {
+      merchantIcons.push({
+        type: 'merchant',
+        icon: require('../../assets/images/icons/hollowedBook.png'),
+        key: 'hollowedtextbook',
+        level: hollowedTextbookLevel,
+      });
+    }
+
+    if (doubleSidedCoinLevel > 0) {
+      merchantIcons.push({
+        type: 'merchant',
+        icon: require('../../assets/images/icons/luckyCoin.png'),
+        key: 'doublesidedcoin',
+        level: doubleSidedCoinLevel,
+      });
+    }
+
+    // MERCHANT ITEMS - Consumable (show when active count > 0)
+    merchantActiveEffects.forEach((effect) => {
+      if (effect.itemId === 'influencer_shoutout' && (effect.count || 0) > 0) {
+        merchantIcons.push({
+          type: 'merchant',
+          icon: require('../../assets/images/icons/influencerShoutout.png'),
+          key: 'influencer',
+        });
+      } else if (
+        effect.itemId === 'hall_monitor_bribe' &&
+        (effect.count || 0) > 0
+      ) {
+        merchantIcons.push({
+          type: 'merchant',
+          icon: require('../../assets/images/icons/bribe.png'),
+          key: 'bribe',
+        });
+      } else if (
+        effect.itemId === 'sixth_grade_bodyguard' &&
+        (effect.count || 0) > 0
+      ) {
+        merchantIcons.push({
+          type: 'merchant',
+          icon: require('../../assets/images/icons/bodyguard.png'),
+          key: 'bodyguard',
+        });
+      }
+    });
+
+    // JOKERS - Check all owned jokers
+    jokers.forEach((joker) => {
+      // Protection jokers (always show when owned)
+      if (joker.name === 'Medieval Shield') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/shield.png'),
+          key: 'shield',
+          isImage: true,
+        });
+      } else if (joker.name === 'Candy Vault') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/lock.png'),
+          key: 'vault',
+          isImage: true,
+        });
+      } else if (joker.name === 'Tapped in') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/tappedIn.png'),
+          key: 'tappedin',
+          isImage: true,
+        });
+      }
+      // Time-based conditional jokers
+      else if (joker.name === 'Sunset Surge' && period >= 5 && period <= 8) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/sunrise.png'),
+          key: 'sunsetsurge',
+          isImage: true,
+        });
+      } else if (
+        joker.name === 'Time Zone Arbitrage' &&
+        period >= 1 &&
+        period <= 4
+      ) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/clock.png'),
+          key: 'timezone',
+          isImage: true,
+        });
+      } else if (joker.name === 'Hopscotch Bonus' && period % 2 === 0) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/hopscotch.png'),
+          key: 'hopscotch',
+          isImage: true,
+        });
+      }
+      // Inventory-based conditional jokers
+      else if (joker.name === 'Even Stevens' && inventoryLimit % 2 === 0) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/scale.png'),
+          key: 'evenstevens',
+          isImage: true,
+        });
+      } else if (joker.name === 'Odd Todd' && inventoryLimit % 2 === 1) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/theater.png'),
+          key: 'oddtodd',
+          isImage: true,
+        });
+      } else if (joker.name === 'Slow Cooker' && totalInventory > 0) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/slowcooker.png'),
+          key: 'slowcooker',
+          isImage: true,
+        });
+      } else if (joker.name === 'Diamond Hand' && totalInventory > 0) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/diamondHand.png'),
+          key: 'diamondhand',
+          isImage: true,
+        });
+      } else if (
+        joker.name === 'Bulk Sale' &&
+        totalInventory / inventoryLimit > 0.5
+      ) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/bulkSale.png'),
+          key: 'bulksale',
+          isImage: true,
+        });
+      }
+      // Sales streak-based conditional jokers
+      else if (joker.name === 'Jump Rope Rhythm') {
+        const nextSaleNumber = (totalCandiesSold || 0) + 1;
+        if (nextSaleNumber % 3 === 0) {
+          jokerIcons.push({
+            type: 'joker',
+            icon: require('../../assets/images/emojis/jumpRope.png'),
+            key: 'jumprope',
+            isImage: true,
+          });
+        }
+      } else if (joker.name === 'Swingset Momentum') {
+        const consecutiveCount = consecutivePeriodSales();
+        if (consecutiveCount > 1) {
+          jokerIcons.push({
+            type: 'joker',
+            icon: require('../../assets/images/emojis/swingset.png'),
+            key: 'swingset',
+            isImage: true,
+          });
+        }
+      }
+    });
+
+    // ONE-TIME JOKERS - Check activeEffects for activated jokers
+    jokerActiveEffects.forEach((effect: any) => {
+      // Check if Pursuasion is activated (jokerId 48)
+      if (effect.jokerId === 48 || effect.jokerId === '48') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/talkingHead.png'),
+          key: 'pursuasion',
+          isImage: true,
+        });
+      }
+    });
+
+    return { merchantIcons, jokerIcons };
+  }, [
+    merchantActiveEffects,
+    jokerActiveEffects,
+    jokers,
+    period,
+    getTotalInventoryCount,
+    getInventoryLimit,
+    consecutivePeriodSales,
+    totalCandiesSold,
+    streetCredLevel,
+    fakeReportCardLevel,
+    metalDetectorLevel,
+    hollowedTextbookLevel,
+    doubleSidedCoinLevel,
+  ]);
+
+  // Filter icons based on type prop
+  const iconsToShow = type === 'merchant' ? merchantIcons : jokerIcons;
+
+  // Always render container with fixed width, even if empty
+  return (
+    <View style={styles.fixedWidthContainer}>
+      {iconsToShow.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.scrollView}
+        >
+          <View style={styles.gridContainer}>
+            {iconsToShow.map((indicator) => (
+              <View key={indicator.key} style={styles.iconContainer}>
+                {type === 'merchant' ? (
+                  <>
+                    <Image
+                      source={indicator.icon}
+                      style={styles.merchantIcon}
+                    />
+                    {indicator.level && indicator.level > 0 && (
+                      <View style={styles.levelBadge}>
+                        <Text style={styles.levelText}>{indicator.level}</Text>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {indicator.isImage ? (
+                      <Image
+                        source={indicator.icon}
+                        style={styles.jokerImageIcon}
+                      />
+                    ) : (
+                      <TextWithEmojis style={styles.jokerIcon} imageSize={20}>
+                        {indicator.icon}
+                      </TextWithEmojis>
+                    )}
+                  </>
+                )}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fixedWidthContainer: {
+    width: 119, // Fixed width: 4.25 icons × 28px (24px icon + 4px gap)
+    height: 52, // Fixed height: 2 rows (24px + 4px gap + 24px)
+  },
+  scrollView: {
+    flex: 1,
+  },
+  gridContainer: {
+    flexDirection: 'column',
+    flexWrap: 'wrap',
+    height: 52, // 2 rows: 24px + 4px gap + 24px
+    gap: 4,
+    alignContent: 'flex-start',
+  },
+  iconContainer: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 69, 19, 0.3)',
+    position: 'relative',
+  },
+  merchantIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
+  jokerIcon: {
+    fontSize: 16,
+  },
+  jokerImageIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
+  },
+  levelBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 6,
+    minWidth: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  levelText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+    lineHeight: 10,
+  },
+});
+
+export default React.memo(StatusIndicators);

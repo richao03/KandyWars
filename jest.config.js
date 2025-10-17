@@ -4,13 +4,14 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
   testMatch: [
-    '**/__tests__/**/*.(ts|tsx|js)',
+    '**/__tests__/**/*.test.(ts|tsx|js)',
     '**/?(*.)+(spec|test).(ts|tsx|js)',
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
     '/android/',
     '/ios/',
+    '/__tests__/utils/',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

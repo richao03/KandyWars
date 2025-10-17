@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import colors from '../../src/constants/colors';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
@@ -22,8 +23,6 @@ import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import colors from '../../src/constants/colors';
-
 
 const CANDY_TYPES = [
   'Snickers',
@@ -583,7 +582,7 @@ function JokersPage() {
         <GameHUD
           theme="evening"
           customHeaderText="School"
-          customLocationText="Jokers Collection"
+          customLocationText="Collection"
         />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Loading jokers...</Text>
@@ -597,7 +596,7 @@ function JokersPage() {
       <GameHUD
         theme="evening"
         customHeaderText={`Jokers Collection`}
-        customLocationText="Jokers Collection"
+        customLocationText="Collection"
       />
 
       <View style={headerStyles}>
@@ -869,7 +868,10 @@ function JokersPage() {
                     innerPadding={0}
                   >
                     <View style={styles.candyButtonInner}>
-                      <TextWithEmojis style={styles.candyButtonText} imageSize={24}>
+                      <TextWithEmojis
+                        style={styles.candyButtonText}
+                        imageSize={24}
+                      >
                         {`${availableJoker.name} ${availableJoker.type === 'persistent' ? '🔮' : '⚡'}`}
                       </TextWithEmojis>
                     </View>

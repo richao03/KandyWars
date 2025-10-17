@@ -15,6 +15,7 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useWallet } from '../../src/hooks/useWallet';
 import { EMOJI_IMAGES, EMOJI_TO_IMAGE_MAP } from '../../utils/eventImages';
 import PixelBorder from './PixelBorder';
+import StatusIndicators from './StatusIndicators';
 
 // Helper function to render text with emojis replaced by images
 const renderTextWithEmojis = (text: string, textStyle: any) => {
@@ -497,19 +498,27 @@ function GameHUD({
         </PixelBorder>
       </View>
 
-      {/* Location badge */}
-      <Animated.View style={[styles.locationRow, animatedLocationBadgeStyle]}>
-        <PixelBorder
-          borderColor="#cc7a00"
-          borderWidth={3}
-          backgroundColor="#ffcc99"
-          innerPadding={0}
-        >
-          <View style={styles.locationBadge}>
-            <Text style={styles.locationText}>@ {locationText}</Text>
-          </View>
-        </PixelBorder>
-      </Animated.View>
+      {/* Location badge with status indicators */}
+      <View style={styles.locationRowContainer}>
+        <View style={styles.leftSide}>
+          <StatusIndicators theme={theme} type="joker" />
+        </View>
+        <Animated.View style={[styles.locationRow, animatedLocationBadgeStyle]}>
+          <PixelBorder
+            borderColor="#cc7a00"
+            borderWidth={3}
+            backgroundColor="#ffcc99"
+            innerPadding={0}
+          >
+            <View style={styles.locationBadge}>
+              <Text style={styles.locationText}>@ {locationText}</Text>
+            </View>
+          </PixelBorder>
+        </Animated.View>
+        <View style={styles.rightSide}>
+          <StatusIndicators theme={theme} type="merchant" />
+        </View>
+      </View>
 
       {/* Flavor text scroll */}
       {text &&
@@ -553,7 +562,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(254, 247, 227, 0.7)', // Warm cream paper background
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
     borderBottomWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
     fontFamily: 'PixeloidMono',
@@ -561,13 +571,13 @@ const styles = StyleSheet.create({
   eveningContainer: {
     backgroundColor: 'rgba(25,25,25, 0.3)', // Evening theme background
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 3,
     borderColor: '#f7e98e', // Evening theme border
   },
   headerRow: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   headerText: {
     fontSize: 20,
@@ -588,12 +598,12 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
     gap: 8,
     overflow: 'visible',
   },
   statBox: {
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: 'center',
     borderRadius: 10,
     backgroundColor: 'transparent',
@@ -625,7 +635,7 @@ const styles = StyleSheet.create({
   eveningStatTitle: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#c9b4d4', // Evening theme lavender
+    color: '#5d4e37', // Evening theme lavender
     marginBottom: 3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -652,9 +662,27 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     lineHeight: 16,
   },
+  locationRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  leftSide: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  rightSide: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingLeft: 8,
+  },
   locationRow: {
     alignItems: 'center',
-    marginBottom: 10,
   },
   locationBadge: {
     backgroundColor: 'transparent',

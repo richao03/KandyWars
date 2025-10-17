@@ -139,7 +139,7 @@ function TransactionModal({
 
   // Calculate periodsHeld for Slow Cooker (resets every day)
   const { periodsHeld, slowCookerMultiplier } = useMemo(() => {
-    if (!slowCookerJoker || mode !== 'sell') {
+    if (!slowCookerJoker || mode !== 'Sell') {
       return { periodsHeld: 0, slowCookerMultiplier: 1 };
     }
     const inventoryItem = inventory.find((item) => item.name === candy.name);
@@ -156,7 +156,7 @@ function TransactionModal({
         : Math.floor(periodCount / 8) * 8; // Start of current day
 
     const periods = Math.max(0, periodCount - effectivePurchasedPeriod);
-    const multiplier = Math.pow(1.05, periods);
+    const multiplier = Math.pow(1.1, periods);
     return { periodsHeld: periods, slowCookerMultiplier: multiplier };
   }, [slowCookerJoker, mode, inventory, candy.name, periodCount]);
 
@@ -192,32 +192,102 @@ function TransactionModal({
     candy.cost,
   ]);
 
-  // Calculate all bonuses per unit (only for selling)
-  const hallPassBonusPerUnit = useMemo(() => {
+  // Calculate joker sell multiplier from effects (Pursuasion, etc.)
+  const jokerSellMultiplier = useMemo(() => {
+    if (mode === 'Sell' && priceBreakdown?.jokerEffects) {
+      let multiplier = 1;
+
+      // Find all active sell_multiplier effects
+      priceBreakdown.jokerEffects.forEach((effect) => {
+        if (effect.isActive && effect.effectType === 'sell') {
+          // Check if this is a multiplier effect (like Pursuasion: ×2)
+          const match = effect.effect.match(/×(\d+\.?\d*)/);
+          if (match) {
+            const mult = parseFloat(match[1]);
+            multiplier *= mult;
+            console.log(
+              `📊 Found ${effect.jokerName} multiplier: ${mult}x (total now: ${multiplier}x)`
+            );
+          }
+        }
+      });
+
+      return multiplier;
+    }
+    return 1;
+  }, [mode, priceBreakdown]);
+
+  // Calculate all bonuses (only for selling)
+  const hallPassBonusTotal = useMemo(() => {
     if (mode === 'Sell' && priceBreakdown?.hallPassEffect) {
-      return priceBreakdown.hallPassEffect.bonusAmount;
+      return priceBreakdown.hallPassEffect.bonusAmount * quantity;
     }
     return 0;
-  }, [mode, priceBreakdown]);
+  }, [mode, priceBreakdown, quantity]);
+
+  const merchantBonusTotal = useMemo(() => {
+    if (mode === 'Sell' && priceBreakdown?.merchantEffect) {
+      return priceBreakdown.merchantEffect.bonusAmount * quantity;
+    }
+    return 0;
+  }, [mode, priceBreakdown, quantity]);
+
+  const influencerBonusTotal = useMemo(() => {
+    if (mode === 'Sell' && priceBreakdown?.influencerShoutoutEffect) {
+      return priceBreakdown.influencerShoutoutEffect.bonusAmount * quantity;
+    }
+    return 0;
+  }, [mode, priceBreakdown, quantity]);
+
+  // Calculate pocket value - matches actual transaction logic in market.tsx
+  // The transaction does: (baseGain + hallPassBonus + merchantBonus + ...) × multiplier
+  // So we need to apply the multiplier to EVERYTHING, not just the base price
+  const pocketValue = useMemo(() => {
+    if (mode === 'Sell' && priceBreakdown) {
+      // Use BASE price (not final price which already has multiplier baked in)
+      const baseRevenue = priceBreakdown.basePrice * quantity;
+      const allBonuses =
+        hallPassBonusTotal + merchantBonusTotal + influencerBonusTotal;
+      const total = (baseRevenue + allBonuses) * jokerSellMultiplier;
+
+      console.log(`💰 TransactionModal pocketValue calculation:
+        basePrice: $${priceBreakdown.basePrice.toFixed(2)}
+        baseRevenue: $${baseRevenue.toFixed(2)}
+        hallPassBonus: $${hallPassBonusTotal.toFixed(2)}
+        merchantBonus: $${merchantBonusTotal.toFixed(2)}
+        influencerBonus: $${influencerBonusTotal.toFixed(2)}
+        allBonuses: $${allBonuses.toFixed(2)}
+        jokerMultiplier: ${jokerSellMultiplier}x
+        total: $${total.toFixed(2)}`);
+
+      return total.toFixed(2);
+    }
+
+    // For buying
+    return (finalUnitPrice * quantity).toFixed(2);
+  }, [
+    mode,
+    priceBreakdown,
+    finalUnitPrice,
+    hallPassBonusTotal,
+    merchantBonusTotal,
+    influencerBonusTotal,
+    quantity,
+    jokerSellMultiplier,
+  ]);
+
+  // Keep per-unit calculations for display purposes
+  const hallPassBonusPerUnit = useMemo(() => {
+    return quantity > 0 ? hallPassBonusTotal / quantity : 0;
+  }, [hallPassBonusTotal, quantity]);
 
   const merchantBonusPerUnit = useMemo(() => {
-    if (mode === 'Sell' && priceBreakdown?.merchantEffect) {
-      return priceBreakdown.merchantEffect.bonusAmount;
-    }
-    return 0;
-  }, [mode, priceBreakdown]);
+    return quantity > 0 ? merchantBonusTotal / quantity : 0;
+  }, [merchantBonusTotal, quantity]);
 
   const influencerBonusPerUnit = useMemo(() => {
-    if (mode === 'Sell' && priceBreakdown?.influencerShoutoutEffect) {
-      return priceBreakdown.influencerShoutoutEffect.bonusAmount;
-    }
-    return 0;
-  }, [mode, priceBreakdown]);
-
-  // Calculate dynamic font size for pocket value based on number length
-  const pocketValue = useMemo(() => {
-    return ((finalUnitPrice + hallPassBonusPerUnit + merchantBonusPerUnit + influencerBonusPerUnit) * quantity).toFixed(2);
-  }, [finalUnitPrice, hallPassBonusPerUnit, merchantBonusPerUnit, influencerBonusPerUnit, quantity]);
+    return quantity > 0 ? influencerBonusTotal / quantity : 0;
+  }, [influencerBonusTotal, quantity]);
 
   const pocketFontSizes = useMemo(() => {
     const length = pocketValue.length;
@@ -245,7 +315,9 @@ function TransactionModal({
 
         const userObject = scoreboardService.getCachedUserObject();
         if (!userObject) {
-          console.warn('⚠️ User object not cached, cannot track highest single sale');
+          console.warn(
+            '⚠️ User object not cached, cannot track highest single sale'
+          );
         } else if (saleRevenue > userObject.highestSingleSale) {
           console.log(
             '🎉 New highest single sale!',
@@ -1316,6 +1388,66 @@ function TransactionModal({
             </View>
           </PixelBorder>
 
+          {/* Buy Mode Discounts */}
+          {mode === 'Buy' &&
+            (qualifiesForMorningDiscount || qualifiesForBulkDiscount) && (
+              <PixelBorder
+                borderColor="#fde047"
+                borderWidth={3}
+                backgroundColor="#fef3c7"
+                innerPadding={0}
+              >
+                <View style={styles.priceBreakdownContainer}>
+                  {qualifiesForMorningDiscount && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <TextWithEmojis
+                        style={styles.slowCookerText}
+                        imageSize={24}
+                      >
+                        ⏰
+                      </TextWithEmojis>
+                      <Text style={styles.slowCookerText}>
+                        Time Zone Arbitrage (10% off): -$
+                        {(quantity * candy.cost * 0.1).toFixed(2)}
+                      </Text>
+                    </View>
+                  )}
+                  {qualifiesForBulkDiscount && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <TextWithEmojis
+                        style={styles.slowCookerText}
+                        imageSize={24}
+                      >
+                        🛒
+                      </TextWithEmojis>
+                      <Text style={styles.slowCookerText}>
+                        Bulk Sale (10% off): -$
+                        {(
+                          quantity *
+                          (qualifiesForMorningDiscount
+                            ? candy.cost * 0.9
+                            : candy.cost) *
+                          0.1
+                        ).toFixed(2)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </PixelBorder>
+            )}
+
           {priceBreakdown &&
             (priceBreakdown.jokerEffects.length > 0 ||
               priceBreakdown.hallPassEffect ||
@@ -1342,43 +1474,85 @@ function TransactionModal({
                 const additionalProfit =
                   basePrice * (slowCookerMultiplier - 1) * quantity;
                 const periodText = periodsHeld === 1 ? 'period' : 'periods';
-                activeEffects.push({
-                  emoji: '🍲',
-                  text: `Slow cooked for ${periodsHeld} ${periodText}: +$${additionalProfit.toFixed(2)}`,
+                if (periodsHeld) {
+                  activeEffects.push({
+                    image: require('../../assets/images/emojis/slowcooker.png'),
+                    text: `Slow cooked for ${periodsHeld} ${periodText}: +$${additionalProfit.toFixed(2)}`,
+                  });
+                }
+              }
+
+              // Check for sell_multiplier effects (Pursuasion, etc.)
+              // These multiply the ENTIRE profit, not just the candy price
+              const sellMultiplierEffects = priceBreakdown.jokerEffects.filter(
+                (effect) =>
+                  effect.isActive &&
+                  effect.effectType === 'sell' &&
+                  effect.jokerName !== 'Slow Cooker' &&
+                  effect.effect.includes('×')
+              );
+
+              if (sellMultiplierEffects.length > 0) {
+                // Calculate what the total would be WITHOUT the multipliers
+                const baseRevenue = priceBreakdown.basePrice * quantity;
+                const allBonuses =
+                  hallPassBonusTotal +
+                  merchantBonusTotal +
+                  influencerBonusTotal;
+                const totalWithoutMultiplier = baseRevenue + allBonuses;
+
+                // The additional gain from the multiplier is: total × (multiplier - 1)
+                const multiplierGain =
+                  totalWithoutMultiplier * (jokerSellMultiplier - 1);
+
+                console.log(`📊 Sell multiplier calculation:
+                  baseRevenue: $${baseRevenue.toFixed(2)}
+                  allBonuses: $${allBonuses.toFixed(2)}
+                  totalWithoutMultiplier: $${totalWithoutMultiplier.toFixed(2)}
+                  jokerSellMultiplier: ${jokerSellMultiplier}x
+                  multiplierGain: $${multiplierGain.toFixed(2)}`);
+
+                // Show all multiplier effects combined
+                sellMultiplierEffects.forEach((effect) => {
+                  activeEffects.push({
+                    emoji: effect.jokerEmoji,
+                    text: `${effect.jokerName}: +$${multiplierGain.toFixed(2)}`,
+                  });
                 });
               }
 
-              // Check for other sell effects (Pursuasion, Even Stevens, Odd Todd, etc.)
-              // Calculate bonuses with proper compounding
-              let currentPrice = priceBreakdown.basePrice;
-
-              priceBreakdown.jokerEffects.forEach((effect) => {
-                console.log('📊 TransactionModal effect:', effect);
-
-                if (
+              // Check for other sell effects (Even Stevens, Odd Todd, etc.)
+              // These are percentage bonuses on candy price
+              const priceBoostEffects = priceBreakdown.jokerEffects.filter(
+                (effect) =>
                   effect.isActive &&
                   effect.effectType === 'sell' &&
-                  effect.jokerName !== 'Slow Cooker'
-                ) {
-                  // Calculate the actual bonus amount with compounding
-                  const priceBeforeBonus = currentPrice;
-                  const multiplier = 1 + effect.amount / 100;
-                  const priceAfterBonus = currentPrice * multiplier;
-                  const bonusAmount =
-                    (priceAfterBonus - priceBeforeBonus) * quantity;
+                  effect.jokerName !== 'Slow Cooker' &&
+                  !effect.effect.includes('×')
+              );
 
-                  // Update current price for next effect (compounding)
-                  currentPrice = priceAfterBonus;
+              let currentPrice = priceBreakdown.basePrice;
+              priceBoostEffects.forEach((effect) => {
+                console.log('📊 TransactionModal price boost effect:', effect);
 
-                  console.log(
-                    `📊 Adding ${effect.jokerName} to display: priceBeforeBonus=${priceBeforeBonus.toFixed(2)}, priceAfterBonus=${priceAfterBonus.toFixed(2)}, bonusAmount=${bonusAmount.toFixed(2)}`
-                  );
+                // Calculate the actual bonus amount with compounding
+                const priceBeforeBonus = currentPrice;
+                const multiplier = 1 + effect.amount / 100;
+                const priceAfterBonus = currentPrice * multiplier;
+                const bonusAmount =
+                  (priceAfterBonus - priceBeforeBonus) * quantity;
 
-                  activeEffects.push({
-                    emoji: effect.jokerEmoji,
-                    text: `${effect.jokerName}: +$${bonusAmount.toFixed(2)}`,
-                  });
-                }
+                // Update current price for next effect (compounding)
+                currentPrice = priceAfterBonus;
+
+                console.log(
+                  `📊 Adding ${effect.jokerName} to display: priceBeforeBonus=${priceBeforeBonus.toFixed(2)}, priceAfterBonus=${priceAfterBonus.toFixed(2)}, bonusAmount=${bonusAmount.toFixed(2)}`
+                );
+
+                activeEffects.push({
+                  emoji: effect.jokerEmoji,
+                  text: `${effect.jokerName}: +$${bonusAmount.toFixed(2)}`,
+                });
               });
 
               // Add hall pass effect if present
@@ -1415,7 +1589,8 @@ function TransactionModal({
                 priceBreakdown.influencerShoutoutEffect.bonusAmount > 0
               ) {
                 const influencerBonusTotal =
-                  priceBreakdown.influencerShoutoutEffect.bonusAmount * quantity;
+                  priceBreakdown.influencerShoutoutEffect.bonusAmount *
+                  quantity;
                 activeEffects.push({
                   image: require('../../assets/images/icons/influencerShoutout.png'),
                   text: `+${priceBreakdown.influencerShoutoutEffect.bonusPercent}% profit: `,
@@ -1444,7 +1619,11 @@ function TransactionModal({
                           {effect.image ? (
                             <Image
                               source={effect.image}
-                              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+                              style={{
+                                width: 24,
+                                height: 24,
+                                resizeMode: 'contain',
+                              }}
                             />
                           ) : (
                             <TextWithEmojis
@@ -1554,45 +1733,6 @@ function TransactionModal({
                   </Text>
                 </View>
               </PixelBorder>
-            )}
-
-            {/* Morning Discount Notification */}
-            {qualifiesForMorningDiscount && mode === 'Buy' && (
-              <View style={styles.morningDiscountContainer}>
-                <View style={styles.morningDiscountContent}>
-                  <Text style={styles.morningDiscountLabel}>
-                    Morning Discount Applied!
-                  </Text>
-                  <Text style={styles.morningDiscountLabel}>
-                    You Save: ${(quantity * candy.cost * 0.1).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Combined Bulk Discount Notification */}
-            {qualifiesForBulkDiscount && mode === 'Buy' && (
-              <View style={styles.bulkDiscountContainer}>
-                <View style={styles.bulkDiscountContent}>
-                  {/* <Image
-                  source={require('../../assets/images/emojis/bullseye.png')}
-                  style={styles.bullseyeIcon}
-                /> */}
-                  <Text style={styles.bulkDiscountLabel}>
-                    Bulk Discount Applied!
-                  </Text>
-                  <Text style={styles.bulkDiscountLabel}>
-                    You Save: $
-                    {(
-                      quantity *
-                      (qualifiesForMorningDiscount
-                        ? candy.cost * 0.9
-                        : candy.cost) *
-                      0.1
-                    ).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
             )}
 
             {mode === 'Buy' && maxBuyQuantity === 0 && (

@@ -12,7 +12,7 @@ export const useDroughtRelief = () => {
   const { add: addMoney } = useWallet();
   const droughtReliefBonus = useAppSelector(selectComputedDroughtReliefBonus);
 
-  // Track sales history for the last 3 periods
+  // Track sales history for recent periods
   const [salesHistory, setSalesHistory] = useState<boolean[]>([]);
   const [lastPeriod, setLastPeriod] = useState(periodCount);
 
@@ -28,32 +28,26 @@ export const useDroughtRelief = () => {
   }, [periodCount]);
 
   const checkDroughtReliefBonus = () => {
-    // Skip the first few periods (need at least 3 periods of history)
-    if (lastPeriod < 3) return;
+    // Skip the first period (need at least 1 period of history)
+    if (lastPeriod < 1) return;
 
     // Check if player has The Bounceback joker (provides drought relief)
     const droughtReliefJoker = findJokerById(jokers, JOKER_IDS.THE_BOUNCEBACK);
     if (!droughtReliefJoker) return;
 
-    // Check if the last 3 periods had no sales
-    if (salesHistory.length >= 3) {
-      const lastThreePeriods = salesHistory.slice(-3);
-      const hadNoSalesForThreePeriods = lastThreePeriods.every(
-        (hadSales) => !hadSales
-      );
+    // Check if the previous period had no sales
+    if (salesHistory.length > 0) {
+      const previousPeriodHadSales = salesHistory[salesHistory.length - 1];
 
-      if (hadNoSalesForThreePeriods) {
+      if (!previousPeriodHadSales) {
         // Get the bonus amount from computed effects
         const bonusAmount = droughtReliefBonus;
 
         if (bonusAmount > 0) {
           addMoney(bonusAmount);
           console.log(
-            `🌧️ Drought Relief: +$${bonusAmount} for making no sales for 3 consecutive periods!`
+            `🌧️ Drought Relief: +$${bonusAmount} for making no sales this period!`
           );
-
-          // Reset the sales history after awarding bonus to prevent multiple awards
-          setSalesHistory([]);
         }
       }
     }

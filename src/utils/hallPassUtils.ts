@@ -1,4 +1,5 @@
 import { HallPassEffect } from '../store/slices/hallPassSlice';
+import { applyPercentageBonus } from './priceUtils';
 
 export class HallPassUtils {
   /**
@@ -11,8 +12,8 @@ export class HallPassUtils {
 
     if (saleBonusPercentage === 0) return basePrice;
 
-    const finalPrice = Math.round(basePrice * (1 + saleBonusPercentage / 100));
-    console.log(`💎 Sale Price - Base: $${basePrice}, Hall Pass bonus: +${saleBonusPercentage}%, Final: $${finalPrice}`);
+    const finalPrice = applyPercentageBonus(basePrice, saleBonusPercentage);
+    console.log(`💎 Sale Price - Base: $${basePrice.toFixed(2)}, Hall Pass bonus: +${saleBonusPercentage}%, Final: $${finalPrice.toFixed(2)}`);
 
     return finalPrice;
   }
@@ -27,8 +28,8 @@ export class HallPassUtils {
 
     if (allowanceBonusPercentage === 0) return baseAllowance;
 
-    const finalAllowance = Math.round(baseAllowance * (1 + allowanceBonusPercentage / 100));
-    console.log(`💰 Allowance - Base: $${baseAllowance}, Hall Pass bonus: +${allowanceBonusPercentage}%, Final: $${finalAllowance}`);
+    const finalAllowance = applyPercentageBonus(baseAllowance, allowanceBonusPercentage);
+    console.log(`💰 Allowance - Base: $${baseAllowance.toFixed(2)}, Hall Pass bonus: +${allowanceBonusPercentage}%, Final: $${finalAllowance.toFixed(2)}`);
 
     return finalAllowance;
   }

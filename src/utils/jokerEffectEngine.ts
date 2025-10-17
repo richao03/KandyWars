@@ -537,12 +537,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     type: 'persistent',
     flavorText: 'Good things come to those who wait',
     description:
-      'Candy gains compounding +5% profit per period held (resets daily)',
+      'Candy gains compounding +10% profit per period held (resets daily)',
     effects: [
       {
         target: 'sell_multiplier',
         operation: 'multiply',
-        amount: 1.05, // +5% per period held (resets each day)
+        amount: 1.10, // +10% per period held (resets each day)
         duration: 'persistent',
       },
     ],
@@ -621,12 +621,12 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Gym',
     type: 'persistent',
     flavorText: "Don't call it a come back!",
-    description: 'Every 3 period of no sale, you receive $1000',
+    description: 'Every period with no sale, you receive $333',
     effects: [
       {
         target: 'drought_relief_bonus',
         operation: 'add',
-        amount: 1000,
+        amount: 333,
         duration: 'persistent',
       },
     ],
@@ -688,7 +688,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Logic',
     type: 'one-time',
     flavorText: 'Oh these? These are limited edition man',
-    description: '2x profits for next sale',
+    description: 'Doubles your next sale (2x total value)',
     effects: [
       {
         target: 'sell_multiplier',
@@ -1128,7 +1128,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     ],
   },
   {
-    id: 43,
+    id: 44,
     name: 'Atlas Bonus',
     subject: 'Geography',
     type: 'one-time',

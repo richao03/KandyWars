@@ -1,4 +1,5 @@
 import { ActiveMerchantEffect } from '../store/slices/merchantSlice';
+import { applyPercentageBonus, applyMultiplier } from './priceUtils';
 
 export class MerchantUtils {
   /**
@@ -38,10 +39,10 @@ export class MerchantUtils {
     if (!streetCred || !streetCred.level) return basePrice;
 
     const bonusPercentage = streetCred.level * 10;
-    const finalPrice = Math.round(basePrice * (1 + bonusPercentage / 100));
+    const finalPrice = applyPercentageBonus(basePrice, bonusPercentage);
 
     console.log(
-      `💰 Merchant - Street Cred Lvl ${streetCred.level}: Base price $${basePrice} + ${bonusPercentage}% = $${finalPrice}`
+      `💰 Merchant - Street Cred Lvl ${streetCred.level}: Base price $${basePrice.toFixed(2)} + ${bonusPercentage}% = $${finalPrice.toFixed(2)}`
     );
 
     return finalPrice;
@@ -63,10 +64,10 @@ export class MerchantUtils {
 
     // Exponential doubling: 2^level
     const multiplier = Math.pow(2, fakeReportCard.level);
-    const finalAllowance = Math.round(baseAllowance * multiplier);
+    const finalAllowance = applyMultiplier(baseAllowance, multiplier);
 
     console.log(
-      `📝 Merchant - Fake Report Card Lvl ${fakeReportCard.level}: Base allowance $${baseAllowance} × ${multiplier}x = $${finalAllowance}`
+      `📝 Merchant - Fake Report Card Lvl ${fakeReportCard.level}: Base allowance $${baseAllowance.toFixed(2)} × ${multiplier}x = $${finalAllowance.toFixed(2)}`
     );
 
     return finalAllowance;
@@ -88,10 +89,10 @@ export class MerchantUtils {
 
     const multipliers = [10, 100, 1000];
     const multiplier = multipliers[metalDetector.level - 1] || 1;
-    const finalAmount = baseAmount * multiplier;
+    const finalAmount = applyMultiplier(baseAmount, multiplier);
 
     console.log(
-      `🔍 Merchant - Metal Detector Lvl ${metalDetector.level}: Base amount $${baseAmount} × ${multiplier} = $${finalAmount}`
+      `🔍 Merchant - Metal Detector Lvl ${metalDetector.level}: Base amount $${baseAmount.toFixed(2)} × ${multiplier} = $${finalAmount.toFixed(2)}`
     );
 
     return finalAmount;

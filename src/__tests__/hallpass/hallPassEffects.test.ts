@@ -9,22 +9,30 @@ describe('Hall Pass Effects', () => {
       store.dispatch(selectHallPass('senior_executive'));
 
       const state = store.getState();
-      expect(state.hallPass.selectedPassId).toBe('senior_executive');
+      // Updated to use selectedPassIds array instead of selectedPassId
+      expect(state.hallPass.selectedPassIds).toContain('senior_executive');
     });
 
     it('should deselect a hall pass', () => {
       const store = createMockStore(testStates.withHallPassBonus);
 
-      store.dispatch(selectHallPass(null));
+      // First select it
+      store.dispatch(selectHallPass('senior_executive'));
+      // Then deselect it by selecting it again (toggle behavior)
+      store.dispatch(selectHallPass('senior_executive'));
 
       const state = store.getState();
-      expect(state.hallPass.selectedPassId).toBeNull();
+      // After toggling, it should not be in the array
+      expect(state.hallPass.selectedPassIds).not.toContain('senior_executive');
     });
   });
 
   describe('Hall Pass Effects', () => {
     it('should get effects from selected hall pass', () => {
       const store = createMockStore(testStates.withHallPassBonus);
+
+      // Select the hall pass first
+      store.dispatch(selectHallPass('senior_executive'));
 
       const effects = selectSelectedHallPassEffects(store.getState());
       expect(effects).toHaveLength(2);
@@ -33,7 +41,7 @@ describe('Hall Pass Effects', () => {
       const inventoryEffect = effects.find(e => e.type === 'inventory_bonus');
 
       expect(salePriceEffect?.value).toBe(15);
-      expect(inventoryEffect?.value).toBe(5);
+      expect(inventoryEffect?.value).toBe(10); // senior_executive gives +10 inventory
     });
 
     it('should return empty effects when no hall pass selected', () => {
@@ -59,7 +67,7 @@ describe('Hall Pass Effects', () => {
         hallPass: {
           availablePasses: [],
           unlockedPassIds: ['test_pass'],
-          selectedPassId: null,
+          selectedPassIds: [],
           isLoaded: true,
         },
       });
@@ -125,16 +133,19 @@ describe('Hall Pass Effects', () => {
 
       expect(state.hallPass).toHaveProperty('availablePasses');
       expect(state.hallPass).toHaveProperty('unlockedPassIds');
-      expect(state.hallPass).toHaveProperty('selectedPassId');
+      expect(state.hallPass).toHaveProperty('selectedPassIds');
       expect(state.hallPass).toHaveProperty('isLoaded');
 
       expect(Array.isArray(state.hallPass.availablePasses)).toBe(true);
       expect(Array.isArray(state.hallPass.unlockedPassIds)).toBe(true);
+      expect(Array.isArray(state.hallPass.selectedPassIds)).toBe(true);
       expect(typeof state.hallPass.isLoaded).toBe('boolean');
     });
 
     it('should validate hall pass effect structure', () => {
       const store = createMockStore(testStates.withHallPassBonus);
+      // Select the hall pass first
+      store.dispatch(selectHallPass('senior_executive'));
       const effects = selectSelectedHallPassEffects(store.getState());
 
       effects.forEach(effect => {

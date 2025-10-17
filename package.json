@@ -13,7 +13,14 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --coverage --watchAll=false"
+    "test:ci": "jest --coverage --watchAll=false",
+    "test:jokers": "jest src/__tests__/jokers",
+    "test:hallpass": "jest src/__tests__/hallpass",
+    "test:merchant": "jest src/__tests__/merchant",
+    "test:integration": "jest src/__tests__/integration",
+    "test:all": "jest src/__tests__",
+    "test:verbose": "jest --verbose",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
   },
   "dependencies": {
     "@animatereactnative/marquee": "^0.5.2",

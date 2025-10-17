@@ -97,7 +97,7 @@ export const testStates = {
     hallPass: {
       availablePasses: [],
       unlockedPassIds: [],
-      selectedPassId: null,
+      selectedPassIds: [],
       isLoaded: true,
     },
   },
@@ -119,8 +119,8 @@ export const testStates = {
             },
             {
               type: 'inventory_bonus',
-              value: 5,
-              description: '+5 inventory slots',
+              value: 10,
+              description: '+10 inventory slots',
             },
           ],
           rarity: 'epic',
@@ -128,7 +128,7 @@ export const testStates = {
         },
       ],
       unlockedPassIds: ['senior_executive'],
-      selectedPassId: 'senior_executive',
+      selectedPassIds: [], // Start with nothing selected for selection tests
       isLoaded: true,
     },
   },

@@ -564,11 +564,20 @@ function Market(props) {
       // Get inventory data
       const inventoryItem = inventory.find(item => item.name === candy.name);
 
-      // Calculate price breakdown for selling (includes hall pass and merchant bonuses)
-      const purchasePrice = inventoryItem?.price || basePrice;
-      const profitPerUnit = Math.max(0, basePrice - purchasePrice);
+      // Calculate price breakdown for selling using JokerService
+      // This will include ALL joker effects (Pursuasion, Even Stevens, Odd Todd, Slow Cooker, etc.)
+      const jokerBreakdown = jokerService.getPriceBreakdown(
+        basePrice,
+        jokers,
+        periodCount,
+        getInventoryLimit(),
+        activeEffects,
+        'sell'
+      );
 
       // Calculate hall pass bonus per unit if player owns this candy
+      const purchasePrice = inventoryItem?.price || basePrice;
+      const profitPerUnit = Math.max(0, basePrice - purchasePrice);
       const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
       const hallPassBonusPerUnit = (hallPassSaleBonusPercent > 0 && profitPerUnit > 0)
         ? profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
@@ -590,8 +599,11 @@ function Market(props) {
         ? profitPerUnit * 2 // 200% = 2x the profit
         : 0;
 
-      // Only create priceBreakdown if there are bonuses to show
-      const hasAnyBonus = hallPassBonusPerUnit > 0 || merchantBonusPerUnit > 0 || influencerBonusPerUnit > 0;
+      // Check if there are any bonuses to show (joker effects, hall pass, merchant, or influencer)
+      const hasAnyBonus = jokerBreakdown.jokerEffects.length > 0 ||
+                          hallPassBonusPerUnit > 0 ||
+                          merchantBonusPerUnit > 0 ||
+                          influencerBonusPerUnit > 0;
 
       return {
         ...candy,
@@ -601,7 +613,7 @@ function Market(props) {
         averagePrice: inventoryItem?.price ?? null,
         priceBreakdown: hasAnyBonus ? {
           basePrice,
-          jokerEffects: [],
+          jokerEffects: jokerBreakdown.jokerEffects, // Now includes Pursuasion and all other joker effects!
           hallPassEffect: hallPassBonusPerUnit > 0 ? {
             bonusPercent: hallPassEffectivePercent, // Show effective percentage (with 5x multiplier)
             bonusAmount: hallPassBonusPerUnit,
@@ -614,11 +626,11 @@ function Market(props) {
             bonusPercent: 200, // +200% bonus
             bonusAmount: influencerBonusPerUnit,
           } : undefined,
-          finalPrice: basePrice,
+          finalPrice: jokerBreakdown.finalPrice, // Use final price from joker breakdown
         } : undefined,
       };
     });
-  }, [periodCount, currentLocation, gameData.candyPrices, gameData.eventPrices, inventory, hallPassModifiers, merchantEffects]);
+  }, [periodCount, currentLocation, gameData.candyPrices, gameData.eventPrices, inventory, hallPassModifiers, merchantEffects, jokers, activeEffects, jokerService, getInventoryLimit]);
 
   // Sync memoized candies to state only when they change
   useEffect(() => {
@@ -930,7 +942,7 @@ function Market(props) {
               0,
               periodCount - effectivePurchasedPeriod
             );
-            const slowCookerMultiplier = Math.pow(1.05, periodsHeld); // Compound 5% per period
+            const slowCookerMultiplier = Math.pow(1.10, periodsHeld); // Compound 10% per period
             multiplier *= slowCookerMultiplier;
             bonusDetails.push({
               emoji: '🍲',

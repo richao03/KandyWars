@@ -216,4 +216,7 @@ export const selectComputedEmptyInventoryBonus = (state: { joker: JokerState }) 
 export const selectComputedEffects = (state: { joker: JokerState }) =>
   state.joker.computedEffects ?? initialComputedEffects;
 
+export const selectJokerActiveEffects = (state: { joker: JokerState }) =>
+  state.joker.activeEffects ?? [];
+
 export default jokerSlice.reducer;

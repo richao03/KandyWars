@@ -50,7 +50,7 @@ export default function PriceHistory() {
       <GameHUD
         theme="evening"
         customHeaderText="Price History"
-        customLocationText="Price History"
+        customLocationText="History"
       />
 
       <ScrollView

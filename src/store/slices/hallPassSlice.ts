@@ -295,6 +295,10 @@ const hallPassSlice = createSlice({
         state.unlockedPassIds.push(passId);
         console.log(`🎓 REDUCER: Added ${passId} to unlockedPassIds`);
         // Track as newly unlocked in this playthrough
+        // Initialize newlyUnlockedPassIds if it doesn't exist (backwards compatibility)
+        if (!state.newlyUnlockedPassIds) {
+          state.newlyUnlockedPassIds = [];
+        }
         if (!state.newlyUnlockedPassIds.includes(passId)) {
           state.newlyUnlockedPassIds.push(passId);
           console.log(`🎓 REDUCER: Added ${passId} to newlyUnlockedPassIds`);
@@ -326,6 +330,12 @@ const hallPassSlice = createSlice({
     selectHallPass: (state, action: PayloadAction<string>) => {
       const passId = action.payload;
       console.log(`🎖️ REDUCER: selectHallPass called for passId: ${passId}`);
+
+      // Initialize selectedPassIds if it doesn't exist (backwards compatibility)
+      if (!state.selectedPassIds) {
+        state.selectedPassIds = [];
+      }
+
       console.log(
         `🎖️ REDUCER: Current selectedPassIds:`,
         state.selectedPassIds

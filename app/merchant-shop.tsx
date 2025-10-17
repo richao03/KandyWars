@@ -1,20 +1,20 @@
 import { router, Stack } from 'expo-router';
-import React, { useCallback, lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useCallback } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useWallet } from '../src/hooks/useWallet';
 import {
+  consumeEffect,
   MERCHANT_ITEMS,
   MerchantItemType,
   purchaseConsumableItem,
   purchaseLeveledItem,
+  selectActiveEffects,
   selectCanPurchaseItem,
   selectItemPrice,
   selectOwnedLevel,
   selectPurchaseCount,
-  consumeEffect,
-  selectActiveEffects,
 } from '../src/store/slices/merchantSlice';
 import FastModal from './components/FastModal';
 import GameHUD from './components/GameHUD';
@@ -440,7 +440,7 @@ export default function MerchantShopPage() {
         <GameHUD
           theme="evening"
           showLunchMinigames={false}
-          customLocationText="a secret location"
+          customLocationText="Shhhh..."
           onInventoryPress={() => setInventoryModalVisible(true)}
         />
         <View style={styles.header}>
@@ -536,7 +536,9 @@ export default function MerchantShopPage() {
             visible={stashMoneyModalVisible}
             onClose={() => {
               // If user backs out without depositing, don't consume the drone
-              console.log('✈️ User backed out of drone deposit - not consuming drone');
+              console.log(
+                '✈️ User backed out of drone deposit - not consuming drone'
+              );
               setStashMoneyModalVisible(false);
             }}
             onConfirm={handleMoneyStashed}
