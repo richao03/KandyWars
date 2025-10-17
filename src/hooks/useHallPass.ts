@@ -15,6 +15,8 @@ import {
   selectUnlockedHallPasses,
   unlockHallPass,
 } from '../store/slices/hallPassSlice';
+import { selectActiveEffects } from '../store/slices/merchantSlice';
+import { MerchantUtils } from '../utils/merchantUtils';
 
 export const useHallPass = () => {
   const dispatch = useAppDispatch();
@@ -26,6 +28,7 @@ export const useHallPass = () => {
   const selectedPassIds = useAppSelector(selectSelectedPassIds);
   const selectedEffects = useAppSelector(selectSelectedHallPassEffects);
   const hallPassState = useAppSelector((state) => state.hallPass);
+  const merchantEffects = useAppSelector(selectActiveEffects);
 
   // Debug hall pass state (remove in production)
   // console.log('🎖️ Hall Pass State Debug:', {
@@ -128,11 +131,16 @@ export const useHallPass = () => {
   // Apply hall pass effects to values (NOTE: This function is kept for compatibility but profit bonuses are now calculated in market.tsx)
   const applySalePriceBonus = useCallback(
     (basePrice: number): number => {
-      // This function is now mainly used for compatibility - actual profit bonuses are calculated in selling logic
+      // Apply Hall Pass bonus first
       const bonus = getSalePriceBonus();
-      return bonus > 0 ? Math.round(basePrice * (1 + bonus / 100)) : basePrice;
+      let finalPrice = bonus > 0 ? Math.round(basePrice * (1 + bonus / 100)) : basePrice;
+
+      // Then apply Merchant bonus (Street Cred)
+      finalPrice = MerchantUtils.applyProfitBonus(finalPrice, merchantEffects);
+
+      return finalPrice;
     },
-    [getSalePriceBonus]
+    [getSalePriceBonus, merchantEffects]
   );
 
   const applyAllowanceBonus = useCallback(

@@ -1,7 +1,7 @@
 import { useIsFocused } from '@react-navigation/native';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   ImageBackground,
@@ -35,13 +35,15 @@ import { forceSave } from '../../src/store/store';
 import CustomCopilotTooltip from '../components/CustomCopilotTooltip';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
-import InventoryModal from '../components/InventoryModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
 import DeliPage from '../deli';
 import PiggyBankPage from '../piggy-bank';
+
+// Lazy load InventoryModal - it's rarely used
+const InventoryModal = lazy(() => import('../components/InventoryModal'));
 
 const CopilotTouchableOpacity = walkthroughable(TouchableOpacity);
 
@@ -651,20 +653,22 @@ function AfterSchoolPage() {
             onInventoryPress={() => setShowInventory(true)}
           />
 
-          <View style={styles.optionsContainer}>
-            {showStudySubjects ? (
-              isFocused && (
+          {showStudySubjects ? (
+            isFocused && (
+              <View style={{ flex: 1 }}>
                 <StudySubjectSelector
                   onBack={handleBackToOptions}
                   disabled={hasStudiedTonight}
                   disabledMessage="You've already studied tonight! Rest up for tomorrow."
                 />
-              )
-            ) : (
-              // Main options view
+              </View>
+            )
+          ) : (
+            <View style={styles.optionsContainer}>
+              {/* Main options view */}
               <View style={styles.optionsGrid}>{renderMainOptions}</View>
-            )}
-          </View>
+            </View>
+          )}
         </ImageBackground>
       )}
 
@@ -682,13 +686,18 @@ function AfterSchoolPage() {
         guaranteedEventWarnings={guaranteedEventWarnings}
       />
 
-      <InventoryModal
-        visible={showInventory}
-        onClose={() => setShowInventory(false)}
-        inventory={inventory}
-        totalCount={getTotalInventoryCount()}
-        capacity={getInventoryLimit()}
-      />
+      {/* Lazy load InventoryModal only when needed */}
+      {showInventory && (
+        <Suspense fallback={null}>
+          <InventoryModal
+            visible={showInventory}
+            onClose={() => setShowInventory(false)}
+            inventory={inventory}
+            totalCount={getTotalInventoryCount()}
+            capacity={getInventoryLimit()}
+          />
+        </Suspense>
+      )}
     </View>
   );
 }

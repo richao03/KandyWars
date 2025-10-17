@@ -28,6 +28,7 @@ import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import colors from '../../src/constants/colors';
 
 
@@ -133,6 +134,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   const [hintGesture, setHintGesture] = useState<Gesture | null>(null);
   const [playerTimeLimit, setPlayerTimeLimit] = useState(1500); // Time limit for player choice
   const [showTimerLine, setShowTimerLine] = useState(false);
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Animation values
   const countdownScale = useSharedValue(0);
@@ -986,6 +988,22 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             Rock Paper Scissors Battle!
           </Text>
 
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#4A90C1"
+              borderWidth={2}
+              backgroundColor="#87CEEB"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <PixelBorder
             borderColor="#4A90C1"
             borderWidth={3}
@@ -1056,6 +1074,19 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             </PixelBorder>
           </PressableButton>
         </View>
+
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={RECESS_JOKERS}
+          subject="Recess"
+          themeColors={{
+            borderColor: '#4A90C1',
+            backgroundColor: '#87CEEB',
+            headerColor: '#6BB6E3',
+            textColor: '#ffffff',
+          }}
+        />
       </View>
     );
   }
@@ -1697,6 +1728,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.white,
+    fontFamily: 'PixeloidMono',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
     fontFamily: 'PixeloidMono',
   },
   // Timer line styles

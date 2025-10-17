@@ -8,7 +8,7 @@
  */
 
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
-import { Auth, User, getAuth, signInAnonymously } from 'firebase/auth';
+import { Auth, User, initializeAuth, getAuth, signInAnonymously, onAuthStateChanged, getReactNativePersistence } from 'firebase/auth';
 import {
   Firestore,
   doc,
@@ -26,6 +26,7 @@ import {
   where,
   deleteDoc,
 } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
@@ -49,12 +50,20 @@ export const initializeFirebase = () => {
   // Only initialize if not already done
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
+
+    // Initialize Auth with AsyncStorage persistence for React Native
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+
+    console.log('🔐 Firebase Auth initialized with AsyncStorage persistence');
   } else {
     app = getApps()[0];
+    // Auth is already initialized, just get the existing instance
+    auth = getAuth(app);
   }
 
   db = getFirestore(app);
-  auth = getAuth(app);
 
   return { app, db, auth };
 };
@@ -100,12 +109,36 @@ class ScoreboardService {
       console.log('📊 Initializing Firebase auth...');
       initializeFirebase();
 
-      console.log('📊 Signing in anonymously...');
-      const userCredential = await signInAnonymously(auth);
-      this.currentUser = userCredential.user;
+      // Wait for auth state to be restored (handles persisted sessions)
+      console.log('📊 Waiting for auth state to be restored...');
+      const user = await new Promise<User>((resolve, reject) => {
+        const unsubscribe = onAuthStateChanged(
+          auth,
+          async (user) => {
+            unsubscribe(); // Clean up listener
+
+            if (user) {
+              console.log('📊 User already signed in (persisted session):', user.uid);
+              resolve(user);
+            } else {
+              console.log('📊 No persisted session found, signing in anonymously...');
+              try {
+                const userCredential = await signInAnonymously(auth);
+                console.log('📊 New anonymous user created:', userCredential.user.uid);
+                resolve(userCredential.user);
+              } catch (error) {
+                reject(error);
+              }
+            }
+          },
+          reject
+        );
+      });
+
+      this.currentUser = user;
 
       // Use Firebase Auth UID as the document ID (for security rules)
-      this.deviceId = userCredential.user.uid;
+      this.deviceId = user.uid;
       console.log('📱 User ID (Auth UID):', this.deviceId);
 
       this.isInitialized = true;

@@ -10,9 +10,11 @@ import {
   setIsProcessing,
 } from '../store/slices/eventHandlerSlice';
 import { recordConfiscation } from '../store/slices/dailyStatsSlice';
+import { selectActiveEffects, consumeEffect } from '../store/slices/merchantSlice';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
+import { MerchantUtils } from '../utils/merchantUtils';
 
 export const useEventHandler = () => {
   const dispatch = useAppDispatch();
@@ -21,6 +23,7 @@ export const useEventHandler = () => {
   const { clearInventory, inventory, removeFromInventory } = useInventory();
   const { jokers } = useJokers();
   const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
+  const merchantEffects = useAppSelector(selectActiveEffects);
 
   const handleEvent = useCallback(
     (eventData: any) => {
@@ -63,8 +66,15 @@ export const useEventHandler = () => {
 
       // Apply event effects immediately when event is triggered
       if (eventData.effect === 'LOSE_MONEY') {
-        // Check for Medieval Shield protection
-        if (hasMedievalShield) {
+        // Check for 6th Grade Bodyguard protection (merchant item)
+        if (MerchantUtils.hasBodyguard(merchantEffects)) {
+          console.log('💪 6th Grade Bodyguard: Protected from bully!');
+          processedEventData.protectedByBodyguard = true;
+          // Consume one bodyguard
+          dispatch(consumeEffect({ itemId: 'sixth_grade_bodyguard' }));
+        }
+        // Check for Medieval Shield protection (joker)
+        else if (hasMedievalShield) {
           console.log('🛡️ Medieval Shield: Protected from money loss!');
           // Add protection flag to event data
           processedEventData.protectedByMedievalShield = true;
@@ -97,15 +107,28 @@ export const useEventHandler = () => {
         // Found money event
         let amountFound = eventData.dollarAmount || Math.floor(Math.random() * (500 - 100 + 1)) + 100;
         console.log('💰 EVENT: Found $', amountFound);
+
+        // Apply Hide and Seek joker multiplier
         if (hasHideAndSeek) {
           amountFound = amountFound * 3;
         }
-        // Store the actual amount found (after joker multiplier) in the processed event
+
+        // Apply Metal Detector merchant multiplier
+        amountFound = MerchantUtils.applyFoundMoneyMultiplier(amountFound, merchantEffects);
+
+        // Store the actual amount found (after all multipliers) in the processed event
         processedEventData.dollarAmount = amountFound;
         wallet.add(amountFound);
       } else if (eventData.effect === 'STASH_LOCKED') {
-        // Check for Candy Vault protection
-        if (hasCandyVault) {
+        // Check for Hall Monitor Bribe protection (merchant item)
+        if (MerchantUtils.hasHallMonitorBribe(merchantEffects)) {
+          console.log('🤝 Hall Monitor Bribe: Protected from confiscation!');
+          processedEventData.protectedByHallMonitorBribe = true;
+          // Consume one bribe
+          dispatch(consumeEffect({ itemId: 'hall_monitor_bribe' }));
+        }
+        // Check for Candy Vault protection (joker)
+        else if (hasCandyVault) {
           console.log('🔒 Candy Vault: Protected from confiscation!');
           // Add protection flag to event data
           processedEventData.protectedByCandyVault = true;
@@ -145,7 +168,7 @@ export const useEventHandler = () => {
       dispatch(setCurrentEvent(processedEventData));
       console.log('🔄 EVENT: Stored in Redux successfully');
     },
-    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds]
+    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds, merchantEffects]
   );
 
   const clearEvent = useCallback(() => {

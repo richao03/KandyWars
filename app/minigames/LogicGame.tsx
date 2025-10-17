@@ -19,6 +19,7 @@ import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import colors from '../../src/constants/colors';
 
 
@@ -85,6 +86,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const [gameComplete, setGameComplete] = useState(false);
   const [allLevelsComplete, setAllLevelsComplete] = useState(false);
   const [maxAttempts] = useState(6);
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Start game
   const startGame = () => {
@@ -338,6 +340,22 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Logic Study Session!</Text>
 
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#ff6ec7"
+              borderWidth={2}
+              backgroundColor="#2d1b69"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <PixelBorder
             borderColor="#666"
             borderWidth={3}
@@ -423,6 +441,19 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             </PixelBorder>
           </PressableButton>
         </View>
+
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={LOGIC_JOKERS}
+          subject="Logic"
+          themeColors={{
+            borderColor: '#ff6ec7',
+            backgroundColor: '#2d1b69',
+            headerColor: '#404040',
+            textColor: '#ff9a8b',
+          }}
+        />
       </View>
     );
   }
@@ -1069,6 +1100,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.white,
+    fontFamily: 'PixeloidMono',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
     fontFamily: 'PixeloidMono',
   },
 });

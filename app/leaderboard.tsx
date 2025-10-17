@@ -3,19 +3,18 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Image,
 } from 'react-native';
+import colors from '../src/constants/colors';
 import { useScoreboard } from '../src/hooks/useScoreboard';
 import { scoreboardService } from '../src/services/firebase';
 import TextWithEmojis from './components/TextWithEmojis';
-import colors from '../src/constants/colors';
-
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -172,7 +171,9 @@ export default function LeaderboardScreen() {
       </View>
 
       <View style={styles.leaderboardSection}>
-        <TextWithEmojis style={styles.sectionTitle}>💰 Top Players by Net Worth</TextWithEmojis>
+        <TextWithEmojis style={styles.sectionTitle}>
+          💰 Top Players by Net Worth
+        </TextWithEmojis>
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
@@ -255,7 +256,9 @@ export default function LeaderboardScreen() {
       ) : (
         <>
           <View style={styles.analyticsSection}>
-            <TextWithEmojis style={styles.sectionTitle}>🎮 Most Played Minigames</TextWithEmojis>
+            <TextWithEmojis style={styles.sectionTitle}>
+              🎮 Most Played Minigames
+            </TextWithEmojis>
             {topMinigames.length === 0 ? (
               <Text style={styles.emptyAnalyticsText}>
                 No minigame data yet - play some minigames to see stats!
@@ -364,7 +367,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#D2691E',
+    backgroundColor: colors.gray.dark,
   },
   header: {
     flexDirection: 'row',
@@ -373,7 +376,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: '#D2691E',
+    backgroundColor: colors.gray.medium,
     borderBottomWidth: 3,
     borderBottomColor: '#d4a574',
   },

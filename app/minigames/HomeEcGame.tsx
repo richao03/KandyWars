@@ -23,6 +23,8 @@ import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import TextWithEmojis from '../components/TextWithEmojis';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 
 // Candy emoji to image mapping
 const getCandyImage = (emoji: string) => {
@@ -83,6 +85,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const [candyA, setCandyA] = useState('');
   const [candyB, setCandyB] = useState('');
   const [nextCandy, setNextCandy] = useState('');
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -493,6 +496,22 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionsTitle}>Candy Kitchen Study!</Text>
 
+        <TouchableOpacity
+          style={styles.jokerIconButton}
+          onPress={() => setShowAvailableJokers(true)}
+        >
+          <PixelBorder
+            borderColor="#6c757d"
+            borderWidth={2}
+            backgroundColor="#1c1f26"
+            innerPadding={8}
+          >
+            <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+              🃏
+            </TextWithEmojis>
+          </PixelBorder>
+        </TouchableOpacity>
+
         <PixelBorder
           borderColor="#6c757d"
           borderWidth={3}
@@ -584,6 +603,19 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             </View>
           </PixelBorder>
         </PressableButton>
+
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={HOME_EC_JOKERS}
+          subject="Home Economics"
+          themeColors={{
+            borderColor: '#6c757d',
+            backgroundColor: '#1c1f26',
+            headerColor: '#2c3139',
+            textColor: '#adb5bd',
+          }}
+        />
       </View>
     );
   }
@@ -1101,5 +1133,15 @@ const styles = StyleSheet.create({
   centerCandyImage: {
     width: 50,
     height: 50,
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
   },
 });

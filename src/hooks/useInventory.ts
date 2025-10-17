@@ -11,7 +11,9 @@ import {
   selectIsInventoryFull,
 } from '../store/slices/inventorySlice';
 import { selectSelectedHallPassEffects } from '../store/slices/hallPassSlice';
+import { selectActiveEffects } from '../store/slices/merchantSlice';
 import { HallPassUtils } from '../utils/hallPassUtils';
+import { MerchantUtils } from '../utils/merchantUtils';
 
 export const useInventory = () => {
   const dispatch = useAppDispatch();
@@ -67,6 +69,7 @@ export const useInventory = () => {
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const jokerState = useAppSelector(state => state.joker);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
+  const merchantEffects = useAppSelector(selectActiveEffects);
 
   // Ensure joker state is properly migrated on first use
   useEffect(() => {
@@ -79,9 +82,13 @@ export const useInventory = () => {
   const getInventoryLimit = useCallback((): number => {
     // Apply Hall Pass inventory bonus from pre-computed modifiers
     const inventoryBonusSlots = hallPassModifiers.inventoryBonusSlots;
-    const finalLimit = computedInventoryLimit + inventoryBonusSlots;
+    let finalLimit = computedInventoryLimit + inventoryBonusSlots;
+
+    // Apply Merchant inventory bonus (Hollowed Textbook)
+    finalLimit = MerchantUtils.applyInventoryBonus(finalLimit, merchantEffects);
+
     return finalLimit;
-  }, [computedInventoryLimit, hallPassModifiers.inventoryBonusSlots]);
+  }, [computedInventoryLimit, hallPassModifiers.inventoryBonusSlots, merchantEffects]);
 
   // New Redux-style methods
   const addCandyAction = useCallback((candy: any) => {

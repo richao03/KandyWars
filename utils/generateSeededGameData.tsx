@@ -74,7 +74,7 @@ const subjects = [
   'Geography',
 ];
 
-// Locations
+// Locations (for event generation only - excludes special locations like 'the connect')
 const locations = [
   'gym',
   'cafeteria',
@@ -83,7 +83,6 @@ const locations = [
   'science lab',
   'school yard',
   'bathroom',
-  'music room',
 ] as const;
 
 // Actor pools for major events

@@ -33,8 +33,10 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
+import { consumeEffect, selectActiveEffects } from '../../src/store/slices/merchantSlice';
 import { forceSave } from '../../src/store/store';
 import { JokerService } from '../../src/utils/jokerService';
+import { MerchantUtils } from '../../src/utils/merchantUtils';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EventModal from '../components/EventModal';
 import { Location } from '../components/LocationModal';
@@ -62,6 +64,14 @@ type PriceBreakdown = {
     isActive: boolean;
   }>;
   hallPassEffect?: {
+    bonusPercent: number;
+    bonusAmount: number;
+  };
+  merchantEffect?: {
+    bonusPercent: number;
+    bonusAmount: number;
+  };
+  influencerShoutoutEffect?: {
     bonusPercent: number;
     bonusAmount: number;
   };
@@ -178,6 +188,9 @@ function Market(props) {
 
   // Get pre-computed hall pass modifiers from Redux (computed once at game start)
   const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
+
+  // Get merchant effects
+  const merchantEffects = useAppSelector(selectActiveEffects);
 
   // Initialize computed joker effects system
   useComputedJokerEffects();
@@ -527,148 +540,85 @@ function Market(props) {
     [getInventoryLimit]
   );
 
-  // Memoize joker service computation to avoid recalculating for each candy
-  const jokerServiceComputed = useMemo(() => {
-    if (!jokers || jokers.length === 0) return null;
-
-    const service = JokerService.getInstance();
-    service.initializeEngineForComputation(
-      jokers,
-      periodCount,
-      inventoryLimit,
-      activeEffects
-    );
-    return service;
-  }, [jokers, periodCount, inventoryLimit, activeEffects]);
-
-  // Memoize candy calculations to prevent excessive re-renders
-  // Extract stable values from gameData to prevent unnecessary recalculations
-  const periodEvents = useMemo(
-    () => gameData.periodEvents,
-    [gameData.periodEvents]
-  );
-  const candyPrices = useMemo(
-    () => gameData.candyPrices,
-    [gameData.candyPrices]
-  );
-
+  // Simple price lookup from gameData - NO calculations
   const calculatedCandies = useMemo(() => {
-    const startTime = performance.now();
-    if (process.env.NODE_ENV === 'development') {
-      console.log(
-        '🔄 Recalculating candies | period:',
-        periodCount,
-        'location:',
-        currentLocation,
-        'jokers:',
-        jokerCount,
-        'activeEffects:',
-        activeEffects.length,
-        'inventory items:',
-        inventory.length
-      );
-    }
-    // No need to check isFocused anymore - Stack navigation properly unmounts
-    const currentInventoryLimit = inventoryLimit;
-    // Calculate once for all candies instead of per-candy
-    const consecutiveSalesCount = consecutivePeriodSales(periodCount);
+    const eventPrices = gameData.eventPrices || {};
 
-    const result = baseCandies.map((candy) => {
-      // Hybrid price lookup (Option 3):
-      // 1. Check if there's a pre-calculated event price for this period/location/candy
-      // 2. Fall back to base price from gameData
-      const eventPrices = gameData.eventPrices || {};
-
-      let finalCost: number;
+    return baseCandies.map((candy) => {
+      // Just look up the price - no calculations!
+      let basePrice: number;
 
       // First check location-specific event price
       if (eventPrices[periodCount]?.[currentLocation]?.[candy.name]) {
-        finalCost = eventPrices[periodCount][currentLocation][candy.name];
+        basePrice = eventPrices[periodCount][currentLocation][candy.name];
       }
       // Then check 'any' location event price
       else if (eventPrices[periodCount]?.['any']?.[candy.name]) {
-        finalCost = eventPrices[periodCount]['any'][candy.name];
+        basePrice = eventPrices[periodCount]['any'][candy.name];
       }
-      // Finally fall back to base price
+      // Finally fall back to base price from gameData
       else {
-        finalCost = candyPrices[candy.name]?.[periodCount] || 0;
+        basePrice = gameData.candyPrices[candy.name]?.[periodCount] || 0;
       }
 
-      // Get price breakdown showing base price and joker effects
-      // (consecutiveSalesCount already calculated once above)
+      // Get inventory data
+      const inventoryItem = inventory.find(item => item.name === candy.name);
 
-      // Use pre-computed joker service if available, otherwise fall back to regular calculation
-      const priceBreakdown = jokerServiceComputed
-        ? jokerService.getPriceBreakdown(
-            finalCost,
-            jokers,
-            periodCount,
-            currentInventoryLimit,
-            activeEffects,
-            consecutiveSalesCount,
-            totalCandiesSold
-          )
-        : { basePrice: finalCost, jokerEffects: [], finalPrice: finalCost };
+      // Calculate price breakdown for selling (includes hall pass and merchant bonuses)
+      const purchasePrice = inventoryItem?.price || basePrice;
+      const profitPerUnit = Math.max(0, basePrice - purchasePrice);
 
-      // Note: Price storage moved to separate useEffect to avoid setState during render
-
-      // Get inventory information for this candy
-      const inventoryItem = inventory.find((item) => item.name === candy.name);
-
-      // Calculate hall pass effect for price breakdown (only for selling)
+      // Calculate hall pass bonus per unit if player owns this candy
       const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
-      let hallPassEffect:
-        | { bonusPercent: number; bonusAmount: number }
-        | undefined;
+      const hallPassBonusPerUnit = (hallPassSaleBonusPercent > 0 && profitPerUnit > 0)
+        ? profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
+        : 0;
+      // The effective percentage shown to user includes the 5x multiplier
+      const hallPassEffectivePercent = hallPassSaleBonusPercent * 5;
 
-      if (
-        hallPassSaleBonusPercent > 0 &&
-        inventoryItem &&
-        inventoryItem.quantity > 0
-      ) {
-        // Calculate profit and hall pass bonus for 1 unit
-        const purchasePrice = inventoryItem.price || finalCost;
-        const profitPerUnit = Math.max(0, finalCost - purchasePrice);
-        const hallPassBonusPerUnit =
-          profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100); // 5x multiplier
+      // Calculate merchant bonus per unit (Street Cred)
+      const streetCredEffect = merchantEffects.find(e => e.itemId === 'street_cred');
+      const merchantBonusPercent = streetCredEffect?.level ? streetCredEffect.level * 10 : 0;
+      const merchantBonusPerUnit = (merchantBonusPercent > 0 && profitPerUnit > 0)
+        ? profitPerUnit * (merchantBonusPercent / 100)
+        : 0;
 
-        hallPassEffect = {
-          bonusPercent: hallPassSaleBonusPercent * 5,
-          bonusAmount: hallPassBonusPerUnit,
-        };
-      }
+      // Check for Influencer Shoutout (+200% profit bonus)
+      const hasInfluencerShoutout = MerchantUtils.hasInfluencerShoutout(merchantEffects);
+      // Influencer shoutout bonus: 200% of profit (only applies if profit > 0)
+      const influencerBonusPerUnit = (hasInfluencerShoutout && profitPerUnit > 0)
+        ? profitPerUnit * 2 // 200% = 2x the profit
+        : 0;
+
+      // Only create priceBreakdown if there are bonuses to show
+      const hasAnyBonus = hallPassBonusPerUnit > 0 || merchantBonusPerUnit > 0 || influencerBonusPerUnit > 0;
 
       return {
         ...candy,
-        basePrice: finalCost, // Use finalCost as basePrice
-        cost: finalCost,
-        quantityOwned: inventoryItem?.quantity || 0,
-        averagePrice: inventoryItem?.price || null,
-        priceBreakdown: hallPassEffect
-          ? { ...priceBreakdown, hallPassEffect }
-          : priceBreakdown,
+        basePrice,
+        cost: basePrice,
+        quantityOwned: inventoryItem?.quantity ?? 0,
+        averagePrice: inventoryItem?.price ?? null,
+        priceBreakdown: hasAnyBonus ? {
+          basePrice,
+          jokerEffects: [],
+          hallPassEffect: hallPassBonusPerUnit > 0 ? {
+            bonusPercent: hallPassEffectivePercent, // Show effective percentage (with 5x multiplier)
+            bonusAmount: hallPassBonusPerUnit,
+          } : undefined,
+          merchantEffect: merchantBonusPerUnit > 0 ? {
+            bonusPercent: merchantBonusPercent,
+            bonusAmount: merchantBonusPerUnit,
+          } : undefined,
+          influencerShoutoutEffect: influencerBonusPerUnit > 0 ? {
+            bonusPercent: 200, // +200% bonus
+            bonusAmount: influencerBonusPerUnit,
+          } : undefined,
+          finalPrice: basePrice,
+        } : undefined,
       };
     });
-    const endTime = performance.now();
-    if (process.env.NODE_ENV === 'development') {
-      console.log(
-        `⏱️ Candy calculation took ${(endTime - startTime).toFixed(2)}ms`
-      );
-    }
-    return result;
-  }, [
-    periodCount,
-    currentLocation,
-    inventory,
-    candyPrices,
-    gameData.eventPrices,
-    jokerCount,
-    activeEffects,
-    inventoryLimit,
-    jokerServiceComputed,
-    totalCandiesSold,
-    hallPassModifiers,
-  ]);
+  }, [periodCount, currentLocation, gameData.candyPrices, gameData.eventPrices, inventory, hallPassModifiers, merchantEffects]);
 
   // Sync memoized candies to state only when they change
   useEffect(() => {
@@ -713,6 +663,7 @@ function Market(props) {
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
   const [showLunchMinigames, setShowLunchMinigames] = useState(false);
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
+  const [isDroneDeposit, setIsDroneDeposit] = useState(false);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -839,7 +790,22 @@ function Market(props) {
             }
           }
 
-          // 2. Check Redux jokers for Even Stevens / Odd Todd
+          // 2. Check for Influencer Shoutout merchant item (+200% profit)
+          if (MerchantUtils.hasInfluencerShoutout(merchantEffects)) {
+            multiplier *= 3; // +200% = 3x total
+            bonusDetails.push({
+              emoji: '📣',
+              name: 'Influencer Shoutout',
+              multiplier: 3,
+            });
+            console.log('📣 Influencer Shoutout: +200% sales bonus applied (3x multiplier)');
+
+            // Consume the influencer shoutout
+            dispatch(consumeEffect({ itemId: 'influencer_shoutout' }));
+            console.log('📣 Influencer Shoutout consumed after sale');
+          }
+
+          // 3. Check Redux jokers for Even Stevens / Odd Todd
           const candyInventoryLimit = getInventoryLimit();
           const hasEvenStevens = jokers.some(
             (j) => j.id === JOKER_IDS.EVEN_STEVENS.toString()
@@ -870,7 +836,7 @@ function Market(props) {
             );
           }
 
-          // 3. Check Redux jokers for Recess bonuses
+          // 4. Check Redux jokers for Recess bonuses
           const hasHopscotch = jokers.some(
             (j) => j.id === JOKER_IDS.HOPSCOTCH_BONUS.toString()
           );
@@ -903,7 +869,7 @@ function Market(props) {
             );
           }
 
-          // 4. Check for Sunset Surge afternoon bonus
+          // 5. Check for Sunset Surge afternoon bonus
           const periodWithinDay = periodCount % 8;
           const isAfternoon = periodWithinDay >= 3; // Periods 3, 4, 5, 6, 7 are "afternoon"
           const hasSunsetSurge = jokers.some((joker: any) => joker.id === 38);
@@ -920,7 +886,7 @@ function Market(props) {
             );
           }
 
-          // 5. Check for Bulk Sale bonus (sell >50% of inventory space in one sale)
+          // 6. Check for Bulk Sale bonus (sell >50% of inventory space in one sale)
           const hasBulkSale = jokers.some(
             (joker: any) => joker.id === JOKER_IDS.BULK_SALE
           );
@@ -939,7 +905,7 @@ function Market(props) {
             );
           }
 
-          // 6. Check for Slow Cooker sell multiplier (persistent joker) - resets every day
+          // 7. Check for Slow Cooker sell multiplier (persistent joker) - resets every day
           const hasSlowCooker = jokers.some(
             (j) => j.id === JOKER_IDS.SLOW_COOKER.toString()
           );
@@ -976,7 +942,7 @@ function Market(props) {
             );
           }
 
-          // 7. Calculate profit-based hall pass bonus from pre-computed modifiers
+          // 8. Calculate profit-based hall pass bonus from pre-computed modifiers
           const inventoryItem = inventory.find(
             (item) => item.name === candy.name
           );
@@ -1105,6 +1071,14 @@ function Market(props) {
 
   const handleLocationSelect = useCallback(
     (location: Location) => {
+      // Check if player selected The Connect merchant
+      if (location === 'the connect') {
+        console.log('🕶️ Player selected The Connect - navigating to merchant shop page');
+        setLocationModalVisible(false);
+        router.push('/merchant-shop');
+        return;
+      }
+
       // Wrap all updates in startTransition to batch them together
       startTransition(() => {
         setLocationModalVisible(false);
@@ -1178,6 +1152,7 @@ function Market(props) {
     [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory, periodCount, showLunchMinigames]
   );
 
+
   const handleLunchConfirm = useCallback(() => {
     console.log('🍽️ Lunch confirmed - showing minigame selection');
     setLunchConfirmVisible(false);
@@ -1196,6 +1171,12 @@ function Market(props) {
 
     setEndDayConfirmVisible(false);
 
+    // Reset lunch minigames flag when ending day early
+    if (showLunchMinigames) {
+      console.log('🍽️ Ending day during lunch, hiding minigame view');
+      setShowLunchMinigames(false);
+    }
+
     // If we're on day 5 or completed all 40 periods, game will end after day stats
     if (day >= 5 || periodCount >= 40) {
       console.log('🎮 Day 5 or all periods complete - will end game after showing day stats');
@@ -1213,7 +1194,7 @@ function Market(props) {
     if (perfectBakeJoker) {
       const totalInventory = getTotalInventoryCount();
       if (totalInventory === 0) {
-        const bonusAmount = 300;
+        const bonusAmount = 1000;
         add(bonusAmount);
         bonuses.push({
           jokerName: 'Perfect Bake',
@@ -1269,7 +1250,7 @@ function Market(props) {
         console.log('🏠 setDayStatsModalVisible(true) called via End Day');
       }, 100);
     }, 200);
-  }, [day, periodCount, balance, jokers, getTotalInventoryCount, add, dayStatsModalVisible]);
+  }, [day, periodCount, balance, jokers, getTotalInventoryCount, add, dayStatsModalVisible, showLunchMinigames]);
 
   const handleEndDayCancel = useCallback(() => {
     setEndDayConfirmVisible(false);
@@ -1316,13 +1297,19 @@ function Market(props) {
     // Show loading prices immediately
     setLocalPricesUpdating(true);
 
+    // Reset lunch minigames flag when starting new day
+    if (showLunchMinigames) {
+      console.log('🍽️ Starting new day, resetting lunch minigames flag');
+      setShowLunchMinigames(false);
+    }
+
     incrementPeriod('home room'); // Start next day at home room
 
     // Reset loading state after 1.5 seconds
     setTimeout(() => {
       setLocalPricesUpdating(false);
     }, 1500);
-  }, [incrementPeriod]);
+  }, [incrementPeriod, showLunchMinigames]);
 
   const handleSleepCancel = useCallback(() => {
     // Cancel sleep confirmation
@@ -1330,8 +1317,16 @@ function Market(props) {
   }, []);
 
   const handleMoneyStashed = useCallback(() => {
+    // Check if this was a drone deposit
+    if (isDroneDeposit) {
+      // Consume the Air Delivery Drone after using it
+      dispatch(consumeEffect({ itemId: 'air_delivery_drone' }));
+      console.log('✈️ Air Delivery Drone consumed after depositing money');
+      setIsDroneDeposit(false);
+    }
+
     setStashMoneyModalVisible(false);
-  }, []);
+  }, [isDroneDeposit, dispatch]);
 
   const selectedCandy =
     selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
@@ -1357,6 +1352,12 @@ function Market(props) {
   const handleLunchBack = useCallback(() => {
     console.log('🍔 handleLunchBack called');
     setShowLunchMinigames(false);
+  }, []);
+
+  const handleAirDeliveryDroneActivated = useCallback(() => {
+    console.log('✈️ Air Delivery Drone activated - opening stash modal in drone mode');
+    setIsDroneDeposit(true);
+    setStashMoneyModalVisible(true);
   }, []);
 
   // Check if we should show copilot tutorial wrappers
@@ -1430,8 +1431,16 @@ function Market(props) {
       <Suspense fallback={null}>
         <StashMoneyModal
           visible={stashMoneyModalVisible}
-          onClose={() => setStashMoneyModalVisible(false)}
+          onClose={() => {
+            // If in drone mode and user just closes (backs out), don't consume drone
+            if (isDroneDeposit) {
+              console.log('✈️ User backed out of drone deposit - not consuming drone');
+              setIsDroneDeposit(false);
+            }
+            setStashMoneyModalVisible(false);
+          }}
           onConfirm={handleMoneyStashed}
+          isDroneMode={isDroneDeposit}
         />
       </Suspense>
 

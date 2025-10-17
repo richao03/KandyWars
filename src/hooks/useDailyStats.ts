@@ -9,9 +9,11 @@ import {
   recordSale,
   recordPurchase,
   recordAllowance,
+  recordMerchantPurchase,
   resetDailyStats,
   resetPlaythroughStats,
   selectTotalProfit,
+  MerchantPurchase,
 } from '../store/slices/dailyStatsSlice';
 
 export const useDailyStats = () => {
@@ -124,6 +126,10 @@ export const useDailyStats = () => {
     dispatch(resetPlaythroughStats());
   }, [dispatch]);
 
+  const recordMerchantPurchaseAction = useCallback((purchase: MerchantPurchase) => {
+    dispatch(recordMerchantPurchase(purchase));
+  }, [dispatch]);
+
   return {
     dailyStats: dailyStatsState.dailyStats,
     currentDayStats: dailyStatsState.currentDayStats,
@@ -150,5 +156,6 @@ export const useDailyStats = () => {
     getBestSale,
     getMostSoldCandy,
     getPlaythroughStats,
+    recordMerchantPurchase: recordMerchantPurchaseAction,
   };
 };

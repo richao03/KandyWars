@@ -19,6 +19,7 @@ import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 
 interface GeographyGameProps {
   onComplete: () => void;
@@ -75,6 +76,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDogName, setSelectedDogName] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrambleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -457,6 +459,22 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Geography Puzzle!</Text>
 
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#3b82f6"
+              borderWidth={2}
+              backgroundColor="#1a2332"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <PixelBorder
             borderColor="#4a5568"
             borderWidth={3}
@@ -527,6 +545,19 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             </PixelBorder>
           </PressableButton>
         </View>
+
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={GEOGRAPHY_JOKERS}
+          subject="Geography"
+          themeColors={{
+            borderColor: '#3b82f6',
+            backgroundColor: '#1a2332',
+            headerColor: '#2d4a3e',
+            textColor: '#e0f2fe',
+          }}
+        />
       </View>
     );
   }
@@ -789,6 +820,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#e2e8f0',
+    fontFamily: 'PixeloidMono',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
     fontFamily: 'PixeloidMono',
   },
 });

@@ -31,17 +31,7 @@ function InventoryModal({
   totalCount,
   capacity,
 }: Props) {
-  console.log('🔴 InventoryModal render - visible:', visible);
-  console.log('🔴 InventoryModal inventory data:', inventory);
-  console.log(
-    '🔴 InventoryModal totalCount:',
-    totalCount,
-    'capacity:',
-    capacity
-  );
-
   const inventoryItems = inventory.filter((item) => (item.quantity || 0) > 0);
-  console.log('🔴 InventoryModal filtered inventoryItems:', inventoryItems);
 
   const totalValue = inventoryItems.reduce((sum, item) => {
     return sum + (item.quantity || 0) * item.price;

@@ -585,6 +585,65 @@ export default function GameEndScreen() {
               )}
             </PixelBorder>
 
+            {/* Merchant Items Purchased */}
+            {playthroughStats?.merchantPurchases && playthroughStats.merchantPurchases.length > 0 && (
+              <PixelBorder
+                borderColor="#FFD700"
+                borderWidth={4}
+                backgroundColor="rgba(255, 250, 205, 0.95)"
+                innerPadding={16}
+                style={styles.section}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <Image
+                    source={require('../assets/images/icons/merchant.png')}
+                    style={{ width: 32, height: 32, resizeMode: 'contain', marginRight: 8 }}
+                  />
+                  <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
+                    Merchant Items ({playthroughStats.merchantPurchases.length})
+                  </TextWithEmojis>
+                </View>
+
+                <View style={styles.merchantGrid}>
+                  {playthroughStats.merchantPurchases.map((purchase, index) => (
+                    <PixelBorder
+                      key={index}
+                      borderColor="#DAA520"
+                      borderWidth={2}
+                      backgroundColor="rgba(255, 245, 220, 0.8)"
+                      innerPadding={8}
+                      style={styles.merchantItem}
+                    >
+                      <Image
+                        source={(() => {
+                          const iconMap: Record<string, any> = {
+                            fake_report_card: require('../assets/images/icons/fakeReportCard.png'),
+                            metal_detector: require('../assets/images/icons/metalDetector.png'),
+                            hollowed_textbook: require('../assets/images/icons/hollowedBook.png'),
+                            street_cred: require('../assets/images/icons/streetCred.png'),
+                            double_sided_coin: require('../assets/images/icons/luckyCoin.png'),
+                            influencer_shoutout: require('../assets/images/icons/influencerShoutout.png'),
+                            hall_monitor_bribe: require('../assets/images/icons/bribe.png'),
+                            sixth_grade_bodyguard: require('../assets/images/icons/bodyguard.png'),
+                            air_delivery_drone: require('../assets/images/icons/drone.png'),
+                          };
+                          return iconMap[purchase.itemId];
+                        })()}
+                        style={{ width: 24, height: 24, resizeMode: 'contain', marginBottom: 4 }}
+                      />
+                      <Text style={styles.merchantItemText}>
+                        {purchase.itemName}
+                        {purchase.level && ` Lv${purchase.level}`}
+                      </Text>
+                      <Text style={styles.merchantItemPrice}>
+                        ${(purchase.price / 1000).toFixed(1)}k
+                      </Text>
+                    </PixelBorder>
+                  ))}
+                </View>
+              </PixelBorder>
+            )}
+
             {/* Hall Passes Unlocked */}
             {newlyUnlockedPasses.length > 0 && (
               <PixelBorder
@@ -872,6 +931,30 @@ const styles = StyleSheet.create({
     color: '#8B5FBF',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
+  },
+  merchantGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  merchantItem: {
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  merchantItemText: {
+    fontSize: 12,
+    color: '#B8860B',
+    textAlign: 'center',
+    fontFamily: 'PixeloidMono',
+    marginBottom: 2,
+  },
+  merchantItemPrice: {
+    fontSize: 10,
+    color: '#DAA520',
+    textAlign: 'center',
+    fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   leaderboardText: {
     fontSize: 16,

@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
@@ -16,7 +17,7 @@ export type Location =
   | 'science lab'
   | 'school yard'
   | 'bathroom'
-  | 'music room';
+  | 'the connect';
 
 interface LocationModalProps {
   visible: boolean;
@@ -25,7 +26,7 @@ interface LocationModalProps {
   gameData?: any; // Optional game data to check for upcoming events
 }
 
-const locations: Location[] = [
+const baseLocations: Location[] = [
   'gym',
   'cafeteria',
   'home room',
@@ -33,7 +34,6 @@ const locations: Location[] = [
   'science lab',
   'school yard',
   'bathroom',
-  'music room',
 ];
 
 const locationColors: Record<Location, { bg: string; border: string }> = {
@@ -44,7 +44,7 @@ const locationColors: Record<Location, { bg: string; border: string }> = {
   'science lab': { bg: '#ffffcc', border: '#ffff66' }, // Light yellow
   'school yard': { bg: '#e6ffcc', border: '#a3ff66' }, // Light lime
   bathroom: { bg: '#ffcc99', border: '#ff9933' }, // Light orange
-  'music room': { bg: '#ffe6f0', border: '#ff66b3' }, // Light pink
+  'the connect': { bg: '#fff', border: '#FFD700' }, // Dark with gold border (cool kid vibe)
 };
 
 const locationIcons: Record<Location, any> = {
@@ -55,7 +55,7 @@ const locationIcons: Record<Location, any> = {
   'science lab': require('../../assets/images/emojis/lab.png'),
   'school yard': require('../../assets/images/emojis/recess.png'),
   bathroom: require('../../assets/images/emojis/bathroom.png'),
-  'music room': require('../../assets/images/emojis/msuic.png'),
+  'the connect': require('../../assets/images/icons/merchant.png'), // TODO: Replace with merchant/sunglasses icon
 };
 
 function LocationModal({
@@ -66,6 +66,19 @@ function LocationModal({
 }: LocationModalProps) {
   const { jokers } = useJokers();
   const { periodCount } = useGame();
+
+  // Check if The Connect merchant appears (40% chance)
+  const merchantAppears = React.useMemo(
+    () => Math.random() < 0.4,
+    [periodCount]
+  );
+
+  // Build locations array conditionally
+  const locations = React.useMemo(() => {
+    return merchantAppears
+      ? [...baseLocations, 'the connect' as Location]
+      : baseLocations;
+  }, [merchantAppears]);
 
   // Check if Map Maker joker is active (id: 53)
   const hasMapMaker = jokers.some((joker: any) => joker.id === 53);
@@ -134,30 +147,79 @@ function LocationModal({
               <PixelBorder
                 borderColor={borderColor}
                 borderWidth={borderWidth}
-                backgroundColor={locationColors[location].bg}
+                backgroundColor={
+                  location === 'the connect'
+                    ? 'transparent'
+                    : locationColors[location].bg
+                }
                 innerPadding={0}
               >
-                <View style={styles.locationButton}>
-                  <Image
-                    source={locationIcons[location]}
-                    style={styles.locationIcon}
-                  />
-                  {!hasGoodEvent && !hasBadEvent && (
-                    <TextWithEmojis style={styles.locationText}>
-                      {location.charAt(0).toUpperCase() + location.slice(1)}
-                    </TextWithEmojis>
-                  )}
-                  {hasGoodEvent && (
-                    <TextWithEmojis style={styles.goodEventText} imageSize={24}>
-                      {location.charAt(0).toUpperCase() + location.slice(1)}
-                    </TextWithEmojis>
-                  )}
-                  {hasBadEvent && (
-                    <TextWithEmojis style={styles.badEventText} imageSize={24}>
-                      {location.charAt(0).toUpperCase() + location.slice(1)}
-                    </TextWithEmojis>
-                  )}
-                </View>
+                {location === 'the connect' ? (
+                  <LinearGradient
+                    colors={['#1e40af', '#000']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 2 }}
+                    style={styles.connectGradient}
+                  >
+                    <View style={styles.locationButton}>
+                      <Image
+                        source={locationIcons[location]}
+                        style={styles.locationIcon}
+                      />
+                      {!hasGoodEvent && !hasBadEvent && (
+                        <TextWithEmojis
+                          style={[styles.locationText, styles.connectText]}
+                        >
+                          {location.charAt(0).toUpperCase() + location.slice(1)}
+                        </TextWithEmojis>
+                      )}
+                      {hasGoodEvent && (
+                        <TextWithEmojis
+                          style={styles.goodEventText}
+                          imageSize={24}
+                        >
+                          {location.charAt(0).toUpperCase() + location.slice(1)}
+                        </TextWithEmojis>
+                      )}
+                      {hasBadEvent && (
+                        <TextWithEmojis
+                          style={styles.badEventText}
+                          imageSize={24}
+                        >
+                          {location.charAt(0).toUpperCase() + location.slice(1)}
+                        </TextWithEmojis>
+                      )}
+                    </View>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.locationButton}>
+                    <Image
+                      source={locationIcons[location]}
+                      style={styles.locationIcon}
+                    />
+                    {!hasGoodEvent && !hasBadEvent && (
+                      <TextWithEmojis style={styles.locationText}>
+                        {location.charAt(0).toUpperCase() + location.slice(1)}
+                      </TextWithEmojis>
+                    )}
+                    {hasGoodEvent && (
+                      <TextWithEmojis
+                        style={styles.goodEventText}
+                        imageSize={24}
+                      >
+                        {location.charAt(0).toUpperCase() + location.slice(1)}
+                      </TextWithEmojis>
+                    )}
+                    {hasBadEvent && (
+                      <TextWithEmojis
+                        style={styles.badEventText}
+                        imageSize={24}
+                      >
+                        {location.charAt(0).toUpperCase() + location.slice(1)}
+                      </TextWithEmojis>
+                    )}
+                  </View>
+                )}
               </PixelBorder>
             </PressableButton>
           );
@@ -229,8 +291,8 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   locationIcon: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     resizeMode: 'contain',
   },
   locationText: {
@@ -278,6 +340,16 @@ const styles = StyleSheet.create({
     textShadowColor: colors.black,
     textShadowOffset: { width: 0.5, height: 0.5 },
     textShadowRadius: 1,
+  },
+  connectGradient: {
+    width: '100%',
+    borderRadius: 13,
+  },
+  connectText: {
+    color: '#FFD700',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
 

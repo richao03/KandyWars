@@ -74,7 +74,7 @@ const locationNames = {
   'science lab': 'Science Lab',
   'school yard': 'School Yard',
   bathroom: 'Bathroom',
-  'music room': 'Music Room',
+  'the connect': 'The Connect',
 } as const;
 
 interface GameHUDProps {

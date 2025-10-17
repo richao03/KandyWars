@@ -1,6 +1,7 @@
+import colors from '@/src/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,11 +14,18 @@ import {
   View,
 } from 'react-native';
 import { useWallet } from '../src/hooks/useWallet';
-import { useAppDispatch, useAppSelector } from '../src/store/hooks';
-import { clearCachedUserObject, updateCachedUserObject, setCachedUserObject } from '../src/store/slices/userObjectSlice';
-import { setWonDifficulties, setTotalCompletions } from '../src/store/slices/scoreboardSlice';
-import { resetHallPasses } from '../src/store/slices/hallPassSlice';
 import { scoreboardService } from '../src/services/firebase';
+import { useAppDispatch, useAppSelector } from '../src/store/hooks';
+import { resetHallPasses } from '../src/store/slices/hallPassSlice';
+import {
+  setTotalCompletions,
+  setWonDifficulties,
+} from '../src/store/slices/scoreboardSlice';
+import {
+  clearCachedUserObject,
+  setCachedUserObject,
+  updateCachedUserObject,
+} from '../src/store/slices/userObjectSlice';
 import { resetFirebaseSession } from './components/CandyWarsTitleScreen';
 import ConfirmationModal from './components/ConfirmationModal';
 import PixelBorder from './components/PixelBorder';
@@ -83,7 +91,9 @@ export default function TitleSettings() {
       console.log('✅ Player name updated in Redux:', trimmedName);
 
       // Sync to service cache
-      const updatedUser = cachedUser ? { ...cachedUser, playerName: trimmedName } : null;
+      const updatedUser = cachedUser
+        ? { ...cachedUser, playerName: trimmedName }
+        : null;
       if (updatedUser) {
         scoreboardService.setCachedUserObject(updatedUser);
         console.log('✅ Player name synced to service cache');
@@ -159,7 +169,10 @@ export default function TitleSettings() {
             await scoreboardService.deleteUserObject();
             console.log('✅ User document deleted from Firebase');
           } catch (error) {
-            console.error('❌ Failed to delete user document from Firebase:', error);
+            console.error(
+              '❌ Failed to delete user document from Firebase:',
+              error
+            );
           }
 
           // STEP 1: Reset all Redux slices FIRST (in memory)
@@ -172,7 +185,9 @@ export default function TitleSettings() {
           // STEP 2: Reset wallet context completely (including username and player ID)
           if (walletContext) {
             await walletContext.completeReset();
-            console.log('✅ Wallet completely reset including username and player ID');
+            console.log(
+              '✅ Wallet completely reset including username and player ID'
+            );
           }
 
           // STEP 3: Clear service cache and Firebase session
@@ -425,7 +440,7 @@ export default function TitleSettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#D2691E',
+    backgroundColor: colors.black,
   },
   header: {
     flexDirection: 'row',
@@ -434,7 +449,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#D2691E',
+    backgroundColor: colors.black,
     borderBottomWidth: 3,
     borderBottomColor: '#d4a574',
   },

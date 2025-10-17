@@ -15,7 +15,9 @@ import { resetInventory } from '../store/slices/inventorySlice';
 import { resetJokers } from '../store/slices/jokerSlice';
 import { resetDailyStats } from '../store/slices/dailyStatsSlice';
 import { selectSelectedHallPassEffects } from '../store/slices/hallPassSlice';
+import { selectActiveEffects } from '../store/slices/merchantSlice';
 import { HallPassUtils } from '../utils/hallPassUtils';
+import { MerchantUtils } from '../utils/merchantUtils';
 
 export const useWallet = () => {
   const dispatch = useAppDispatch();
@@ -32,6 +34,7 @@ export const useWallet = () => {
   const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
   const dailyStats = useAppSelector(state => state.dailyStats.dailyStats);
   const currentDayStats = useAppSelector(state => state.dailyStats.currentDayStats);
+  const merchantEffects = useAppSelector(selectActiveEffects);
 
   const spend = useCallback((amount: number): boolean => {
     if (balance >= amount) {
@@ -80,6 +83,9 @@ export const useWallet = () => {
       console.log(`💰 Allowance calculation: base=${baseAllowance}, multiplier=${allowanceMultiplier}, addition=${allowanceAddition}, final=${finalAllowance}`);
     }
 
+    // Apply Merchant allowance bonus (Fake Report Card)
+    finalAllowance = MerchantUtils.applyAllowanceBonus(finalAllowance, merchantEffects);
+
     // Finance Club: Add 10% of yesterday's profit to allowance
     const hasFinanceClub = selectedPassIds.includes('finance_club');
     if (hasFinanceClub && currentDayStats) {
@@ -100,7 +106,7 @@ export const useWallet = () => {
 
     dispatch(addBalance(finalAllowance));
     return finalAllowance;
-  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats]);
+  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects]);
 
   const stashMoneyAction = useCallback((amount: number, jokers?: any[]): boolean => {
     // Use small epsilon to handle floating point precision issues

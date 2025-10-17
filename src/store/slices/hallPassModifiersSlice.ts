@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { resetGame } from './gameSlice';
 
 /**
  * Hall Pass Modifiers Slice
@@ -61,14 +60,9 @@ const hallPassModifiersSlice = createSlice({
       return initialState;
     },
   },
-  extraReducers: (builder) => {
-    builder.addCase(resetGame, () => {
-      console.log('🎖️ MODIFIERS: resetGame called - clearing modifiers for new game');
-      // Clear modifiers when starting a new game
-      // They will be recalculated from the newly selected hall passes
-      return initialState;
-    });
-  },
+  // NOTE: No extraReducers for resetGame
+  // Hall pass modifiers should persist throughout the game since they're selected BEFORE game start
+  // They are only cleared when explicitly calling resetHallPassModifiers or when user changes selection
 });
 
 export const { setHallPassModifiers, resetHallPassModifiers } = hallPassModifiersSlice.actions;

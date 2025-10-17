@@ -1,7 +1,14 @@
 import React, { useEffect, useMemo } from 'react';
-import { Dimensions, Image, StyleSheet, Text } from 'react-native';
+import {
+  Dimensions,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useTabBar } from '../../src/hooks/useTabBar';
 import FastModal from './FastModal';
+import PixelBorder from './PixelBorder';
 
 interface GoingToSchoolModalProps {
   visible: boolean;
@@ -39,7 +46,7 @@ export default function GoingToSchoolModal({
       const timer = setTimeout(() => {
         showTabBar();
         onComplete();
-      }, 2500);
+      }, 2800);
 
       return () => {
         clearTimeout(timer);
@@ -56,45 +63,68 @@ export default function GoingToSchoolModal({
       backdropOpacity={1}
       modalStyle={styles.container}
     >
-      <Image
+      <ImageBackground
         source={require('../../assets/images/goingToSchool.png')}
-        style={styles.image}
-        resizeMode="contain"
-      />
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <View style={styles.contentContainer}>
+          <PixelBorder
+            borderColor="#8B4513"
+            borderWidth={4}
+            backgroundColor="rgba(255, 228, 181, 0.95)"
+            innerPadding={0}
+          >
+            <View style={styles.textBox}>
+              {allowanceAmount && (
+                <Text style={styles.allowanceText}>
+                  Received ${allowanceAmount.toFixed(2)} for allowance for the
+                  day! Yay!
+                </Text>
+              )}
 
-      {allowanceAmount && (
-        <Text style={styles.allowanceText}>
-          Received ${allowanceAmount.toFixed(2)} for allowance for the day! Yay!
-        </Text>
-      )}
+              {guaranteedEventWarnings.length > 0 && (
+                <>
+                  {guaranteedEventWarnings.map((warning, index) => (
+                    <Text key={index} style={styles.warningText}>
+                      {warning}
+                    </Text>
+                  ))}
+                </>
+              )}
 
-      {guaranteedEventWarnings.length > 0 && (
-        <>
-          {guaranteedEventWarnings.map((warning, index) => (
-            <Text key={index} style={styles.warningText}>
-              {warning}
-            </Text>
-          ))}
-        </>
-      )}
-
-      <Text style={styles.text}>{randomNewDayText}</Text>
+              <Text style={styles.text}>{randomNewDayText}</Text>
+            </View>
+          </PixelBorder>
+        </View>
+      </ImageBackground>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFE4B5', // Warm morning/sunrise background
-    justifyContent: 'center',
-    alignItems: 'center',
     width: width,
     height: height,
   },
-  image: {
-    width: width * 0.9,
-    height: height * 0.7,
-    marginBottom: 20,
+  backgroundImage: {
+    width: width,
+    height: height,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  textBox: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: width * 0.8,
+    maxWidth: width * 0.9,
   },
   text: {
     fontSize: 12,
@@ -102,36 +132,26 @@ const styles = StyleSheet.create({
     color: '#8B4513', // Saddle brown for good contrast on warm background
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   allowanceText: {
     paddingHorizontal: 8,
-    marginBottom: 12,
-    fontSize: 18,
+    marginBottom: 16,
+    fontSize: 22,
     fontWeight: '600',
     color: '#2E8B57', // Sea green for money/positive message
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-    marginTop: 12,
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   warningText: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    marginBottom: 8,
-    fontSize: 16,
+    marginBottom: 12,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#DC143C', // Crimson red for warnings
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    backgroundColor: 'rgba(255, 0, 0, 0.15)',
     borderRadius: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
 });

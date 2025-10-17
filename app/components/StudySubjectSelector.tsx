@@ -3,8 +3,23 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
+import { useJokers } from '../../src/hooks/useJokers';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
+
+// Map subject names to joker subjects
+const subjectToJokerSubject: Record<string, string> = {
+  Math: 'Math',
+  Gym: 'Gym',
+  Cooking: 'Home Economics',
+  Economy: 'Economy',
+  Logic: 'Logic',
+  Recess: 'Recess',
+  'Comp Sci': 'Computer',
+  Art: 'Art',
+  Geography: 'Geography',
+};
 
 const subjects = [
   {
@@ -33,7 +48,7 @@ const subjects = [
     icon: require('../../assets/images/emojis/logic.png'),
   },
   {
-    name: 'Playground',
+    name: 'Recess',
     color: { bg: '#fff0f6', border: '#eb2f96' },
     icon: require('../../assets/images/emojis/recess.png'),
   },
@@ -75,8 +90,33 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
   );
 
   const { period, markLunchMinigamePlayed, setMinigameContext } = useGame();
+  const { jokersOwned } = useJokers();
 
   console.log('🎮 StudySubjectSelector after useGame - period:', period);
+
+  // Calculate unobtained jokers for each subject
+  const getUnobtainedJokerCount = React.useCallback(
+    (subjectName: string) => {
+      const jokerSubject = subjectToJokerSubject[subjectName];
+      if (!jokerSubject) return 0;
+
+      // Get all jokers for this subject
+      const subjectJokers = STANDARDIZED_JOKERS.filter(
+        (j) => j.subject === jokerSubject
+      );
+
+      // Get IDs of owned jokers
+      const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
+
+      // Count unobtained jokers
+      const unobtained = subjectJokers.filter(
+        (j) => !ownedIds.has(j.id.toString())
+      );
+
+      return unobtained.length;
+    },
+    [jokersOwned]
+  );
 
   const handleSubjectSelect = (subject: string) => {
     // During lunch, check if a game has already been played
@@ -110,7 +150,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       case 'Logic':
         router.push('/logic-game');
         break;
-      case 'Playground':
+      case 'Recess':
         router.push('/recess-game');
         break;
       case 'Comp Sci':
@@ -136,13 +176,13 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
 
   return (
     <View style={styles.studyContainer}>
-      <View style={styles.studyHeader}>
-        {buttonsDisabled && isLunchPeriod && (
+      {buttonsDisabled && isLunchPeriod && (
+        <View style={styles.studyHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.alreadyStudiedText}>{displayMessage}</Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       <View style={styles.subjectsContainer}>
         {/* First Row - 3 subjects */}
@@ -153,45 +193,57 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               onPress={() => handleSubjectSelect(subject.name)}
               disabled={buttonsDisabled}
               shadowColor={subject.color.border}
-              shadowOffset={{ width: 0, height: 3 }}
-              shadowOpacity={0.4}
-              shadowRadius={4}
-              elevation={6}
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={6}
+              elevation={8}
               style={
                 isLunchPeriod
                   ? styles.subjectDayTimeButtonWrapper
                   : styles.subjectButtonWrapper
               }
             >
-              <PixelBorder
-                borderColor={subject.color.border}
-                borderWidth={3}
-                backgroundColor={subject.color.bg}
-                innerPadding={0}
-              >
-                <View
+              <View style={styles.subjectContainer}>
+                <Image
+                  source={subject.icon}
                   style={[
-                    styles.subjectButtonInner,
-                    buttonsDisabled && styles.disabledSubjectButton,
+                    styles.subjectIcon,
+                    buttonsDisabled && styles.disabledIcon,
                   ]}
-                >
-                  <Image
-                    source={subject.icon}
-                    style={[
-                      styles.subjectIcon,
-                      buttonsDisabled && styles.disabledIcon,
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.subjectText,
-                      buttonsDisabled && styles.disabledText,
-                    ]}
+                />
+                <View style={styles.subjectBorderWrapper}>
+                  <PixelBorder
+                    borderColor={subject.color.border}
+                    borderWidth={3}
+                    backgroundColor={subject.color.bg}
+                    innerPadding={0}
                   >
-                    {subject.name}
-                  </Text>
+                    <View
+                      style={[
+                        styles.subjectButtonInner,
+                        buttonsDisabled && styles.disabledSubjectButton,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.subjectText,
+                          buttonsDisabled && styles.disabledText,
+                        ]}
+                      >
+                        {subject.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.jokerCount,
+                          buttonsDisabled && styles.disabledText,
+                        ]}
+                      >
+                        {getUnobtainedJokerCount(subject.name)} jokers left
+                      </Text>
+                    </View>
+                  </PixelBorder>
                 </View>
-              </PixelBorder>
+              </View>
             </PressableButton>
           ))}
         </View>
@@ -204,45 +256,57 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               onPress={() => handleSubjectSelect(subject.name)}
               disabled={buttonsDisabled}
               shadowColor={subject.color.border}
-              shadowOffset={{ width: 0, height: 3 }}
-              shadowOpacity={0.4}
-              shadowRadius={4}
-              elevation={6}
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={6}
+              elevation={8}
               style={
                 isLunchPeriod
                   ? styles.subjectDayTimeButtonWrapper
                   : styles.subjectButtonWrapper
               }
             >
-              <PixelBorder
-                borderColor={subject.color.border}
-                borderWidth={3}
-                backgroundColor={subject.color.bg}
-                innerPadding={0}
-              >
-                <View
+              <View style={styles.subjectContainer}>
+                <Image
+                  source={subject.icon}
                   style={[
-                    styles.subjectButtonInner,
-                    buttonsDisabled && styles.disabledSubjectButton,
+                    styles.subjectIcon,
+                    buttonsDisabled && styles.disabledIcon,
                   ]}
-                >
-                  <Image
-                    source={subject.icon}
-                    style={[
-                      styles.subjectIcon,
-                      buttonsDisabled && styles.disabledIcon,
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.subjectText,
-                      buttonsDisabled && styles.disabledText,
-                    ]}
+                />
+                <View style={styles.subjectBorderWrapper}>
+                  <PixelBorder
+                    borderColor={subject.color.border}
+                    borderWidth={3}
+                    backgroundColor={subject.color.bg}
+                    innerPadding={0}
                   >
-                    {subject.name}
-                  </Text>
+                    <View
+                      style={[
+                        styles.subjectButtonInner,
+                        buttonsDisabled && styles.disabledSubjectButton,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.subjectText,
+                          buttonsDisabled && styles.disabledText,
+                        ]}
+                      >
+                        {subject.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.jokerCount,
+                          buttonsDisabled && styles.disabledText,
+                        ]}
+                      >
+                        {getUnobtainedJokerCount(subject.name)} jokers left
+                      </Text>
+                    </View>
+                  </PixelBorder>
                 </View>
-              </PixelBorder>
+              </View>
             </PressableButton>
           ))}
         </View>
@@ -255,45 +319,57 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               onPress={() => handleSubjectSelect(subject.name)}
               disabled={buttonsDisabled}
               shadowColor={subject.color.border}
-              shadowOffset={{ width: 0, height: 3 }}
-              shadowOpacity={0.4}
-              shadowRadius={4}
-              elevation={6}
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={6}
+              elevation={8}
               style={
                 isLunchPeriod
                   ? styles.subjectDayTimeButtonWrapper
                   : styles.subjectButtonWrapper
               }
             >
-              <PixelBorder
-                borderColor={subject.color.border}
-                borderWidth={3}
-                backgroundColor={subject.color.bg}
-                innerPadding={0}
-              >
-                <View
+              <View style={styles.subjectContainer}>
+                <Image
+                  source={subject.icon}
                   style={[
-                    styles.subjectButtonInner,
-                    buttonsDisabled && styles.disabledSubjectButton,
+                    styles.subjectIcon,
+                    buttonsDisabled && styles.disabledIcon,
                   ]}
-                >
-                  <Image
-                    source={subject.icon}
-                    style={[
-                      styles.subjectIcon,
-                      buttonsDisabled && styles.disabledIcon,
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.subjectText,
-                      buttonsDisabled && styles.disabledText,
-                    ]}
+                />
+                <View style={styles.subjectBorderWrapper}>
+                  <PixelBorder
+                    borderColor={subject.color.border}
+                    borderWidth={3}
+                    backgroundColor={subject.color.bg}
+                    innerPadding={0}
                   >
-                    {subject.name}
-                  </Text>
+                    <View
+                      style={[
+                        styles.subjectButtonInner,
+                        buttonsDisabled && styles.disabledSubjectButton,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.subjectText,
+                          buttonsDisabled && styles.disabledText,
+                        ]}
+                      >
+                        {subject.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.jokerCount,
+                          buttonsDisabled && styles.disabledText,
+                        ]}
+                      >
+                        {getUnobtainedJokerCount(subject.name)} jokers left
+                      </Text>
+                    </View>
+                  </PixelBorder>
                 </View>
-              </PixelBorder>
+              </View>
             </PressableButton>
           ))}
         </View>
@@ -307,7 +383,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
           shadowOpacity={0.5}
           shadowRadius={5}
           elevation={8}
-          style={{ marginBottom: 20, width: '100%' }}
+          style={{ marginBottom: 20, width: '90%', alignSelf: 'center' }}
         >
           <PixelBorder
             borderColor="rgba(185,28,28,1)"
@@ -331,7 +407,6 @@ const styles = StyleSheet.create({
   studyContainer: {
     flex: 1,
     width: '100%',
-    alignItems: 'center',
   },
   studyHeader: {
     alignItems: 'center',
@@ -356,50 +431,71 @@ const styles = StyleSheet.create({
   subjectsContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 15,
     paddingHorizontal: 20,
   },
   subjectsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
-    paddingHorizontal: 10,
+    gap: 15,
   },
   subjectDayTimeButtonWrapper: {
-    height: 100,
-    width: 100,
-    margin: 5,
+    flex: 1,
+    aspectRatio: 1,
   },
   subjectButtonWrapper: {
-    height: 100,
-    width: 100,
-    margin: 5,
+    flex: 1,
+    aspectRatio: 1,
   },
-  subjectButtonInner: {
-    height: '100%',
+  subjectContainer: {
     width: '100%',
-    justifyContent: 'center',
+    height: '100%',
     alignItems: 'center',
-    backgroundColor: 'transparent',
-    gap: 6,
-  },
-  disabledSubjectButton: {
-    opacity: 0.5,
+    justifyContent: 'center',
   },
   subjectIcon: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     resizeMode: 'contain',
+    position: 'absolute',
+    top: 0,
+    zIndex: 10,
   },
   disabledIcon: {
     opacity: 0.5,
   },
+  subjectBorderWrapper: {
+    width: '90%',
+    marginTop: 25, // Position below the icon
+  },
+  subjectButtonInner: {
+    height: 88,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    paddingTop: 36, // Space for the icon overlap
+    paddingBottom: 18,
+    paddingHorizontal: 12,
+  },
+  disabledSubjectButton: {
+    opacity: 0.5,
+  },
   subjectText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#2a1845',
+    fontWeight: 'bold',
+    color: '#000000',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
+    width: '100%',
+  },
+  jokerCount: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#666',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginTop: 8,
   },
   disabledText: {
     color: '#666',

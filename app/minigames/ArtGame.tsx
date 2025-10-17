@@ -29,6 +29,7 @@ import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import colors from '../../src/constants/colors';
 
 
@@ -94,6 +95,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [stage, setStage] = useState(1); // 1, 2, 3
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [currentPosition, setCurrentPosition] = useState<{
     row: number;
@@ -718,6 +720,22 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#ff6b35"
+              borderWidth={2}
+              backgroundColor="#2d4a3e"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <Text style={styles.instructionsTitle}>Art Study Session!</Text>
 
           <PixelBorder
@@ -789,6 +807,19 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
               </View>
             </PixelBorder>
           </PressableButton>
+
+          <AvailableJokersModal
+            visible={showAvailableJokers}
+            onClose={() => setShowAvailableJokers(false)}
+            jokers={ART_JOKERS}
+            subject="Art"
+            themeColors={{
+              borderColor: '#ff6b35',
+              backgroundColor: '#1a2332',
+              headerColor: '#2d4a3e',
+              textColor: '#faebd7',
+            }}
+          />
         </View>
       </View>
     );
@@ -1360,5 +1391,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
   },
 });

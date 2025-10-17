@@ -26,6 +26,7 @@ import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 
 interface Position {
   x: number;
@@ -175,6 +176,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const [moves, setMoves] = useState(0);
   const [traveledCells, setTraveledCells] = useState<Set<string>>(new Set());
   const [caughtPosition, setCaughtPosition] = useState<Position | null>(null);
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Initialize level
   const initializeLevel = (levelNum: number) => {
@@ -450,6 +452,22 @@ export default function GymGame({ onComplete }: GymGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Gym Class Stealth!</Text>
 
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#ef4444"
+              borderWidth={2}
+              backgroundColor="#1a2332"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <PixelBorder
             borderColor="#e74c3c"
             borderWidth={3}
@@ -528,6 +546,19 @@ export default function GymGame({ onComplete }: GymGameProps) {
             </PixelBorder>
           </PressableButton>
         </View>
+
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={GYM_JOKERS}
+          subject="Gym"
+          themeColors={{
+            borderColor: '#ef4444',
+            backgroundColor: '#1a2332',
+            headerColor: '#2d4a3e',
+            textColor: '#fee2e2',
+          }}
+        />
       </View>
     );
   }
@@ -847,5 +878,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
   },
 });

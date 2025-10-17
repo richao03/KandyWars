@@ -1,7 +1,7 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -33,6 +33,14 @@ type PriceBreakdown = {
     isActive: boolean;
   }>;
   hallPassEffect?: {
+    bonusPercent: number;
+    bonusAmount: number;
+  };
+  merchantEffect?: {
+    bonusPercent: number;
+    bonusAmount: number;
+  };
+  influencerShoutoutEffect?: {
     bonusPercent: number;
     bonusAmount: number;
   };
@@ -184,7 +192,7 @@ function TransactionModal({
     candy.cost,
   ]);
 
-  // Calculate hall pass bonus per unit (only for selling)
+  // Calculate all bonuses per unit (only for selling)
   const hallPassBonusPerUnit = useMemo(() => {
     if (mode === 'Sell' && priceBreakdown?.hallPassEffect) {
       return priceBreakdown.hallPassEffect.bonusAmount;
@@ -192,10 +200,24 @@ function TransactionModal({
     return 0;
   }, [mode, priceBreakdown]);
 
+  const merchantBonusPerUnit = useMemo(() => {
+    if (mode === 'Sell' && priceBreakdown?.merchantEffect) {
+      return priceBreakdown.merchantEffect.bonusAmount;
+    }
+    return 0;
+  }, [mode, priceBreakdown]);
+
+  const influencerBonusPerUnit = useMemo(() => {
+    if (mode === 'Sell' && priceBreakdown?.influencerShoutoutEffect) {
+      return priceBreakdown.influencerShoutoutEffect.bonusAmount;
+    }
+    return 0;
+  }, [mode, priceBreakdown]);
+
   // Calculate dynamic font size for pocket value based on number length
   const pocketValue = useMemo(() => {
-    return ((finalUnitPrice + hallPassBonusPerUnit) * quantity).toFixed(2);
-  }, [finalUnitPrice, hallPassBonusPerUnit, quantity]);
+    return ((finalUnitPrice + hallPassBonusPerUnit + merchantBonusPerUnit + influencerBonusPerUnit) * quantity).toFixed(2);
+  }, [finalUnitPrice, hallPassBonusPerUnit, merchantBonusPerUnit, influencerBonusPerUnit, quantity]);
 
   const pocketFontSizes = useMemo(() => {
     const length = pocketValue.length;
@@ -1296,11 +1318,18 @@ function TransactionModal({
 
           {priceBreakdown &&
             (priceBreakdown.jokerEffects.length > 0 ||
-              priceBreakdown.hallPassEffect) &&
+              priceBreakdown.hallPassEffect ||
+              priceBreakdown.merchantEffect ||
+              priceBreakdown.influencerShoutoutEffect) &&
             mode === 'Sell' &&
             (() => {
               // Collect all active sell effects for simplified display
-              const activeEffects: Array<{ emoji: string; text: string }> = [];
+              const activeEffects: Array<{
+                emoji?: string;
+                image?: any;
+                text: string;
+                amount?: string;
+              }> = [];
 
               // Check for Slow Cooker
               const slowCookerEffect = priceBreakdown.jokerEffects.find(
@@ -1367,6 +1396,33 @@ function TransactionModal({
                 });
               }
 
+              // Add Street Cred merchant effect if present
+              if (
+                priceBreakdown.merchantEffect &&
+                priceBreakdown.merchantEffect.bonusAmount > 0
+              ) {
+                const merchantBonusTotal =
+                  priceBreakdown.merchantEffect.bonusAmount * quantity;
+                activeEffects.push({
+                  image: require('../../assets/images/icons/streetCred.png'),
+                  text: `Street Cred +${priceBreakdown.merchantEffect.bonusPercent}%: +$${merchantBonusTotal.toFixed(2)}`,
+                });
+              }
+
+              // Add Influencer Shoutout merchant effect if present
+              if (
+                priceBreakdown.influencerShoutoutEffect &&
+                priceBreakdown.influencerShoutoutEffect.bonusAmount > 0
+              ) {
+                const influencerBonusTotal =
+                  priceBreakdown.influencerShoutoutEffect.bonusAmount * quantity;
+                activeEffects.push({
+                  image: require('../../assets/images/icons/influencerShoutout.png'),
+                  text: `+${priceBreakdown.influencerShoutoutEffect.bonusPercent}% profit: `,
+                  amount: `+$${influencerBonusTotal.toFixed(2)}`,
+                });
+              }
+
               if (activeEffects.length > 0) {
                 return (
                   <PixelBorder
@@ -1377,13 +1433,32 @@ function TransactionModal({
                   >
                     <View style={styles.priceBreakdownContainer}>
                       {activeEffects.map((effect, index) => (
-                        <TextWithEmojis
+                        <View
                           key={index}
-                          style={styles.slowCookerText}
-                          imageSize={24}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
                         >
-                          {`${effect.emoji} ${effect.text}${effect.amount ? ' ' + effect.amount : ''}`}
-                        </TextWithEmojis>
+                          {effect.image ? (
+                            <Image
+                              source={effect.image}
+                              style={{ width: 24, height: 24, resizeMode: 'contain' }}
+                            />
+                          ) : (
+                            <TextWithEmojis
+                              style={styles.slowCookerText}
+                              imageSize={24}
+                            >
+                              {effect.emoji}
+                            </TextWithEmojis>
+                          )}
+                          <Text style={styles.slowCookerText}>
+                            {effect.text}
+                            {effect.amount ? ' ' + effect.amount : ''}
+                          </Text>
+                        </View>
                       ))}
                     </View>
                   </PixelBorder>

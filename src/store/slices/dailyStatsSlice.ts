@@ -21,12 +21,21 @@ interface DayStats {
   allowance: number;
 }
 
+export interface MerchantPurchase {
+  itemId: string;
+  itemName: string;
+  price: number;
+  type: 'leveled' | 'consumable';
+  level?: number; // For leveled items
+}
+
 interface PlaythroughStats {
   totalProfit: number;
   totalSpentOnCandy: number;
   totalAllowance: number;
   totalCandiesSold: number;
   confiscationCount: number; // Track STASH_LOCKED events
+  merchantPurchases: MerchantPurchase[]; // Track all merchant purchases
 }
 
 interface DailyStatsState {
@@ -55,6 +64,7 @@ const initialState: DailyStatsState = {
     totalAllowance: 0,
     totalCandiesSold: 0,
     confiscationCount: 0,
+    merchantPurchases: [],
   },
 };
 
@@ -120,6 +130,10 @@ const dailyStatsSlice = createSlice({
       state.playthroughStats.confiscationCount += 1;
       console.log('📊 Confiscation recorded, total:', state.playthroughStats.confiscationCount);
     },
+    recordMerchantPurchase: (state, action: PayloadAction<MerchantPurchase>) => {
+      state.playthroughStats.merchantPurchases.push(action.payload);
+      console.log('🛍️ Merchant purchase recorded:', action.payload.itemName);
+    },
     resetPlaythroughStats: (state) => {
       state.playthroughStats = {
         totalProfit: 0,
@@ -127,9 +141,22 @@ const dailyStatsSlice = createSlice({
         totalAllowance: 0,
         totalCandiesSold: 0,
         confiscationCount: 0,
+        merchantPurchases: [],
       };
     },
-    resetDailyStats: () => initialState,
+    resetDailyStats: (state) => {
+      // Reset daily tracking but preserve playthrough stats
+      state.dailyStats = [];
+      state.currentDayStats = {
+        day: 1,
+        revenue: 0,
+        candiesSold: 0,
+        expenses: 0,
+        profit: 0,
+        allowance: 0,
+      };
+      // Keep playthrough stats, bestSale, and candySoldCounts intact
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(resetGame, () => initialState);
@@ -146,6 +173,7 @@ export const {
   recordPurchase,
   recordAllowance,
   recordConfiscation,
+  recordMerchantPurchase,
   resetPlaythroughStats,
   resetDailyStats,
 } = dailyStatsSlice.actions;

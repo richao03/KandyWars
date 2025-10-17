@@ -8,7 +8,7 @@ export type Location =
   | 'science lab'
   | 'school yard'
   | 'bathroom'
-  | 'music room';
+  | 'the connect';
 
 type LocationHistory = {
   period: number;

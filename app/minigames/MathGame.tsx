@@ -17,6 +17,7 @@ import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
@@ -46,6 +47,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const [matchesCompleted, setMatchesCompleted] = useState(0);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [jokerRewardTier, setJokerRewardTier] = useState(0); // Track joker reward tier for selection
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false); // Show available jokers modal
 
   // Number sequences
   const [numbersSequence, setNumbersSequence] = useState<number[]>([]);
@@ -493,6 +495,23 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Math Challenge!</Text>
 
+          {/* Joker icon button */}
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#f5f5dc"
+              borderWidth={2}
+              backgroundColor="#2d4a3e"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <PixelBorder
             borderColor="#f5f5dc"
             borderWidth={3}
@@ -558,6 +577,20 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
             </PixelBorder>
           </PressableButton>
         </View>
+
+        {/* Available Jokers Modal */}
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={MATH_JOKERS}
+          subject="Math"
+          themeColors={{
+            borderColor: '#f5f5dc',
+            backgroundColor: '#0d2818',
+            headerColor: '#2d4a3e',
+            textColor: '#f5f5dc',
+          }}
+        />
       </View>
     );
   }
@@ -722,6 +755,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.gold.beige,
     marginBottom: 20,
+    fontFamily: 'PixeloidMono',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
     fontFamily: 'PixeloidMono',
   },
   instructionsCard: {

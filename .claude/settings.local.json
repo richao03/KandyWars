@@ -30,7 +30,8 @@
       "Bash(tail:*)",
       "Bash(wc:*)",
       "Bash(chmod:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(do echo \"=== Checking $game.tsx for instruction state ===\")"
     ],
     "deny": [],
     "ask": []

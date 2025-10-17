@@ -138,8 +138,7 @@ const EventModal = React.memo(function EventModal() {
 
       // Check if this is a money-stealing event (bully or similar)
       // Note: STASH_LOCKED is NOT a money-stealing event, it confiscates inventory/candy
-      const isMoneyStealingEvent =
-        currentEvent.effect === 'LOSE_MONEY'; // Only LOSE_MONEY events show money counter
+      const isMoneyStealingEvent = currentEvent.effect === 'LOSE_MONEY'; // Only LOSE_MONEY events show money counter
 
       // Check if this is a money-gaining event (found money or similar)
       const isMoneyGainingEvent =
@@ -429,11 +428,19 @@ const EventModal = React.memo(function EventModal() {
                       <Text style={[styles.title, { color: theme.titleColor }]}>
                         {currentEvent.title}
                       </Text>
-                      <Text
-                        style={[styles.subtitle, { color: theme.textColor }]}
-                      >
-                        {currentEvent.subtitle}
-                      </Text>
+                      {currentEvent.protectedByBodyguard ? (
+                        <Text
+                          style={[styles.subtitle, { color: theme.textColor }]}
+                        >
+                          STOP!
+                        </Text>
+                      ) : (
+                        <Text
+                          style={[styles.subtitle, { color: theme.textColor }]}
+                        >
+                          {currentEvent.subtitle}
+                        </Text>
+                      )}
                       {currentEvent.bullyHasMercy && (
                         // <PixelBorder
                         //   borderColor="white"
@@ -450,6 +457,25 @@ const EventModal = React.memo(function EventModal() {
                           </Text>
                         </View>
                         // </PixelBorder>
+                      )}
+                      {currentEvent.protectedByBodyguard && (
+                        <View style={styles.protectionContainer}>
+                          <Image
+                            source={require('../../assets/images/icons/bodyguard.png')}
+                            style={{
+                              width: 64,
+                              height: 64,
+                              resizeMode: 'contain',
+                              marginBottom: 8,
+                            }}
+                          />
+                          <Text style={styles.protectionText}>
+                            Why dont you pick on someone your own size
+                          </Text>
+                          <Text style={styles.protectionSubtext}>
+                            Bully ran away
+                          </Text>
+                        </View>
                       )}
                       {currentEvent.protectedByMedievalShield && (
                         <PixelBorder
@@ -497,7 +523,35 @@ const EventModal = React.memo(function EventModal() {
                           </View>
                         </PixelBorder>
                       )}
+                      {currentEvent.protectedByHallMonitorBribe && (
+                        <PixelBorder
+                          borderColor="#52c41a"
+                          borderWidth={3}
+                          backgroundColor="rgba(0, 0, 0, 0.2)"
+                          innerPadding={12}
+                          style={{ marginTop: 12 }}
+                        >
+                          <View style={styles.protectionContainer}>
+                            <Image
+                              source={require('../../assets/images/icons/bribe.png')}
+                              style={{
+                                width: 48,
+                                height: 48,
+                                resizeMode: 'contain',
+                                marginBottom: 8,
+                              }}
+                            />
+                            <Text style={styles.protectionText}>
+                              Hall Monitor Bribed!
+                            </Text>
+                            <Text style={styles.protectionSubtext}>
+                              Your candy is protected
+                            </Text>
+                          </View>
+                        </PixelBorder>
+                      )}
                       {showMoneyLoss &&
+                        !currentEvent.protectedByBodyguard &&
                         !currentEvent.protectedByMedievalShield &&
                         !currentEvent.bullyHasMercy && (
                           <PixelBorder
@@ -584,8 +638,10 @@ const EventModal = React.memo(function EventModal() {
                         <Text style={styles.dismissText}>
                           {!canDismiss
                             ? 'Please wait...'
-                            : currentEvent.protectedByMedievalShield ||
-                                currentEvent.protectedByCandyVault
+                            : currentEvent.protectedByBodyguard ||
+                                currentEvent.protectedByMedievalShield ||
+                                currentEvent.protectedByCandyVault ||
+                                currentEvent.protectedByHallMonitorBribe
                               ? 'Noice!'
                               : currentEvent.dismissText
                                 ? currentEvent.dismissText

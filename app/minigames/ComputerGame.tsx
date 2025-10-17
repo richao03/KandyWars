@@ -13,6 +13,7 @@ import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import colors from '../../src/constants/colors';
 
 
@@ -61,6 +62,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [isGameActive, setIsGameActive] = useState(false);
   const [showingAllCards, setShowingAllCards] = useState(false);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Level configuration: [pairs, maxTurns]
   const levelConfig = {
@@ -315,6 +317,22 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#00d4ff"
+              borderWidth={2}
+              backgroundColor="#16213e"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <Text style={styles.instructionsTitle}>Computer Study Session!</Text>
 
           <PixelBorder
@@ -386,6 +404,19 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
               </View>
             </PixelBorder>
           </PressableButton>
+
+          <AvailableJokersModal
+            visible={showAvailableJokers}
+            onClose={() => setShowAvailableJokers(false)}
+            jokers={COMPUTER_JOKERS}
+            subject="Computer"
+            themeColors={{
+              borderColor: '#00d4ff',
+              backgroundColor: '#0a0e1a',
+              headerColor: '#16213e',
+              textColor: '#00ff41',
+            }}
+          />
         </View>
       </View>
     );
@@ -952,6 +983,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.blue.cyan,
+    fontFamily: 'PixeloidMono',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
     fontFamily: 'PixeloidMono',
   },
 });

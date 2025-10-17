@@ -10,19 +10,19 @@ import {
   View,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
-import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
-import colors from '../../src/constants/colors';
-
+import TextWithEmojis from '../components/TextWithEmojis';
 
 /** =========================
  *  Types
@@ -585,6 +585,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const [levelIndex, setLevelIndex] = useState(0);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [timeLeft, setTimeLeft] = useState(60); // 60 second timer
+  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [puzzle, setPuzzle] = useState<Puzzle>(() => generatePuzzle(0));
@@ -949,6 +950,22 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Economics Study Session</Text>
 
+          <TouchableOpacity
+            style={styles.jokerIconButton}
+            onPress={() => setShowAvailableJokers(true)}
+          >
+            <PixelBorder
+              borderColor="#42a5f5"
+              borderWidth={2}
+              backgroundColor="#1e3a8a"
+              innerPadding={8}
+            >
+              <TextWithEmojis style={styles.jokerIconText} imageSize={22}>
+                🃏
+              </TextWithEmojis>
+            </PixelBorder>
+          </TouchableOpacity>
+
           <PixelBorder
             borderColor="#42a5f5"
             borderWidth={3}
@@ -1015,6 +1032,19 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             </PixelBorder>
           </PressableButton>
         </View>
+
+        <AvailableJokersModal
+          visible={showAvailableJokers}
+          onClose={() => setShowAvailableJokers(false)}
+          jokers={ECONOMY_JOKERS}
+          subject="Economy"
+          themeColors={{
+            borderColor: '#52c41a',
+            backgroundColor: '#1a2332',
+            headerColor: '#2d4a3e',
+            textColor: '#f5f5dc',
+          }}
+        />
       </View>
     );
   }
@@ -1544,5 +1574,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
+  },
+  jokerIconButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  jokerIconText: {
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
   },
 });
