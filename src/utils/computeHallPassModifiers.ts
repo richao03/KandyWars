@@ -19,17 +19,39 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
     allowanceBonusPercent: 0,
     jokerBonusCount: 0,
     rerollBonusCount: 0,
+    salesMultiplier: 1, // Default 1x (no multiplier)
   };
 
   // Accumulate effects from all selected passes
   selectedPasses.forEach((pass) => {
-    console.log(`🎖️ COMPUTE: Processing pass "${pass.name}" with ${pass.effects.length} effects`);
+    console.log(`🎖️ COMPUTE: Processing pass "${pass.name}" (id: ${pass.id}) with ${pass.effects.length} effects`);
 
+    // Handle special hall passes by ID (like we do with jokers)
+    switch (pass.id) {
+      case 'time_crunch':
+        // Time Crunch: +400% profit bonus
+        modifiers.salePriceBonusPercent += 80; // 400% / 5 = 80
+        console.log(`  ✓ time_crunch: +400% sales profit (total: ${modifiers.salePriceBonusPercent * 5}%)`);
+        break;
+      case 'speedrun_champion':
+        // Speedrun Champion: +100% profit bonus
+        modifiers.salePriceBonusPercent += 20; // 100% / 5 = 20
+        console.log(`  ✓ speedrun_champion: +100% sales profit (total: ${modifiers.salePriceBonusPercent * 5}%)`);
+        break;
+      case 'forged_pass':
+        // Forged Pass: +1 reroll
+        modifiers.rerollBonusCount += 1;
+        console.log(`  ✓ forged_pass: +1 reroll (total: ${modifiers.rerollBonusCount} rerolls)`);
+        break;
+      // Add more special hall passes here as needed
+    }
+
+    // Process standard effects
     pass.effects.forEach((effect: HallPassEffect) => {
       switch (effect.type) {
         case 'sale_price_bonus':
           modifiers.salePriceBonusPercent += effect.value;
-          console.log(`  ✓ sale_price_bonus: +${effect.value}% (total: ${modifiers.salePriceBonusPercent}%)`);
+          console.log(`  ✓ sale_price_bonus: +${effect.value * 5}% (total: ${modifiers.salePriceBonusPercent * 5}%)`);
           break;
         case 'inventory_bonus':
           modifiers.inventoryBonusSlots += effect.value;
@@ -44,12 +66,8 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
           console.log(`  ✓ joker_bonus: +${effect.value} jokers (total: ${modifiers.jokerBonusCount} jokers)`);
           break;
         case 'special':
-          // Check description for special effects
-          if (effect.description.includes('reroll')) {
-            modifiers.rerollBonusCount += effect.value;
-            console.log(`  ✓ special (reroll): +${effect.value} rerolls (total: ${modifiers.rerollBonusCount} rerolls)`);
-          }
-          // Add more special effect handling here as needed
+          // Special effects are handled by hall pass ID above
+          console.log(`  ℹ️ special effect (handled by ID): ${effect.description}`);
           break;
         default:
           console.warn(`  ⚠️ Unknown effect type: ${effect.type}`);

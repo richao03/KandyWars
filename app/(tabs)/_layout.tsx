@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Image } from 'react-native';
+import { Image, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
 
@@ -16,6 +16,8 @@ export default function TabLayout() {
     () => ({
       headerShown: false, // Disable tab headers for consistent spacing
       animation: 'none', // Disable animations for instant switching
+      lazy: true, // Only mount screens when they're focused for the first time
+      unmountOnBlur: false, // Keep screens mounted for better performance and state preservation
       tabBarStyle: isTabBarVisible
         ? {
             backgroundColor: '#000000',
@@ -59,18 +61,16 @@ export default function TabLayout() {
         name="jokers"
         options={{
           title: 'Jokers',
-          tabBarIcon: ({ color, size }) => {
-            return (
-              <Image
-                source={require('../../assets/images/emojis/joker.png')}
-                style={{
-                  width: size || 24,
-                  height: size || 24,
-                }}
-                resizeMode="contain"
-              />
-            );
-          },
+          tabBarIcon: ({ color, size }) => (
+            <Image
+              source={require('../../assets/images/emojis/joker.png')}
+              style={{
+                width: size || 24,
+                height: size || 24,
+              }}
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tabs.Screen

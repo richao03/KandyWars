@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Dimensions,
   ImageBackground,
@@ -26,6 +26,7 @@ export default function GoingToSchoolModal({
   guaranteedEventWarnings = [],
 }: GoingToSchoolModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
+  const hasSetTimer = useRef(false); // Track if timer has been set for this modal opening
 
   // NEW_DAY flavor text array
   const newDayTexts = [
@@ -40,11 +41,14 @@ export default function GoingToSchoolModal({
   }, [visible]); // Re-randomize when modal becomes visible
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !hasSetTimer.current) {
       hideTabBar();
-      // Auto-dismiss after 2.5 seconds
+      hasSetTimer.current = true;
+
+      // Auto-dismiss after 2.8 seconds
       const timer = setTimeout(() => {
         showTabBar();
+        hasSetTimer.current = false; // Reset for next time modal opens
         onComplete();
       }, 2800);
 
@@ -53,7 +57,13 @@ export default function GoingToSchoolModal({
         showTabBar();
       };
     }
-  }, [visible]); // Only depend on visible to prevent infinite loops
+
+    if (!visible) {
+      // Reset the timer flag when modal is hidden
+      hasSetTimer.current = false;
+      showTabBar();
+    }
+  }, [visible]); // Only depend on visible to prevent re-triggering from parent re-renders
 
   return (
     <FastModal

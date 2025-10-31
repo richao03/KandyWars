@@ -45,7 +45,13 @@ interface DeliPageProps {
 export default function Deli({ onBack }: DeliPageProps = {}) {
   const { gameData } = useSeed();
   const { balance, spend, add } = useWallet();
-  const { inventory, addToInventory, removeFromInventory } = useInventory();
+  const {
+    inventory,
+    addToInventory,
+    removeFromInventory,
+    inventoryCount,
+    getInventoryLimit,
+  } = useInventory();
   const { day } = useGame();
   const { jokers } = useJokers();
 
@@ -215,9 +221,17 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
 
   const selectedCandy =
     selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
+
+  // Calculate max buy quantity considering both wallet balance AND inventory space
+  const inventoryLimit = getInventoryLimit();
+  const availableInventorySpace = Math.max(0, inventoryLimit - inventoryCount);
+
   const maxBuyQty =
     selectedCandy && selectedCandy.cost > 0
-      ? Math.floor(balance / selectedCandy.cost)
+      ? Math.min(
+          Math.floor(balance / selectedCandy.cost), // How much can afford
+          availableInventorySpace // How much inventory space available
+        )
       : 0;
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
@@ -227,7 +241,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
       <GameHUD
         theme="evening"
         customHeaderText={`After School - Day ${day}`}
-        customLocationText="Peaceful Evening"
+        customLocationText="Corner Store"
       />
       <View style={styles.contentContainer}>
         {vendorKickbackJoker && (

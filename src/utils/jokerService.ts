@@ -113,7 +113,8 @@ export class JokerService {
     currentPeriod: number,
     inventoryLimit?: number,
     candyCount?: number,
-    activeEffects: any[] = []
+    activeEffects: any[] = [],
+    periodsPerDay: number = 8
   ): number {
     // Debug logging for inventory_limit target
     if (target === 'inventory_limit') {
@@ -211,11 +212,11 @@ export class JokerService {
       );
       if (inductiveReasoning) {
         // Add 3 inventory spaces for each completed day
-        const completedDays = Math.floor(currentPeriod / 8);
+        const completedDays = Math.floor(currentPeriod / periodsPerDay);
         const dailyBonus = completedDays * 3;
         result += dailyBonus;
         console.log(
-          `   📚 Inductive Reasoning bonus: +${dailyBonus} (${completedDays} completed days)`
+          `   📚 Inductive Reasoning bonus: +${dailyBonus} (${completedDays} completed days, ${periodsPerDay} periods/day)`
         );
       }
 
@@ -416,6 +417,7 @@ export class JokerService {
         if (jokerName === 'Even Stevens') {
           shouldApply = inventoryLimit ? inventoryLimit % 2 === 0 : false;
           jokerEmoji = '⚖️';
+          console.log(`💰 Even Stevens check: inventoryLimit=${inventoryLimit}, shouldApply=${shouldApply}`);
         } else if (jokerName === 'Odd Todd') {
           shouldApply = inventoryLimit ? inventoryLimit % 2 === 1 : false;
           jokerEmoji = '🎲';

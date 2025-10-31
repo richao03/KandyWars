@@ -6,7 +6,7 @@ export const ALL_MINIGAMES = [
   'math',
   'computer',
   'art',
-  'history',
+  'geography',
   'economy',
   'home-ec',
   'logic',

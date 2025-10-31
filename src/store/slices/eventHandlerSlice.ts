@@ -43,6 +43,11 @@ const eventHandlerSlice = createSlice({
           const eventId = `${eventData.period}_${eventData.effect}_${eventData.title}`;
           if (!state.processedEventIds.includes(eventId)) {
             state.processedEventIds.push(eventId);
+
+            // Keep only last 100 event IDs to prevent unbounded memory growth
+            if (state.processedEventIds.length > 100) {
+              state.processedEventIds = state.processedEventIds.slice(-100);
+            }
           }
         }
       }

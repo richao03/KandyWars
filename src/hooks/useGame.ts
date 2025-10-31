@@ -14,8 +14,6 @@ import {
   setPricesUpdating,
   setIsInitialized,
   setMinigameContext,
-  setHasCompletedMarketTutorial,
-  setHasCompletedAfterSchoolTutorial,
   selectDay,
   selectPeriod,
   selectGameResetSignal,
@@ -36,8 +34,6 @@ export const useGame = () => {
   const isInitialized = useAppSelector(state => state.game.isInitialized);
   const locationHistory = useAppSelector(state => state.game.locationHistory);
   const isAfterSchool = useAppSelector(state => state.game.isAfterSchool);
-  const hasCompletedMarketTutorial = useAppSelector(state => state.game.hasCompletedMarketTutorial);
-  const hasCompletedAfterSchoolTutorial = useAppSelector(state => state.game.hasCompletedAfterSchoolTutorial);
   const gameResetSignal = useAppSelector(selectGameResetSignal);
 
   const incrementPeriodAction = useCallback((location: Parameters<typeof incrementPeriod>[0]) => {
@@ -48,8 +44,8 @@ export const useGame = () => {
     dispatch(startAfterSchool());
   }, [dispatch]);
 
-  const startNewDayAction = useCallback(() => {
-    dispatch(startNewDay());
+  const startNewDayAction = useCallback((periodsPerDay?: number) => {
+    dispatch(startNewDay(periodsPerDay));
   }, [dispatch]);
 
   const resetGameAction = useCallback(() => {
@@ -94,14 +90,6 @@ export const useGame = () => {
     dispatch(setMinigameContext(context));
   }, [dispatch]);
 
-  const setHasCompletedMarketTutorialAction = useCallback((completed: boolean) => {
-    dispatch(setHasCompletedMarketTutorial(completed));
-  }, [dispatch]);
-
-  const setHasCompletedAfterSchoolTutorialAction = useCallback((completed: boolean) => {
-    dispatch(setHasCompletedAfterSchoolTutorial(completed));
-  }, [dispatch]);
-
   // Return object directly - useAppSelector calls are already optimized
   return {
     day,
@@ -116,8 +104,6 @@ export const useGame = () => {
     lastActiveView,
     pricesUpdating,
     isInitialized,
-    hasCompletedMarketTutorial,
-    hasCompletedAfterSchoolTutorial,
     gameResetSignal,
     incrementPeriod: incrementPeriodAction,
     startAfterSchool: startAfterSchoolAction,
@@ -132,7 +118,5 @@ export const useGame = () => {
     setPricesUpdating: setPricesUpdatingAction,
     setIsInitialized: setIsInitializedAction,
     setMinigameContext: setMinigameContextAction,
-    setHasCompletedMarketTutorial: setHasCompletedMarketTutorialAction,
-    setHasCompletedAfterSchoolTutorial: setHasCompletedAfterSchoolTutorialAction,
   };
 };

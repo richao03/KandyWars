@@ -46,7 +46,7 @@ const rootReducer = combineReducers({
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 1,
+  version: 4, // Increment version to trigger migration
   storage: AsyncStorage,
   whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
@@ -62,6 +62,31 @@ const persistConfig = {
       // If there's legacy state without version, keep it as-is
       return Promise.resolve(state);
     }
+
+    // Migration to version 2: Force hall pass re-initialization for new passes
+    if (state && state._persist?.version < 2) {
+      console.log('🔄 Migrating to version 2: Resetting hall pass isLoaded flag');
+      if (state.hallPass) {
+        state.hallPass.isLoaded = false; // Force re-initialization
+      }
+    }
+
+    // Migration to version 3: Force hall pass re-initialization for 4 new passes
+    if (state && state._persist?.version < 3) {
+      console.log('🔄 Migrating to version 3: Forcing hall pass refresh for new passes');
+      if (state.hallPass) {
+        state.hallPass.isLoaded = false; // Force re-initialization to load all 17 passes
+      }
+    }
+
+    // Migration to version 4: Update hall pass rarities (add magical tier, reorder by difficulty)
+    if (state && state._persist?.version < 4) {
+      console.log('🔄 Migrating to version 4: Updating hall pass rarities and order');
+      if (state.hallPass) {
+        state.hallPass.isLoaded = false; // Force re-initialization to load updated rarities
+      }
+    }
+
     return Promise.resolve(state);
   },
 };

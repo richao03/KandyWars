@@ -90,6 +90,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const modalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isSwipingRef = useRef(false);
   const levelCompleteRef = useRef(false);
   const completedLevelRef = useRef(0); // Track with ref to avoid stale closures
@@ -229,7 +230,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             levelCompleteRef.current = true; // Stop accepting swipes but keep UI visible
 
             if (level < 3) {
-              setTimeout(() => {
+              if (modalTimeoutRef.current) {
+                clearTimeout(modalTimeoutRef.current);
+              }
+              modalTimeoutRef.current = setTimeout(() => {
                 console.log(`Level ${level} complete! Showing modal...`);
                 showModal(
                   `Level ${level} Complete!`,
@@ -244,7 +248,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                 );
               }, 600);
             } else {
-              setTimeout(() => {
+              if (modalTimeoutRef.current) {
+                clearTimeout(modalTimeoutRef.current);
+              }
+              modalTimeoutRef.current = setTimeout(() => {
                 console.log('All levels complete! Showing final modal...');
                 showModal(
                   'All Levels Complete!',
@@ -269,7 +276,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       }
 
       // Clear feedback and allow next swipe after animation
-      setTimeout(() => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+      feedbackTimeoutRef.current = setTimeout(() => {
         setFeedback('');
         setFeedbackPosition(null);
         isSwipingRef.current = false;
@@ -441,6 +451,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       if (feedbackTimeoutRef.current) {
         clearTimeout(feedbackTimeoutRef.current);
         feedbackTimeoutRef.current = null;
+      }
+      if (modalTimeoutRef.current) {
+        clearTimeout(modalTimeoutRef.current);
+        modalTimeoutRef.current = null;
       }
     };
   }, []);

@@ -23,6 +23,8 @@ import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { setStashedAmount } from '../../src/store/slices/walletSlice';
 
 const CANDY_TYPES = [
   'Snickers',
@@ -36,6 +38,8 @@ const CANDY_TYPES = [
 
 function JokersPage() {
   // Always call all hooks first - before any conditional returns
+  const dispatch = useAppDispatch();
+  const stashedAmount = useAppSelector(state => state.wallet.stashedAmount);
   const gameContext = useGame();
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
@@ -279,24 +283,39 @@ function JokersPage() {
 
     const { addJoker, removeJoker } = jokerContext;
 
-    // Create a copy of the selected joker with a new ID
+    // Deduct $15,000 from piggy bank (can go into debt)
+    const GLITCH_COST = 15000;
+    const newBalance = stashedAmount - GLITCH_COST;
+    dispatch(setStashedAmount(newBalance));
+
+    const balanceMessage = newBalance < 0
+      ? `You now owe $${Math.abs(newBalance).toLocaleString()}!`
+      : `New piggy bank balance: $${newBalance.toLocaleString()}`;
+
+    console.log(`💰 Glitch in the Matrix: Deducted $${GLITCH_COST.toLocaleString()} from piggy bank. ${balanceMessage}`);
+
+    // Create a copy of the selected joker
+    // Strategy: Give copy a unique ID for removal, but store original ID for activation
+    const copyId = Date.now() + Math.random(); // Unique ID for this copy
     const duplicatedJoker = {
       ...selectedJoker,
-      id: Date.now() + Math.random(), // Generate unique ID
+      id: copyId, // Unique ID for removal
+      originalId: selectedJoker.id, // Original ID for activation handlers
+      isCopy: true,
       name: selectedJoker.name + ' (Copy)',
     };
 
     // Add the duplicated joker to inventory
     addJoker(duplicatedJoker);
 
-    // Remove the Glitch in the Matrix joker (it's one-time use)
+    // Remove the Glitch in the Matrix joker (one-time use only)
     removeJoker(joker.id);
 
     // Close modal and show confirmation
     setJokerSelectorModal({ visible: false, joker: null });
     handleShowConfirmation(
       'Glitch in the Matrix!',
-      `Created a copy of ${selectedJoker.name}!`,
+      `Created a copy of ${selectedJoker.name}! ($${GLITCH_COST.toLocaleString()} deducted from piggy bank)`,
       'refresh'
     );
   };
@@ -314,18 +333,20 @@ function JokersPage() {
       return;
 
     const { periodCount } = gameContext;
-    const { removeJoker } = jokerContext;
+    const { markJokerUsedToday } = jokerContext;
     const { getInventoryLimit } = inventoryContext;
     const { gameData, modifyCandyPrice } = seedContext;
 
     if (joker.id === JOKER_IDS.PROPACANDIES) {
+      // Mark as used FIRST to prevent double-use
+      markJokerUsedToday(joker.id.toString());
+
       // Drop the selected candy's price by 90%
       const originalPrice =
         gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = Math.max(originalPrice * 0.1, 0.01); // 90% reduction, minimum $0.01
 
       modifyCandyPrice(selectedCandy, newPrice, periodCount);
-      removeJoker(joker.id);
 
       handleShowConfirmation(
         'Propacandies Activated!',
@@ -333,6 +354,9 @@ function JokersPage() {
         '📰'
       );
     } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
+      // Mark as used FIRST to prevent double-use
+      markJokerUsedToday(joker.id.toString());
+
       // Set the selected candy's price to the highest price of all candies this period
       const allCandyTypes = Object.keys(gameData.candyPrices);
       let highestPrice = 0;
@@ -347,7 +371,6 @@ function JokersPage() {
       }
 
       modifyCandyPrice(selectedCandy, highestPrice, periodCount);
-      removeJoker(joker.id);
 
       handleShowConfirmation(
         'Market Manipulation Activated!',
@@ -355,6 +378,9 @@ function JokersPage() {
         '📈'
       );
     } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
+      // Mark as used FIRST to prevent double-use
+      markJokerUsedToday(joker.id.toString());
+
       // Set the selected candy's price to the lowest price of all candies this period
       const allCandyTypes = Object.keys(gameData.candyPrices);
       let lowestPrice = Infinity;
@@ -374,7 +400,6 @@ function JokersPage() {
       }
 
       modifyCandyPrice(selectedCandy, lowestPrice, periodCount);
-      removeJoker(joker.id);
 
       handleShowConfirmation(
         'The Big Short Activated!',
@@ -385,13 +410,15 @@ function JokersPage() {
       joker.id === JOKER_IDS.DOUBLE_UP ||
       joker.effect === 'double_candy_price'
     ) {
+      // Mark as used FIRST to prevent double-use
+      markJokerUsedToday(joker.id.toString());
+
       // Double Up joker - doubles candy price for current period
       const originalPrice =
         gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
       const newPrice = originalPrice * 2;
 
       modifyCandyPrice(selectedCandy, newPrice, periodCount);
-      removeJoker(joker.id);
 
       handleShowConfirmation(
         'Double Up Activated!',
@@ -399,6 +426,9 @@ function JokersPage() {
         '💰'
       );
     } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
+      // Mark as used FIRST to prevent double-use
+      markJokerUsedToday(joker.id.toString());
+
       // Fill inventory with the selected candy type
       const currentInventoryCount = inventoryContext.getTotalInventoryCount();
       const inventoryLimit = getInventoryLimit();
@@ -416,14 +446,13 @@ function JokersPage() {
 
       const candyPrice =
         gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
-      const quantityToAdd = Math.min(spaceAvailable, 10); // Add up to 10 or until full
+      const quantityToAdd = spaceAvailable; // Fill entire inventory
 
       inventoryContext.addToInventory(selectedCandy, quantityToAdd, candyPrice);
-      removeJoker(joker.id);
 
       handleShowConfirmation(
         'Inventory Filled!',
-        `Added ${quantityToAdd} ${selectedCandy} to your inventory!`,
+        `Filled inventory with ${quantityToAdd} ${selectedCandy}!`,
         '🏃‍♂️'
       );
     } else if (joker.id === JOKER_IDS.MASTER_NEGOTIATOR) {
@@ -433,6 +462,9 @@ function JokersPage() {
         setSelectedSourceCandy(selectedCandy);
         return; // Keep modal open for step 2
       } else {
+        // Mark as used FIRST to prevent double-use (only on step 2 when action completes)
+        markJokerUsedToday(joker.id.toString());
+
         // Step 2: Select target candy and perform conversion
         const targetCandy = selectedCandy;
 
@@ -460,7 +492,6 @@ function JokersPage() {
           originalPrice,
           periodCount
         );
-        removeJoker(joker.id);
 
         handleShowConfirmation(
           'Master Negotiator Activated!',
@@ -1044,11 +1075,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
+    gap: 8, // Add gap between cards
   },
   jokerCardContainer: {
     width: 160, // Fixed width for consistent sizing
     height: 180, // Fixed height to ensure all cards are the same size
-    marginRight: 8,
     position: 'relative',
   },
   emptyContainer: {

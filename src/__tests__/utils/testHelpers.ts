@@ -139,7 +139,8 @@ export class PeriodMocker {
    */
   getCurrentDay(): number {
     const periodCount = this.store.getState().game.periodCount;
-    return Math.floor(periodCount / 8) + 1;
+    const periodsPerDay = 8; // Default to 8 periods per day for tests (can be overridden per test)
+    return Math.floor((periodCount - 1) / periodsPerDay) + 1;
   }
 
   /**
@@ -314,7 +315,7 @@ export const createStoreWithEffects = (config: StoreEffectsConfig) => {
         tutorialCompleted: true,
         hasPlayedLunchMinigame: false,
         didNotStudyLastNight: false,
-        day: Math.floor(period / 8) + 1,
+        day: Math.floor((period - 1) / 8) + 1, // Note: Tests use 8 periods/day by default
       },
       wallet: {
         balance: money,

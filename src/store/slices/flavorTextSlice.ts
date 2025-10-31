@@ -10,6 +10,7 @@ export type FlavorEvent =
   | 'JOKER_UNLOCKED'
   | 'resale_bonus'
   | 'AFTERNOON'
+  | 'AFTER_SCHOOL'
   | 'PIGGY_BANK'
   | 'LOSE_MONEY'
   | 'PERIOD_CHANGE'

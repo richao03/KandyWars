@@ -44,7 +44,11 @@ export type EffectTarget =
   | 'perfect_balance_bonus' // gives bonus when cash ends in .00 at end of day
   | 'location_highlights' // highlights locations with good events
   | 'randomize_prices' // randomizes all candy prices
-  | 'price_prediction'; // enables price prediction features
+  | 'price_prediction' // enables price prediction features
+  | 'stash_interest' // applies compound interest to stashed money daily
+  | 'synergy_allowance_bonus' // gives allowance bonus when 3+ allowance multiplier jokers owned
+  | 'early_sale_penalty' // penalty applied to all profits if any sale before period 6
+  | 'farmers_carry_bonus'; // bonus per candy per period if inventory limit >= 75
 
 export type EffectOperation =
   | 'add' // + operation: current + amount
@@ -420,7 +424,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Computer',
     type: 'one-time',
     flavorText: "Didn't I just see that joker?",
-    description: 'Choose 1 joker in your possession, and copy it',
+    description: 'Copy 1 joker in your possession. -$15,000 from piggy bank',
     effects: [
       {
         target: 'joker_duplicate',
@@ -428,21 +432,27 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
         amount: 1,
         duration: 'one-time',
       },
+      {
+        target: 'money',
+        operation: 'add',
+        amount: -15000,
+        duration: 'one-time',
+      },
     ],
   },
   {
     id: 11,
-    name: 'Trojan Horse',
-    subject: 'Computer',
-    type: 'one-time',
-    flavorText: 'Sneaky delivery of candy contraband',
-    description: 'Skip one level and get 5 of every candy',
+    name: 'Farmers Carry',
+    subject: 'Gym',
+    type: 'persistent',
+    flavorText: 'Massive operations requires massive forearms',
+    description: 'If inventory limit >= 75, +$2000 per period',
     effects: [
       {
-        target: 'skip_level_and_gain_candy',
-        operation: 'activate',
-        amount: 5,
-        duration: 'one-time',
+        target: 'farmers_carry_bonus',
+        operation: 'add',
+        amount: 2000,
+        duration: 'persistent',
       },
     ],
   },
@@ -454,13 +464,19 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Home Economics',
     type: 'persistent',
     flavorText: 'All candy, no air!',
-    description: '2x inventory limit',
+    description: '2x inventory limit, -50% profit for sales before period 6',
     requiresSnapshot: true, // Flag to indicate this needs current inventory calculated
     effects: [
       {
         target: 'inventory_limit',
         operation: 'add',
         amount: 0, // Placeholder - will be set to current inventory when activated
+        duration: 'persistent',
+      },
+      {
+        target: 'early_sale_penalty',
+        operation: 'multiply',
+        amount: 0.5, // 50% penalty (multiply by 0.5)
         duration: 'persistent',
       },
     ],
@@ -542,7 +558,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       {
         target: 'sell_multiplier',
         operation: 'multiply',
-        amount: 1.10, // +10% per period held (resets each day)
+        amount: 1.1, // +10% per period held (resets each day)
         duration: 'persistent',
       },
     ],
@@ -639,7 +655,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Logic',
     type: 'one-time',
     flavorText: 'Trust me this is a win-win-win situation',
-    description: 'You can replace 1 type of candy for another type of candy',
+    description: 'You can replace 1 type of candy for another type',
     effects: [
       {
         target: 'candy_conversion',
@@ -801,7 +817,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   {
     id: 20,
     name: 'Market Manipulation',
-    subject: 'Economy',
+    subject: 'Computer',
     type: 'one-time',
     flavorText: 'Pump and dump!',
     description:
@@ -917,17 +933,18 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 26,
-    name: 'Tachyonic Sprint',
-    subject: 'Gym',
-    type: 'one-time',
-    flavorText: 'Run so fast time goes backwards',
-    description: 'Travel back to any period of today ',
+    name: 'Family Business',
+    subject: 'Economy',
+    type: 'persistent',
+    flavorText: 'When the family works together, everyone prospers',
+    description:
+      'If 3+ allowance multiplier jokers owned, +$1000 to daily allowance',
     effects: [
       {
-        target: 'time_travel_to_period',
-        operation: 'activate',
-        amount: 1,
-        duration: 'one-time',
+        target: 'synergy_allowance_bonus',
+        operation: 'add',
+        amount: 1000,
+        duration: 'persistent',
       },
     ],
   },
@@ -955,7 +972,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     subject: 'Recess',
     type: 'persistent',
     flavorText: 'Keep the rhythm going, every third counts',
-    description: 'Every 3rd sale gets +66% bonus',
+    description: 'Every 3rd sale in 1 period gets +66% bonus',
     effects: [
       {
         target: 'every_third_sale_bonus',
@@ -1097,16 +1114,16 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   },
   {
     id: 53,
-    name: 'Map Maker',
+    name: 'Mysterious Artifact',
     subject: 'Geography',
     type: 'persistent',
-    flavorText: 'Chart your own course to success',
-    description: 'See locations that will lead to good events',
+    flavorText: 'Be blessed with endless fortune',
+    description: 'Stashed money generates 8% compound interest daily',
     effects: [
       {
-        target: 'location_highlights',
-        operation: 'enable',
-        amount: 1,
+        target: 'stash_interest',
+        operation: 'multiply',
+        amount: 1.08,
         duration: 'persistent',
       },
     ],

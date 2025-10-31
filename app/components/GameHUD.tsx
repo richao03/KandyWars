@@ -345,11 +345,11 @@ function GameHUD({
   // Get glow style and border color based on event type
   const getGlowStyleAndBorderColor = useMemo(() => {
     const glowColors = {
-      HINT: '#FFD700', // Gold for hints
+      HINT: '#32CD32', // Gold for hints
       FOUND_MONEY: '#32CD32', // Lime green for found money
       LOSE_MONEY: '#FF4444', // Red for losing money
-      PRICE_SPIKE: '#FF6B35', // Orange for price increases
-      PRICE_DROP: '#4CAF50', // Green for price drops
+      PRICE_SPIKE: '#32CD32', // Orange for price increases
+      PRICE_DROP: '#FF4444', // Green for price drops
       JOKER_UNLOCKED: '#9C27B0', // Purple for jokers
       NEW_DAY: '#2196F3', // Blue for new day
       DEFAULT: '#f4d03f', // Default yellow
@@ -458,15 +458,32 @@ function GameHUD({
           </PixelBorder>
         </Animated.View>
 
-        <PixelBorder
-          borderColor="#5c7cb8"
-          borderWidth={3}
-          backgroundColor="#d6e8ff"
-          innerPadding={0}
-          style={{ flex: 1 }}
-        >
-          {inventoryWrapper ? (
-            inventoryWrapper(
+        <View style={{ flex: 1 }}>
+          <PixelBorder
+            borderColor="#5c7cb8"
+            borderWidth={3}
+            backgroundColor="#d6e8ff"
+            innerPadding={0}
+            style={{ flex: 1 }}
+          >
+            {inventoryWrapper ? (
+              inventoryWrapper(
+                <TouchableOpacity
+                  style={[styles.statBox, styles.inventoryBox]}
+                  onPress={onInventoryPress}
+                >
+                  <Text style={statTitleStyle}>Inventory</Text>
+                  <Text
+                    style={[
+                      styles.inventoryAmount,
+                      { fontFamily: 'PixeloidMono' },
+                    ]}
+                  >
+                    {totalInventory || 0}/{inventoryCapacity || 30}
+                  </Text>
+                </TouchableOpacity>
+              )
+            ) : (
               <TouchableOpacity
                 style={[styles.statBox, styles.inventoryBox]}
                 onPress={onInventoryPress}
@@ -481,21 +498,9 @@ function GameHUD({
                   {totalInventory || 0}/{inventoryCapacity || 30}
                 </Text>
               </TouchableOpacity>
-            )
-          ) : (
-            <TouchableOpacity
-              style={[styles.statBox, styles.inventoryBox]}
-              onPress={onInventoryPress}
-            >
-              <Text style={statTitleStyle}>Inventory</Text>
-              <Text
-                style={[styles.inventoryAmount, { fontFamily: 'PixeloidMono' }]}
-              >
-                {totalInventory || 0}/{inventoryCapacity || 30}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </PixelBorder>
+            )}
+          </PixelBorder>
+        </View>
       </View>
 
       {/* Location badge with status indicators */}

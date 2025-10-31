@@ -28,10 +28,9 @@ interface GameState {
   isLoaded: boolean;
   isInitialized: boolean;
   pricesUpdating: boolean;
-  hasCompletedMarketTutorial: boolean;
-  hasCompletedAfterSchoolTutorial: boolean;
   totalCompletions: number;
   gameResetSignal: number; // Increments on each game reset to signal zombie cleanup
+  markFarmersCarryBonusApplied: number[]; // Tracks which periods have received Farmers Carry bonus
 }
 
 const initialState: GameState = {
@@ -47,10 +46,9 @@ const initialState: GameState = {
   isLoaded: false,
   isInitialized: false,
   pricesUpdating: false,
-  hasCompletedMarketTutorial: false,
-  hasCompletedAfterSchoolTutorial: false,
   totalCompletions: 0,
   gameResetSignal: 0,
+  markFarmersCarryBonusApplied: [],
 };
 
 const gameSlice = createSlice({
@@ -78,7 +76,10 @@ const gameSlice = createSlice({
     setHasPlayedLunchMinigame: (state, action: PayloadAction<boolean>) => {
       state.hasPlayedLunchMinigame = action.payload;
     },
-    setLastActiveView: (state, action: PayloadAction<'market' | 'after-school'>) => {
+    setLastActiveView: (
+      state,
+      action: PayloadAction<'market' | 'after-school'>
+    ) => {
       state.lastActiveView = action.payload;
     },
     incrementTrojanHorseCounter: (state) => {
@@ -95,12 +96,6 @@ const gameSlice = createSlice({
     },
     setPricesUpdating: (state, action: PayloadAction<boolean>) => {
       state.pricesUpdating = action.payload;
-    },
-    setHasCompletedMarketTutorial: (state, action: PayloadAction<boolean>) => {
-      state.hasCompletedMarketTutorial = action.payload;
-    },
-    setHasCompletedAfterSchoolTutorial: (state, action: PayloadAction<boolean>) => {
-      state.hasCompletedAfterSchoolTutorial = action.payload;
     },
     setTotalCompletions: (state, action: PayloadAction<number>) => {
       state.totalCompletions = action.payload;
@@ -124,15 +119,24 @@ const gameSlice = createSlice({
       state.pricesUpdating = true;
       // Reset lunch minigame flag when moving to a new period
       state.hasPlayedLunchMinigame = false;
-      console.log('💾 Period incremented to:', state.periodCount, '- Auto-save triggered');
+      if (__DEV__) {
+        console.log(
+          '💾 Period incremented to:',
+          state.periodCount,
+          '- Auto-save triggered'
+        );
+      }
     },
     startAfterSchool: (state) => {
       state.isAfterSchool = true;
       // Reset study flag when entering after-school to allow studying
       state.hasStudiedTonight = false;
     },
-    startNewDay: (state) => {
-      const newPeriodCount = Math.floor(state.periodCount / 8) * 8 + 8;
+    startNewDay: (state, action: PayloadAction<number | undefined>) => {
+      const periodsPerDay = action.payload ?? 8; // Default to 8 if not provided
+      const newPeriodCount =
+        Math.floor(state.periodCount / periodsPerDay) * periodsPerDay +
+        periodsPerDay;
       state.periodCount = newPeriodCount;
       state.isAfterSchool = false;
       state.hasStudiedTonight = false;
@@ -141,20 +145,22 @@ const gameSlice = createSlice({
         period: newPeriodCount,
         location: 'home room',
       });
-      console.log('💾 New day started, period:', newPeriodCount, '- Auto-save triggered');
+      if (__DEV__) {
+        console.log(
+          `💾 New day started, period: ${newPeriodCount} (${periodsPerDay} periods/day) - Auto-save triggered`
+        );
+      }
     },
     resetGame: (state) => {
-      // Preserve tutorial completion flags, totalCompletions, and isInitialized across game resets
-      const hasCompletedMarketTutorial = state.hasCompletedMarketTutorial;
-      const hasCompletedAfterSchoolTutorial = state.hasCompletedAfterSchoolTutorial;
+      // Preserve totalCompletions and isInitialized across game resets
       const totalCompletions = state.totalCompletions;
       const isInitialized = state.isInitialized; // Preserve so "Continue" button stays enabled
       const gameResetSignal = state.gameResetSignal + 1; // Increment to signal cleanup
-      console.log(`🔄 Game reset signal: ${gameResetSignal} - This will trigger zombie cleanup`);
+      console.log(
+        `🔄 Game reset signal: ${gameResetSignal} - This will trigger zombie cleanup`
+      );
       return {
         ...initialState,
-        hasCompletedMarketTutorial,
-        hasCompletedAfterSchoolTutorial,
         totalCompletions,
         isInitialized,
         gameResetSignal,
@@ -162,15 +168,13 @@ const gameSlice = createSlice({
     },
     fullResetGame: (state) => {
       // Full reset including isInitialized - used after completing a game
-      const hasCompletedMarketTutorial = state.hasCompletedMarketTutorial;
-      const hasCompletedAfterSchoolTutorial = state.hasCompletedAfterSchoolTutorial;
       const totalCompletions = state.totalCompletions;
       const gameResetSignal = state.gameResetSignal + 1;
-      console.log(`🔄 Full game reset signal: ${gameResetSignal} - Clearing isInitialized`);
+      console.log(
+        `🔄 Full game reset signal: ${gameResetSignal} - Clearing isInitialized`
+      );
       return {
         ...initialState,
-        hasCompletedMarketTutorial,
-        hasCompletedAfterSchoolTutorial,
         totalCompletions,
         isInitialized: false, // Clear to disable "Continue" button
         gameResetSignal,
@@ -179,7 +183,8 @@ const gameSlice = createSlice({
     revertToPreviousPeriod: (state) => {
       if (state.periodCount > 0) {
         state.periodCount--;
-        const prevHistory = state.locationHistory[state.locationHistory.length - 2];
+        const prevHistory =
+          state.locationHistory[state.locationHistory.length - 2];
         if (prevHistory) {
           state.currentLocation = prevHistory.location;
           state.locationHistory.pop();
@@ -190,7 +195,9 @@ const gameSlice = createSlice({
       const targetPeriod = action.payload;
       if (targetPeriod >= 0 && targetPeriod <= 39) {
         state.periodCount = targetPeriod;
-        const historyEntry = state.locationHistory.find(h => h.period === targetPeriod);
+        const historyEntry = state.locationHistory.find(
+          (h) => h.period === targetPeriod
+        );
         if (historyEntry) {
           state.currentLocation = historyEntry.location;
         }
@@ -202,8 +209,22 @@ const gameSlice = createSlice({
     markLunchMinigamePlayed: (state) => {
       state.hasPlayedLunchMinigame = true;
     },
-    setMinigameContext: (state, action: PayloadAction<'lunch' | 'after-school' | null>) => {
+    setMinigameContext: (
+      state,
+      action: PayloadAction<'lunch' | 'after-school' | null>
+    ) => {
       state.minigameContext = action.payload;
+    },
+    markFarmersCarryBonusApplied: (state, action: PayloadAction<number>) => {
+      const period = action.payload;
+      if (!state.markFarmersCarryBonusApplied.includes(period)) {
+        state.markFarmersCarryBonusApplied.push(period);
+        // Keep only last 50 periods to prevent unbounded growth
+        if (state.markFarmersCarryBonusApplied.length > 50) {
+          state.markFarmersCarryBonusApplied =
+            state.markFarmersCarryBonusApplied.slice(-50);
+        }
+      }
     },
   },
 });
@@ -223,8 +244,6 @@ export const {
   setIsLoaded,
   setIsInitialized,
   setPricesUpdating,
-  setHasCompletedMarketTutorial,
-  setHasCompletedAfterSchoolTutorial,
   setTotalCompletions,
   incrementTotalCompletions,
   incrementPeriod,
@@ -236,16 +255,27 @@ export const {
   jumpToPeriod,
   markStudiedTonight,
   markLunchMinigamePlayed,
+  markFarmersCarryBonusApplied,
 } = gameSlice.actions;
 
 export default gameSlice.reducer;
 
-// Selectors
-export const selectDay = (state: any) =>
-  Math.max(1, Math.floor(state.game?.periodCount / 8) + 1);
+// Helper function to get periods per day based on hall pass selection
+export const getPeriodsPerDay = (state: any): number => {
+  const selectedPassIds = state.hallPass?.selectedPassIds || [];
+  return selectedPassIds.includes('time_crunch') ? 6 : 8;
+};
 
-export const selectPeriod = (state: any) =>
-  Math.max(1, (state.game?.periodCount % 8) + 1);
+// Selectors
+export const selectDay = (state: any) => {
+  const periodsPerDay = getPeriodsPerDay(state);
+  return Math.max(1, Math.floor(state.game?.periodCount / periodsPerDay) + 1);
+};
+
+export const selectPeriod = (state: any) => {
+  const periodsPerDay = getPeriodsPerDay(state);
+  return Math.max(1, (state.game?.periodCount % periodsPerDay) + 1);
+};
 
 export const selectGameResetSignal = (state: any) =>
   state.game?.gameResetSignal;

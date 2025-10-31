@@ -51,6 +51,10 @@ export default function HallPassModal({
       console.log('🎓 HALL PASS MODAL: Opened');
       console.log('🎓 HALL PASS MODAL: Total passes:', allPasses.length);
       console.log(
+        '🎓 HALL PASS MODAL: All pass IDs:',
+        allPasses.map((p) => p.id)
+      );
+      console.log(
         '🎓 HALL PASS MODAL: Unlocked passes:',
         unlockedPasses.length
       );
@@ -72,13 +76,15 @@ export default function HallPassModal({
   const getRarityColor = (rarity: HallPass['rarity']) => {
     switch (rarity) {
       case 'common':
-        return colors.brown.secondary; // Brown - most popular color
+        return 'grey'; // White
+      case 'magical':
+        return '#1eff00'; // Green
       case 'rare':
-        return colors.blue.lightBg; // Cyan - very popular
+        return '#0070dd'; // Blue
       case 'epic':
-        return colors.purple.primary; // Hot pink - popular accent
+        return '#a335ee'; // Purple
       case 'legendary':
-        return colors.orange.primary; // Orange - popular CTA color
+        return '#ff8000'; // Orange
       default:
         return colors.gray.medium;
     }
@@ -88,12 +94,14 @@ export default function HallPassModal({
     switch (rarity) {
       case 'common':
         return colors.gold.beige; // Beige - very popular background
+      case 'magical':
+        return '#bbffb2'; // Light green tint
       case 'rare':
-        return colors.offWhite; // Off white for contrast
+        return '#b2d4f4'; // Light blue tint
       case 'epic':
-        return colors.gold.beige; // Beige again for consistency
+        return '#e3c2f9'; // Light purple tint
       case 'legendary':
-        return colors.gold.beige; // Gold beige - matches legendary theme
+        return '#ffcc99'; // Light orange tint
       default:
         return colors.offWhite;
     }
@@ -102,13 +110,15 @@ export default function HallPassModal({
   const getRarityGlow = (rarity: HallPass['rarity']) => {
     switch (rarity) {
       case 'common':
-        return colors.brown.primary;
+        return '#ffffff'; // White
+      case 'magical':
+        return '#1eff00'; // Green
       case 'rare':
-        return colors.blue.cyan;
+        return '#0070dd'; // Blue
       case 'epic':
-        return colors.purple.hotPink;
+        return '#a335ee'; // Purple
       case 'legendary':
-        return colors.orange.primary;
+        return '#ff8000'; // Orange
       default:
         return colors.gray.light;
     }
@@ -182,11 +192,7 @@ export default function HallPassModal({
         ]}
       >
         <PixelBorder
-          borderColor={
-            isSelected || isCurrentlySelected
-              ? colors.green.success
-              : getRarityColor(pass.rarity)
-          }
+          borderColor={getRarityColor(pass.rarity)}
           borderWidth={isSelected || isCurrentlySelected ? 4 : 3}
           backgroundColor={
             isUnlocked ? getRarityBackground(pass.rarity) : colors.offWhite
@@ -351,57 +357,53 @@ export default function HallPassModal({
             style={styles.titleIcon}
           />
         </View>
-        <Text style={styles.subtitle}>
-          {isSelectionMode
-            ? 'Choose Hall Passes to gain bonuses'
-            : 'Your collection of earned Hall Passes'}
-        </Text>
+
         {isSelectionMode &&
           localSelectedIds.length > 0 &&
           computedModifiers && (
-              <PixelBorder
-                borderColor={colors.brown.secondary}
-                borderWidth={3}
-                backgroundColor={colors.gold.beige}
-                innerPadding={14}
-                style={styles.accumulatedEffects}
-              >
-                <View style={styles.accumulatedHeader}>
-                  <Text style={styles.accumulatedTitle}>
-                    ✨ {localSelectedIds.length} pass
-                    {localSelectedIds.length !== 1 ? 'es' : ''} selected
-                  </Text>
-                </View>
-                {computedModifiers.salePriceBonusPercent > 0 && (
-                  <Text style={styles.accumulatedEffect}>
-                    💰 +{computedModifiers.salePriceBonusPercent * 5}% profit bonus on
-                    sales
-                  </Text>
-                )}
-                {computedModifiers.inventoryBonusSlots > 0 && (
-                  <Text style={styles.accumulatedEffect}>
-                    🎒 +{computedModifiers.inventoryBonusSlots} inventory slots
-                  </Text>
-                )}
-                {computedModifiers.allowanceBonusPercent > 0 && (
-                  <Text style={styles.accumulatedEffect}>
-                    💵 +{computedModifiers.allowanceBonusPercent}% daily allowance
-                  </Text>
-                )}
-                {computedModifiers.jokerBonusCount > 0 && (
-                  <Text style={styles.accumulatedEffect}>
-                    🃏 +{computedModifiers.jokerBonusCount} joker
-                    {computedModifiers.jokerBonusCount !== 1 ? 's' : ''}
-                  </Text>
-                )}
-                {computedModifiers.rerollBonusCount > 0 && (
-                  <Text style={styles.accumulatedEffect}>
-                    🔄 +{computedModifiers.rerollBonusCount} reroll
-                    {computedModifiers.rerollBonusCount !== 1 ? 's' : ''}
-                  </Text>
-                )}
-              </PixelBorder>
-            )}
+            <PixelBorder
+              borderColor={colors.brown.secondary}
+              borderWidth={3}
+              backgroundColor={colors.gold.beige}
+              innerPadding={8}
+              style={styles.accumulatedEffects}
+            >
+              <View style={styles.accumulatedHeader}>
+                <Text style={styles.accumulatedTitle}>
+                  {localSelectedIds.length} pass
+                  {localSelectedIds.length !== 1 ? 'es' : ''} selected
+                </Text>
+              </View>
+              {computedModifiers.salePriceBonusPercent > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  💰 +{(computedModifiers.salePriceBonusPercent * 5).toFixed(0)}
+                  % sales profit
+                </Text>
+              )}
+              {computedModifiers.inventoryBonusSlots > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  🎒 +{computedModifiers.inventoryBonusSlots} inventory slots
+                </Text>
+              )}
+              {computedModifiers.allowanceBonusPercent > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  💵 +{computedModifiers.allowanceBonusPercent}% daily allowance
+                </Text>
+              )}
+              {computedModifiers.jokerBonusCount > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  🃏 +{computedModifiers.jokerBonusCount} joker
+                  {computedModifiers.jokerBonusCount !== 1 ? 's' : ''}
+                </Text>
+              )}
+              {computedModifiers.rerollBonusCount > 0 && (
+                <Text style={styles.accumulatedEffect}>
+                  🔄 +{computedModifiers.rerollBonusCount} reroll
+                  {computedModifiers.rerollBonusCount !== 1 ? 's' : ''}
+                </Text>
+              )}
+            </PixelBorder>
+          )}
 
         <ScrollViewWithFade
           fadeColor={colors.offWhite}
@@ -518,7 +520,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
     color: colors.brown.primary,

@@ -6,6 +6,7 @@ import {
   ImageBackground,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -23,6 +24,8 @@ import { useFlavorText } from '../src/context/FlavorTextContext';
 import { useGame } from '../src/hooks/useGame';
 import { useJokers } from '../src/hooks/useJokers';
 import { useWallet } from '../src/hooks/useWallet';
+import { useAppDispatch } from '../src/store/hooks';
+import { incrementMaxDeposit } from '../src/store/slices/dailyStatsSlice';
 import ConfirmationModal from './components/ConfirmationModal';
 import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
@@ -33,14 +36,29 @@ interface PiggyBankPageProps {
   onBack?: () => void;
 }
 
-export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
+export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
+  console.log(
+    '🏦 PiggyBankPage rendering, onBack:',
+    onBack ? 'provided' : 'not provided'
+  );
+
   const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } =
     useWallet();
+
+  console.log(
+    '🏦 PiggyBankPage wallet data - balance:',
+    balance,
+    'stashed:',
+    stashedAmount
+  );
   const { day, period } = useGame();
   const { setEvent } = useFlavorText();
   const { jokers } = useJokers();
+  const dispatch = useAppDispatch();
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingValue, setTypingValue] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
     visible: boolean;
     title: string;
@@ -65,9 +83,10 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
   const shakeX = useSharedValue(0);
 
   // Set piggy bank flavor text when component loads
-  useEffect(() => {
-    setEvent('PIGGY_BANK');
-  }, [setEvent]);
+  // TEMPORARILY DISABLED to debug crash
+  // useEffect(() => {
+  //   setEvent('PIGGY_BANK');
+  // }, [setEvent]);
 
   // Initialize previous stashed amount on first render
   useEffect(() => {
@@ -141,8 +160,57 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
     transform: [{ translateX: shakeX.value }],
   }));
 
+  // Use percentage-based slider (0-100%) to handle any balance size
   const maxAmount =
     mode === 'deposit' ? Math.max(0, balance) : Math.max(0, stashedAmount);
+
+  // Convert amount to percentage for slider
+  const amountPercentage = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+
+  const handleTextInput = (text: string) => {
+    // Remove any non-numeric characters except decimal point and dollar sign
+    const cleanText = text.replace(/[^0-9.]/g, '');
+
+    // Parse and cap the value at max
+    const numValue = parseFloat(cleanText) || 0;
+    const cappedValue = Math.min(numValue, maxAmount);
+
+    // If value exceeds max, update typing value to show capped amount
+    if (numValue > maxAmount) {
+      setTypingValue(cappedValue.toFixed(2));
+    } else {
+      setTypingValue(cleanText);
+    }
+
+    setAmount(cappedValue);
+  };
+
+  const handleSliderChange = (percentage: number) => {
+    // Convert percentage (0-100) to dollar amount and round to 2 decimals
+    const dollarAmount = (percentage / 100) * maxAmount;
+    const roundedAmount = Math.round(dollarAmount * 100) / 100;
+    setAmount(roundedAmount);
+    // Also update typing value if currently focused so input reflects slider position
+    if (isTyping) {
+      setTypingValue(roundedAmount.toFixed(2));
+    }
+  };
+
+  const handleInputFocus = () => {
+    setIsTyping(true);
+    // Initialize typing value with current amount
+    setTypingValue(amount > 0 ? amount.toString() : '');
+  };
+
+  const handleInputBlur = () => {
+    setIsTyping(false);
+    setTypingValue('');
+  };
+
+  // Check for deposit bonus joker
+  const depositBonusJoker = findJokerById(jokers, JOKER_IDS.DEPOSIT_BONUS);
+  const hasBonus = depositBonusJoker && mode === 'deposit' && amount > 0;
+  const displayAmount = hasBonus ? amount * 1.1 : amount;
 
   // Calculate dynamic font size for stashed amount based on text length
   const stashedAmountText = `$${stashedAmount.toFixed(2)}`;
@@ -167,18 +235,24 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
       return;
     }
 
-    // Check for Deposit Bonus joker to show appropriate message
-    let bonusApplied = false;
-    let finalAmount = amount;
     if (mode === 'deposit') {
-      const depositBonusJoker = findJokerById(jokers, JOKER_IDS.DEPOSIT_BONUS);
-      if (depositBonusJoker) {
-        finalAmount = amount * 1.1; // Calculate final amount for display
-        bonusApplied = true;
+      // Check if depositing entire wallet (for Maximalist hall pass)
+      const epsilon = 0.01; // Small tolerance for floating point comparison
+      const isMaxDeposit = Math.abs(amount - balance) < epsilon;
+
+      console.log(
+        `💰 Piggy Bank - amount: ${amount}, balance: ${balance}, diff: ${Math.abs(amount - balance)}, isMaxDeposit: ${isMaxDeposit}`
+      );
+
+      if (isMaxDeposit) {
+        dispatch(incrementMaxDeposit());
+        console.log(
+          `🏆 Maximalist: Full wallet deposited! ($${amount.toFixed(2)})`
+        );
       }
     }
 
-    // Handle the transaction - stashMoney will handle deposit bonus internally
+    // Handle the transaction - stashMoney handles deposit bonus internally
     const success =
       mode === 'deposit'
         ? stashMoney(amount, jokers) // Pass jokers to handle deposit bonus
@@ -327,26 +401,43 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps = {}) {
                 </Text>
 
                 <View style={styles.amountDisplay}>
-                  <Text
-                    style={[
-                      styles.amountValue,
-                      { color: mode === 'deposit' ? '#4ade80' : '#22c55e' },
-                    ]}
-                  >
-                    ${amount.toFixed(2)}
-                  </Text>
-                  <Text style={styles.maxAmount}>
-                    Max: ${maxAmount.toFixed(2)}
-                  </Text>
+                  <View style={styles.amountInputContainer}>
+                    <TextInput
+                      style={[
+                        styles.amountValue,
+                        { color: mode === 'deposit' ? '#4ade80' : '#22c55e' },
+                      ]}
+                      value={
+                        isTyping
+                          ? `$${typingValue}`
+                          : amount > 0
+                            ? `$${amount.toFixed(2)}`
+                            : '$0.00'
+                      }
+                      onChangeText={handleTextInput}
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                      keyboardType="numeric"
+                      selectTextOnFocus
+                    />
+                  </View>
                 </View>
+
+                {hasBonus && (
+                  <View style={styles.bonusIndicator}>
+                    <Text style={styles.bonusText}>
+                      💰 +10% bonus = ${displayAmount.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
 
                 <Slider
                   style={styles.slider}
                   minimumValue={0}
-                  maximumValue={maxAmount}
-                  step={0.01}
-                  value={amount}
-                  onValueChange={setAmount}
+                  maximumValue={100}
+                  step={1}
+                  value={amountPercentage}
+                  onValueChange={handleSliderChange}
                   minimumTrackTintColor={
                     mode === 'deposit' ? '#4ade80' : '#22c55e'
                   }
@@ -485,7 +576,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   piggyBankAmount: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.gold.light,
     fontFamily: 'PixeloidMono',
@@ -552,12 +643,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+  },
+  amountInputContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 2,
+    borderColor: 'rgba(251, 191, 36, 0.5)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  bonusIndicator: {
+    backgroundColor: 'rgba(34, 197, 94, 0.3)',
+
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+
+    alignItems: 'center',
+  },
+  bonusText: {
+    fontSize: 14,
+    color: '#86efac',
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   amountValue: {
     fontSize: 28,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   maxAmount: {
     fontSize: 14,
@@ -570,7 +687,33 @@ const styles = StyleSheet.create({
   slider: {
     width: '100%',
     height: 40,
-    marginBottom: 15,
+    marginBottom: -10,
+  },
+  sliderNote: {
+    fontSize: 12,
+    color: '#fbbf24',
+    textAlign: 'center',
+  },
+  quickPercentContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10,
+  },
+  quickPercentButton: {
+    flex: 1,
+    backgroundColor: 'rgba(123, 169, 101, 0.3)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'rgba(123, 169, 101, 0.6)',
+  },
+  quickPercentText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   quickAmountContainer: {
     flexDirection: 'row',

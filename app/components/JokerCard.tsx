@@ -80,7 +80,14 @@ function JokerCard({
   onShowJokerSelector,
   onTriggerEvent,
 }: JokerCardProps) {
-  const { jokers, activateJoker, addJoker, removeJoker } = useJokers();
+  const {
+    jokers,
+    activateJoker,
+    addJoker,
+    removeJoker,
+    usedTodayJokerIds,
+    markJokerUsedToday,
+  } = useJokers();
   const { periodCount, revertToPreviousPeriod, incrementPeriod, jumpToPeriod } =
     useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
@@ -179,6 +186,27 @@ function JokerCard({
   const isActivating = useRef(false);
 
   const handleActivate = useCallback(() => {
+    // For copied jokers, use originalId for activation checks
+    const activationId = (joker as any).originalId || joker.id;
+
+    console.log(
+      '🔍 handleActivate called for:',
+      joker.name,
+      'ID:',
+      joker.id,
+      'ActivationID:',
+      activationId,
+      'Type:',
+      joker.type
+    );
+    console.log('🔍 Current usedTodayJokerIds:', usedTodayJokerIds);
+    console.log(
+      '🔍 Checking if',
+      activationId.toString(),
+      'is in usedTodayJokerIds:',
+      usedTodayJokerIds.includes(activationId.toString())
+    );
+
     if (isActivating.current) {
       console.log(
         '🃏 Activation already in progress, ignoring duplicate call for:',
@@ -192,6 +220,21 @@ function JokerCard({
       return;
     }
 
+    // Check if this instant joker has already been used today (use originalId for copies)
+    if (
+      joker.type === 'one-time' &&
+      usedTodayJokerIds.includes(activationId.toString())
+    ) {
+      console.log('🚫 Joker already used today:', joker.name, 'ID:', joker.id);
+      showAlert(
+        'Already Used',
+        'This instant joker has already been used today. It will be available again tomorrow!',
+        '⏳'
+      );
+      return;
+    }
+
+    console.log('✅ Joker NOT in used list, proceeding with activation');
     isActivating.current = true;
     console.log(
       '🃏 handleActivate called for joker:',
@@ -206,7 +249,7 @@ function JokerCard({
     }, 1000); // Increased to 1 second
 
     if (
-      joker.id === JOKER_IDS.DOUBLE_UP ||
+      activationId === JOKER_IDS.DOUBLE_UP ||
       joker.effect === 'double_candy_price'
     ) {
       // Show candy selector modal for Double Up
@@ -222,17 +265,17 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.GLITCH_IN_THE_MATRIX) {
+    } else if (activationId === JOKER_IDS.GLITCH_IN_THE_MATRIX) {
       // Show joker selector modal for duplication
       if (onShowJokerSelector) {
         onShowJokerSelector(joker);
       } else {
         setShowJokerSelector(true);
       }
-    } else if (joker.id === JOKER_IDS.MASTER_NEGOTIATOR) {
+    } else if (activationId === JOKER_IDS.MASTER_NEGOTIATOR) {
       // Show candy selector modal for conversion
       onShowCandySelector?.(joker);
-    } else if (joker.id === JOKER_IDS.TEMPORARY_EMPEROR) {
+    } else if (activationId === JOKER_IDS.TEMPORARY_EMPEROR) {
       // Show confirmation for time skip with auto profits
       showConfirm(
         'Temporary Emperor',
@@ -243,7 +286,7 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.MARKET_CRASH) {
+    } else if (activationId === JOKER_IDS.MARKET_CRASH) {
       // Show confirmation for market crash
       showConfirm(
         'Market Crash',
@@ -254,22 +297,22 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
+    } else if (activationId === JOKER_IDS.MARKET_MANIPULATION) {
       // Show candy selector modal for market manipulation
       onShowCandySelector?.(joker);
-    } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
+    } else if (activationId === JOKER_IDS.THE_BIG_SHORT) {
       // Show candy selector modal for big short
       onShowCandySelector?.(joker);
-    } else if (joker.id === JOKER_IDS.PROPACANDIES) {
+    } else if (activationId === JOKER_IDS.PROPACANDIES) {
       // Show candy selector modal for Propacandies
       onShowCandySelector?.(joker);
-    } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
+    } else if (activationId === JOKER_IDS.BET_YOU_IM_FASTER) {
       // Show candy selector modal for inventory filling
       onShowCandySelector?.(joker);
-    } else if (joker.id === JOKER_IDS.TACHYONIC_SPRINT) {
+    } else if (activationId === JOKER_IDS.TACHYONIC_SPRINT) {
       // Show period selector modal for time travel
       setShowPeriodSelector(true);
-    } else if (joker.id === JOKER_IDS.ROMAN_COIN) {
+    } else if (activationId === JOKER_IDS.ROMAN_COIN) {
       // Show confirmation for Roman Coin activation
       showConfirm(
         'Roman Coin',
@@ -280,11 +323,11 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.LOST_AND_FOUND) {
+    } else if (activationId === JOKER_IDS.LOST_AND_FOUND) {
       // Generate random amount for preview
       const baseAmount = Math.floor(Math.random() * 401) + 100; // 100 to 500
       const hasHideAndSeek = jokers.some(
-        (j: any) => j.id === JOKER_IDS.HIDE_AND_SEEK
+        (j: any) => ((j as any).originalId || j.id) === JOKER_IDS.HIDE_AND_SEEK
       );
       const finalAmount = hasHideAndSeek ? baseAmount * 3 : baseAmount;
 
@@ -299,7 +342,7 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.DODGEBALL_DASH) {
+    } else if (activationId === JOKER_IDS.DODGEBALL_DASH) {
       // Show confirmation for Dodgeball Dash activation
       showConfirm(
         'Dodgeball Dash',
@@ -310,7 +353,7 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.PURSUASION) {
+    } else if (activationId === JOKER_IDS.PURSUASION) {
       // Show confirmation for Pursuasion activation
       showConfirm(
         'Pursuasion',
@@ -321,18 +364,18 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.BAKE_SALE) {
+    } else if (activationId === JOKER_IDS.BAKE_SALE) {
       // Show confirmation for Bake Sale
       showConfirm(
         'Bake Sale',
-        'Cash rules everything around me! Instantly gain $1000?',
+        'Cash rules everything around me! Instantly gain $3000?',
         '🧁',
         () => handleBakeSale(),
         'Collect Money!',
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.CONTINENTAL_DRIFT) {
+    } else if (activationId === JOKER_IDS.CONTINENTAL_DRIFT) {
       // Show confirmation for Continental Drift
       showConfirm(
         'Continental Drift',
@@ -343,7 +386,7 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.TROJAN_HORSE) {
+    } else if (activationId === JOKER_IDS.TROJAN_HORSE) {
       // Show confirmation for Trojan Horse
       showConfirm(
         'Trojan Horse',
@@ -354,7 +397,7 @@ function JokerCard({
         'Cancel',
         () => {}
       );
-    } else if (joker.id === JOKER_IDS.ATLAS_BONUS) {
+    } else if (activationId === JOKER_IDS.ATLAS_BONUS) {
       // Show confirmation for Atlas Bonus
       showConfirm(
         'Atlas Bonus',
@@ -384,6 +427,7 @@ function JokerCard({
   }, [
     joker,
     disableActivation,
+    usedTodayJokerIds,
     onShowCandySelector,
     onShowJokerSelector,
     showConfirm,
@@ -391,11 +435,13 @@ function JokerCard({
   ]);
 
   const handleTimeRevert = async () => {
+    // Mark the joker as used today FIRST to prevent double-activation
+    // Use originalId for copies so all copies share the same "used" status
+    const activationId = (joker as any).originalId || joker.id;
+    markJokerUsedToday(activationId.toString());
+
     const timeReverted = revertToPreviousPeriod();
     if (timeReverted) {
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-
       showAlert(
         'Time Reversed!',
         'You have successfully reverted to the previous period. Use this knowledge wisely!',
@@ -411,10 +457,12 @@ function JokerCard({
   };
 
   const handlePeriodSelection = async (targetPeriod: number) => {
-    if (jumpToPeriod && jumpToPeriod(targetPeriod)) {
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
+    // Mark the joker as used today FIRST to prevent double-activation
+    // Use originalId for copies so all copies share the same "used" status
+    const activationId = (joker as any).originalId || joker.id;
+    markJokerUsedToday(activationId.toString());
 
+    if (jumpToPeriod && jumpToPeriod(targetPeriod)) {
       showAlert(
         'Tachyonic Sprint Activated!',
         `Time has bent to your will! You have traveled back to period ${targetPeriod}.\n\nYour wallet and inventory remain intact, but game events and prices have been reset.`,
@@ -475,6 +523,11 @@ function JokerCard({
       return;
     }
 
+    // Mark the joker as used today FIRST to prevent double-activation
+    // Use originalId for copies so all copies share the same "used" status
+    const activationId = (joker as any).originalId || joker.id;
+    markJokerUsedToday(activationId.toString());
+
     const currentTotal = getTotalInventoryCount();
     console.log(
       `Master of Trade: Current inventory: ${currentTotal}/${memoizedInventoryLimit}`
@@ -507,9 +560,6 @@ function JokerCard({
       `Master of Trade: Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`
     );
 
-    // Remove the Master of Trade joker (it's one-time use)
-    removeJoker(joker.id);
-
     showAlert(
       'Trade Completed!',
       `Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} into ${sourceInventoryItem.quantity} ${targetCandyType}!`,
@@ -532,6 +582,11 @@ function JokerCard({
   );
 
   const handleTemporaryEmperor = async () => {
+    // Mark the joker as used today FIRST to prevent double-activation
+    // Use originalId for copies so all copies share the same "used" status
+    const activationId = (joker as any).originalId || joker.id;
+    markJokerUsedToday(activationId.toString());
+
     const skippedPeriod = periodCount + 1;
     const targetPeriod = periodCount + 2; // Skip one period, go to period after next
     let totalProfit = 0;
@@ -554,9 +609,6 @@ function JokerCard({
     incrementPeriod('market'); // First advance: period 5 -> period 6
     incrementPeriod('market'); // Second advance: period 6 -> period 7 (skip period 6)
 
-    // Remove the joker (it's one-time use)
-    removeJoker(joker.id);
-
     showAlert(
       "Emperor's Decree Executed!",
       `Time has been advanced by 2 periods (skipped period ${skippedPeriod}).\n\nAuto-profit from selling 3 of each candy:\n${profitBreakdown.join('\n')}\n\nTotal gained: $${totalProfit.toFixed(2)}`,
@@ -565,6 +617,18 @@ function JokerCard({
   };
 
   const handleMarketCrash = async () => {
+    // Mark the joker as used today FIRST to prevent double-activation
+    console.log(
+      '🔧 Market Crash: Marking joker as used today, ID:',
+      joker.id,
+      'Type:',
+      typeof joker.id
+    );
+    // Use originalId for copies so all copies share the same "used" status
+    const activationId = (joker as any).originalId || joker.id;
+    markJokerUsedToday(activationId.toString());
+    console.log('🔧 Market Crash: Joker marked as used');
+
     const priceChanges = [];
 
     // Reduce all candy prices by 50% for the current period
@@ -581,16 +645,6 @@ function JokerCard({
       );
     }
 
-    // Remove the joker (it's one-time use)
-    console.log(
-      '🔧 Market Crash: Attempting to remove joker with ID:',
-      joker.id,
-      'Type:',
-      typeof joker.id
-    );
-    removeJoker(joker.id);
-    console.log('🔧 Market Crash: removeJoker called');
-
     showAlert(
       'Market Crash Executed!',
       `All candy prices have been reduced by 50% for this period!\n\n${priceChanges.join('\n')}\n\nTime to stock up!`,
@@ -600,8 +654,26 @@ function JokerCard({
 
   const handleRomanCoin = async () => {
     console.log('🪙 Roman Coin: Starting activation');
+    console.log(
+      '🪙 Roman Coin: usedTodayJokerIds BEFORE marking:',
+      usedTodayJokerIds
+    );
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      console.log(
+        '🪙 Roman Coin: Marking joker as used, ID:',
+        joker.id,
+        'Type:',
+        typeof joker.id
+      );
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      console.log(
+        '🪙 Roman Coin: markJokerUsedToday called, waiting for state update...'
+      );
+
       // Add $200 to wallet
       console.log('🪙 Roman Coin: Adding $2000 to wallet');
       addMoney(2000);
@@ -612,12 +684,6 @@ function JokerCard({
         'You sold the ancient Roman coin and received $2000!',
         '🪙'
       );
-
-      // Remove the joker after a delay to avoid interfering with modal
-      setTimeout(() => {
-        console.log('🪙 Roman Coin: Removing joker with ID:', joker.id);
-        removeJoker(joker.id);
-      }, 500);
     } catch (error) {
       console.error('🪙 Roman Coin: Error during activation:', error);
       showAlert(
@@ -632,6 +698,12 @@ function JokerCard({
     console.log('🎒 Lost and Found: Starting activation');
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      console.log('🎒 Lost and Found: Marking joker as used, ID:', joker.id);
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+
       // Generate random amount between $100-$500
       const baseAmount = Math.floor(Math.random() * 401) + 100; // 100 to 500
 
@@ -670,12 +742,6 @@ function JokerCard({
           '🎒'
         );
       }
-
-      // Remove the joker after a delay to avoid interfering with modal
-      setTimeout(() => {
-        console.log('🎒 Lost and Found: Removing joker with ID:', joker.id);
-        removeJoker(joker.id);
-      }, 500);
     } catch (error) {
       console.error('🎒 Lost and Found: Error during activation:', error);
       showAlert(
@@ -690,13 +756,15 @@ function JokerCard({
     console.log('⚡ Dodgeball Dash: Starting activation');
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      console.log('⚡ Dodgeball Dash: Joker marked as used');
+
       // This joker sets up a "next sale doubles" effect
       // We'll need to track this in the sales system
       console.log('⚡ Dodgeball Dash: Setting up next sale multiplier');
-
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-      console.log('⚡ Dodgeball Dash: Joker removed from inventory');
 
       showAlert(
         'Dodgeball Dash Activated!',
@@ -719,6 +787,12 @@ function JokerCard({
     console.log('🗣️ Pursuasion: Joker ID:', joker.id);
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      console.log('🗣️ Pursuasion: Joker marked as used');
+
       // Activate the joker effect for current period
       const activated = await activateJoker(
         Number(joker.id),
@@ -728,18 +802,12 @@ function JokerCard({
       console.log('🗣️ Pursuasion: Effect activated result:', activated);
       console.log('🗣️ Pursuasion: Effect activated for period', periodCount);
 
-      // Show alert BEFORE removing joker to avoid re-render interference
+      // Show alert AFTER marking joker as used
       showAlert(
         'Pursuasion Activated!',
         'Your next candy sale will earn 2x profit!',
         '🗣️'
       );
-
-      // Remove the joker after a delay to avoid interfering with modal
-      setTimeout(() => {
-        removeJoker(joker.id);
-        console.log('🗣️ Pursuasion: Joker removed from inventory');
-      }, 500);
     } catch (error) {
       console.error('🗣️ Pursuasion: Error during activation:', error);
       showAlert('Error', 'An error occurred while activating Pursuasion', '❌');
@@ -750,21 +818,21 @@ function JokerCard({
     console.log('🧁 Bake Sale: Starting activation');
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      console.log('🧁 Bake Sale: Joker marked as used');
+
       // Add $1000 to wallet
-      addMoney(1000);
-      console.log('🧁 Bake Sale: Added $1000 to wallet');
+      addMoney(3000);
+      console.log('🧁 Bake Sale: Added $3000 to wallet');
 
       showAlert(
         'Bake Sale Success!',
-        'You collected $1000 from your bake sale! Cash rules everything around me!',
+        'You collected $3000 from your bake sale! Cash rules everything around me!',
         '🧁'
       );
-
-      // Remove the joker after a delay to avoid interfering with modal
-      setTimeout(() => {
-        removeJoker(joker.id);
-        console.log('🧁 Bake Sale: Joker removed from inventory');
-      }, 500);
     } catch (error) {
       console.error('🧁 Bake Sale: Error during activation:', error);
       showAlert('Error', 'An error occurred while activating Bake Sale', '❌');
@@ -787,8 +855,15 @@ function JokerCard({
   }, [joker.type]);
 
   const typeText = useMemo(() => {
-    return joker.type === 'persistent' ? 'Aura' : 'Instant';
-  }, [joker.type]);
+    if (joker.type === 'persistent') {
+      return 'Aura';
+    }
+    // Check if instant joker has been used today
+    if (usedTodayJokerIds.includes(joker.id.toString())) {
+      return 'Used';
+    }
+    return 'Instant';
+  }, [joker.type, usedTodayJokerIds, joker.id]);
 
   // Get flavor text from standardized jokers if missing (for backward compatibility)
   const flavorText = useMemo(() => {
@@ -824,6 +899,11 @@ function JokerCard({
     );
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+
       // Define candy types (matches the game's candy types)
       const candyTypes = [
         'Snickers',
@@ -871,9 +951,6 @@ function JokerCard({
         );
       });
 
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-
       showAlert(
         'Continental Drift Activated!',
         `The market landscape has shifted! All candy prices have been shuffled:\n\n${priceChanges.join('\n')}`,
@@ -895,6 +972,11 @@ function JokerCard({
     );
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+
       // Define candy types
       const candyTypes = [
         'Snickers',
@@ -919,9 +1001,6 @@ function JokerCard({
       incrementPeriod();
       console.log('🐴 Trojan Horse: Skipped one period');
 
-      // Remove the joker (it's one-time use)
-      removeJoker(joker.id);
-
       showAlert(
         'Trojan Horse Activated!',
         `Smuggled in 5 of every candy and skipped ahead one period!`,
@@ -941,6 +1020,11 @@ function JokerCard({
     console.log('🏔️ Atlas Bonus: Starting activation - adding $1500');
 
     try {
+      // Mark the joker as used today FIRST to prevent double-activation
+      // Use originalId for copies so all copies share the same "used" status
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+
       // Add $1500 to wallet
       addMoney(1500);
 
@@ -949,11 +1033,6 @@ function JokerCard({
         'The weight of the world brings heavy profits! You gained $1500.',
         '🏔️'
       );
-
-      // Remove the joker after a delay to avoid interfering with modal
-      setTimeout(() => {
-        removeJoker(joker.id);
-      }, 500);
     } catch (error) {
       console.error('🏔️ Atlas Bonus: Error during activation:', error);
       showAlert(
@@ -969,6 +1048,11 @@ function JokerCard({
     : debugMode
       ? { onPress: handleDebugAdd, activeOpacity: 0.8 }
       : {};
+
+  // Check if this instant joker has been used today
+  const isUsedToday =
+    joker.type === 'one-time' &&
+    usedTodayJokerIds.includes(joker.id.toString());
 
   return (
     <>
@@ -990,7 +1074,8 @@ function JokerCard({
 
             {joker.type === 'one-time' &&
               !disableActivation &&
-              !isAfterSchool && (
+              !isAfterSchool &&
+              !isUsedToday && (
                 <TouchableOpacity
                   style={styles.useButton}
                   onPress={handleActivate}
@@ -1314,7 +1399,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginBottom: 8,
+    marginBottom: 4,
     marginTop: -8,
     marginHorizontal: -8,
     borderTopLeftRadius: 12,
@@ -1381,7 +1466,7 @@ const styles = StyleSheet.create({
   contentSection: {
     flex: 1,
     justifyContent: 'flex-start',
-    marginTop: 8,
+    marginTop: 4,
   },
   jokerDescription: {
     fontSize: 12,

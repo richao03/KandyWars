@@ -19,7 +19,7 @@ import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { setPeriodCount } from '../../src/store/slices/gameSlice';
-import { unlockHallPass } from '../../src/store/slices/hallPassSlice';
+import { syncHallPassesFromFirebase } from '../../src/store/slices/hallPassSlice';
 import { setHallPassModifiers } from '../../src/store/slices/hallPassModifiersSlice';
 import {
   setTotalCompletions,
@@ -68,8 +68,6 @@ export default function CandyWarsTitleScreen({
     periodCount,
     isInitialized,
     setIsInitialized,
-    setHasCompletedMarketTutorial,
-    setHasCompletedAfterSchoolTutorial,
   } = useGame();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
@@ -133,12 +131,10 @@ export default function CandyWarsTitleScreen({
         console.log('🏆 Unlocked hall passes:', userObject.unlockedHallPasses);
         console.log('💰 Highest single sale:', userObject.highestSingleSale);
 
-        // Sync hall passes from Firebase to Redux
+        // Sync hall passes from Firebase to Redux (batch operation)
         if (userObject.unlockedHallPasses && userObject.unlockedHallPasses.length > 0) {
           console.log('🎓 Syncing hall passes from Firebase to Redux...');
-          userObject.unlockedHallPasses.forEach(passId => {
-            dispatch(unlockHallPass({ passId }));
-          });
+          dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
           console.log('✅ Hall passes synced:', userObject.unlockedHallPasses);
         }
       } catch (error) {
@@ -251,12 +247,10 @@ export default function CandyWarsTitleScreen({
       dispatch(setCachedUserObject(userObject));
       console.log('✅ User object refreshed and cached:', userObject);
 
-      // Sync hall passes from Firebase
+      // Sync hall passes from Firebase (batch operation)
       if (userObject.unlockedHallPasses?.length > 0) {
         console.log('🎖️ Syncing hall passes from Firebase:', userObject.unlockedHallPasses);
-        userObject.unlockedHallPasses.forEach(passId => {
-          dispatch(unlockHallPass({ passId }));
-        });
+        dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
       }
 
       // Immediately save game state when difficulty is selected
@@ -520,33 +514,6 @@ export default function CandyWarsTitleScreen({
 
                 {__DEV__ && (
                   <>
-                    <PressableButton
-                      onPress={() => {
-                        setHasCompletedMarketTutorial(false);
-                        setHasCompletedAfterSchoolTutorial(false);
-                        console.log('🔧 DEBUG: Tutorial flags reset');
-                      }}
-                      shadowColor="#6b2d2d"
-                      shadowOffset={{ width: 0, height: 4 }}
-                      shadowOpacity={0.4}
-                      shadowRadius={5}
-                      elevation={8}
-                      style={{ width: '80%' }}
-                    >
-                      <PixelBorder
-                        borderColor="#ff6b6b"
-                        borderWidth={3}
-                        backgroundColor="#ffe8e8"
-                        innerPadding={0}
-                      >
-                        <View style={[styles.button, styles.debugButton]}>
-                          <Text style={[styles.buttonText, styles.debugText]}>
-                            Reset Tutorial
-                          </Text>
-                        </View>
-                      </PixelBorder>
-                    </PressableButton>
-
                     <PressableButton
                       onPress={() => {
                         console.log(

@@ -25,14 +25,17 @@ const MarketList = React.memo(function MarketList({
   onLunchBack,
 }: MarketListProps) {
   const renderItem = useCallback(
-    ({ item, index }: { item: CandyForMarket; index: number }) => (
-      <CandyListItem
-        item={item}
-        index={index}
-        localPricesUpdating={localPricesUpdating}
-        onPress={onCandyPress}
-      />
-    ),
+    ({ item, index }: { item: CandyForMarket; index: number }) => {
+      // Always render normally without zone wrapper
+      return (
+        <CandyListItem
+          item={item}
+          index={index}
+          localPricesUpdating={localPricesUpdating}
+          onPress={onCandyPress}
+        />
+      );
+    },
     [localPricesUpdating, onCandyPress]
   );
 

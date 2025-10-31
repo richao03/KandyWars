@@ -1,9 +1,9 @@
 import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import React, {
-  lazy,
   Suspense,
+  lazy,
   startTransition,
   useCallback,
   useEffect,
@@ -12,7 +12,6 @@ import React, {
   useState,
 } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useCopilot } from 'react-native-copilot';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
@@ -31,18 +30,24 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
+import { useBackgroundMusic } from '../../src/hooks/useBackgroundMusic';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { resetDailyStats } from '../../src/store/slices/candySalesSlice';
+import { getPeriodsPerDay } from '../../src/store/slices/gameSlice';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
-import { consumeEffect, selectActiveEffects } from '../../src/store/slices/merchantSlice';
-import { forceSave } from '../../src/store/store';
+import {
+  consumeEffect,
+  selectActiveEffects,
+} from '../../src/store/slices/merchantSlice';
+import { HallPassUtils } from '../../src/utils/hallPassUtils';
 import { JokerService } from '../../src/utils/jokerService';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EventModal from '../components/EventModal';
 import { Location } from '../components/LocationModal';
 import MarketContent from '../components/MarketContent';
-import MarketWithCopilot from '../components/MarketWithCopilot';
 import { Candy } from '../types';
+import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 
 // Lazy load modals that are shown less frequently
 const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
@@ -75,6 +80,10 @@ type PriceBreakdown = {
     bonusPercent: number;
     bonusAmount: number;
   };
+  vacuumSealerPenalty?: {
+    penaltyPercent: number; // e.g., 50 for -50%
+    isActive: boolean;
+  };
   finalPrice: number;
 };
 
@@ -82,7 +91,6 @@ type CandyForMarket = Candy & {
   cost: number;
   quantityOwned: number;
   averagePrice: number | null;
-  priceBreakdown?: PriceBreakdown;
 };
 
 const baseCandies = [
@@ -98,6 +106,9 @@ const baseCandies = [
 function Market(props) {
   // Check if this tab is currently focused to prevent unnecessary renders
   const isFocused = useIsFocused();
+
+  // Get periods per day based on hall pass selection (6 for Time Crunch, 8 otherwise)
+  const periodsPerDay = useAppSelector((state) => getPeriodsPerDay(state));
 
   // Debug: Log mount/unmount
   const instanceIdRef = useRef(Math.random().toString(36).substring(7));
@@ -117,31 +128,19 @@ function Market(props) {
 
   const { balance, spend, add } = useWallet();
 
-  // Always call useCopilot to satisfy Rules of Hooks, but check if tutorial is completed
-  const { hasCompletedMarketTutorial, setHasCompletedMarketTutorial } =
-    useGame();
-  const {
-    start,
-    stop: stopCopilot,
-    eventEmitter,
-    copilotEvents,
-    isFirstStep,
-    currentStep,
-    visible,
-  } = useCopilot();
-
   // Track active view on mount only
   useEffect(() => {
     setLastActiveView('market');
   }, [setLastActiveView]);
 
-  // Reset lunch minigames flag when period advances past 4
+  // Reset lunch minigames flag when period advances past lunch period
+  const lunchPeriod = Math.floor(periodsPerDay / 2);
   useEffect(() => {
-    if (period !== 4 && showLunchMinigames) {
-      console.log('🍽️ Period advanced past 4, hiding lunch minigames');
+    if (period !== lunchPeriod && showLunchMinigames) {
+      console.log(`🍽️ Period advanced past ${lunchPeriod}, hiding lunch minigames`);
       setShowLunchMinigames(false);
     }
-  }, [period, showLunchMinigames]);
+  }, [period, lunchPeriod, showLunchMinigames]);
   const {
     inventory,
     addToInventory,
@@ -161,11 +160,12 @@ function Market(props) {
     setPricesUpdating,
     hasPlayedLunchMinigame,
     markLunchMinigamePlayed,
+    isAfterSchool,
   } = useGame();
 
   // Log every render to see how many instances are active
   console.log(
-    `📊 Market RENDER - Instance: ${instanceIdRef.current}, Period: ${period}, PeriodCount: ${periodCount}, Day: ${day}`
+    `📊 Market RENDER - Instance: ${instanceIdRef.current}, Period: ${period}, PeriodCount: ${periodCount}, Day: ${day}, isAfterSchool: ${isAfterSchool}`
   );
 
   const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
@@ -184,10 +184,14 @@ function Market(props) {
   const [localPricesUpdating, setLocalPricesUpdating] = useState(false);
 
   const { activeEffects, jokers, removeJoker, clearActiveEffect } = useJokers();
-  const { applySalePriceBonus, getSalePriceBonus } = useHallPass();
+  const { applySalePriceBonus, getSalePriceBonus, selectedPassIds } =
+    useHallPass();
 
   // Get pre-computed hall pass modifiers from Redux (computed once at game start)
   const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
+
+  // Get candy sales state for Vacuum Sealer penalty check
+  const hasEarlySaleToday = useAppSelector((state) => state.candySales.hasEarlySaleToday);
 
   // Get merchant effects
   const merchantEffects = useAppSelector(selectActiveEffects);
@@ -202,157 +206,7 @@ function Market(props) {
   useHomeMadeBonus(); // This hook handles Home Made joker bonus
   const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
   const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
-  // Tutorial using Copilot - only show if not already completed
-  const shouldShowTutorial =
-    day === 1 && periodCount === 0 && !hasCompletedMarketTutorial;
-  const tutorialStarted = useRef(false);
-
-  // Reset tutorialStarted ref when not on day 1
-  useEffect(() => {
-    if (day !== 1) {
-      tutorialStarted.current = false;
-    }
-  }, [day]);
-
-  // Simple tutorial auto-start - only run on day 1
-  useEffect(() => {
-    // Skip entirely if not day 1
-    if (day !== 1) return;
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🎓 Tutorial check:', {
-        day,
-        periodCount,
-        hasCompletedMarketTutorial,
-        shouldShowTutorial,
-        tutorialStarted: tutorialStarted.current,
-      });
-    }
-
-    if (shouldShowTutorial && !tutorialStarted.current) {
-      console.log('🎓 Auto-starting market tutorial');
-
-      // Small delay to ensure UI is ready
-      const timeoutId = setTimeout(() => {
-        console.log('🎯 Starting market copilot tutorial');
-        tutorialStarted.current = true;
-        start();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [shouldShowTutorial, start, day, periodCount, hasCompletedMarketTutorial]);
-
-  // Mark tutorial as completed when it finishes or is skipped - only on day 1
-  useEffect(() => {
-    // Skip entirely if not day 1
-    if (day !== 1) return;
-
-    if (eventEmitter && copilotEvents) {
-      console.log('🎓 Setting up tutorial event listeners');
-      console.log('🎓 copilotEvents object:', copilotEvents);
-      console.log('🎓 All copilotEvents keys:', Object.keys(copilotEvents));
-      console.log('🎓 STOP event name:', copilotEvents.STOP);
-      console.log('🎓 SKIP event name:', copilotEvents.SKIP);
-
-      const handleComplete = (eventType: string) => {
-        console.log('🎓 Market tutorial event fired:', eventType);
-        console.log(
-          '🎓 Current hasCompletedMarketTutorial:',
-          hasCompletedMarketTutorial
-        );
-        setHasCompletedMarketTutorial(true);
-        // Force immediate save to AsyncStorage
-        setTimeout(() => {
-          forceSave();
-          console.log('💾 Tutorial completion saved to AsyncStorage');
-        }, 100);
-      };
-
-      const handleStop = () => handleComplete('STOP');
-      const handleSkip = () => handleComplete('SKIP');
-
-      // Listen to ALL possible events to see what fires
-      const allEventHandler = (eventName: string) => {
-        console.log('🔔 Copilot event fired:', eventName);
-      };
-
-      // Try to listen to all events
-      if (copilotEvents.STOP) {
-        eventEmitter.on(copilotEvents.STOP, handleStop);
-        console.log('✅ Registered STOP listener');
-      }
-      if (copilotEvents.SKIP) {
-        eventEmitter.on(copilotEvents.SKIP, handleSkip);
-        console.log('✅ Registered SKIP listener');
-      }
-
-      // Also try common event names
-      ['stop', 'skip', 'stepChange', 'start'].forEach((eventName) => {
-        eventEmitter.on(eventName, () => allEventHandler(eventName));
-      });
-
-      console.log('🎓 Event listeners registered');
-
-      return () => {
-        console.log('🎓 Cleaning up event listeners');
-        if (copilotEvents.STOP)
-          eventEmitter.off(copilotEvents.STOP, handleStop);
-        if (copilotEvents.SKIP)
-          eventEmitter.off(copilotEvents.SKIP, handleSkip);
-        ['stop', 'skip', 'stepChange', 'start'].forEach((eventName) => {
-          eventEmitter.off(eventName, () => allEventHandler(eventName));
-        });
-      };
-    }
-  }, [
-    eventEmitter,
-    copilotEvents,
-    setHasCompletedMarketTutorial,
-    hasCompletedMarketTutorial,
-    day,
-  ]);
-
-  // Fallback: Mark tutorial as complete when user navigates away or advances to period 1+
-  useEffect(() => {
-    if (
-      day === 1 &&
-      periodCount > 0 &&
-      !hasCompletedMarketTutorial &&
-      tutorialStarted.current
-    ) {
-      console.log(
-        '🎓 Fallback: Marking market tutorial complete (user advanced period)'
-      );
-      setHasCompletedMarketTutorial(true);
-      forceSave();
-    }
-  }, [
-    day,
-    periodCount,
-    hasCompletedMarketTutorial,
-    setHasCompletedMarketTutorial,
-  ]);
-
-  // Fallback: Mark tutorial as complete when screen loses focus after tutorial started
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        // On blur/unfocus
-        if (
-          day === 1 &&
-          !hasCompletedMarketTutorial &&
-          tutorialStarted.current
-        ) {
-          console.log(
-            '🎓 Fallback: Marking market tutorial complete (user navigated away)'
-          );
-          setHasCompletedMarketTutorial(true);
-          forceSave();
-        }
-      };
-    }, [day, hasCompletedMarketTutorial, setHasCompletedMarketTutorial])
-  );
+  // Farmers Carry hook now runs in GameEffectsManager (root layout) to ensure it's always mounted
 
   // Show location modal after event modal is dismissed
   useEffect(() => {
@@ -416,8 +270,8 @@ function Market(props) {
       (e) => e.period === periodCount + 2
     );
 
-    let periodOfTheDay = (periodCount % 8) + 1;
-    if (periodOfTheDay === 0) {
+    // Use the already-calculated period instead of recalculating
+    if (period === 1 && periodCount > 0) {
       setEvent('NEW_DAY');
     } else if (currentEvent) {
       // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
@@ -435,7 +289,10 @@ function Market(props) {
         lastEventPeriodRef.current = periodCount;
 
         // Minor events (PRICE_SPIKE, PRICE_DROP): Show flavor text only, no modal
-        if (currentEvent.effect === 'PRICE_SPIKE' || currentEvent.effect === 'PRICE_DROP') {
+        if (
+          currentEvent.effect === 'PRICE_SPIKE' ||
+          currentEvent.effect === 'PRICE_DROP'
+        ) {
           console.log(
             '🎯 MINOR EVENT: Showing flavor text only (no modal):',
             currentEvent.flavorText
@@ -446,7 +303,7 @@ function Market(props) {
         else {
           console.log(
             '🎯 MAJOR EVENT: Triggering event modal for period',
-            periodOfTheDay,
+            period,
             ':',
             currentEvent.title
           );
@@ -472,7 +329,8 @@ function Market(props) {
           periodCount,
           baseHintChance,
           undefined,
-          activeEffects
+          activeEffects,
+          periodsPerDay
         );
 
         console.log(
@@ -481,18 +339,23 @@ function Market(props) {
 
         if (Math.random() < effectiveHintChance) {
           // Show all hints from upcoming events (multiple hints possible)
-          const allHints = nextPeriodEvents.map(e => e.hint).filter(h => h).join('\n\n');
-          console.log(`💡 Showing hints for ${nextPeriodEvents.length} events:\n${allHints}`);
+          const allHints = nextPeriodEvents
+            .map((e) => e.hint)
+            .filter((h) => h)
+            .join('\n\n');
+          console.log(
+            `💡 Showing hints for ${nextPeriodEvents.length} events:\n${allHints}`
+          );
           setHint(allHints);
         } else {
           console.log(`💡 Random check failed, showing flavor text instead`);
 
           // Show period-specific flavor text instead of hint
-          if (periodOfTheDay <= 2) {
+          if (period <= 2) {
             setEvent('MORNING_TRADE');
-          } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
+          } else if (period >= Math.floor(periodsPerDay / 2) && period <= Math.ceil(periodsPerDay * 0.75)) {
             setEvent('LUNCH_RUSH');
-          } else if (periodOfTheDay >= 7) {
+          } else if (period >= periodsPerDay - 1) {
             setEvent('FINAL_PERIOD');
           } else {
             setEvent('PERIOD_CHANGE');
@@ -501,11 +364,11 @@ function Market(props) {
       }
     } else {
       // Period-specific flavor text based on time of day
-      if (periodOfTheDay <= 2) {
+      if (period <= 2) {
         setEvent('MORNING_TRADE');
-      } else if (periodOfTheDay >= 4 && periodOfTheDay <= 6) {
+      } else if (period >= Math.floor(periodsPerDay / 2) && period <= Math.ceil(periodsPerDay * 0.75)) {
         setEvent('LUNCH_RUSH');
-      } else if (periodOfTheDay >= 7) {
+      } else if (period >= periodsPerDay - 1) {
         setEvent('FINAL_PERIOD');
       } else {
         setEvent('PERIOD_CHANGE');
@@ -521,6 +384,8 @@ function Market(props) {
     setHint,
     jokers,
     activeEffects,
+    period,
+    periodsPerDay,
   ]);
 
   const [candies, setCandies] = useState<CandyForMarket[]>(() =>
@@ -540,12 +405,13 @@ function Market(props) {
     [getInventoryLimit]
   );
 
-  // Simple price lookup from gameData - NO calculations
+  // Simple price lookup from gameData - NO heavy calculations
+  // Price breakdowns are calculated lazily in TransactionModal when needed
   const calculatedCandies = useMemo(() => {
     const eventPrices = gameData.eventPrices || {};
 
     return baseCandies.map((candy) => {
-      // Just look up the price - no calculations!
+      // Just look up the price - no heavy calculations!
       let basePrice: number;
 
       // First check location-specific event price
@@ -562,48 +428,7 @@ function Market(props) {
       }
 
       // Get inventory data
-      const inventoryItem = inventory.find(item => item.name === candy.name);
-
-      // Calculate price breakdown for selling using JokerService
-      // This will include ALL joker effects (Pursuasion, Even Stevens, Odd Todd, Slow Cooker, etc.)
-      const jokerBreakdown = jokerService.getPriceBreakdown(
-        basePrice,
-        jokers,
-        periodCount,
-        getInventoryLimit(),
-        activeEffects,
-        'sell'
-      );
-
-      // Calculate hall pass bonus per unit if player owns this candy
-      const purchasePrice = inventoryItem?.price || basePrice;
-      const profitPerUnit = Math.max(0, basePrice - purchasePrice);
-      const hallPassSaleBonusPercent = hallPassModifiers.salePriceBonusPercent;
-      const hallPassBonusPerUnit = (hallPassSaleBonusPercent > 0 && profitPerUnit > 0)
-        ? profitPerUnit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
-        : 0;
-      // The effective percentage shown to user includes the 5x multiplier
-      const hallPassEffectivePercent = hallPassSaleBonusPercent * 5;
-
-      // Calculate merchant bonus per unit (Street Cred)
-      const streetCredEffect = merchantEffects.find(e => e.itemId === 'street_cred');
-      const merchantBonusPercent = streetCredEffect?.level ? streetCredEffect.level * 10 : 0;
-      const merchantBonusPerUnit = (merchantBonusPercent > 0 && profitPerUnit > 0)
-        ? profitPerUnit * (merchantBonusPercent / 100)
-        : 0;
-
-      // Check for Influencer Shoutout (+200% profit bonus)
-      const hasInfluencerShoutout = MerchantUtils.hasInfluencerShoutout(merchantEffects);
-      // Influencer shoutout bonus: 200% of profit (only applies if profit > 0)
-      const influencerBonusPerUnit = (hasInfluencerShoutout && profitPerUnit > 0)
-        ? profitPerUnit * 2 // 200% = 2x the profit
-        : 0;
-
-      // Check if there are any bonuses to show (joker effects, hall pass, merchant, or influencer)
-      const hasAnyBonus = jokerBreakdown.jokerEffects.length > 0 ||
-                          hallPassBonusPerUnit > 0 ||
-                          merchantBonusPerUnit > 0 ||
-                          influencerBonusPerUnit > 0;
+      const inventoryItem = inventory.find((item) => item.name === candy.name);
 
       return {
         ...candy,
@@ -611,26 +436,16 @@ function Market(props) {
         cost: basePrice,
         quantityOwned: inventoryItem?.quantity ?? 0,
         averagePrice: inventoryItem?.price ?? null,
-        priceBreakdown: hasAnyBonus ? {
-          basePrice,
-          jokerEffects: jokerBreakdown.jokerEffects, // Now includes Pursuasion and all other joker effects!
-          hallPassEffect: hallPassBonusPerUnit > 0 ? {
-            bonusPercent: hallPassEffectivePercent, // Show effective percentage (with 5x multiplier)
-            bonusAmount: hallPassBonusPerUnit,
-          } : undefined,
-          merchantEffect: merchantBonusPerUnit > 0 ? {
-            bonusPercent: merchantBonusPercent,
-            bonusAmount: merchantBonusPerUnit,
-          } : undefined,
-          influencerShoutoutEffect: influencerBonusPerUnit > 0 ? {
-            bonusPercent: 200, // +200% bonus
-            bonusAmount: influencerBonusPerUnit,
-          } : undefined,
-          finalPrice: jokerBreakdown.finalPrice, // Use final price from joker breakdown
-        } : undefined,
+        // priceBreakdown removed - TransactionModal calculates on-demand
       };
     });
-  }, [periodCount, currentLocation, gameData.candyPrices, gameData.eventPrices, inventory, hallPassModifiers, merchantEffects, jokers, activeEffects, jokerService, getInventoryLimit]);
+  }, [
+    periodCount,
+    currentLocation,
+    gameData.candyPrices,
+    gameData.eventPrices,
+    inventory,
+  ]);
 
   // Sync memoized candies to state only when they change
   useEffect(() => {
@@ -677,6 +492,11 @@ function Market(props) {
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
   const [isDroneDeposit, setIsDroneDeposit] = useState(false);
 
+  // Play background music during school day (stop when schools out modal shows or after-school starts)
+  const shouldPlayMusic = !isAfterSchool && !schoolsOutModalVisible;
+  console.log(`🎵 Market music check - isAfterSchool: ${isAfterSchool}, schoolsOutModalVisible: ${schoolsOutModalVisible}, shouldPlayMusic: ${shouldPlayMusic}`);
+  useBackgroundMusic(shouldPlayMusic, 0.3); // Play at 30% volume
+
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
     setSelectedCandyIndex(index);
@@ -688,344 +508,244 @@ function Market(props) {
     setSelectedCandyIndex(null);
   }, []);
 
-  const handleTransaction = useCallback((quantity: number, mode: 'buy' | 'sell') => {
-    if (selectedCandyIndex === null) return;
-    const selectedCandy = candies[selectedCandyIndex];
-    const isFirstBuy =
-      day === 1 && getTotalInventoryCount() === 0 && mode === 'buy';
-    const isFirstSell = day === 1 && mode === 'sell';
+  const handleTransaction = useCallback(
+    (quantity: number, mode: 'buy' | 'sell') => {
+      if (selectedCandyIndex === null) return;
+      const selectedCandy = candies[selectedCandyIndex];
+      const isFirstBuy =
+        day === 1 && getTotalInventoryCount() === 0 && mode === 'buy';
+      const isFirstSell = day === 1 && mode === 'sell';
 
-    setCandies((prev) =>
-      prev.map((candy, i) => {
-        if (i !== selectedCandyIndex) return candy;
+      setCandies((prev) =>
+        prev.map((candy, i) => {
+          if (i !== selectedCandyIndex) return candy;
 
-        if (mode === 'buy') {
-          // Check for Time Zone Arbitrage joker effect (morning purchase discount)
-          const periodWithinDay = periodCount % 8;
-          const isMorning = periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
-          const hasTimeZoneArbitrage = jokers.some(
-            (joker: any) => joker.id === 42
-          );
-
-          let purchasePrice = candy.cost;
-          if (hasTimeZoneArbitrage && isMorning) {
-            purchasePrice = candy.cost * 0.9; // 10% discount
-            console.log(
-              `🕘 Time Zone Arbitrage: Morning purchase discount applied! ${candy.cost} -> ${purchasePrice.toFixed(2)}`
-            );
-          }
-
-          const totalCost = purchasePrice * quantity;
-          if (balance < totalCost) {
-            return candy;
-          }
-
-          // Try to add to inventory first - this will check inventory limits
-          const inventorySuccess = addToInventory(
-            candy.name,
-            quantity,
-            purchasePrice,
-            periodCount // Track when candy was purchased
-          );
-          if (!inventorySuccess) {
-            // Inventory is full, transaction fails
-            return candy;
-          }
-
-          spend(totalCost);
-          addSpent(totalCost); // Track daily spending
-
-          // Reset consecutive sales tracking when buying
-          resetSales();
-
-          const newQty = candy.quantityOwned + quantity;
-          const newAvg =
-            candy.averagePrice === null
-              ? purchasePrice
-              : (candy.averagePrice * candy.quantityOwned +
-                  purchasePrice * quantity) /
-                newQty;
-
-          return {
-            ...candy,
-            quantityOwned: newQty,
-            averagePrice: newAvg,
-          };
-        } else {
-          // === SELLING LOGIC ===
-
-          // Record sales for tracking systems
-          recordSale(); // Diamond Hand tracking
-          recordDroughtSale(); // Drought Relief tracking
-          addSale({
-            candyId: candy.name,
-            candyName: candy.name,
-            quantity: quantity,
-            price: candy.cost,
-            total: candy.cost * quantity,
-            timestamp: Date.now(),
-            period: periodCount,
-          }); // General sales tracking
-
-          // === CALCULATE ALL BONUSES FROM REDUX STATE ===
-          let multiplier = 1;
-          const bonusDetails: Array<{
-            emoji: string;
-            name: string;
-            multiplier: number;
-            flatBonus?: number;
-          }> = [];
-
-          // 1. Check for one-time sell multiplier jokers (Persuasion, etc) from Redux state
-          const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(
-            jokers, // From Redux via useJokers()
-            periodCount,
-            activeEffects // From Redux via useJokers()
-          );
-          if (sellMultiplierInfo.hasEffect && sellMultiplierInfo.multiplier) {
-            multiplier *= sellMultiplierInfo.multiplier;
-            bonusDetails.push({
-              emoji: sellMultiplierInfo.jokerEmoji || '🗣️',
-              name: sellMultiplierInfo.jokerName,
-              multiplier: sellMultiplierInfo.multiplier,
-            });
-            console.log(
-              `🗣️ ${sellMultiplierInfo.jokerName} activated! ${sellMultiplierInfo.multiplier}x multiplier applied`
+          if (mode === 'buy') {
+            // Check for Time Zone Arbitrage joker effect (morning purchase discount)
+            const periodWithinDay = periodCount % 8;
+            const isMorning = periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
+            const hasTimeZoneArbitrage = jokers.some(
+              (joker: any) => joker.id == 42 || joker.id === '42'
             );
 
-            // Clear the one-time effect after use
-            if (sellMultiplierInfo.jokerId) {
-              clearActiveEffect(sellMultiplierInfo.jokerId);
+            let purchasePrice = candy.cost;
+            if (hasTimeZoneArbitrage && isMorning) {
+              purchasePrice = candy.cost * 0.9; // 10% discount
               console.log(
-                `🗣️ ${sellMultiplierInfo.jokerName} effect cleared after sale`
+                `🕘 Time Zone Arbitrage: Morning purchase discount applied! ${candy.cost} -> ${purchasePrice.toFixed(2)}`
               );
             }
-          }
 
-          // 2. Check for Influencer Shoutout merchant item (+200% profit)
-          if (MerchantUtils.hasInfluencerShoutout(merchantEffects)) {
-            multiplier *= 3; // +200% = 3x total
-            bonusDetails.push({
-              emoji: '📣',
-              name: 'Influencer Shoutout',
-              multiplier: 3,
+            const totalCost = purchasePrice * quantity;
+            if (balance < totalCost) {
+              return candy;
+            }
+
+            // Try to add to inventory first - this will check inventory limits
+            const inventorySuccess = addToInventory(
+              candy.name,
+              quantity,
+              purchasePrice,
+              periodCount // Track when candy was purchased
+            );
+            if (!inventorySuccess) {
+              // Inventory is full, transaction fails
+              return candy;
+            }
+
+            spend(totalCost);
+            addSpent(totalCost); // Track daily spending
+
+            // Reset consecutive sales tracking when buying
+            resetSales();
+
+            const newQty = candy.quantityOwned + quantity;
+            const newAvg =
+              candy.averagePrice === null
+                ? purchasePrice
+                : (candy.averagePrice * candy.quantityOwned +
+                    purchasePrice * quantity) /
+                  newQty;
+
+            return {
+              ...candy,
+              quantityOwned: newQty,
+              averagePrice: newAvg,
+            };
+          } else {
+            // === SELLING LOGIC ===
+
+            // Record sales for tracking systems
+            recordSale(); // Diamond Hand tracking
+            recordDroughtSale(); // Drought Relief tracking
+
+            // === HANDLE ONE-TIME JOKERS (with side effects) ===
+            let oneTimeMultiplier = 1;
+            const bonusDetails: Array<{
+              emoji: string;
+              name: string;
+              multiplier: number;
+              flatBonus?: number;
+            }> = [];
+
+            // 1. Check for one-time sell multiplier jokers (Persuasion, etc) from Redux state
+            const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(
+              jokers, // From Redux via useJokers()
+              periodCount,
+              activeEffects // From Redux via useJokers()
+            );
+            if (sellMultiplierInfo.hasEffect && sellMultiplierInfo.multiplier) {
+              oneTimeMultiplier *= sellMultiplierInfo.multiplier;
+              bonusDetails.push({
+                emoji: sellMultiplierInfo.jokerEmoji || '🗣️',
+                name: sellMultiplierInfo.jokerName,
+                multiplier: sellMultiplierInfo.multiplier,
+              });
+              console.log(
+                `🗣️ ${sellMultiplierInfo.jokerName} activated! ${sellMultiplierInfo.multiplier}x multiplier applied`
+              );
+
+              // Clear the one-time effect after use
+              if (sellMultiplierInfo.jokerId) {
+                clearActiveEffect(sellMultiplierInfo.jokerId);
+                console.log(
+                  `🗣️ ${sellMultiplierInfo.jokerName} effect cleared after sale`
+                );
+              }
+            }
+
+            // Consume Influencer Shoutout if active (before calculation)
+            if (MerchantUtils.hasInfluencerShoutout(merchantEffects)) {
+              dispatch(consumeEffect({ itemId: 'influencer_shoutout' }));
+              console.log('📣 Influencer Shoutout consumed (will be applied in calculation)');
+            }
+
+            // === CALCULATE SALE USING SHARED FUNCTION ===
+            const inventoryItem = inventory.find((item) => item.name === candy.name);
+            const purchasePrice = inventoryItem?.price ?? candy.cost;
+
+            const saleResult = calculateSaleTotal({
+              candyName: candy.name,
+              basePrice: candy.cost,
+              purchasePrice,
+              quantity,
+              jokers,
+              periodCount,
+              inventoryLimit: getInventoryLimit(),
+              activeEffects,
+              hallPassModifiers,
+              merchantEffects,
+              consecutivePeriodSales: consecutivePeriodSales(),
+              totalCandiesSold: totalCandiesSold || 0,
+              hasEarlySaleToday,
+              inventory,
+              initialMultiplier: oneTimeMultiplier,
             });
-            console.log('📣 Influencer Shoutout: +200% sales bonus applied (3x multiplier)');
 
-            // Consume the influencer shoutout
-            dispatch(consumeEffect({ itemId: 'influencer_shoutout' }));
-            console.log('📣 Influencer Shoutout consumed after sale');
-          }
+            // Merge bonus breakdown from one-time jokers
+            bonusDetails.push(...saleResult.bonusBreakdown);
 
-          // 3. Check Redux jokers for Even Stevens / Odd Todd
-          const candyInventoryLimit = getInventoryLimit();
-          const hasEvenStevens = jokers.some(
-            (j) => j.id === JOKER_IDS.EVEN_STEVENS.toString()
-          );
-          const hasOddTodd = jokers.some(
-            (j) => j.id === JOKER_IDS.ODD_TODD.toString()
-          );
+            const {
+              totalGain,
+              profitPerUnit,
+              totalProfit,
+              purchaseValue,
+              hallPassBonus,
+              jokerMultiplier,
+              vacuumSealerPenalty,
+            } = saleResult;
 
-          if (hasEvenStevens && candyInventoryLimit % 2 === 0) {
-            multiplier *= 1.1;
-            bonusDetails.push({
-              emoji: '⚖️',
-              name: 'Even Stevens',
-              multiplier: 1.1,
-            });
+            const finalProfit = totalGain - purchaseValue;
+
             console.log(
-              `⚖️ Even Stevens: +10% sales bonus applied (inventory limit: ${candyInventoryLimit})`
+              '🛒 Market: Selling candy:',
+              candy.name,
+              'quantity:',
+              quantity,
+              'sale price:',
+              candy.cost,
+              'purchase price:',
+              purchasePrice,
+              'profit per unit:',
+              profitPerUnit,
+              'total profit:',
+              totalProfit,
+              'hall pass bonus:',
+              hallPassBonus,
+              'joker multiplier:',
+              jokerMultiplier,
+              'vacuum sealer penalty:',
+              vacuumSealerPenalty,
+              'final profit:',
+              finalProfit,
+              'purchase value returned:',
+              purchaseValue,
+              'total gain:',
+              totalGain
             );
-          } else if (hasOddTodd && candyInventoryLimit % 2 === 1) {
-            multiplier *= 1.1;
-            bonusDetails.push({
-              emoji: '🎭',
-              name: 'Odd Todd',
-              multiplier: 1.1,
+            add(totalGain);
+            addProfit(finalProfit); // Track daily profit (profit only, not purchase value)
+            addCandySold(quantity); // Track daily candy sales
+            recordDailyStatsSale(candy.name, quantity, totalGain, periodCount); // Track best sale and most sold candy
+
+            // Track sale for period-based hall pass unlocks (Time Crunch, Final Exam)
+            // IMPORTANT: Pass finalProfit (profit after all bonuses/penalties) not revenue for accurate tracking
+            console.log(`📊 Tracking sale for hall pass: ${candy.name}, Period: ${periodCount}, Profit: ${finalProfit.toFixed(2)}`);
+            addSale({
+              candyId: candy.name,
+              candyName: candy.name,
+              quantity: quantity,
+              price: candy.cost,
+              total: finalProfit, // ✅ Pass PROFIT (after all bonuses and penalties), not revenue
+              timestamp: Date.now(),
+              period: periodCount,
+              periodsPerDay: periodsPerDay,
             });
-            console.log(
-              `🎭 Odd Todd: +10% sales bonus applied (inventory limit: ${candyInventoryLimit})`
-            );
+
+            removeFromInventory(candy.name, quantity);
+
+            return {
+              ...candy,
+              quantityOwned: candy.quantityOwned - quantity,
+            };
           }
+        })
+      );
 
-          // 4. Check Redux jokers for Recess bonuses
-          const hasHopscotch = jokers.some(
-            (j) => j.id === JOKER_IDS.HOPSCOTCH_BONUS.toString()
-          );
-          const hasSwingset = jokers.some(
-            (j) => j.id === JOKER_IDS.SWINGSET_MOMENTUM.toString()
-          );
-
-          if (hasHopscotch && period % 2 === 0) {
-            multiplier *= 1.2;
-            bonusDetails.push({
-              emoji: '🏃',
-              name: 'Hopscotch',
-              multiplier: 1.2,
-            });
-            console.log(
-              `🏃 Hopscotch Bonus: +20% sales bonus applied (period ${period} is even)`
-            );
-          }
-
-          if (hasSwingset && consecutivePeriodSales() > 1) {
-            const swingsetMultiplier = 1 + (consecutivePeriodSales() - 1) * 0.1;
-            multiplier *= swingsetMultiplier;
-            bonusDetails.push({
-              emoji: '⛹️',
-              name: 'Swingset',
-              multiplier: swingsetMultiplier,
-            });
-            console.log(
-              `⛹️ Swingset Momentum: ${((swingsetMultiplier - 1) * 100).toFixed(0)}% sales bonus applied`
-            );
-          }
-
-          // 5. Check for Sunset Surge afternoon bonus
-          const periodWithinDay = periodCount % 8;
-          const isAfternoon = periodWithinDay >= 3; // Periods 3, 4, 5, 6, 7 are "afternoon"
-          const hasSunsetSurge = jokers.some((joker: any) => joker.id === 38);
-
-          if (hasSunsetSurge && isAfternoon) {
-            multiplier *= 1.1; // 10% bonus
-            bonusDetails.push({
-              emoji: '🌅',
-              name: 'Sunset Surge',
-              multiplier: 1.1,
-            });
-            console.log(
-              `🌅 Sunset Surge: +10% afternoon sales bonus applied (period ${periodWithinDay + 1} is afternoon)`
-            );
-          }
-
-          // 6. Check for Bulk Sale bonus (sell >50% of inventory space in one sale)
-          const hasBulkSale = jokers.some(
-            (joker: any) => joker.id === JOKER_IDS.BULK_SALE
-          );
-          const inventoryLimit = getInventoryLimit();
-          const isBulkSale = quantity > inventoryLimit * 0.5; // More than 50% of inventory space
-
-          if (hasBulkSale && isBulkSale) {
-            multiplier *= 1.2; // 20% bonus
-            bonusDetails.push({
-              emoji: '📦',
-              name: 'Bulk Sale',
-              multiplier: 1.2,
-            });
-            console.log(
-              `📦 Bulk Sale: +20% sales bonus applied (selling ${quantity} > ${(inventoryLimit * 0.5).toFixed(1)} slots)`
-            );
-          }
-
-          // 7. Check for Slow Cooker sell multiplier (persistent joker) - resets every day
-          const hasSlowCooker = jokers.some(
-            (j) => j.id === JOKER_IDS.SLOW_COOKER.toString()
-          );
-          if (hasSlowCooker) {
-            // Get purchase period from inventory to calculate hold duration
-            const inventoryItem = inventory.find(
-              (item) => item.name === candy.name
-            );
-            const purchasedAtPeriod = inventoryItem?.purchasedAt ?? periodCount;
-
-            // Calculate current day and purchased day (8 periods per day)
-            const currentDay = Math.floor(periodCount / 8);
-            const purchasedDay = Math.floor(purchasedAtPeriod / 8);
-
-            // If purchased on a different day, reset to start of current day
-            const effectivePurchasedPeriod =
-              currentDay === purchasedDay
-                ? purchasedAtPeriod
-                : Math.floor(periodCount / 8) * 8; // Start of current day
-
-            const periodsHeld = Math.max(
-              0,
-              periodCount - effectivePurchasedPeriod
-            );
-            const slowCookerMultiplier = Math.pow(1.10, periodsHeld); // Compound 10% per period
-            multiplier *= slowCookerMultiplier;
-            bonusDetails.push({
-              emoji: '🍲',
-              name: 'Slow Cooker',
-              multiplier: slowCookerMultiplier,
-            });
-            console.log(
-              `🍲 Slow Cooker: +${((slowCookerMultiplier - 1) * 100).toFixed(0)}% sales bonus applied (held for ${periodsHeld} periods within day ${currentDay}, ${slowCookerMultiplier.toFixed(3)}x multiplier)`
-            );
-          }
-
-          // 8. Calculate profit-based hall pass bonus from pre-computed modifiers
-          const inventoryItem = inventory.find(
-            (item) => item.name === candy.name
-          );
-          const purchasePrice = inventoryItem?.price || candy.cost;
-          const profitPerUnit = Math.max(0, candy.cost - purchasePrice);
-          const totalProfit = profitPerUnit * quantity;
-
-          // Use pre-computed hall pass modifiers (set once at game start)
-          const hallPassSaleBonusPercent =
-            hallPassModifiers.salePriceBonusPercent;
-          const hallPassProfitBonus =
-            hallPassSaleBonusPercent > 0
-              ? totalProfit * ((hallPassSaleBonusPercent * 5) / 100) // 5x multiplier on profit
-              : 0;
-
-          if (hallPassProfitBonus > 0) {
-            bonusDetails.push({
-              emoji: '🎖️',
-              name: 'Hall Pass',
-              multiplier: 1,
-              flatBonus: hallPassProfitBonus,
-            });
-            console.log(
-              `🎖️ Hall Pass bonus: +$${hallPassProfitBonus.toFixed(2)} (${hallPassSaleBonusPercent}% × 5x on $${totalProfit.toFixed(2)} profit)`
-            );
-          }
-
-          // === CALCULATE FINAL GAIN ===
-          const baseGain = candy.cost * quantity; // Revenue from sale
-          const totalGain = (baseGain + hallPassProfitBonus) * multiplier; // Hall pass added to base, then joker multipliers
-
-          console.log(
-            '🛒 Market: Selling candy:',
-            candy.name,
-            'quantity:',
-            quantity,
-            'sale price:',
-            candy.cost,
-            'purchase price:',
-            purchasePrice,
-            'profit per unit:',
-            profitPerUnit,
-            'total profit:',
-            totalProfit,
-            'hall pass bonus %:',
-            hallPassSaleBonusPercent,
-            'hall pass profit bonus:',
-            hallPassProfitBonus,
-            'base revenue:',
-            baseGain,
-            'joker multiplier:',
-            multiplier,
-            'final total:',
-            totalGain
-          );
-          add(totalGain);
-          addProfit(totalGain); // Track daily profit
-          addCandySold(quantity); // Track daily candy sales
-          recordDailyStatsSale(candy.name, quantity, totalGain, periodCount); // Track best sale and most sold candy
-          removeFromInventory(candy.name, quantity);
-
-          return {
-            ...candy,
-            quantityOwned: candy.quantityOwned - quantity,
-          };
-        }
-      })
-    );
-
-    closeModal();
-  }, [selectedCandyIndex, candies, balance, day, getTotalInventoryCount, jokers, periodCount, getInventoryLimit, addToInventory, spend, addSpent, resetSales, inventory, recordSale, recordDroughtSale, addSale, jokerService, activeEffects, clearActiveEffect, hallPassModifiers, add, addProfit, addCandySold, recordDailyStatsSale, removeFromInventory, closeModal]);
+      closeModal();
+    },
+    [
+      selectedCandyIndex,
+      candies,
+      balance,
+      day,
+      getTotalInventoryCount,
+      jokers,
+      periodCount,
+      getInventoryLimit,
+      addToInventory,
+      spend,
+      addSpent,
+      resetSales,
+      inventory,
+      recordSale,
+      recordDroughtSale,
+      addSale,
+      jokerService,
+      activeEffects,
+      clearActiveEffect,
+      hallPassModifiers,
+      add,
+      addProfit,
+      addCandySold,
+      recordDailyStatsSale,
+      removeFromInventory,
+      closeModal,
+      periodsPerDay,
+      merchantEffects,
+      dispatch,
+    ]
+  );
 
   const handleNextDay = useCallback(() => {
     console.log(
@@ -1034,15 +754,20 @@ function Market(props) {
       'day:',
       day,
       'hasActiveEvent:',
-      hasActiveEvent
+      hasActiveEvent,
+      'periodsPerDay:',
+      periodsPerDay
     );
     // Trigger success haptic feedback when advancing to next period
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    if (period === 8) {
+    // Calculate lunch period dynamically (period 4 for 8-period days, period 3 for 6-period days)
+    const lunchPeriod = Math.floor(periodsPerDay / 2);
+
+    if (period === periodsPerDay) {
       // End of day - show day stats first
       console.log(
-        '🔵 Period 8 reached - showing day stats modal for day:',
+        `🔵 Period ${periodsPerDay} reached (end of day) - showing day stats modal for day:`,
         day
       );
       console.log(
@@ -1051,9 +776,9 @@ function Market(props) {
       );
       setDayStatsModalVisible(true);
       console.log('🔵 setDayStatsModalVisible(true) called');
-    } else if (period === 4 && !showLunchMinigames) {
-      // Period 4 - Show lunch confirmation modal
-      console.log('🍽️ Period 4 - Showing lunch confirmation modal');
+    } else if (period === lunchPeriod && !showLunchMinigames) {
+      // Lunch period - Show lunch confirmation modal
+      console.log(`🍽️ Period ${lunchPeriod} (lunch) - Showing lunch confirmation modal`);
       setLunchConfirmVisible(true);
     } else {
       // Check if there's an active event
@@ -1077,7 +802,7 @@ function Market(props) {
         }, 100);
       }
     }
-  }, [period, day, hasActiveEvent, dayStatsModalVisible, showLunchMinigames]);
+  }, [period, day, hasActiveEvent, dayStatsModalVisible, showLunchMinigames, periodsPerDay]);
 
   const dispatch = useAppDispatch();
 
@@ -1085,7 +810,9 @@ function Market(props) {
     (location: Location) => {
       // Check if player selected The Connect merchant
       if (location === 'the connect') {
-        console.log('🕶️ Player selected The Connect - navigating to merchant shop page');
+        console.log(
+          '🕶️ Player selected The Connect - navigating to merchant shop page'
+        );
         setLocationModalVisible(false);
         router.push('/merchant-shop');
         return;
@@ -1151,19 +878,44 @@ function Market(props) {
           setShowLunchMinigames(false);
         }
 
+        // Detect day change for daily stat resets
+        const oldDay = day;
+
         // Call incrementPeriod and update flavor text
         incrementPeriod(location);
         setEvent('PERIOD_CHANGE');
 
-        // Reset loading state after 1.5 seconds
+        // Check if we crossed into a new day and reset daily stats if so
+        // Note: We can't directly read the new day here, but we can use periodCount
+        // Day changes when periodCount % periodsPerDay === 0
+        const newPeriodCount = periodCount + 1;
+        const newDay = Math.floor((newPeriodCount - 1) / periodsPerDay) + 1;
+        if (newDay > oldDay) {
+          console.log(
+            `🔄 Day changed from ${oldDay} to ${newDay} - resetting daily stats`
+          );
+          dispatch(resetDailyStats());
+        }
+
+        // Reset loading state after a short delay
         setTimeout(() => {
           setLocalPricesUpdating(false);
-        }, 625);
+        }, 400);
       });
     },
-    [jokers, dispatch, incrementPeriod, setEvent, candies, addToInventory, periodCount, showLunchMinigames]
+    [
+      jokers,
+      dispatch,
+      incrementPeriod,
+      setEvent,
+      candies,
+      addToInventory,
+      periodCount,
+      showLunchMinigames,
+      day,
+      periodsPerDay,
+    ]
   );
-
 
   const handleLunchConfirm = useCallback(() => {
     console.log('🍽️ Lunch confirmed - showing minigame selection');
@@ -1189,9 +941,12 @@ function Market(props) {
       setShowLunchMinigames(false);
     }
 
-    // If we're on day 5 or completed all 40 periods, game will end after day stats
-    if (day >= 5 || periodCount >= 40) {
-      console.log('🎮 Day 5 or all periods complete - will end game after showing day stats');
+    // If we're on day 5 or completed all periods (40 for 8/day, 30 for 6/day), game will end after day stats
+    const maxPeriods = periodsPerDay * 5;
+    if (day >= 5 || periodCount >= maxPeriods) {
+      console.log(
+        `🎮 Day 5 or all periods complete - will end game after showing day stats (max: ${maxPeriods})`
+      );
       console.log('🎮 Day:', day, 'PeriodCount:', periodCount);
     }
 
@@ -1262,7 +1017,17 @@ function Market(props) {
         console.log('🏠 setDayStatsModalVisible(true) called via End Day');
       }, 100);
     }, 200);
-  }, [day, periodCount, balance, jokers, getTotalInventoryCount, add, dayStatsModalVisible, showLunchMinigames]);
+  }, [
+    day,
+    periodCount,
+    periodsPerDay,
+    balance,
+    jokers,
+    getTotalInventoryCount,
+    add,
+    dayStatsModalVisible,
+    showLunchMinigames,
+  ]);
 
   const handleEndDayCancel = useCallback(() => {
     setEndDayConfirmVisible(false);
@@ -1271,12 +1036,21 @@ function Market(props) {
   // Day stats modal handlers
   const handleDayStatsClose = useCallback(() => {
     console.log('📊 Day stats modal closing - checking if game should end');
+    console.log(`📊 Current state: day=${day}, period=${period}, periodCount=${periodCount}, periodsPerDay=${periodsPerDay}`);
     setDayStatsModalVisible(false);
 
-    // If we're on day 5 or have completed all 40 periods, end the game
-    if (day >= 5 || periodCount >= 40) {
-      console.log('🎮 Day 5 complete or all periods done - navigating to game end screen');
-      console.log('🎮 Day:', day, 'PeriodCount:', periodCount);
+    // If we're on day 5 OR the last period of the game, end the game
+    // For 8-period days: maxPeriods = 40, last period is at periodCount 39
+    // For 6-period days: maxPeriods = 30, last period is at periodCount 29
+    const maxPeriods = periodsPerDay * 5;
+    const isDay5 = day >= 5;
+    const isLastPeriod = period === periodsPerDay;
+    const hasCompletedAllPeriods = periodCount >= maxPeriods - 1; // -1 because we check BEFORE incrementing
+
+    if (isDay5 || hasCompletedAllPeriods) {
+      console.log(
+        `🎮 Game ending - Day ${day}, Period ${period}/${periodsPerDay}, PeriodCount ${periodCount}/${maxPeriods}`
+      );
       router.push('/game-end');
       return;
     }
@@ -1284,7 +1058,7 @@ function Market(props) {
     // Show schools out modal first (only for days 1-4)
     console.log('📊 Showing schools out modal');
     setSchoolsOutModalVisible(true);
-  }, [periodCount, day]);
+  }, [periodCount, day, period, periodsPerDay]);
 
   const handleDayStatsCancel = useCallback(() => {
     console.log('📊 Day stats modal cancelled - staying at school');
@@ -1358,8 +1132,8 @@ function Market(props) {
 
   const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
-  // Check if current period is lunch (period 5, which is index 4 in 0-indexed system)
-  const isLunchPeriod = period === 5;
+  // Check if current period is lunch period (dynamically calculated based on periodsPerDay)
+  const isLunchPeriod = period === Math.floor(periodsPerDay / 2);
 
   const handleLunchBack = useCallback(() => {
     console.log('🍔 handleLunchBack called');
@@ -1367,13 +1141,12 @@ function Market(props) {
   }, []);
 
   const handleAirDeliveryDroneActivated = useCallback(() => {
-    console.log('✈️ Air Delivery Drone activated - opening stash modal in drone mode');
+    console.log(
+      '✈️ Air Delivery Drone activated - opening stash modal in drone mode'
+    );
     setIsDroneDeposit(true);
     setStashMoneyModalVisible(true);
   }, []);
-
-  // Check if we should show copilot tutorial wrappers
-  const showCopilotWrappers = day === 1 && periodCount === 0;
 
   // Common props for both market components
   const marketProps = {
@@ -1387,6 +1160,7 @@ function Market(props) {
     selectedCandyIndex,
     period,
     day,
+    periodsPerDay,
     onCandyPress: openModal,
     onLunchBack: handleLunchBack,
     onInventoryPress: () => setInventoryModalVisible(true),
@@ -1396,11 +1170,7 @@ function Market(props) {
 
   return (
     <View style={styles.container}>
-      {showCopilotWrappers ? (
-        <MarketWithCopilot {...marketProps} />
-      ) : (
-        <MarketContent {...marketProps} />
-      )}
+      <MarketContent {...marketProps} />
 
       <Suspense fallback={null}>
         <LocationModal
@@ -1446,7 +1216,9 @@ function Market(props) {
           onClose={() => {
             // If in drone mode and user just closes (backs out), don't consume drone
             if (isDroneDeposit) {
-              console.log('✈️ User backed out of drone deposit - not consuming drone');
+              console.log(
+                '✈️ User backed out of drone deposit - not consuming drone'
+              );
               setIsDroneDeposit(false);
             }
             setStashMoneyModalVisible(false);
@@ -1518,7 +1290,6 @@ function Market(props) {
             maxBuyQuantity={maxBuyQty}
             maxSellQuantity={maxSellQty}
             candy={selectedCandy}
-            priceBreakdown={selectedCandy?.priceBreakdown}
             playerBalance={balance}
             availableInventorySpace={availableInventorySpace}
           />

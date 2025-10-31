@@ -12,11 +12,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { useCandySales } from '../../src/hooks/useCandySales';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { scoreboardService } from '../../src/services/firebase';
+import { useAppSelector } from '../../src/store/hooks';
+import { selectActiveEffects } from '../../src/store/slices/merchantSlice';
 import { Candy } from '../../src/types/candy';
+import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -43,6 +47,10 @@ type PriceBreakdown = {
   influencerShoutoutEffect?: {
     bonusPercent: number;
     bonusAmount: number;
+  };
+  vacuumSealerPenalty?: {
+    penaltyPercent: number; // e.g., 50 for -50%
+    isActive: boolean;
   };
   finalPrice: number;
 };
@@ -76,9 +84,17 @@ function TransactionModal({
 }: Props) {
   const [mode, setMode] = useState<'Buy' | 'Sell'>('Buy');
   const [quantity, setQuantity] = useState(1);
-  const { jokers } = useJokers();
+  const { jokers, activeEffects } = useJokers();
   const { getInventoryLimit, inventory } = useInventory();
   const { periodCount } = useGame();
+
+  // Get hall pass modifiers and early sale state from Redux
+  const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
+  const hasEarlySaleToday = useAppSelector(
+    (state) => state.candySales.hasEarlySaleToday
+  );
+  const merchantEffects = useAppSelector(selectActiveEffects);
+  const { consecutivePeriodSales, totalCandiesSold } = useCandySales();
 
   // Clamp maxBuyQuantity and maxSellQuantity to prevent negative values
   // If value is negative, set to 0
@@ -201,12 +217,20 @@ function TransactionModal({
       priceBreakdown.jokerEffects.forEach((effect) => {
         if (effect.isActive && effect.effectType === 'sell') {
           // Check if this is a multiplier effect (like Pursuasion: ×2)
-          const match = effect.effect.match(/×(\d+\.?\d*)/);
-          if (match) {
-            const mult = parseFloat(match[1]);
+          const multMatch = effect.effect.match(/×(\d+\.?\d*)/);
+          if (multMatch) {
+            const mult = parseFloat(multMatch[1]);
             multiplier *= mult;
             console.log(
               `📊 Found ${effect.jokerName} multiplier: ${mult}x (total now: ${multiplier}x)`
+            );
+          } else if (effect.amount) {
+            // Convert percentage bonus to multiplier (33% → 1.33x)
+            const percentBonus = effect.amount;
+            const mult = 1 + percentBonus / 100;
+            multiplier *= mult;
+            console.log(
+              `📊 Found ${effect.jokerName} bonus: +${percentBonus}% = ${mult}x (total now: ${multiplier}x)`
             );
           }
         }
@@ -239,42 +263,60 @@ function TransactionModal({
     return 0;
   }, [mode, priceBreakdown, quantity]);
 
-  // Calculate pocket value - matches actual transaction logic in market.tsx
-  // The transaction does: (baseGain + hallPassBonus + merchantBonus + ...) × multiplier
-  // So we need to apply the multiplier to EVERYTHING, not just the base price
+  // Calculate sale result for selling - contains pocket value and bonus breakdown
+  const saleResult = useMemo(() => {
+    if (mode === 'Sell' && candy.averagePrice !== null) {
+      // Use shared calculation function to ensure consistency with actual sale
+      return calculateSaleTotal({
+        candyName: candy.name,
+        basePrice: candy.cost,
+        purchasePrice: candy.averagePrice,
+        quantity,
+        jokers,
+        periodCount,
+        inventoryLimit: getInventoryLimit(),
+        activeEffects,
+        hallPassModifiers,
+        merchantEffects,
+        consecutivePeriodSales: consecutivePeriodSales(),
+        totalCandiesSold: totalCandiesSold || 0,
+        hasEarlySaleToday,
+        inventory,
+        initialMultiplier: 1, // Don't include one-time jokers in preview
+      });
+    }
+    return null;
+  }, [
+    mode,
+    candy.name,
+    candy.cost,
+    candy.averagePrice,
+    quantity,
+    jokers,
+    periodCount,
+    getInventoryLimit,
+    activeEffects,
+    hallPassModifiers,
+    merchantEffects,
+    consecutivePeriodSales,
+    totalCandiesSold,
+    hasEarlySaleToday,
+    inventory,
+  ]);
+
+  // Calculate pocket value from sale result
   const pocketValue = useMemo(() => {
-    if (mode === 'Sell' && priceBreakdown) {
-      // Use BASE price (not final price which already has multiplier baked in)
-      const baseRevenue = priceBreakdown.basePrice * quantity;
-      const allBonuses =
-        hallPassBonusTotal + merchantBonusTotal + influencerBonusTotal;
-      const total = (baseRevenue + allBonuses) * jokerSellMultiplier;
-
-      console.log(`💰 TransactionModal pocketValue calculation:
-        basePrice: $${priceBreakdown.basePrice.toFixed(2)}
-        baseRevenue: $${baseRevenue.toFixed(2)}
-        hallPassBonus: $${hallPassBonusTotal.toFixed(2)}
-        merchantBonus: $${merchantBonusTotal.toFixed(2)}
-        influencerBonus: $${influencerBonusTotal.toFixed(2)}
-        allBonuses: $${allBonuses.toFixed(2)}
-        jokerMultiplier: ${jokerSellMultiplier}x
-        total: $${total.toFixed(2)}`);
-
-      return total.toFixed(2);
+    if (saleResult) {
+      return saleResult.totalGain.toFixed(2);
+    } else if (mode === 'Sell') {
+      // Fallback if no average price (shouldn't happen in sell mode)
+      const baseRevenue = candy.cost * quantity;
+      return baseRevenue.toFixed(2);
     }
 
     // For buying
     return (finalUnitPrice * quantity).toFixed(2);
-  }, [
-    mode,
-    priceBreakdown,
-    finalUnitPrice,
-    hallPassBonusTotal,
-    merchantBonusTotal,
-    influencerBonusTotal,
-    quantity,
-    jokerSellMultiplier,
-  ]);
+  }, [saleResult, mode, candy.cost, quantity, finalUnitPrice]);
 
   // Keep per-unit calculations for display purposes
   const hallPassBonusPerUnit = useMemo(() => {
@@ -1448,204 +1490,95 @@ function TransactionModal({
               </PixelBorder>
             )}
 
-          {priceBreakdown &&
-            (priceBreakdown.jokerEffects.length > 0 ||
-              priceBreakdown.hallPassEffect ||
-              priceBreakdown.merchantEffect ||
-              priceBreakdown.influencerShoutoutEffect) &&
-            mode === 'Sell' &&
-            (() => {
-              // Collect all active sell effects for simplified display
-              const activeEffects: Array<{
-                emoji?: string;
-                image?: any;
-                text: string;
-                amount?: string;
-              }> = [];
+          {/* Display bonuses from shared calculation */}
+          {saleResult &&
+            saleResult.bonusBreakdown.length > 0 &&
+            mode === 'Sell' && (
+              <PixelBorder
+                borderColor="#fde047"
+                borderWidth={3}
+                backgroundColor="#fef3c7"
+                innerPadding={0}
+              >
+                <View style={styles.priceBreakdownContainer}>
+                  {saleResult.bonusBreakdown.map((bonus, index) => {
+                    // Map emojis to custom images
+                    const emojiImageMap: { [key: string]: any } = {
+                      '🍲': require('../../assets/images/emojis/slowcooker.png'),
+                      '🏃': require('../../assets/images/emojis/hopscotch.png'),
+                      '⛹️': require('../../assets/images/emojis/swingset.png'),
+                      '🪢': require('../../assets/images/emojis/jumpRope.png'),
+                      '🌅': require('../../assets/images/emojis/sunrise.png'),
+                      '📦': require('../../assets/images/emojis/bulkSale.png'),
+                      '⚖️': require('../../assets/images/emojis/scale.png'),
+                      '🎖️': require('../../assets/images/emojis/hallpass.png'),
+                    };
 
-              // Check for Slow Cooker
-              const slowCookerEffect = priceBreakdown.jokerEffects.find(
-                (effect) =>
-                  effect.jokerName === 'Slow Cooker' &&
-                  effect.effectType === 'sell'
-              );
-              if (slowCookerEffect && slowCookerJoker) {
-                const basePrice = priceBreakdown.basePrice;
-                const additionalProfit =
-                  basePrice * (slowCookerMultiplier - 1) * quantity;
-                const periodText = periodsHeld === 1 ? 'period' : 'periods';
-                if (periodsHeld) {
-                  activeEffects.push({
-                    image: require('../../assets/images/emojis/slowcooker.png'),
-                    text: `Slow cooked for ${periodsHeld} ${periodText}: +$${additionalProfit.toFixed(2)}`,
-                  });
-                }
-              }
+                    const imageSource = emojiImageMap[bonus.emoji];
 
-              // Check for sell_multiplier effects (Pursuasion, etc.)
-              // These multiply the ENTIRE profit, not just the candy price
-              const sellMultiplierEffects = priceBreakdown.jokerEffects.filter(
-                (effect) =>
-                  effect.isActive &&
-                  effect.effectType === 'sell' &&
-                  effect.jokerName !== 'Slow Cooker' &&
-                  effect.effect.includes('×')
-              );
-
-              if (sellMultiplierEffects.length > 0) {
-                // Calculate what the total would be WITHOUT the multipliers
-                const baseRevenue = priceBreakdown.basePrice * quantity;
-                const allBonuses =
-                  hallPassBonusTotal +
-                  merchantBonusTotal +
-                  influencerBonusTotal;
-                const totalWithoutMultiplier = baseRevenue + allBonuses;
-
-                // The additional gain from the multiplier is: total × (multiplier - 1)
-                const multiplierGain =
-                  totalWithoutMultiplier * (jokerSellMultiplier - 1);
-
-                console.log(`📊 Sell multiplier calculation:
-                  baseRevenue: $${baseRevenue.toFixed(2)}
-                  allBonuses: $${allBonuses.toFixed(2)}
-                  totalWithoutMultiplier: $${totalWithoutMultiplier.toFixed(2)}
-                  jokerSellMultiplier: ${jokerSellMultiplier}x
-                  multiplierGain: $${multiplierGain.toFixed(2)}`);
-
-                // Show all multiplier effects combined
-                sellMultiplierEffects.forEach((effect) => {
-                  activeEffects.push({
-                    emoji: effect.jokerEmoji,
-                    text: `${effect.jokerName}: +$${multiplierGain.toFixed(2)}`,
-                  });
-                });
-              }
-
-              // Check for other sell effects (Even Stevens, Odd Todd, etc.)
-              // These are percentage bonuses on candy price
-              const priceBoostEffects = priceBreakdown.jokerEffects.filter(
-                (effect) =>
-                  effect.isActive &&
-                  effect.effectType === 'sell' &&
-                  effect.jokerName !== 'Slow Cooker' &&
-                  !effect.effect.includes('×')
-              );
-
-              let currentPrice = priceBreakdown.basePrice;
-              priceBoostEffects.forEach((effect) => {
-                console.log('📊 TransactionModal price boost effect:', effect);
-
-                // Calculate the actual bonus amount with compounding
-                const priceBeforeBonus = currentPrice;
-                const multiplier = 1 + effect.amount / 100;
-                const priceAfterBonus = currentPrice * multiplier;
-                const bonusAmount =
-                  (priceAfterBonus - priceBeforeBonus) * quantity;
-
-                // Update current price for next effect (compounding)
-                currentPrice = priceAfterBonus;
-
-                console.log(
-                  `📊 Adding ${effect.jokerName} to display: priceBeforeBonus=${priceBeforeBonus.toFixed(2)}, priceAfterBonus=${priceAfterBonus.toFixed(2)}, bonusAmount=${bonusAmount.toFixed(2)}`
-                );
-
-                activeEffects.push({
-                  emoji: effect.jokerEmoji,
-                  text: `${effect.jokerName}: +$${bonusAmount.toFixed(2)}`,
-                });
-              });
-
-              // Add hall pass effect if present
-              if (
-                priceBreakdown.hallPassEffect &&
-                priceBreakdown.hallPassEffect.bonusAmount > 0 &&
-                priceBreakdown.hallPassEffect.bonusAmount * quantity > 0
-              ) {
-                const hallPassBonusTotal =
-                  priceBreakdown.hallPassEffect.bonusAmount * quantity;
-                activeEffects.push({
-                  emoji: '🎖️',
-                  text: `+${priceBreakdown.hallPassEffect.bonusPercent}% profit: `,
-                  amount: `+$${hallPassBonusTotal.toFixed(2)}`,
-                });
-              }
-
-              // Add Street Cred merchant effect if present
-              if (
-                priceBreakdown.merchantEffect &&
-                priceBreakdown.merchantEffect.bonusAmount > 0
-              ) {
-                const merchantBonusTotal =
-                  priceBreakdown.merchantEffect.bonusAmount * quantity;
-                activeEffects.push({
-                  image: require('../../assets/images/icons/streetCred.png'),
-                  text: `Street Cred +${priceBreakdown.merchantEffect.bonusPercent}%: +$${merchantBonusTotal.toFixed(2)}`,
-                });
-              }
-
-              // Add Influencer Shoutout merchant effect if present
-              if (
-                priceBreakdown.influencerShoutoutEffect &&
-                priceBreakdown.influencerShoutoutEffect.bonusAmount > 0
-              ) {
-                const influencerBonusTotal =
-                  priceBreakdown.influencerShoutoutEffect.bonusAmount *
-                  quantity;
-                activeEffects.push({
-                  image: require('../../assets/images/icons/influencerShoutout.png'),
-                  text: `+${priceBreakdown.influencerShoutoutEffect.bonusPercent}% profit: `,
-                  amount: `+$${influencerBonusTotal.toFixed(2)}`,
-                });
-              }
-
-              if (activeEffects.length > 0) {
-                return (
-                  <PixelBorder
-                    borderColor="#fde047"
-                    borderWidth={3}
-                    backgroundColor="#fef3c7"
-                    innerPadding={0}
-                  >
-                    <View style={styles.priceBreakdownContainer}>
-                      {activeEffects.map((effect, index) => (
-                        <View
-                          key={index}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                        >
-                          {effect.image ? (
-                            <Image
-                              source={effect.image}
-                              style={{
-                                width: 24,
-                                height: 24,
-                                resizeMode: 'contain',
-                              }}
-                            />
-                          ) : (
-                            <TextWithEmojis
-                              style={styles.slowCookerText}
-                              imageSize={24}
-                            >
-                              {effect.emoji}
-                            </TextWithEmojis>
-                          )}
-                          <Text style={styles.slowCookerText}>
-                            {effect.text}
-                            {effect.amount ? ' ' + effect.amount : ''}
-                          </Text>
-                        </View>
-                      ))}
+                    return (
+                      <View
+                        key={index}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        {imageSource ? (
+                          <Image
+                            source={imageSource}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              resizeMode: 'contain',
+                            }}
+                          />
+                        ) : (
+                          <TextWithEmojis
+                            style={styles.slowCookerText}
+                            imageSize={24}
+                          >
+                            {bonus.emoji}
+                          </TextWithEmojis>
+                        )}
+                        <Text style={styles.slowCookerText}>
+                          {bonus.name}:{' '}
+                          {bonus.multiplier > 1
+                            ? `${bonus.multiplier.toFixed(2)}x`
+                            : ''}
+                          {bonus.flatBonus
+                            ? ` +$${bonus.flatBonus.toFixed(2)}`
+                            : ''}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                  {/* Show vacuum sealer penalty if active */}
+                  {saleResult.vacuumSealerPenalty < 1 && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <Image
+                        source={require('../../assets/images/emojis/vacuumsealer.png')}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          resizeMode: 'contain',
+                        }}
+                      />
+                      <Text style={styles.penaltyText}>
+                        Vacuum Sealer: -50% profit
+                      </Text>
                     </View>
-                  </PixelBorder>
-                );
-              }
-
-              return null;
-            })()}
+                  )}
+                </View>
+              </PixelBorder>
+            )}
 
           <View style={styles.sliderSection}>
             <Text style={styles.quantityLabel}>
@@ -1968,6 +1901,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.green.success,
+    fontFamily: 'PixeloidMono',
+  },
+  penaltyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ef4444', // Red color for penalties
     fontFamily: 'PixeloidMono',
   },
   breakdownTitle: {

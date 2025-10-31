@@ -14,10 +14,12 @@ import { resetGame } from '../store/slices/gameSlice';
 import { resetInventory } from '../store/slices/inventorySlice';
 import { resetJokers } from '../store/slices/jokerSlice';
 import { resetDailyStats } from '../store/slices/dailyStatsSlice';
+import { resetCandySales } from '../store/slices/candySalesSlice';
 import { selectSelectedHallPassEffects } from '../store/slices/hallPassSlice';
 import { selectActiveEffects } from '../store/slices/merchantSlice';
 import { HallPassUtils } from '../utils/hallPassUtils';
 import { MerchantUtils } from '../utils/merchantUtils';
+import { processEffectsByTarget } from '../utils/jokerEffectEngine';
 
 export const useWallet = () => {
   const dispatch = useAppDispatch();
@@ -88,19 +90,48 @@ export const useWallet = () => {
 
     // Finance Club: Add 10% of yesterday's profit to allowance
     const hasFinanceClub = selectedPassIds.includes('finance_club');
+    console.log(`💼 Finance Club Debug: Checking if Finance Club is active...`);
+    console.log(`💼 Finance Club Debug: selectedPassIds:`, selectedPassIds);
+    console.log(`💼 Finance Club Debug: hasFinanceClub: ${hasFinanceClub}`);
+    console.log(`💼 Finance Club Debug: currentDayStats:`, currentDayStats);
+
     if (hasFinanceClub && currentDayStats) {
       // Get current day number
       const currentDay = currentDayStats.day;
+      console.log(`💼 Finance Club Debug: Current day: ${currentDay}`);
+      console.log(`💼 Finance Club Debug: Looking for yesterday (day ${currentDay - 1}) in dailyStats:`, dailyStats);
+
       // Find yesterday's stats (day - 1)
       const yesterdayStats = dailyStats.find(d => d.day === currentDay - 1);
+      console.log(`💼 Finance Club Debug: Yesterday's stats found:`, yesterdayStats);
 
       if (yesterdayStats && yesterdayStats.profit > 0) {
         const profitBonus = Math.round(yesterdayStats.profit * 0.1);
+        console.log(`💼 Finance Club: Yesterday's profit: $${yesterdayStats.profit}`);
+        console.log(`💼 Finance Club: Calculating 10% bonus: ${yesterdayStats.profit} * 0.1 = ${yesterdayStats.profit * 0.1}`);
+        console.log(`💼 Finance Club: Rounded bonus: $${profitBonus}`);
+        console.log(`💼 Finance Club: Allowance before bonus: $${finalAllowance}`);
         finalAllowance += profitBonus;
-        console.log(`💼 Finance Club: Adding 10% of yesterday's profit ($${yesterdayStats.profit}) → +$${profitBonus} to allowance`);
-        console.log(`💼 Finance Club: Final allowance with bonus: $${finalAllowance}`);
+        console.log(`💼 Finance Club: ✅ Added $${profitBonus} to allowance → Final: $${finalAllowance}`);
+      } else if (yesterdayStats && yesterdayStats.profit <= 0) {
+        console.log(`💼 Finance Club: ⚠️ Yesterday's profit was $${yesterdayStats.profit} (not positive) - no bonus added`);
       } else {
-        console.log(`💼 Finance Club: No profit yesterday or first day, no bonus added`);
+        console.log(`💼 Finance Club: ⚠️ No stats found for yesterday (day ${currentDay - 1}) - likely first day, no bonus added`);
+      }
+    } else if (hasFinanceClub && !currentDayStats) {
+      console.log(`💼 Finance Club: ⚠️ Finance Club active but currentDayStats is null/undefined`);
+    } else {
+      console.log(`💼 Finance Club: Hall pass not selected, skipping bonus`);
+    }
+
+    // Family Business: Add $1000 if 3+ allowance multiplier jokers owned
+    if (jokers && jokers.length > 0) {
+      const allowanceMultiplierJokers = processEffectsByTarget(jokers, 'allowance_multiplier');
+      const hasFamilyBusiness = jokers.some((j: any) => j.id === 26);
+
+      if (hasFamilyBusiness && allowanceMultiplierJokers.length >= 3) {
+        finalAllowance += 1000;
+        console.log(`👨‍👩‍👧‍👦 Family Business: You have ${allowanceMultiplierJokers.length} allowance multiplier jokers → +$1000 to allowance`);
       }
     }
 
@@ -112,7 +143,17 @@ export const useWallet = () => {
     // Use small epsilon to handle floating point precision issues
     const epsilon = 0.001;
     if (balance >= amount - epsilon) {
-      dispatch(stashMoney(amount));
+      // Check for deposit bonus joker (10% extra stashed)
+      let amountStashed = amount;
+      if (jokers) {
+        const depositBonusJoker = jokers.find((j: any) => j.id === 'deposit_bonus');
+        if (depositBonusJoker) {
+          amountStashed = amount * 1.1; // 10% bonus
+          console.log(`💰 Deposit Bonus: Stashing $${amount} → $${amountStashed.toFixed(2)}`);
+        }
+      }
+
+      dispatch(stashMoney({ amountPaid: amount, amountStashed }));
       return true;
     }
     console.log(`❌ Stash failed - balance: ${balance}, amount: ${amount}, difference: ${balance - amount}`);
@@ -147,6 +188,7 @@ export const useWallet = () => {
     dispatch(resetInventory());
     dispatch(resetJokers());
     dispatch(resetDailyStats());
+    dispatch(resetCandySales()); // Reset period profit tracking for new game
     dispatch(initializeWallet({ level, playerName }));
   }, [dispatch]);
 
@@ -157,6 +199,70 @@ export const useWallet = () => {
   const hasExistingName = useCallback(async (): Promise<boolean> => {
     return playerName !== null;
   }, [playerName]);
+
+  const applyDailyInterest = useCallback((jokers?: any[]): number => {
+    console.log(`💰 High Yield Account Debug: Checking daily interest...`);
+    console.log(`💰 High Yield Account Debug: jokers:`, jokers?.map(j => ({ id: j.id, name: j.name })));
+    console.log(`💰 High Yield Account Debug: stashedAmount: $${stashedAmount}`);
+
+    // Check if player has High Yield Account joker (ID 53)
+    if (!jokers || jokers.length === 0) {
+      console.log(`💰 High Yield Account: No jokers owned, skipping interest`);
+      return 0;
+    }
+
+    if (stashedAmount <= 0) {
+      console.log(`💰 High Yield Account: No money stashed ($${stashedAmount}), skipping interest`);
+      return 0;
+    }
+
+    const hasHighYieldAccount = jokers.some((j: any) => j.id === 53);
+    console.log(`💰 High Yield Account Debug: hasHighYieldAccount (ID 53): ${hasHighYieldAccount}`);
+
+    if (!hasHighYieldAccount) {
+      console.log(`💰 High Yield Account: Joker not owned, skipping interest`);
+      return 0;
+    }
+
+    // Apply 8% compound interest
+    const interest = stashedAmount * 0.08;
+    console.log(`💰 High Yield Account: Calculating interest: ${stashedAmount} * 0.08 = ${interest}`);
+    console.log(`💰 High Yield Account: Stashed before interest: $${stashedAmount}`);
+    dispatch(stashMoney({ amountPaid: 0, amountStashed: interest }));
+    console.log(`💰 High Yield Account: ✅ Earned $${interest.toFixed(2)} interest (8% of $${stashedAmount})`);
+    console.log(`💰 High Yield Account: Stashed after interest: $${stashedAmount + interest}`);
+    return interest;
+  }, [dispatch, stashedAmount]);
+
+  const applyInheritance = useCallback((): number => {
+    console.log(`💎 Inheritance Debug: Checking if Inheritance is active...`);
+    console.log(`💎 Inheritance Debug: selectedPassIds:`, selectedPassIds);
+    console.log(`💎 Inheritance Debug: includes('inheritance'): ${selectedPassIds.includes('inheritance')}`);
+    console.log(`💎 Inheritance Debug: current wallet balance: $${balance}`);
+    console.log(`💎 Inheritance Debug: current stashed amount: $${stashedAmount}`);
+
+    // Check if Inheritance hall pass is selected
+    if (!selectedPassIds.includes('inheritance')) {
+      console.log(`💎 Inheritance: Hall pass not selected, skipping transfer`);
+      return 0;
+    }
+
+    if (balance <= 0) {
+      console.log(`💎 Inheritance: ⚠️ Wallet balance is $${balance} (not positive) - no transfer`);
+      return 0;
+    }
+
+    // Add 10% of wallet to piggy bank (FREE money, doesn't remove from wallet)
+    const transferAmount = balance * 0.1;
+    console.log(`💎 Inheritance: Calculating transfer: ${balance} * 0.1 = ${transferAmount}`);
+    console.log(`💎 Inheritance: Wallet before: $${balance} (will stay the same)`);
+    console.log(`💎 Inheritance: Stashed before: $${stashedAmount}`);
+    dispatch(stashMoney({ amountPaid: 0, amountStashed: transferAmount }));
+    console.log(`💎 Inheritance: ✅ Added $${transferAmount.toFixed(2)} to piggy bank (FREE money, wallet unchanged)`);
+    console.log(`💎 Inheritance: Wallet after: $${balance} (unchanged)`);
+    console.log(`💎 Inheritance: Stashed after: $${stashedAmount + transferAmount}`);
+    return transferAmount;
+  }, [dispatch, selectedPassIds, balance, stashedAmount]);
 
   return {
     balance,
@@ -177,5 +283,7 @@ export const useWallet = () => {
     initializeWallet: initializeWalletAction,
     setPlayerName: setPlayerNameAction,
     hasExistingName,
+    applyDailyInterest,
+    applyInheritance,
   };
 };

@@ -30,8 +30,8 @@ export const useDiamondHand = () => {
     const currentInventory = getTotalInventoryCount();
 
     if (currentInventory > 0) {
-      // Calculate bonus: $5 per candy in inventory
-      const bonusAmount = currentInventory * 5;
+      // Calculate bonus: $10 per candy in inventory
+      const bonusAmount = currentInventory * 10;
 
       addMoney(bonusAmount);
       console.log(

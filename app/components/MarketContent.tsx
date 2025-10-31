@@ -15,6 +15,7 @@ interface MarketContentProps {
   selectedCandyIndex: number | null;
   period: number;
   day: number;
+  periodsPerDay: number;
   onCandyPress: (index: number) => void;
   onLunchBack: () => void;
   onInventoryPress: () => void;
@@ -34,6 +35,7 @@ export default function MarketContent({
   selectedCandyIndex,
   period,
   day,
+  periodsPerDay,
   onCandyPress,
   onLunchBack,
   onInventoryPress,
@@ -74,6 +76,7 @@ export default function MarketContent({
             period={period}
             day={day}
             totalDays={5}
+            periodsPerDay={periodsPerDay}
             showLunchMinigames={showLunchMinigames}
             onNextPeriod={onNextPeriod}
             onEndDay={onEndDay}

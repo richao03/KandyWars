@@ -19,12 +19,13 @@ import { useMinigameTracking } from '../src/hooks/useMinigameTracking';
 import { useWallet } from '../src/hooks/useWallet';
 import { scoreboardService } from '../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../src/store/hooks';
-import { setTotalCompletions } from '../src/store/slices/gameSlice';
+import {
+  getPeriodsPerDay,
+  setTotalCompletions,
+} from '../src/store/slices/gameSlice';
 import { resetLocalAnalytics } from '../src/store/slices/localAnalyticsSlice';
 import { setWonDifficulties } from '../src/store/slices/scoreboardSlice';
-import {
-  setCachedUserObject,
-} from '../src/store/slices/userObjectSlice';
+import { setCachedUserObject } from '../src/store/slices/userObjectSlice';
 import { forceSave } from '../src/store/store';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
@@ -41,6 +42,7 @@ export default function GameEndScreen() {
   } = useDailyStats();
   const { resetGame, fullResetGame, periodCount } = useGame();
   const {
+    allPasses,
     unlockedPasses,
     newlyUnlockedPasses,
     clearNewlyUnlocked,
@@ -53,6 +55,8 @@ export default function GameEndScreen() {
   const reduxUserObject = useAppSelector(
     (state) => state.userObject.cachedUser
   );
+  const periodsPerDay = useAppSelector((state) => getPeriodsPerDay(state));
+  const candySalesState = useAppSelector((state) => state.candySales);
 
   const totalStats = getTotalStats();
   const playthroughStats = getPlaythroughStats();
@@ -62,6 +66,124 @@ export default function GameEndScreen() {
   // Win condition: paid off the debt (stashedAmount >= 0)
   // The game starts with stashedAmount = -adoptionFee (negative = debt)
   const gameResult = finalScore >= 0 ? 'won' : 'lost';
+
+  // Track total wins from Firebase for hall pass progress
+  const [totalWinCount, setTotalWinCount] = React.useState(0);
+
+  // Helper function to get hall pass progress
+  const getHallPassProgress = (passId: string) => {
+    switch (passId) {
+      case 'no_longer_freshman':
+        return { current: totalWinCount, required: 1, label: 'wins' };
+      case 'sophomore_swagger':
+        return { current: totalWinCount, required: 3, label: 'wins' };
+      case 'junior_genius':
+        return {
+          current: finalScore,
+          required: 100000,
+          label: 'profit*',
+          isThisGame: true,
+        };
+      case 'senior_executive':
+        return { current: totalWinCount, required: 5, label: 'wins' };
+      case 'valedictorian_vendor':
+        return {
+          current: playedMinigames.length,
+          required: 9,
+          label: 'minigames',
+        };
+      case 'candy_kingpin':
+        return { current: totalWinCount, required: 10, label: 'wins' };
+      case 'forged_pass':
+        return {
+          current: jokers.length,
+          required: 8,
+          label: 'jokers*',
+        };
+      case 'minimalist_master':
+        return {
+          current: jokers.length === 0 && gameResult === 'won' ? 1 : 0,
+          required: 1,
+          label:
+            jokers.length === 0 && gameResult === 'won'
+              ? 'Achieved!'
+              : 'Used jokers',
+          isBoolean: true,
+        };
+      case 'high_roller':
+        return {
+          current: playthroughStats?.totalCandiesSold || 0,
+          required: 1000,
+          label: 'candies*',
+        };
+      case 'perfect_scholar':
+        return {
+          current: difficultyLevel >= 6 && gameResult === 'won' ? 1 : 0,
+          required: 1,
+          label:
+            difficultyLevel >= 6 && gameResult === 'won'
+              ? 'Achieved!'
+              : `Difficulty ${difficultyLevel} (need 6+)`,
+          isBoolean: true,
+        };
+      case 'teachers_pet':
+        return {
+          current: playthroughStats?.confiscationCount || 0,
+          required: 3,
+          label: 'confiscations*',
+        };
+      case 'finance_club':
+        return {
+          current: Math.max(0, stashedAmount),
+          required: 35000,
+          label: 'stashed*',
+          isThisGame: true,
+        };
+      case 'maximalist':
+        return {
+          current: playthroughStats?.maxDepositsCount || 0,
+          required: 4,
+          label: 'max deposits*',
+        };
+      case 'inheritance':
+        return {
+          current: Math.max(0, stashedAmount),
+          required: 50000,
+          label: 'stashed*',
+          isThisGame: true,
+        };
+      case 'time_crunch': {
+        const totalProfit = finalScore + adoptionFee; // Total profit = final score + debt paid
+        const earlyPercent =
+          totalProfit > 0
+            ? (candySalesState.earlyPeriodProfit / totalProfit) * 100
+            : 0;
+        return {
+          current: Math.round(earlyPercent),
+          required: 50,
+          label: 'early profit*',
+          isThisGame: true,
+          isPercentage: true,
+        };
+      }
+      case 'final_exam': {
+        const totalProfit = finalScore + adoptionFee; // Total profit = final score + debt paid
+        const latePercent =
+          totalProfit > 0
+            ? (candySalesState.latePeriodProfit / totalProfit) * 100
+            : 0;
+        return {
+          current: Math.round(latePercent),
+          required: 50,
+          label: 'late profit*',
+          isThisGame: true,
+          isPercentage: true,
+        };
+      }
+      default:
+        return { current: 0, required: 1, label: 'unknown' };
+    }
+  };
 
   // Check for hall pass unlocks when screen loads
   useEffect(() => {
@@ -107,6 +229,9 @@ export default function GameEndScreen() {
         }
 
         console.log('📊 Current user object:', userObject);
+
+        // Set total win count for hall pass progress display
+        setTotalWinCount(userObject.totalWinCount || 0);
 
         // Always update played minigames (regardless of win/loss)
         const updates: any = {
@@ -175,7 +300,9 @@ export default function GameEndScreen() {
 
         // Track game completion to scoreboard
         try {
-          const day = Math.floor(periodCount / 8) + 1;
+          const day = Math.floor((periodCount - 1) / periodsPerDay) + 1;
+          const estimatedMinutes =
+            periodsPerDay === 6 ? periodCount * 4 : periodCount * 5;
           await scoreboardService.trackGameCompletion(
             balance,
             difficultyLevel?.toString() || '1',
@@ -184,7 +311,7 @@ export default function GameEndScreen() {
             playthroughStats?.totalProfit || 0,
             playthroughStats?.totalCandiesSold || 0,
             jokers.length,
-            periodCount * 5, // Approximate minutes (5 min per period)
+            estimatedMinutes, // Approximate minutes (4 min for 6-period days, 5 min for 8-period days)
             periodCount
           );
           console.log('✅ Game completion tracked to scoreboard');
@@ -213,9 +340,18 @@ export default function GameEndScreen() {
           confiscationCount: playthroughStats?.confiscationCount || 0,
           stashedAmount: stashedAmount,
           jokerCount: jokers.length,
+          maxDepositsCount: playthroughStats?.maxDepositsCount || 0,
+          earlyPeriodProfit: candySalesState.earlyPeriodProfit,
+          latePeriodProfit: candySalesState.latePeriodProfit,
+          transactionCount: candySalesState.transactionCount,
         };
 
         console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
+        console.log('🎓 Minigame tracking data:', {
+          hasPlayedAllMinigames: hasPlayedAllMinigames,
+          playedMinigames: playedMinigames,
+          playedCount: playedMinigames.length,
+        });
 
         const unlocked = checkUnlockRequirements(gameStats, {
           hasPlayedAllMinigames: hasPlayedAllMinigames,
@@ -450,7 +586,7 @@ export default function GameEndScreen() {
               style={styles.difficultyBadge}
             >
               <TextWithEmojis style={styles.difficultyText} imageSize={24}>
-                {`🎯 Difficulty: ${difficultyName} `}
+                {`Difficulty: ${difficultyName} `}
               </TextWithEmojis>
             </PixelBorder>
 
@@ -586,63 +722,84 @@ export default function GameEndScreen() {
             </PixelBorder>
 
             {/* Merchant Items Purchased */}
-            {playthroughStats?.merchantPurchases && playthroughStats.merchantPurchases.length > 0 && (
-              <PixelBorder
-                borderColor="#FFD700"
-                borderWidth={4}
-                backgroundColor="rgba(255, 250, 205, 0.95)"
-                innerPadding={16}
-                style={styles.section}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                  <Image
-                    source={require('../assets/images/icons/merchant.png')}
-                    style={{ width: 32, height: 32, resizeMode: 'contain', marginRight: 8 }}
-                  />
-                  <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
-                    Merchant Items ({playthroughStats.merchantPurchases.length})
-                  </TextWithEmojis>
-                </View>
+            {playthroughStats?.merchantPurchases &&
+              playthroughStats.merchantPurchases.length > 0 && (
+                <PixelBorder
+                  borderColor="#FFD700"
+                  borderWidth={4}
+                  backgroundColor="rgba(255, 250, 205, 0.95)"
+                  innerPadding={16}
+                  style={styles.section}
+                >
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Image
+                      source={require('../assets/images/icons/merchant.png')}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        resizeMode: 'contain',
+                        marginRight: 8,
+                      }}
+                    />
+                    <TextWithEmojis style={styles.sectionTitle} imageSize={30}>
+                      Merchant Items (
+                      {playthroughStats.merchantPurchases.length})
+                    </TextWithEmojis>
+                  </View>
 
-                <View style={styles.merchantGrid}>
-                  {playthroughStats.merchantPurchases.map((purchase, index) => (
-                    <PixelBorder
-                      key={index}
-                      borderColor="#DAA520"
-                      borderWidth={2}
-                      backgroundColor="rgba(255, 245, 220, 0.8)"
-                      innerPadding={8}
-                      style={styles.merchantItem}
-                    >
-                      <Image
-                        source={(() => {
-                          const iconMap: Record<string, any> = {
-                            fake_report_card: require('../assets/images/icons/fakeReportCard.png'),
-                            metal_detector: require('../assets/images/icons/metalDetector.png'),
-                            hollowed_textbook: require('../assets/images/icons/hollowedBook.png'),
-                            street_cred: require('../assets/images/icons/streetCred.png'),
-                            double_sided_coin: require('../assets/images/icons/luckyCoin.png'),
-                            influencer_shoutout: require('../assets/images/icons/influencerShoutout.png'),
-                            hall_monitor_bribe: require('../assets/images/icons/bribe.png'),
-                            sixth_grade_bodyguard: require('../assets/images/icons/bodyguard.png'),
-                            air_delivery_drone: require('../assets/images/icons/drone.png'),
-                          };
-                          return iconMap[purchase.itemId];
-                        })()}
-                        style={{ width: 24, height: 24, resizeMode: 'contain', marginBottom: 4 }}
-                      />
-                      <Text style={styles.merchantItemText}>
-                        {purchase.itemName}
-                        {purchase.level && ` Lv${purchase.level}`}
-                      </Text>
-                      <Text style={styles.merchantItemPrice}>
-                        ${(purchase.price / 1000).toFixed(1)}k
-                      </Text>
-                    </PixelBorder>
-                  ))}
-                </View>
-              </PixelBorder>
-            )}
+                  <View style={styles.merchantGrid}>
+                    {playthroughStats.merchantPurchases.map(
+                      (purchase, index) => (
+                        <PixelBorder
+                          key={index}
+                          borderColor="#DAA520"
+                          borderWidth={2}
+                          backgroundColor="rgba(255, 245, 220, 0.8)"
+                          innerPadding={8}
+                          style={styles.merchantItem}
+                        >
+                          <Image
+                            source={(() => {
+                              const iconMap: Record<string, any> = {
+                                fake_report_card: require('../assets/images/icons/fakeReportCard.png'),
+                                metal_detector: require('../assets/images/icons/metalDetector.png'),
+                                hollowed_textbook: require('../assets/images/icons/hollowedBook.png'),
+                                street_cred: require('../assets/images/icons/streetCred.png'),
+                                double_sided_coin: require('../assets/images/icons/luckyCoin.png'),
+                                influencer_shoutout: require('../assets/images/icons/influencerShoutout.png'),
+                                hall_monitor_bribe: require('../assets/images/icons/bribe.png'),
+                                sixth_grade_bodyguard: require('../assets/images/icons/bodyguard.png'),
+                                air_delivery_drone: require('../assets/images/icons/drone.png'),
+                              };
+                              return iconMap[purchase.itemId];
+                            })()}
+                            style={{
+                              width: 24,
+                              height: 24,
+                              resizeMode: 'contain',
+                              marginBottom: 4,
+                              alignSelf: 'center',
+                            }}
+                          />
+                          <Text style={styles.merchantItemText}>
+                            {purchase.itemName}
+                            {purchase.level && ` Lv${purchase.level}`}
+                          </Text>
+                          <Text style={styles.merchantItemPrice}>
+                            ${(purchase.price / 1000).toFixed(1)}k
+                          </Text>
+                        </PixelBorder>
+                      )
+                    )}
+                  </View>
+                </PixelBorder>
+              )}
 
             {/* Hall Passes Unlocked */}
             {newlyUnlockedPasses.length > 0 && (
@@ -728,6 +885,78 @@ export default function GameEndScreen() {
             <Text style={styles.leaderboardText}>
               Your score has been submitted to the leaderboard!
             </Text>
+
+            {/* Hall Pass Progress - Only show locked passes */}
+            {(() => {
+              console.log(
+                '🎖️ Game End - allPasses count:',
+                allPasses?.length || 0
+              );
+              console.log(
+                '🎖️ Game End - locked passes:',
+                allPasses
+                  ?.filter((pass) => !pass.isUnlocked)
+                  .map((p) => p.id) || []
+              );
+              return (
+                allPasses &&
+                allPasses.filter((pass) => !pass.isUnlocked).length > 0
+              );
+            })() && (
+              <PixelBorder
+                borderColor="#A3D5FF"
+                borderWidth={4}
+                backgroundColor="rgba(230, 245, 255, 0.95)"
+                innerPadding={16}
+                style={styles.section}
+              >
+                <TextWithEmojis style={styles.sectionTitle} imageSize={32}>
+                  🎖️ Hall Pass Progress
+                </TextWithEmojis>
+
+                <View style={{ marginTop: 12 }}>
+                  {allPasses
+                    .filter((pass) => !pass.isUnlocked)
+                    .map((pass) => {
+                      const progress = getHallPassProgress(pass.id);
+                      const isBoolean = (progress as any).isBoolean;
+                      const isThisGame = (progress as any).isThisGame;
+                      const isPercentage = (progress as any).isPercentage;
+
+                      console.log(
+                        `🎖️ Rendering progress for ${pass.id}:`,
+                        progress
+                      );
+
+                      return (
+                        <View key={pass.id} style={styles.statItemRow}>
+                          <Text style={styles.hallPassName}>{pass.name}</Text>
+                          <Text style={styles.hallPassProgress}>
+                            {isBoolean
+                              ? progress.label
+                              : isThisGame && isPercentage
+                                ? `${progress.current}%/${progress.required}% ${progress.label}`
+                                : isThisGame
+                                  ? `$${progress.current >= 1000 ? (progress.current / 1000).toFixed(1) + 'k' : progress.current}/$${progress.required >= 1000 ? (progress.required / 1000).toFixed(0) + 'k' : progress.required} ${progress.label}`
+                                  : `${progress.current}/${progress.required} ${progress.label}`}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                </View>
+
+                <Text
+                  style={{
+                    ...styles.subtitle,
+                    fontSize: 12,
+                    marginTop: 12,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  * "This game" stats show current playthrough only
+                </Text>
+              </PixelBorder>
+            )}
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
@@ -983,5 +1212,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
+  },
+  hallPassName: {
+    fontSize: 14,
+    color: '#2D9B99',
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    flex: 1,
+  },
+  hallPassProgress: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'right',
+    marginLeft: 8,
   },
 });

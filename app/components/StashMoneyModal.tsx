@@ -1,27 +1,30 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import Slider from '@react-native-community/slider';
+import * as Haptics from 'expo-haptics';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Image,
   ImageBackground,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
-import * as Haptics from 'expo-haptics';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withTiming,
+  useSharedValue,
   withSequence,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
-import { useWallet } from '../../src/hooks/useWallet';
-import { useJokers } from '../../src/hooks/useJokers';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { useJokers } from '../../src/hooks/useJokers';
+import { useWallet } from '../../src/hooks/useWallet';
+import { useAppDispatch } from '../../src/store/hooks';
+import { incrementMaxDeposit } from '../../src/store/slices/dailyStatsSlice';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
-
 
 interface StashMoneyModalProps {
   visible: boolean;
@@ -38,9 +41,12 @@ function StashMoneyModal({
 }: StashMoneyModalProps) {
   const { balance, stashedAmount, stashMoney } = useWallet();
   const { jokers } = useJokers();
+  const dispatch = useAppDispatch();
 
   const [amount, setAmount] = useState(0);
   const [lastStashedAmount, setLastStashedAmount] = useState(stashedAmount);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingValue, setTypingValue] = useState('');
 
   // Animation values
   const translateY = useSharedValue(0);
@@ -89,10 +95,7 @@ function StashMoneyModal({
 
   const animatedChangeStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
+      transform: [{ translateY: translateY.value }, { scale: scale.value }],
       opacity: opacity.value,
     };
   });
@@ -117,40 +120,86 @@ function StashMoneyModal({
       return;
     }
 
-    // Check for Deposit Bonus joker
-    const depositBonusJoker = findJokerById(jokers, JOKER_IDS.DEPOSIT_BONUS);
-    let finalAmount = amount;
+    // Check if depositing entire wallet (for Maximalist hall pass)
+    const epsilon = 0.01; // Small tolerance for floating point comparison
+    const isMaxDeposit = Math.abs(amount - balance) < epsilon;
 
-    if (depositBonusJoker) {
-      finalAmount = amount * 1.1; // 10% bonus
-      console.log(`💰 Deposit Bonus: Depositing $${amount} with 10% bonus = $${finalAmount.toFixed(2)}`);
+    console.log(
+      `💰 Stash check - amount: ${amount}, balance: ${balance}, diff: ${Math.abs(amount - balance)}, isMaxDeposit: ${isMaxDeposit}`
+    );
+
+    // Track max deposit for Maximalist hall pass BEFORE stashing
+    if (isMaxDeposit) {
+      dispatch(incrementMaxDeposit());
+      console.log(
+        `🏆 Maximalist: Full wallet deposited! ($${amount.toFixed(2)})`
+      );
     }
 
-    const success = stashMoney(amount, jokers);
+    // stashMoney handles deposit bonus internally
+    stashMoney(amount, jokers);
 
-    if (success) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setAmount(0);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setAmount(0);
 
-      // Call onConfirm which handles drone consumption if in drone mode
-      setTimeout(() => {
-        onConfirm();
-      }, 500);
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-  }, [amount, balance, jokers, stashMoney, onConfirm, shakeX]);
+    // Call onConfirm which handles drone consumption if in drone mode
+    setTimeout(() => {
+      onConfirm();
+    }, 500);
+  }, [amount, balance, jokers, stashMoney, onConfirm, shakeX, dispatch]);
 
-  const handleSliderChange = useCallback((value: number) => {
-    setAmount(Math.floor(value));
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleSliderChange = useCallback(
+    (value: number) => {
+      setAmount(Math.floor(value));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Also update typing value if currently focused so input reflects slider position
+      if (isTyping) {
+        setTypingValue(Math.floor(value).toString());
+      }
+    },
+    [isTyping]
+  );
+
+  const handleQuickAmount = useCallback(
+    (percent: number) => {
+      const quickAmount = Math.floor(balance * percent);
+      setAmount(quickAmount);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    },
+    [balance]
+  );
+
+  const handleTextInput = useCallback(
+    (text: string) => {
+      // Remove any non-numeric characters except decimal point
+      const cleanText = text.replace(/[^0-9.]/g, '');
+
+      // Parse and cap the value
+      const numValue = parseFloat(cleanText) || 0;
+      const cappedValue = Math.min(numValue, balance);
+
+      // If value exceeds max, update typing value to show capped amount
+      if (numValue > balance) {
+        setTypingValue(cappedValue.toString());
+      } else {
+        setTypingValue(cleanText);
+      }
+
+      setAmount(cappedValue);
+    },
+    [balance]
+  );
+
+  const handleInputFocus = useCallback(() => {
+    setIsTyping(true);
+    // Initialize typing value with current amount
+    setTypingValue(amount > 0 ? amount.toString() : '');
+  }, [amount]);
+
+  const handleInputBlur = useCallback(() => {
+    setIsTyping(false);
+    setTypingValue('');
   }, []);
-
-  const handleQuickAmount = useCallback((percent: number) => {
-    const quickAmount = Math.floor(balance * percent);
-    setAmount(quickAmount);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, [balance]);
 
   // Calculate display amount with Deposit Bonus joker
   const depositBonusJoker = findJokerById(jokers, JOKER_IDS.DEPOSIT_BONUS);
@@ -177,8 +226,19 @@ function StashMoneyModal({
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
+              {isDroneMode ? (
+                <Image
+                  source={require('../../assets/images/icons/drone.png')}
+                  style={{
+                    width: 50,
+                    height: 50,
+                  }}
+                ></Image>
+              ) : (
+                ''
+              )}
               <Text style={styles.title}>
-                {isDroneMode ? '✈️ Drone Delivery' : '🏦 Piggy Bank'}
+                {isDroneMode ? 'Drone Delivery' : '🏦 Piggy Bank'}
               </Text>
               <Text style={styles.subtitle}>
                 {isDroneMode
@@ -204,7 +264,9 @@ function StashMoneyModal({
                   <Text
                     style={[
                       styles.changeText,
-                      changeAmount > 0 ? styles.positiveChange : styles.negativeChange,
+                      changeAmount > 0
+                        ? styles.positiveChange
+                        : styles.negativeChange,
                     ]}
                   >
                     {changeAmount > 0 ? '+' : ''}${changeAmount.toFixed(2)}
@@ -223,9 +285,23 @@ function StashMoneyModal({
             <View style={styles.amountContainer}>
               <Text style={styles.amountLabel}>Deposit Amount</Text>
               <View style={styles.amountDisplay}>
-                <Text style={styles.amountValue}>
-                  ${amount.toFixed(2)}
-                </Text>
+                <View style={styles.amountInputContainer}>
+                  <TextInput
+                    style={styles.amountValue}
+                    value={
+                      isTyping
+                        ? `$${typingValue}`
+                        : amount > 0
+                          ? `$${amount.toFixed(2)}`
+                          : '$0.00'
+                    }
+                    onChangeText={handleTextInput}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                    keyboardType="numeric"
+                    selectTextOnFocus
+                  />
+                </View>
                 {hasBonus && (
                   <View style={styles.bonusIndicator}>
                     <Text style={styles.bonusText}>
@@ -297,6 +373,7 @@ function StashMoneyModal({
                   <View style={styles.buttonInner}>
                     <Text style={styles.buttonText}>
                       {isDroneMode ? '✈️ Send' : '💰 Deposit'}
+                      {hasBonus && ` (+10%)`}
                     </Text>
                   </View>
                 </PixelBorder>
@@ -335,7 +412,7 @@ export default React.memo(StashMoneyModal);
 const styles = StyleSheet.create({
   background: {
     width: '100%',
-    minHeight: 500,
+    minHeight: 700,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -356,7 +433,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
     color: '#fbbf24',
     fontFamily: 'PixeloidMono',
@@ -387,7 +464,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stashedAmount: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: '700',
     color: '#22c55e',
     fontFamily: 'PixeloidMono',
@@ -452,6 +529,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  amountInputContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 2,
+    borderColor: 'rgba(251, 191, 36, 0.5)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
   amountValue: {
     fontSize: 32,
     fontWeight: '700',
@@ -460,6 +545,7 @@ const styles = StyleSheet.create({
     textShadowColor: '#000',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
+    textAlign: 'center',
   },
   bonusIndicator: {
     marginTop: 4,

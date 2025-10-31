@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,13 +20,13 @@ import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 
 interface Position {
   x: number;
@@ -37,54 +37,45 @@ interface GymGameProps {
   onComplete: () => void;
 }
 
-const GRID_SIZE = 15;
+// Get grid size based on level
+const getGridSize = (level: number): number => {
+  if (level === 1) return 5; // 5x5 = 25 cells
+  if (level === 2) return 6; // 6x6 = 36 cells
+  return 7; // 7x7 = 49 cells (level 3)
+};
 
-// Function to get random opposite corner positions
-const getRandomCornerPositions = (): { start: Position; goal: Position } => {
+// Fixed cell size for consistent sizing across all levels
+const CELL_SIZE = 24;
+
+// Function to get random corner position for start
+const getRandomCornerPosition = (gridSize: number): Position => {
   const corners = [
     { x: 0, y: 0 }, // top-left
-    { x: GRID_SIZE - 1, y: 0 }, // top-right
-    { x: 0, y: GRID_SIZE - 1 }, // bottom-left
-    { x: GRID_SIZE - 1, y: GRID_SIZE - 1 }, // bottom-right
+    { x: gridSize - 1, y: 0 }, // top-right
+    { x: 0, y: gridSize - 1 }, // bottom-left
+    { x: gridSize - 1, y: gridSize - 1 }, // bottom-right
   ];
 
   // Pick random corner for start
   const startIndex = Math.floor(Math.random() * corners.length);
-  const start = corners[startIndex];
-
-  // Get opposite corner for goal
-  let goal: Position;
-  if (startIndex === 0)
-    goal = corners[3]; // top-left -> bottom-right
-  else if (startIndex === 1)
-    goal = corners[2]; // top-right -> bottom-left
-  else if (startIndex === 2)
-    goal = corners[1]; // bottom-left -> top-right
-  else goal = corners[0]; // bottom-right -> top-left
-
-  return { start, goal };
+  return corners[startIndex];
 };
-
-// Calculate cell size to match container width
-const { width: screenWidth } = Dimensions.get('window');
-const containerPadding = 40; // 20px margin on each side
-const gridBorder = 4; // 2px border on each side
-const availableWidth = screenWidth - containerPadding - gridBorder;
-const CELL_SIZE = Math.floor(availableWidth / GRID_SIZE);
 
 // Initialize multiple hall monitors based on level
 const initializeHallMonitors = (
   levelNum: number,
-  startPos: Position,
-  goalPos: Position
+  gridSize: number,
+  startPos: Position
 ): Position[] => {
-  const numMonitors = levelNum * 4; // Level 1 = 3 monitors, Level 2 = 6 monitors, Level 3 = 9 monitors
+  // Monitor counts per level
+  let numMonitors = 1; // Level 1
+  if (levelNum === 2) numMonitors = 3;
+  if (levelNum === 3) numMonitors = 5;
   const monitors: Position[] = [];
   const usedPositions = new Set<string>();
 
-  // Add start/goal to avoid list
+  // Add start position to avoid list
   usedPositions.add(`${startPos.x}-${startPos.y}`);
-  usedPositions.add(`${goalPos.x}-${goalPos.y}`);
 
   // Place monitors randomly on the grid
   for (let i = 0; i < numMonitors; i++) {
@@ -94,8 +85,8 @@ const initializeHallMonitors = (
 
     do {
       monitorPos = {
-        x: Math.floor(Math.random() * GRID_SIZE),
-        y: Math.floor(Math.random() * GRID_SIZE),
+        x: Math.floor(Math.random() * gridSize),
+        y: Math.floor(Math.random() * gridSize),
       };
       attempts++;
     } while (
@@ -111,7 +102,10 @@ const initializeHallMonitors = (
 };
 
 // Move hall monitor to adjacent cell (up, down, left, right)
-const moveHallMonitorAdjacent = (currentPos: Position): Position => {
+const moveHallMonitorAdjacent = (
+  currentPos: Position,
+  gridSize: number
+): Position => {
   const directions = [
     { x: 0, y: -1 }, // up
     { x: 0, y: 1 }, // down
@@ -131,9 +125,9 @@ const moveHallMonitorAdjacent = (currentPos: Position): Position => {
     // Check if position is within bounds
     if (
       newPos.x >= 0 &&
-      newPos.x < GRID_SIZE &&
+      newPos.x < gridSize &&
       newPos.y >= 0 &&
-      newPos.y < GRID_SIZE
+      newPos.y < gridSize
     ) {
       validMoves.push(newPos);
     }
@@ -164,13 +158,14 @@ export default function GymGame({ onComplete }: GymGameProps) {
     'instructions' | 'playing' | 'jokerSelection'
   >('instructions');
   const [level, setLevel] = useState(1);
+  const [gridSize, setGridSize] = useState(5); // Dynamic grid size based on level
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
-  const [cornerPositions, setCornerPositions] = useState(() =>
-    getRandomCornerPositions()
+  const [startPosition, setStartPosition] = useState(() =>
+    getRandomCornerPosition(5)
   );
-  const [playerPos, setPlayerPos] = useState<Position>(cornerPositions.start);
+  const [playerPos, setPlayerPos] = useState<Position>(startPosition);
   const [hallMonitors, setHallMonitors] = useState<Position[]>(
-    initializeHallMonitors(1, cornerPositions.start, cornerPositions.goal)
+    initializeHallMonitors(1, 5, startPosition)
   );
   const [gameActive, setGameActive] = useState(false);
   const [moves, setMoves] = useState(0);
@@ -180,15 +175,20 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
   // Initialize level
   const initializeLevel = (levelNum: number) => {
-    // Generate new random corner positions for each level
-    const newCorners = getRandomCornerPositions();
-    setCornerPositions(newCorners);
-    setPlayerPos(newCorners.start);
-    setHallMonitors(
-      initializeHallMonitors(levelNum, newCorners.start, newCorners.goal)
-    );
+    // Get grid size for this level
+    const newGridSize = getGridSize(levelNum);
+    setGridSize(newGridSize);
+
+    // Generate new random corner position for start
+    const newStartPos = getRandomCornerPosition(newGridSize);
+    setStartPosition(newStartPos);
+    setPlayerPos(newStartPos);
+
+    // Initialize hall monitors
+    setHallMonitors(initializeHallMonitors(levelNum, newGridSize, newStartPos));
+
     setMoves(0);
-    setTraveledCells(new Set([`${newCorners.start.x}-${newCorners.start.y}`]));
+    setTraveledCells(new Set([`${newStartPos.x}-${newStartPos.y}`]));
     setGameActive(true);
   };
 
@@ -198,8 +198,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
     // Calculate new player position
     const delta = DIRECTIONS[direction as keyof typeof DIRECTIONS];
     const newPos = {
-      x: Math.max(0, Math.min(GRID_SIZE - 1, playerPos.x + delta.x)),
-      y: Math.max(0, Math.min(GRID_SIZE - 1, playerPos.y + delta.y)),
+      x: Math.max(0, Math.min(gridSize - 1, playerPos.x + delta.x)),
+      y: Math.max(0, Math.min(gridSize - 1, playerPos.y + delta.y)),
     };
 
     // Check if player actually moved (not hitting a wall)
@@ -212,7 +212,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
     // Move all hall monitors to adjacent cells
     const newHallMonitors = hallMonitors.map((monitor) =>
-      moveHallMonitorAdjacent(monitor)
+      moveHallMonitorAdjacent(monitor, gridSize)
     );
 
     // Check if any hall monitor lands on same square as player - CAUGHT!
@@ -277,13 +277,17 @@ export default function GymGame({ onComplete }: GymGameProps) {
     setPlayerPos(newPos);
     setHallMonitors(newHallMonitors);
     setMoves((prev) => prev + 1);
-    setTraveledCells((prev) => new Set([...prev, `${newPos.x}-${newPos.y}`]));
 
-    // Check if reached goal
-    if (
-      newPos.x === cornerPositions.goal.x &&
-      newPos.y === cornerPositions.goal.y
-    ) {
+    // Update traveled cells
+    const updatedTraveledCells = new Set([
+      ...traveledCells,
+      `${newPos.x}-${newPos.y}`,
+    ]);
+    setTraveledCells(updatedTraveledCells);
+
+    // Check if all cells have been visited (WIN CONDITION)
+    const totalCells = gridSize * gridSize;
+    if (updatedTraveledCells.size === totalCells) {
       setGameActive(false);
       setCompletedLevel(level); // Mark this level as completed
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -291,7 +295,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
       if (level < 3) {
         showModal(
           'Level Complete!',
-          `Great stealth! You made it in ${moves + 1} moves. Ready for Level ${level + 1}?`,
+          `Amazing! You covered all ${totalCells} cells in ${moves + 1} moves. Ready for Level ${level + 1}?`,
           '🎯',
           () => {
             setLevel(level + 1);
@@ -310,6 +314,42 @@ export default function GymGame({ onComplete }: GymGameProps) {
       }
     }
   };
+
+  // Add keyboard support for web/desktop
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!gameActive) return;
+
+      let direction = '';
+      switch (event.key) {
+        case 'ArrowUp':
+          direction = '⬆️';
+          event.preventDefault();
+          break;
+        case 'ArrowDown':
+          direction = '⬇️';
+          event.preventDefault();
+          break;
+        case 'ArrowLeft':
+          direction = '⬅️';
+          event.preventDefault();
+          break;
+        case 'ArrowRight':
+          direction = '➡️';
+          event.preventDefault();
+          break;
+      }
+
+      if (direction) {
+        handleMove(direction);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameActive, handleMove]);
 
   // Handle swipe gestures with new Gesture API
   const panGesture = Gesture.Pan().onEnd((event) => {
@@ -364,9 +404,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     const isHallMonitor = hallMonitors.some(
       (monitor) => monitor.x === x && monitor.y === y
     );
-    const isStart =
-      x === cornerPositions.start.x && y === cornerPositions.start.y;
-    const isGoal = x === cornerPositions.goal.x && y === cornerPositions.goal.y;
+    const isStart = x === startPosition.x && y === startPosition.y;
     const isTraveled = traveledCells.has(`${x}-${y}`);
     const isCaughtCell =
       caughtPosition && caughtPosition.x === x && caughtPosition.y === y;
@@ -394,7 +432,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
     } else if (isHallMonitor) {
       cellContent = '🚨';
       cellStyle = [styles.gridCell, styles.hallMonitorCell];
-    } else if (isStart && !isPlayer) {
+    } else if (isStart && !isTraveled) {
+      // Only show start door if player hasn't traveled from it yet
       cellContent = (
         <Image
           source={require('../../assets/images/emojis/door.png')}
@@ -402,14 +441,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
         />
       );
       cellStyle = [styles.gridCell, styles.startCell];
-    } else if (isGoal) {
-      cellContent = (
-        <Image
-          source={require('../../assets/images/emojis/bullseye.png')}
-          style={styles.bullseyeIcon}
-        />
-      );
-      cellStyle = [styles.gridCell, styles.goalCell];
     } else if (isTraveled) {
       cellContent = '';
       cellStyle = [styles.gridCell, styles.traveledCell];
@@ -478,28 +509,35 @@ export default function GymGame({ onComplete }: GymGameProps) {
             <Text style={styles.instructionsHeader}>How to Play:</Text>
 
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>4.</Text>
+              <Text style={styles.stepNumber}>1.</Text>
               <View>
                 <TextWithEmojis style={styles.stepText} imageSize={28}>
-                  Get from start 🚪
-                </TextWithEmojis>
-                <TextWithEmojis style={styles.stepText} imageSize={28}>
-                  to goal 🎯
-                </TextWithEmojis>
-                <TextWithEmojis style={styles.stepText} imageSize={28}>
-                  without being caught by any monitor
+                  Cover every cell on the grid without being caught by monitors
+                  🚨
                 </TextWithEmojis>
               </View>
             </View>
 
             <View style={styles.instructionStep}>
-              <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>Swipe to move</Text>
-            </View>
-            <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
+              <View>
+                <Text style={styles.stepText}>Swipe to move</Text>
+              </View>
+            </View>
+
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>3.</Text>
+              <View>
+                <Text style={styles.stepText}>lvl 1: 5x5 grid, 1 monitor</Text>
+                <Text style={styles.stepText}>lvl 2: 6x6 grid, 3 monitors</Text>
+                <Text style={styles.stepText}>lvl 3: 7x7 grid, 6 monitors</Text>
+              </View>
+            </View>
+
+            <View style={styles.instructionStep}>
+              <Text style={styles.stepNumber}>4.</Text>
               <Text style={styles.stepText}>
-                Level 1: 3 monitors! Level 2: 6 monitors! Level 3: 9 monitors!
+                Monitors move randomly each turn
               </Text>
             </View>
           </PixelBorder>
@@ -566,68 +604,68 @@ export default function GymGame({ onComplete }: GymGameProps) {
   // Render game
   return (
     <GestureHandlerRootView style={styles.container}>
-      <View
-        style={[
-          styles.container,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
-      >
-        <MinigameHUD
-          title="Gym Class Stealth"
-          subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
-          leftInfo={`Level ${level}/3`}
-          centerInfo=" "
-          rightInfo={`Moves: ${moves}`}
-          theme="gym"
-        />
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={styles.container}>
+          <View
+            style={[
+              styles.innerContainer,
+              {
+                padding: ResponsiveSpacing.containerPadding(),
+                paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
+              },
+            ]}
+          >
+            <MinigameHUD
+              title="Gym Class Stealth"
+              subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
+              leftInfo={`Level ${level}/3`}
+              centerInfo={`Visited: ${traveledCells.size}/${gridSize * gridSize}`}
+              rightInfo={`Moves: ${moves}`}
+              theme="gym"
+            />
 
-        <View style={styles.contentContainer}>
-          <View style={styles.gameContainer}>
-            <GestureDetector gesture={panGesture}>
-              <Animated.View style={styles.swipeArea}>
+            <View style={styles.contentContainer}>
+              <View style={styles.gameContainer}>
                 <View style={styles.gridContainer}>
-                  {Array.from({ length: GRID_SIZE }, (_, y) => (
+                  {Array.from({ length: gridSize }, (_, y) => (
                     <View key={y} style={styles.gridRow}>
-                      {Array.from({ length: GRID_SIZE }, (_, x) =>
+                      {Array.from({ length: gridSize }, (_, x) =>
                         renderCell(x, y)
                       )}
                     </View>
                   ))}
                 </View>
-              </Animated.View>
-            </GestureDetector>
-          </View>
-          <PixelBorder
-            borderColor="#e74c3c"
-            borderWidth={3}
-            backgroundColor="#1a2332"
-            innerPadding={0}
-            style={{ marginTop: 20 }}
-          >
-            <TouchableOpacity
-              style={styles.leaveButton}
-              onPress={handleForfeit}
-            >
-              <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
-                🚪 Leave
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
-        </View>
+              </View>
+              <PixelBorder
+                borderColor="#e74c3c"
+                borderWidth={3}
+                backgroundColor="#1a2332"
+                innerPadding={0}
+                style={{ marginTop: 20 }}
+              >
+                <TouchableOpacity
+                  style={styles.leaveButton}
+                  onPress={handleForfeit}
+                >
+                  <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
+                    🚪 Leave
+                  </TextWithEmojis>
+                </TouchableOpacity>
+              </PixelBorder>
+            </View>
 
-        <GameModal
-          visible={modal.visible}
-          title={modal.title}
-          message={modal.message}
-          emoji={modal.emoji}
-          onClose={hideModal}
-          onConfirm={modal.onConfirm}
-          showCancelButton={modal.showCancelButton}
-        />
-      </View>
+            <GameModal
+              visible={modal.visible}
+              title={modal.title}
+              message={modal.message}
+              emoji={modal.emoji}
+              onClose={hideModal}
+              onConfirm={modal.onConfirm}
+              showCancelButton={modal.showCancelButton}
+            />
+          </View>
+        </Animated.View>
+      </GestureDetector>
     </GestureHandlerRootView>
   );
 }
@@ -636,6 +674,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#2c3e50', // Dark gym blue-gray
+  },
+  innerContainer: {
+    flex: 1,
   },
   instructionsContainer: {
     flex: 1,
@@ -672,6 +713,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 12,
     alignItems: 'flex-start',
+    width: '90%',
   },
   stepNumber: {
     fontSize: 18,
@@ -725,24 +767,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  swipeArea: {
-    alignItems: 'center',
-  },
   gridContainer: {
     borderWidth: 2,
     borderColor: colors.red.error, // Gym red border
     borderRadius: 8,
     backgroundColor: '#34495e', // Dark gym floor
-    alignSelf: 'stretch',
-    marginHorizontal: 20,
+    alignSelf: 'center',
     marginTop: 16,
   },
   gridRow: {
     flexDirection: 'row',
   },
   gridCell: {
-    width: 23.8,
-    height: 23.8,
+    width: CELL_SIZE,
+    height: CELL_SIZE,
     borderWidth: 0.5,
     borderColor: '#7f8c8d', // Darker grid lines
     alignItems: 'center',

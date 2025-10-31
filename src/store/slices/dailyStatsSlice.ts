@@ -36,6 +36,7 @@ interface PlaythroughStats {
   totalCandiesSold: number;
   confiscationCount: number; // Track STASH_LOCKED events
   merchantPurchases: MerchantPurchase[]; // Track all merchant purchases
+  maxDepositsCount: number; // Track full wallet deposits for Maximalist hall pass
 }
 
 interface DailyStatsState {
@@ -65,6 +66,7 @@ const initialState: DailyStatsState = {
     totalCandiesSold: 0,
     confiscationCount: 0,
     merchantPurchases: [],
+    maxDepositsCount: 0,
   },
 };
 
@@ -132,7 +134,18 @@ const dailyStatsSlice = createSlice({
     },
     recordMerchantPurchase: (state, action: PayloadAction<MerchantPurchase>) => {
       state.playthroughStats.merchantPurchases.push(action.payload);
+
+      // Keep only last 50 purchases to prevent unbounded memory growth
+      if (state.playthroughStats.merchantPurchases.length > 50) {
+        state.playthroughStats.merchantPurchases =
+          state.playthroughStats.merchantPurchases.slice(-50);
+      }
+
       console.log('🛍️ Merchant purchase recorded:', action.payload.itemName);
+    },
+    incrementMaxDeposit: (state) => {
+      state.playthroughStats.maxDepositsCount += 1;
+      console.log('💰 Max deposit recorded. Total:', state.playthroughStats.maxDepositsCount);
     },
     resetPlaythroughStats: (state) => {
       state.playthroughStats = {
@@ -142,6 +155,7 @@ const dailyStatsSlice = createSlice({
         totalCandiesSold: 0,
         confiscationCount: 0,
         merchantPurchases: [],
+        maxDepositsCount: 0,
       };
     },
     resetDailyStats: (state) => {
@@ -174,6 +188,7 @@ export const {
   recordAllowance,
   recordConfiscation,
   recordMerchantPurchase,
+  incrementMaxDeposit,
   resetPlaythroughStats,
   resetDailyStats,
 } = dailyStatsSlice.actions;

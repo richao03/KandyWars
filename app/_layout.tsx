@@ -2,13 +2,12 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useState } from 'react';
-import { CopilotProvider } from 'react-native-copilot';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { persistor, store } from '../src/store/store';
-import CustomCopilotTooltip from './components/CustomCopilotTooltip';
+import GameEffectsManager from './components/GameEffectsManager';
 import StudioTitleScreen from './components/StudioTitleScreen';
 
 // Keep the splash screen visible while we fetch resources
@@ -48,118 +47,103 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
+        <GameEffectsManager />
         <SafeAreaProvider>
           <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <CopilotProvider
-                overlay="svg"
-                animated={true}
-                backdropColor="rgba(0, 0, 0, 0.9)"
-                labels={{
-                  previous: 'Back',
-                  next: 'Next',
-                  skip: 'Skip',
-                  finish: 'Got it!',
-                }}
-                tooltipComponent={CustomCopilotTooltip}
-                stopOnOutsideClick={false}
-                arrowSize={{ width: 0, height: 0 }}
-                maskOffset={8}
-              >
-                {showStudioScreen ? (
-                  <StudioTitleScreen
-                    onComplete={() => {
-                      setShowStudioScreen(false);
-                    }}
-                  />
-                ) : (
-                  <Stack
-                    screenOptions={{
-                      animation: 'none',
-                      animationEnabled: false,
-                    }}
-                  >
-                    <Stack.Screen
-                      name="index"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="(tabs)"
-                      options={{
-                        headerShown: false,
-                      }}
-                    />
-                    <Stack.Screen
-                      name="title-screen"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="story-screen"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="computer-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="economy-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="history-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="home-ec-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="logic-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="math-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="art-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="recess-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="geography-game"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="leaderboard"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="title-settings"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="piggy-bank"
-                      options={{
-                        presentation: 'modal',
-                        headerShown: false,
-                        animation: 'none',
-                      }}
-                    />
-                    <Stack.Screen
-                      name="deli"
-                      options={{
-                        presentation: 'modal',
-                        headerShown: false,
-                        animation: 'none',
-                      }}
-                    />
-                  </Stack>
-                )}
-              </CopilotProvider>
+                  {showStudioScreen ? (
+                      <StudioTitleScreen
+                        onComplete={() => {
+                          setShowStudioScreen(false);
+                        }}
+                      />
+                    ) : (
+                      <Stack
+                        screenOptions={{
+                          animation: 'none',
+                          animationEnabled: false,
+                        }}
+                      >
+                      <Stack.Screen
+                        name="index"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="(tabs)"
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen
+                        name="title-screen"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="story-screen"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="computer-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="economy-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="history-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="home-ec-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="logic-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="math-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="art-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="recess-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="geography-game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="leaderboard"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="title-settings"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="piggy-bank"
+                        options={{
+                          presentation: 'modal',
+                          headerShown: false,
+                          animation: 'none',
+                        }}
+                      />
+                      <Stack.Screen
+                        name="deli"
+                        options={{
+                          presentation: 'modal',
+                          headerShown: false,
+                          animation: 'none',
+                        }}
+                      />
+                    </Stack>
+                  )}
             </GestureHandlerRootView>
           </SafeAreaView>
         </SafeAreaProvider>

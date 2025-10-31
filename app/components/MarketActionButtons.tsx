@@ -9,25 +9,31 @@ interface MarketActionButtonsProps {
   period: number;
   day: number;
   totalDays: number;
+  periodsPerDay: number;
   showLunchMinigames: boolean;
   onNextPeriod: () => void;
   onEndDay: () => void;
+  isNextPeriodEnabled?: boolean;
 }
 
 const MarketActionButtons = React.memo(function MarketActionButtons({
   period,
   day,
   totalDays,
+  periodsPerDay,
   showLunchMinigames,
   onNextPeriod,
   onEndDay,
+  isNextPeriodEnabled = true,
 }: MarketActionButtonsProps) {
-  const isGoToLunch = period === 4 && !showLunchMinigames;
+  // Calculate lunch period dynamically (period 3 for 6-period days, period 4 for 8-period days)
+  const lunchPeriod = Math.floor(periodsPerDay / 2);
+  const isGoToLunch = period === lunchPeriod && !showLunchMinigames;
   const isLastDay = day === totalDays;
-  const isPeriod8 = period === 8;
+  const isLastPeriod = period === periodsPerDay;
 
-  if (isLastDay && isPeriod8) {
-    // Last day, period 8 - show only end game button
+  if (isLastDay && isLastPeriod) {
+    // Last day, last period - show only end game button
     return (
       <View style={styles.container}>
         <PixelBorder
@@ -43,6 +49,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
             shadowOpacity={0.5}
             shadowRadius={5}
             elevation={8}
+            disabled={!isNextPeriodEnabled}
           >
             <View style={styles.pixelButtonInner}>
               <TextWithEmojis
@@ -61,8 +68,8 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
     );
   }
 
-  if (isPeriod8) {
-    // Period 8 - show only leave school button
+  if (isLastPeriod) {
+    // Last period - show only leave school button
     return (
       <View style={styles.container}>
         <PressableButton
@@ -72,6 +79,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
           shadowOpacity={0.5}
           shadowRadius={5}
           elevation={8}
+          disabled={!isNextPeriodEnabled}
         >
           <PixelBorder
             borderColor="rgba(123,169,101,1)"
@@ -91,7 +99,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
     );
   }
 
-  // Periods 1-7: Show both next period and end day buttons
+  // All other periods: Show both next period and end day buttons
   return (
     <View style={styles.buttonRow}>
       <PressableButton
@@ -102,6 +110,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
         shadowRadius={5}
         elevation={8}
         style={styles.bigButton}
+        disabled={!isNextPeriodEnabled}
       >
         <PixelBorder
           borderColor={

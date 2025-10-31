@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef, useEffect } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useGame } from '../../src/hooks/useGame';
@@ -23,6 +23,7 @@ interface StatusIcon {
   key: string;
   level?: number;
   isImage?: boolean; // true if icon is an image source, false if emoji text
+  name?: string; // Display name for tooltips
 }
 
 function StatusIndicators({
@@ -35,6 +36,18 @@ function StatusIndicators({
   const { period } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { consecutivePeriodSales, totalCandiesSold } = useCandySales();
+
+  const [tooltip, setTooltip] = React.useState<{ name: string; visible: boolean }>({ name: '', visible: false });
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup tooltip timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Get leveled item levels
   const streetCredLevel = useSelector(selectOwnedLevel('street_cred'));
@@ -61,6 +74,7 @@ function StatusIndicators({
         icon: require('../../assets/images/icons/streetCred.png'),
         key: 'streetcred',
         level: streetCredLevel,
+        name: 'Street Cred',
       });
     }
 
@@ -70,6 +84,7 @@ function StatusIndicators({
         icon: require('../../assets/images/icons/fakeReportCard.png'),
         key: 'fakereportcard',
         level: fakeReportCardLevel,
+        name: 'Fake Report Card',
       });
     }
 
@@ -79,6 +94,7 @@ function StatusIndicators({
         icon: require('../../assets/images/icons/metalDetector.png'),
         key: 'metaldetector',
         level: metalDetectorLevel,
+        name: 'Metal Detector',
       });
     }
 
@@ -88,6 +104,7 @@ function StatusIndicators({
         icon: require('../../assets/images/icons/hollowedBook.png'),
         key: 'hollowedtextbook',
         level: hollowedTextbookLevel,
+        name: 'Hollowed Textbook',
       });
     }
 
@@ -97,6 +114,7 @@ function StatusIndicators({
         icon: require('../../assets/images/icons/luckyCoin.png'),
         key: 'doublesidedcoin',
         level: doubleSidedCoinLevel,
+        name: 'Double Sided Coin',
       });
     }
 
@@ -107,6 +125,7 @@ function StatusIndicators({
           type: 'merchant',
           icon: require('../../assets/images/icons/influencerShoutout.png'),
           key: 'influencer',
+          name: 'Influencer Shoutout',
         });
       } else if (
         effect.itemId === 'hall_monitor_bribe' &&
@@ -116,6 +135,7 @@ function StatusIndicators({
           type: 'merchant',
           icon: require('../../assets/images/icons/bribe.png'),
           key: 'bribe',
+          name: 'Hall Monitor Bribe',
         });
       } else if (
         effect.itemId === 'sixth_grade_bodyguard' &&
@@ -125,43 +145,185 @@ function StatusIndicators({
           type: 'merchant',
           icon: require('../../assets/images/icons/bodyguard.png'),
           key: 'bodyguard',
+          name: 'Sixth Grade Bodyguard',
         });
       }
     });
 
-    // JOKERS - Check all owned jokers
+    // JOKERS - Check all owned jokers (deduplicate by name to show only one icon per joker type)
+    const addedJokerNames = new Set<string>();
+
     jokers.forEach((joker) => {
+      // Skip if we've already added this joker type
+      if (addedJokerNames.has(joker.name)) {
+        return;
+      }
+
       // Protection jokers (always show when owned)
       if (joker.name === 'Medieval Shield') {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/shield.png'),
-          key: 'shield',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       } else if (joker.name === 'Candy Vault') {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/lock.png'),
-          key: 'vault',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       } else if (joker.name === 'Tapped in') {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/tappedIn.png'),
-          key: 'tappedin',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Deposit Bonus') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/piggyBank.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Perfect Bake') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/statusCupcake.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Making Cents') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/cent.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Something from Nothing') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/magic.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'The Good Old Days') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/oldTv.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Vacuum Sealer') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/vacuumsealer.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Home Made') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/homemade.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'The Bounceback') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/bounceback.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Embrace the Grind') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/grinder.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Trade Routes') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/treasureMap.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Mysterious Artifact') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/artifact.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Feed the Beast') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/beast.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Hide and Seek') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/magnifyingGlass.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Diamond Hand') {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/diamondHand.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
       }
       // Time-based conditional jokers
       else if (joker.name === 'Sunset Surge' && period >= 5 && period <= 8) {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/sunrise.png'),
-          key: 'sunsetsurge',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       } else if (
         joker.name === 'Time Zone Arbitrage' &&
         period >= 1 &&
@@ -170,46 +332,58 @@ function StatusIndicators({
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/clock.png'),
-          key: 'timezone',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       } else if (joker.name === 'Hopscotch Bonus' && period % 2 === 0) {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/hopscotch.png'),
-          key: 'hopscotch',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       }
       // Inventory-based conditional jokers
-      else if (joker.name === 'Even Stevens' && inventoryLimit % 2 === 0) {
+      else if (joker.name === 'Farmers Carry' && inventoryLimit >= 75) {
+        jokerIcons.push({
+          type: 'joker',
+          icon: require('../../assets/images/emojis/farmersCarry.png'),
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
+          isImage: true,
+        });
+        addedJokerNames.add(joker.name);
+      } else if (joker.name === 'Even Stevens' && inventoryLimit % 2 === 0) {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/scale.png'),
-          key: 'evenstevens',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       } else if (joker.name === 'Odd Todd' && inventoryLimit % 2 === 1) {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/theater.png'),
-          key: 'oddtodd',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       } else if (joker.name === 'Slow Cooker' && totalInventory > 0) {
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/slowcooker.png'),
-          key: 'slowcooker',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
-      } else if (joker.name === 'Diamond Hand' && totalInventory > 0) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/diamondHand.png'),
-          key: 'diamondhand',
-          isImage: true,
-        });
+        addedJokerNames.add(joker.name);
       } else if (
         joker.name === 'Bulk Sale' &&
         totalInventory / inventoryLimit > 0.5
@@ -217,9 +391,11 @@ function StatusIndicators({
         jokerIcons.push({
           type: 'joker',
           icon: require('../../assets/images/emojis/bulkSale.png'),
-          key: 'bulksale',
+          key: `${joker.name}-${joker.id}`,
+          name: joker.name,
           isImage: true,
         });
+        addedJokerNames.add(joker.name);
       }
       // Sales streak-based conditional jokers
       else if (joker.name === 'Jump Rope Rhythm') {
@@ -228,9 +404,11 @@ function StatusIndicators({
           jokerIcons.push({
             type: 'joker',
             icon: require('../../assets/images/emojis/jumpRope.png'),
-            key: 'jumprope',
+            key: `${joker.name}-${joker.id}`,
+            name: joker.name,
             isImage: true,
           });
+          addedJokerNames.add(joker.name);
         }
       } else if (joker.name === 'Swingset Momentum') {
         const consecutiveCount = consecutivePeriodSales();
@@ -238,9 +416,11 @@ function StatusIndicators({
           jokerIcons.push({
             type: 'joker',
             icon: require('../../assets/images/emojis/swingset.png'),
-            key: 'swingset',
+            key: `${joker.name}-${joker.id}`,
+            name: joker.name,
             isImage: true,
           });
+          addedJokerNames.add(joker.name);
         }
       }
     });
@@ -253,6 +433,7 @@ function StatusIndicators({
           type: 'joker',
           icon: require('../../assets/images/emojis/talkingHead.png'),
           key: 'pursuasion',
+          name: 'Pursuasion',
           isImage: true,
         });
       }
@@ -278,6 +459,23 @@ function StatusIndicators({
   // Filter icons based on type prop
   const iconsToShow = type === 'merchant' ? merchantIcons : jokerIcons;
 
+  const handleLongPress = (name: string) => {
+    if (name) {
+      // Clear any existing timeout before setting a new one
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+
+      setTooltip({ name, visible: true });
+
+      // Auto-hide tooltip after 2 seconds
+      tooltipTimeoutRef.current = setTimeout(() => {
+        setTooltip({ name: '', visible: false });
+        tooltipTimeoutRef.current = null;
+      }, 2000);
+    }
+  };
+
   // Always render container with fixed width, even if empty
   return (
     <View style={styles.fixedWidthContainer}>
@@ -289,7 +487,11 @@ function StatusIndicators({
         >
           <View style={styles.gridContainer}>
             {iconsToShow.map((indicator) => (
-              <View key={indicator.key} style={styles.iconContainer}>
+              <Pressable
+                key={indicator.key}
+                onLongPress={() => handleLongPress(indicator.name || '')}
+                style={styles.iconContainer}
+              >
                 {type === 'merchant' ? (
                   <>
                     <Image
@@ -316,10 +518,17 @@ function StatusIndicators({
                     )}
                   </>
                 )}
-              </View>
+              </Pressable>
             ))}
           </View>
         </ScrollView>
+      )}
+      {tooltip.visible && (
+        <View style={styles.tooltipContainer}>
+          <View style={styles.tooltip}>
+            <Text style={styles.tooltipText}>{tooltip.name}</Text>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -384,6 +593,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
     lineHeight: 10,
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: -35,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  tooltip: {
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  tooltipText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
   },
 });
 

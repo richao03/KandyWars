@@ -30,32 +30,38 @@ const walletSlice = createSlice({
     },
     addBalance: (state, action: PayloadAction<number>) => {
       state.balance += action.payload;
-      console.log(
-        '💾 Balance added:',
-        action.payload,
-        'New balance:',
-        state.balance,
-        '- Auto-save triggered'
-      );
-    },
-    spendBalance: (state, action: PayloadAction<number>) => {
-      if (state.balance >= action.payload) {
-        state.balance -= action.payload;
+      if (__DEV__) {
         console.log(
-          '💾 Balance spent:',
+          '💾 Balance added:',
           action.payload,
           'New balance:',
           state.balance,
           '- Auto-save triggered'
         );
+      }
+    },
+    spendBalance: (state, action: PayloadAction<number>) => {
+      if (state.balance >= action.payload) {
+        state.balance -= action.payload;
+        if (__DEV__) {
+          console.log(
+            '💾 Balance spent:',
+            action.payload,
+            'New balance:',
+            state.balance,
+            '- Auto-save triggered'
+          );
+        }
         return;
       }
-      console.log(
-        '❌ Spend rejected - insufficient balance:',
-        state.balance,
-        'amount:',
-        action.payload
-      );
+      if (__DEV__) {
+        console.log(
+          '❌ Spend rejected - insufficient balance:',
+          state.balance,
+          'amount:',
+          action.payload
+        );
+      }
     },
     setStashedAmount: (state, action: PayloadAction<number>) => {
       state.stashedAmount = action.payload;
@@ -63,23 +69,32 @@ const walletSlice = createSlice({
     setAdoptionFee: (state, action: PayloadAction<number>) => {
       state.adoptionFee = action.payload;
     },
-    stashMoney: (state, action: PayloadAction<number>) => {
+    stashMoney: (state, action: PayloadAction<{ amountPaid: number; amountStashed: number }>) => {
       // Use small epsilon to handle floating point precision issues
       const epsilon = 0.001;
-      if (state.balance >= action.payload - epsilon) {
-        state.balance -= action.payload;
-        state.stashedAmount += action.payload;
-        console.log(
-          '💾 Money stashed:',
-          action.payload,
-          'New stashed amount:',
-          state.stashedAmount,
-          '- Auto-save triggered'
-        );
+      const { amountPaid, amountStashed } = action.payload;
+
+      if (state.balance >= amountPaid - epsilon) {
+        state.balance -= amountPaid;
+        state.stashedAmount += amountStashed;
+        const bonusApplied = amountStashed !== amountPaid;
+        if (__DEV__) {
+          console.log(
+            '💾 Money stashed:',
+            amountPaid,
+            'paid,',
+            amountStashed,
+            `stashed${bonusApplied ? ' (with bonus!)' : ''}. New stashed amount:`,
+            state.stashedAmount,
+            '- Auto-save triggered'
+          );
+        }
       } else {
-        console.log(
-          `❌ Stash rejected in reducer - balance: ${state.balance}, amount: ${action.payload}`
-        );
+        if (__DEV__) {
+          console.log(
+            `❌ Stash rejected in reducer - balance: ${state.balance}, amountPaid: ${amountPaid}`
+          );
+        }
       }
     },
     withdrawFromStash: (state, action: PayloadAction<number>) => {

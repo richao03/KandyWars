@@ -18,7 +18,7 @@ export interface HallPass {
   description: string;
   unlockRequirement: string;
   effects: HallPassEffect[];
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: 'common' | 'magical' | 'rare' | 'epic' | 'legendary';
   isUnlocked: boolean;
   unlockedAt?: string; // timestamp
 }
@@ -32,7 +32,9 @@ interface HallPassState {
 }
 
 // Define all possible Hall Passes
+// Sorted by rarity: Common → Magical → Rare → Epic → Legendary
 const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
+  // ===== COMMON (White #ffffff) - Very Easy =====
   {
     id: 'no_longer_freshman',
     name: 'Not a Freshman',
@@ -61,6 +63,36 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     ],
     rarity: 'common',
   },
+
+  // ===== MAGICAL (Green #1eff00) - Easy to Medium =====
+  {
+    id: 'valedictorian_vendor',
+    name: 'Valedictorian Vendor',
+    description: 'Academic excellence across all subjects.',
+    unlockRequirement: 'Play every single minigame at least once',
+    effects: [
+      {
+        type: 'joker_bonus',
+        value: 1,
+        description: 'Get +1 extra joker at joker selection screen',
+      },
+    ],
+    rarity: 'magical',
+  },
+  {
+    id: 'maximalist',
+    name: 'Maximalist',
+    description: 'All in, every time.',
+    unlockRequirement: 'Deposit your entire wallet 4 times in one game',
+    effects: [
+      {
+        type: 'allowance_bonus',
+        value: 1000,
+        description: '+1000% daily allowance',
+      },
+    ],
+    rarity: 'magical',
+  },
   {
     id: 'junior_genius',
     name: 'Junior Genius',
@@ -73,8 +105,10 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
         description: '+1000% daily allowance',
       },
     ],
-    rarity: 'rare',
+    rarity: 'magical',
   },
+
+  // ===== RARE (Blue #0070dd) - Medium =====
   {
     id: 'senior_executive',
     name: 'Senior Executive',
@@ -92,18 +126,64 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
         description: '+10 inventory slots',
       },
     ],
+    rarity: 'rare',
+  },
+  {
+    id: 'finance_club',
+    name: 'Finance Club',
+    description: "What's sweeter than getting paid?",
+    unlockRequirement: 'Win the game with $35,000+ in the piggy bank',
+    effects: [
+      {
+        type: 'special',
+        value: 10,
+        description: "10% of previous day's profit is added to daily allowance",
+      },
+    ],
+    rarity: 'rare',
+  },
+  {
+    id: 'forged_pass',
+    name: 'Forged Pass',
+    description: 'Fake it till you make it.',
+    unlockRequirement: 'Win the game with 8+ jokers',
+    effects: [
+      {
+        type: 'special',
+        value: 1,
+        description: '+1 reroll in joker selection',
+      },
+    ],
+    rarity: 'rare',
+  },
+
+  // ===== EPIC (Purple #a335ee) - Hard =====
+  {
+    id: 'teachers_pet',
+    name: "Teacher's Pet",
+    description: 'Bring an apple for the teacher every morning.',
+    unlockRequirement: 'Get your stash confiscated 3 or more times in one game',
+    effects: [
+      {
+        type: 'special',
+        value: 75,
+        description:
+          'Stash confiscation only takes 25% of candy instead of 100%',
+      },
+    ],
     rarity: 'epic',
   },
   {
-    id: 'valedictorian_vendor',
-    name: 'Valedictorian Vendor',
-    description: 'Academic excellence across all subjects.',
-    unlockRequirement: 'Play every single minigame at least once',
+    id: 'inheritance',
+    name: 'Inheritance',
+    description: 'Build generational wealth.',
+    unlockRequirement: 'Win the game with $50,000+ in the piggy bank',
     effects: [
       {
-        type: 'joker_bonus',
-        value: 1,
-        description: 'Get +1 extra joker at joker selection screen',
+        type: 'special',
+        value: 10,
+        description:
+          '10% of wallet transferred to piggy bank at start of each day',
       },
     ],
     rarity: 'epic',
@@ -125,22 +205,10 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
         description: '+100% daily allowance',
       },
     ],
-    rarity: 'legendary',
-  },
-  {
-    id: 'forged_pass',
-    name: 'Forged Pass',
-    description: 'Fake it till you make it.',
-    unlockRequirement: 'Win the game with 8+ jokers',
-    effects: [
-      {
-        type: 'special',
-        value: 1,
-        description: '+1 reroll in joker selection',
-      },
-    ],
     rarity: 'epic',
   },
+
+  // ===== LEGENDARY (Orange #ff8000) - Very Hard =====
   {
     id: 'minimalist_master',
     name: 'Minimalist Master',
@@ -153,7 +221,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
         description: '+150% profit bonus on candy sales',
       },
     ],
-    rarity: 'epic',
+    rarity: 'legendary',
   },
   {
     id: 'high_roller',
@@ -182,39 +250,55 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     effects: [
       {
         type: 'allowance_bonus',
-        value: 100,
-        description: '+100% daily allowance',
+        value: 1000,
+        description: '+1000% daily allowance',
       },
     ],
     rarity: 'legendary',
   },
   {
-    id: 'teachers_pet',
-    name: "Teacher's Pet",
-    description: 'Bring an apple for the teacher every morning.',
-    unlockRequirement: 'Get your stash confiscated 3 or more times in one game',
+    id: 'time_crunch',
+    name: 'Time Crunch',
+    description: 'Less time, more intensity.',
+    unlockRequirement: 'Win the game with 50%+ profit from periods 1-4',
     effects: [
       {
         type: 'special',
-        value: 75,
-        description: 'Stash confiscation only takes 25% of candy instead of 100%',
+        value: 6,
+        description:
+          'Only 6 periods per day instead of 8, but +400% profit bonus',
       },
     ],
-    rarity: 'epic',
+    rarity: 'legendary',
   },
   {
-    id: 'finance_club',
-    name: 'Finance Club',
-    description: "What's sweeter than getting paid?",
-    unlockRequirement: 'Win the game with $35,000+ in the piggy bank',
+    id: 'final_exam',
+    name: 'Final Exam',
+    description: 'Everything rides on the last period.',
+    unlockRequirement: 'Win the game with 50%+ profit from periods 7-8',
     effects: [
       {
         type: 'special',
-        value: 10,
-        description: '10% of previous day\'s profit is added to daily allowance',
+        value: 15,
+        description:
+          'Period 8 sales are 15x profit, periods 1-7 are -75% profit',
       },
     ],
-    rarity: 'epic',
+    rarity: 'legendary',
+  },
+  {
+    id: 'speedrun_champion',
+    name: 'Speedrun Champion',
+    description: 'Why make more sale if little sale get job done',
+    unlockRequirement: 'Win the game with less than 20 total sales',
+    effects: [
+      {
+        type: 'special',
+        value: 2,
+        description: '+100% sales profit',
+      },
+    ],
+    rarity: 'legendary',
   },
 ];
 
@@ -327,6 +411,44 @@ const hallPassSlice = createSlice({
         state.unlockedPassIds
       );
     },
+    // Batch sync multiple passes from Firebase at once (prevents multiple re-renders)
+    syncHallPassesFromFirebase: (state, action: PayloadAction<string[]>) => {
+      const passIds = action.payload;
+      console.log(
+        `🎓 REDUCER: syncHallPassesFromFirebase called with ${passIds.length} passes`
+      );
+
+      let newlyAdded = 0;
+      passIds.forEach((passId) => {
+        // Only add if not already unlocked
+        if (!state.unlockedPassIds.includes(passId)) {
+          state.unlockedPassIds.push(passId);
+          newlyAdded++;
+        }
+
+        // Update availablePasses
+        const passIndex = state.availablePasses.findIndex(
+          (pass) => pass.id === passId
+        );
+        if (passIndex !== -1) {
+          state.availablePasses[passIndex].isUnlocked = true;
+          if (!state.availablePasses[passIndex].unlockedAt) {
+            state.availablePasses[passIndex].unlockedAt =
+              new Date().toISOString();
+          }
+        }
+      });
+
+      if (newlyAdded > 0) {
+        console.log(
+          `🎓 REDUCER: Synced ${newlyAdded} new passes, ${passIds.length - newlyAdded} already unlocked`
+        );
+      } else {
+        console.log(
+          `🎓 REDUCER: All ${passIds.length} passes were already unlocked`
+        );
+      }
+    },
     selectHallPass: (state, action: PayloadAction<string>) => {
       const passId = action.payload;
       console.log(`🎖️ REDUCER: selectHallPass called for passId: ${passId}`);
@@ -340,6 +462,31 @@ const hallPassSlice = createSlice({
         `🎖️ REDUCER: Current selectedPassIds:`,
         state.selectedPassIds
       );
+
+      // Mutually exclusive pass groups
+      const mutuallyExclusiveGroups = [
+        ['time_crunch', 'final_exam'], // Can't have both Time Crunch and Final Exam
+      ];
+
+      // Check if selecting this pass would conflict with any mutually exclusive passes
+      const conflictingGroup = mutuallyExclusiveGroups.find((group) =>
+        group.includes(passId)
+      );
+      if (conflictingGroup && !state.selectedPassIds.includes(passId)) {
+        // Deselect any other passes in the same group
+        const othersInGroup = conflictingGroup.filter((id) => id !== passId);
+        othersInGroup.forEach((otherId) => {
+          if (state.selectedPassIds.includes(otherId)) {
+            state.selectedPassIds = state.selectedPassIds.filter(
+              (id) => id !== otherId
+            );
+            console.log(
+              `⚠️ REDUCER: Auto-deselected ${otherId} because it's mutually exclusive with ${passId}`
+            );
+          }
+        });
+      }
+
       // Toggle: add if not present, remove if present
       if (state.selectedPassIds.includes(passId)) {
         state.selectedPassIds = state.selectedPassIds.filter(
@@ -395,6 +542,7 @@ const hallPassSlice = createSlice({
 export const {
   initializeHallPasses,
   unlockHallPass,
+  syncHallPassesFromFirebase,
   selectHallPass,
   resetHallPassSelection,
   clearNewlyUnlockedPasses,

@@ -17,6 +17,7 @@ export interface HallPassModifiers {
   allowanceBonusPercent: number; // Percentage bonus to daily allowance (e.g., 100 = +100%)
   jokerBonusCount: number; // Additional jokers from selection (e.g., 1 = +1 joker)
   rerollBonusCount: number; // Additional rerolls in joker selection (e.g., 1 = +1 reroll)
+  salesMultiplier: number; // Sales profit multiplier (e.g., 2 = 2x profit, 4 = 4x profit) - from Time Crunch/Speedrun Champion
 }
 
 interface HallPassModifiersState extends HallPassModifiers {
@@ -29,6 +30,7 @@ const initialState: HallPassModifiersState = {
   allowanceBonusPercent: 0,
   jokerBonusCount: 0,
   rerollBonusCount: 0,
+  salesMultiplier: 1, // Default 1x (no multiplier)
   isInitialized: false,
 };
 
@@ -44,6 +46,7 @@ const hallPassModifiersSlice = createSlice({
       state.allowanceBonusPercent = action.payload.allowanceBonusPercent;
       state.jokerBonusCount = action.payload.jokerBonusCount;
       state.rerollBonusCount = action.payload.rerollBonusCount;
+      state.salesMultiplier = action.payload.salesMultiplier ?? 1; // Default to 1x if not provided (backwards compatibility)
       state.isInitialized = true;
       console.log('🎖️ MODIFIERS REDUCER: State updated successfully');
       console.log('🎖️ MODIFIERS REDUCER: New state:', JSON.stringify({
@@ -52,6 +55,7 @@ const hallPassModifiersSlice = createSlice({
         allowanceBonusPercent: state.allowanceBonusPercent,
         jokerBonusCount: state.jokerBonusCount,
         rerollBonusCount: state.rerollBonusCount,
+        salesMultiplier: state.salesMultiplier,
         isInitialized: state.isInitialized,
       }));
     },
@@ -74,6 +78,7 @@ export const selectHallPassModifiers = (state: { hallPassModifiers: HallPassModi
   allowanceBonusPercent: state.hallPassModifiers.allowanceBonusPercent,
   jokerBonusCount: state.hallPassModifiers.jokerBonusCount,
   rerollBonusCount: state.hallPassModifiers.rerollBonusCount,
+  salesMultiplier: state.hallPassModifiers.salesMultiplier ?? 1,
 });
 
 export const selectIsHallPassModifiersInitialized = (state: { hallPassModifiers: HallPassModifiersState }) =>

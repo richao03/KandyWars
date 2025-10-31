@@ -71,7 +71,7 @@ export const useComputedJokerEffects = () => {
       clearTimeout(globalRecomputeTimer);
     }
 
-    // Debounce: wait 50ms for state to settle before recomputing
+    // Debounce: wait 150ms for state to settle before recomputing
     globalRecomputeTimer = setTimeout(() => {
       try {
         // Double-check we're not already computing
@@ -80,7 +80,9 @@ export const useComputedJokerEffects = () => {
         globalRecomputeInProgress = true;
         lastRecomputeKey = stateKey;
 
-        console.log('🔄 Recomputing joker effects due to state change');
+        if (__DEV__) {
+          console.log('🔄 Recomputing joker effects due to state change');
+        }
         dispatch(recomputeJokerEffects({
           baseInventoryLimit,
           periodCount
@@ -90,13 +92,13 @@ export const useComputedJokerEffects = () => {
         setTimeout(() => {
           globalRecomputeInProgress = false;
           globalRecomputeTimer = null;
-        }, 50);
+        }, 100);
       } catch (error) {
         console.error('❌ Error in joker recomputation:', error);
         globalRecomputeInProgress = false;
         globalRecomputeTimer = null;
       }
-    }, 50);
+    }, 150);
 
     // Cleanup function
     return () => {

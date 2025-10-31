@@ -60,6 +60,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
+  const startScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameActiveRef = useRef(false);
   const containerRef = useRef<View>(null);
   const containerWidth = useRef(0);
@@ -250,7 +251,10 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           initializeNumbers();
           setGameActive(true);
           startTimer();
-          setTimeout(() => {
+          if (startScrollTimeoutRef.current) {
+            clearTimeout(startScrollTimeoutRef.current);
+          }
+          startScrollTimeoutRef.current = setTimeout(() => {
             startScrollAnimation();
           }, 500);
         }
@@ -357,7 +361,10 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     initializeNumbers(newLevel);
     setGameActive(true);
     startTimer();
-    setTimeout(() => {
+    if (startScrollTimeoutRef.current) {
+      clearTimeout(startScrollTimeoutRef.current);
+    }
+    startScrollTimeoutRef.current = setTimeout(() => {
       startScrollAnimation(newLevel);
     }, 500);
   };
@@ -434,7 +441,10 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     startTimer();
 
     // Start scrolling after a delay
-    setTimeout(() => {
+    if (startScrollTimeoutRef.current) {
+      clearTimeout(startScrollTimeoutRef.current);
+    }
+    startScrollTimeoutRef.current = setTimeout(() => {
       startScrollAnimation();
     }, 500);
   };
@@ -451,6 +461,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
+      }
+      // Clear start scroll timeout
+      if (startScrollTimeoutRef.current) {
+        clearTimeout(startScrollTimeoutRef.current);
+        startScrollTimeoutRef.current = null;
       }
       // Reset active flag
       gameActiveRef.current = false;

@@ -9,8 +9,8 @@ import {
   selectHallPass,
   selectNewlyUnlockedHallPasses,
   selectSelectedHallPass,
-  selectSelectedHallPasses,
   selectSelectedHallPassEffects,
+  selectSelectedHallPasses,
   selectSelectedPassIds,
   selectUnlockedHallPasses,
   unlockHallPass,
@@ -133,7 +133,8 @@ export const useHallPass = () => {
     (basePrice: number): number => {
       // Apply Hall Pass bonus first
       const bonus = getSalePriceBonus();
-      let finalPrice = bonus > 0 ? Math.round(basePrice * (1 + bonus / 100)) : basePrice;
+      let finalPrice =
+        bonus > 0 ? Math.round(basePrice * (1 + bonus / 100)) : basePrice;
 
       // Then apply Merchant bonus (Street Cred)
       finalPrice = MerchantUtils.applyProfitBonus(finalPrice, merchantEffects);
@@ -175,24 +176,35 @@ export const useHallPass = () => {
         confiscationCount?: number;
         stashedAmount?: number;
         jokerCount?: number;
+        maxDepositsCount?: number;
+        earlyPeriodProfit?: number; // Profit from periods 1-4 (Time Crunch unlock)
+        latePeriodProfit?: number; // Profit from periods 7-8 (Final Exam unlock)
+        transactionCount?: number; // Number of sales transactions (Speedrun Champion unlock)
       },
       minigameTrackingData?: {
         hasPlayedAllMinigames: boolean;
       }
     ) => {
-      console.log('🎓 checkUnlockRequirements called with:', { gameStats, minigameTrackingData });
+      console.log('🎓 checkUnlockRequirements called with:', {
+        gameStats,
+        minigameTrackingData,
+      });
       console.log('🎓 Total passes to check:', allPasses.length);
 
       const newUnlocks: string[] = [];
 
       // Check each pass requirement
       allPasses.forEach((pass) => {
-        console.log(`🎓 Checking pass: ${pass.id}, isUnlocked: ${pass.isUnlocked}`);
+        console.log(
+          `🎓 Checking pass: ${pass.id}, isUnlocked: ${pass.isUnlocked}`
+        );
         if (pass.isUnlocked) return; // Already unlocked
 
         switch (pass.id) {
           case 'no_longer_freshman':
-            console.log(`🎓 No Longer Freshman check: completions=${gameStats.completions}, required=1`);
+            console.log(
+              `🎓 No Longer Freshman check: completions=${gameStats.completions}, required=1`
+            );
             if (gameStats.completions >= 1) {
               console.log('🎓 No Longer Freshman UNLOCKED!');
               newUnlocks.push(pass.id);
@@ -220,7 +232,8 @@ export const useHallPass = () => {
             break;
           case 'minimalist_master':
             // Unlock if player won with no jokers in inventory
-            if (gameStats.noJokers && gameStats.completions > 0) newUnlocks.push(pass.id);
+            if (gameStats.noJokers && gameStats.completions > 0)
+              newUnlocks.push(pass.id);
             break;
           case 'high_roller':
             // Unlock if player sold over 1000 units of candies
@@ -237,6 +250,77 @@ export const useHallPass = () => {
           case 'finance_club':
             if (gameStats.stashedAmount && gameStats.stashedAmount >= 35000)
               newUnlocks.push(pass.id);
+            break;
+          case 'maximalist':
+            if (gameStats.maxDepositsCount && gameStats.maxDepositsCount >= 4)
+              newUnlocks.push(pass.id);
+            break;
+          case 'time_crunch':
+            // Unlock if player won with 50%+ profit from periods 1-4
+            if (
+              gameStats.earlyPeriodProfit &&
+              gameStats.latePeriodProfit !== undefined
+            ) {
+              const totalProfit =
+                gameStats.earlyPeriodProfit + gameStats.latePeriodProfit;
+              const earlyPercent =
+                totalProfit > 0
+                  ? (gameStats.earlyPeriodProfit / totalProfit) * 100
+                  : 0;
+              if (earlyPercent >= 50 && gameStats.completions > 0) {
+                console.log(
+                  `⏱️ Time Crunch unlocked! Early profit: ${earlyPercent.toFixed(1)}% (${gameStats.earlyPeriodProfit}/${totalProfit})`
+                );
+                newUnlocks.push(pass.id);
+              }
+            }
+            break;
+          case 'final_exam':
+            // Unlock if player won with 50%+ profit from periods 7-8
+            if (
+              gameStats.earlyPeriodProfit !== undefined &&
+              gameStats.latePeriodProfit
+            ) {
+              const totalProfit =
+                gameStats.earlyPeriodProfit + gameStats.latePeriodProfit;
+              const latePercent =
+                totalProfit > 0
+                  ? (gameStats.latePeriodProfit / totalProfit) * 100
+                  : 0;
+              if (latePercent >= 50 && gameStats.completions > 0) {
+                console.log(
+                  `📝 Final Exam unlocked! Late profit: ${latePercent.toFixed(1)}% (${gameStats.latePeriodProfit}/${totalProfit})`
+                );
+                newUnlocks.push(pass.id);
+              }
+            }
+            break;
+          case 'speedrun_champion':
+            // Unlock if player won with less than 30 total sales transactions
+            if (
+              gameStats.transactionCount &&
+              gameStats.transactionCount < 20 &&
+              gameStats.completions > 0
+            ) {
+              console.log(
+                `🏃 Speedrun Champion unlocked! Only ${gameStats.transactionCount} transactions`
+              );
+              newUnlocks.push(pass.id);
+            }
+            break;
+          case 'inheritance':
+            // Unlock if player won with $50,000+ in piggy bank
+            // Note: stashedAmount starts negative (debt), so need to check if >= 50000 after paying off debt
+            if (
+              gameStats.stashedAmount &&
+              gameStats.stashedAmount >= 50000 &&
+              gameStats.completions > 0
+            ) {
+              console.log(
+                `💼 Inheritance unlocked! Piggy bank: $${gameStats.stashedAmount}`
+              );
+              newUnlocks.push(pass.id);
+            }
             break;
         }
       });

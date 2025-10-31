@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import { JokerService } from '../../utils/jokerService';
 import { resetGame } from './gameSlice';
 
@@ -27,6 +27,8 @@ interface JokerState {
   activeEffects: any[]; // Legacy activeEffects for compatibility
   computedEffects: ComputedJokerEffects;
   vacuumSealerBonus: number; // One-time bonus from Vacuum Sealer, added to base inventory
+  usedTodayJokerIds: string[]; // Tracks which instant jokers have been used today
+  currentDay: number; // Track current day for daily reset
 }
 
 const initialComputedEffects: ComputedJokerEffects = {
@@ -45,6 +47,8 @@ const initialState: JokerState = {
   activeEffects: [],
   computedEffects: initialComputedEffects,
   vacuumSealerBonus: 0,
+  usedTodayJokerIds: [],
+  currentDay: 1,
 };
 
 const jokerSlice = createSlice({
@@ -172,6 +176,33 @@ const jokerSlice = createSlice({
     clearAllActiveEffects: (state) => {
       state.activeEffects = [];
     },
+    markJokerUsedToday: (state, action: PayloadAction<string>) => {
+      const jokerId = action.payload;
+      console.log('🔧 REDUCER markJokerUsedToday: Received ID:', jokerId, 'Type:', typeof jokerId);
+      console.log('🔧 REDUCER markJokerUsedToday: Current usedTodayJokerIds:', state.usedTodayJokerIds);
+
+      // Initialize if doesn't exist (backwards compatibility)
+      if (!state.usedTodayJokerIds) {
+        console.log('🔧 REDUCER markJokerUsedToday: Initializing usedTodayJokerIds array');
+        state.usedTodayJokerIds = [];
+      }
+
+      if (!state.usedTodayJokerIds.includes(jokerId)) {
+        state.usedTodayJokerIds.push(jokerId);
+        console.log(`✅ REDUCER markJokerUsedToday: Joker ${jokerId} marked as used today`);
+        console.log('✅ REDUCER markJokerUsedToday: New usedTodayJokerIds:', state.usedTodayJokerIds);
+      } else {
+        console.log(`⚠️ REDUCER markJokerUsedToday: Joker ${jokerId} was ALREADY in usedTodayJokerIds!`);
+      }
+    },
+    resetDailyJokerUsage: (state, action: PayloadAction<number>) => {
+      const newDay = action.payload;
+      if (newDay !== state.currentDay) {
+        console.log(`🌅 New day ${newDay}! Resetting daily joker usage (was day ${state.currentDay})`);
+        state.usedTodayJokerIds = [];
+        state.currentDay = newDay;
+      }
+    },
     resetJokers: () => initialState,
   },
   extraReducers: (builder) => {
@@ -194,6 +225,8 @@ export const {
   removeActiveEffect,
   setVacuumSealerBonus,
   clearAllActiveEffects,
+  markJokerUsedToday,
+  resetDailyJokerUsage,
   resetJokers,
 } = jokerSlice.actions;
 
@@ -216,7 +249,16 @@ export const selectComputedEmptyInventoryBonus = (state: { joker: JokerState }) 
 export const selectComputedEffects = (state: { joker: JokerState }) =>
   state.joker.computedEffects ?? initialComputedEffects;
 
+// Memoized selectors to prevent unnecessary re-renders
+const EMPTY_ARRAY: any[] = [];
+
 export const selectJokerActiveEffects = (state: { joker: JokerState }) =>
-  state.joker.activeEffects ?? [];
+  state.joker.activeEffects ?? EMPTY_ARRAY;
+
+export const selectUsedTodayJokerIds = (state: { joker: JokerState }) =>
+  state.joker.usedTodayJokerIds ?? EMPTY_ARRAY;
+
+export const selectCurrentDay = (state: { joker: JokerState }) =>
+  state.joker.currentDay ?? 1;
 
 export default jokerSlice.reducer;

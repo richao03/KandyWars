@@ -156,7 +156,7 @@ export default function TitleSettings() {
   const handleResetAllData = async () => {
     showConfirmModal(
       'Reset All Data',
-      'This will permanently delete ALL your game data including:\n\n• All saved games\n• Player names\n• Tutorial progress\n• Hall Passes\n• Settings\n• Firebase data\n\nThis action cannot be undone. Are you sure?',
+      'This will permanently delete ALL your game data including:\n\n• All saved games\n• Player names\n• Hall Passes\n• Settings\n• Firebase data\n\nThis action cannot be undone. Are you sure?',
       async () => {
         try {
           setIsResetting(true);

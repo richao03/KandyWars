@@ -12,6 +12,10 @@ import {
   clearAllActiveEffects,
   selectComputedInventoryLimit,
   setVacuumSealerBonus,
+  markJokerUsedToday,
+  resetDailyJokerUsage,
+  selectUsedTodayJokerIds,
+  recomputeJokerEffects,
 } from '../store/slices/jokerSlice';
 import { trackJokerObtained } from '../store/slices/localAnalyticsSlice';
 import { JOKER_IDS } from '../constants/jokerIds';
@@ -28,11 +32,15 @@ export const useJokers = () => {
   const activeEffects = useAppSelector(state => state.joker.activeEffects);
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
+  const usedTodayJokerIds = useAppSelector(selectUsedTodayJokerIds);
+  const periodCount = useAppSelector(state => state.game.periodCount);
   const [onFirstJokerCallbacks] = useState<(() => void)[]>([]);
 
   const addJokerAction = useCallback((joker: any, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
     // Special handling for Vacuum Sealer: doubles current inventory, then becomes disabled
-    if (joker.id === JOKER_IDS.VACUUM_SEALER || joker.id === JOKER_IDS.VACUUM_SEALER.toString()) {
+    // Check both id and originalId (for copies from Glitch in the Matrix)
+    const jokerIdToCheck = joker.originalId || joker.id;
+    if (jokerIdToCheck === JOKER_IDS.VACUUM_SEALER || jokerIdToCheck === JOKER_IDS.VACUUM_SEALER.toString()) {
       // Calculate TOTAL current inventory (including hall passes)
       const currentTotal = computedInventoryLimit + hallPassModifiers.inventoryBonusSlots;
 
@@ -46,6 +54,12 @@ export const useJokers = () => {
 
       dispatch(setVacuumSealerBonus(bonus));
 
+      // Immediately trigger recomputation so UI updates right away
+      dispatch(recomputeJokerEffects({
+        baseInventoryLimit: baseInventory,
+        periodCount
+      }));
+
       console.log(`🔧 Vacuum Sealer: Current=${currentTotal}, Target=${targetTotal}, Setting bonus=${bonus} (base ${baseInventory} + bonus ${bonus} + hallPass ${hallPassModifiers.inventoryBonusSlots} = ${targetTotal})`);
     }
 
@@ -57,7 +71,7 @@ export const useJokers = () => {
       console.log('📊 Local: Tracking joker obtained -', joker.name);
       dispatch(trackJokerObtained(joker.name));
     }
-  }, [dispatch, computedInventoryLimit, hallPassModifiers.inventoryBonusSlots]);
+  }, [dispatch, computedInventoryLimit, hallPassModifiers.inventoryBonusSlots, periodCount]);
 
   const removeJokerAction = useCallback((jokerId: string | number) => {
     dispatch(removeJoker(typeof jokerId === 'string' ? jokerId : jokerId.toString()));
@@ -114,11 +128,23 @@ export const useJokers = () => {
     dispatch(resetJokers());
   }, [dispatch]);
 
+  const markJokerUsedTodayAction = useCallback((jokerId: string) => {
+    console.log('🔧 useJokers: markJokerUsedToday called with ID:', jokerId, 'Type:', typeof jokerId);
+    console.log('🔧 useJokers: Current usedTodayJokerIds before dispatch:', usedTodayJokerIds);
+    dispatch(markJokerUsedToday(jokerId));
+    console.log('🔧 useJokers: markJokerUsedToday dispatch completed');
+  }, [dispatch, usedTodayJokerIds]);
+
+  const resetDailyJokerUsageAction = useCallback((day: number) => {
+    dispatch(resetDailyJokerUsage(day));
+  }, [dispatch]);
+
   return {
     jokers: jokerState.jokers,
     jokersOwned: jokerState.jokersOwned,
     allJokers: jokerState.allJokers,
     lockedJokerIds: jokerState.lockedJokerIds,
+    usedTodayJokerIds,
     activeEffects,
     isLoaded: true, // Always loaded in Redux
     addJoker: addJokerAction,
@@ -133,5 +159,7 @@ export const useJokers = () => {
     lockJoker: lockJokerAction,
     unlockJoker: unlockJokerAction,
     resetJokers: resetJokersAction,
+    markJokerUsedToday: markJokerUsedTodayAction,
+    resetDailyJokerUsage: resetDailyJokerUsageAction,
   };
 };

@@ -185,8 +185,8 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       )}
 
       <View style={styles.subjectsContainer}>
-        {/* First Row - 3 subjects */}
-        <View style={styles.subjectsRow}>
+          {/* First Row - 3 subjects */}
+          <View style={styles.subjectsRow}>
           {subjects.slice(0, 3).map((subject) => (
             <PressableButton
               key={subject.name}
