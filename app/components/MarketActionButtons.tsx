@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 4,
   },
   bigButton: {
     flex: 2,

@@ -316,12 +316,14 @@ function GameHUD({
     }
 
     if (locationText !== previousLocation.current) {
-      console.log(
-        '🎯 Location changed from',
-        previousLocation.current,
-        'to',
-        locationText
-      );
+      if (__DEV__) {
+        console.log(
+          '🎯 Location changed from',
+          previousLocation.current,
+          'to',
+          locationText
+        );
+      }
       // Trigger quick bounce animation
       locationBounceScale.value = withSequence(
         withSpring(1.2, { damping: 20, stiffness: 400, mass: 0.5 }),
@@ -503,11 +505,8 @@ function GameHUD({
         </View>
       </View>
 
-      {/* Location badge with status indicators */}
+      {/* Location badge with status indicators in single row */}
       <View style={styles.locationRowContainer}>
-        <View style={styles.leftSide}>
-          <StatusIndicators theme={theme} type="joker" />
-        </View>
         <Animated.View style={[styles.locationRow, animatedLocationBadgeStyle]}>
           <PixelBorder
             borderColor="#cc7a00"
@@ -520,8 +519,8 @@ function GameHUD({
             </View>
           </PixelBorder>
         </Animated.View>
-        <View style={styles.rightSide}>
-          <StatusIndicators theme={theme} type="merchant" />
+        <View style={styles.statusSide}>
+          <StatusIndicators theme={theme} type="combined" singleRow={true} />
         </View>
       </View>
 
@@ -542,7 +541,7 @@ function GameHUD({
                 ]}
               >
                 <Marquee
-                  spacing={250}
+                  spacing={50}
                   speed={0.75}
                   style={styles.marquee}
                   delay={2000}
@@ -567,8 +566,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(254, 247, 227, 0.7)', // Warm cream paper background
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 0,
     borderBottomWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
     fontFamily: 'PixeloidMono',
@@ -576,23 +575,23 @@ const styles = StyleSheet.create({
   eveningContainer: {
     backgroundColor: 'rgba(25,25,25, 0.3)', // Evening theme background
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 4,
+    paddingBottom: 0,
     borderBottomWidth: 3,
     borderColor: '#f7e98e', // Evening theme border
   },
   headerRow: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   headerText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#8b4513', // Saddle brown
-    textShadow: '1px 1px 0px #e6d4b7',
     fontFamily: 'PixeloidMono',
   },
   eveningHeaderText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#f7e98e', // Evening theme yellow
     textShadowColor: 'rgba(247,233,142,0.4)',
@@ -603,12 +602,12 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 0,
+    gap: 4,
     overflow: 'visible',
   },
   statBox: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     alignItems: 'center',
     borderRadius: 10,
     backgroundColor: 'transparent',
@@ -629,19 +628,19 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   statTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: '#5d4e37', // Dark brown
-    marginBottom: 3,
+    marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontFamily: 'PixeloidMono',
   },
   eveningStatTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: '#5d4e37', // Evening theme lavender
-    marginBottom: 3,
+    marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontFamily: 'PixeloidMono',
@@ -670,29 +669,21 @@ const styles = StyleSheet.create({
   locationRowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  leftSide: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingRight: 8,
-  },
-  rightSide: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingLeft: 8,
+    marginVertical: 4,
+    gap: 8,
   },
   locationRow: {
+    alignItems: 'center',
+  },
+  statusSide: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
   },
   locationBadge: {
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   locationText: {
     fontSize: 13,
@@ -701,10 +692,10 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   flavorContainer: {
-    height: 28,
+    height: 24,
     overflow: 'hidden',
     backgroundColor: 'transparent',
-    paddingHorizontal: 8,
+    paddingHorizontal: 20,
     paddingVertical: 4,
   },
   marquee: {
@@ -712,7 +703,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   flavor: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#7d6608', // Dark yellow-brown
     fontWeight: '500',
     lineHeight: 20,

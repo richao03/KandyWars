@@ -1,11 +1,12 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
+import mobileAds from 'react-native-google-mobile-ads';
 import { persistor, store } from '../src/store/store';
 import GameEffectsManager from './components/GameEffectsManager';
 import StudioTitleScreen from './components/StudioTitleScreen';
@@ -22,6 +23,14 @@ if (__DEV__) {
   };
 }
 
+// Disable console.log in production for performance
+if (!__DEV__) {
+  console.log = () => {};
+  console.info = () => {};
+  console.warn = () => {};
+  // Keep console.error for critical issues
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     CrayonPastel: require('../assets/fonts/CrayonPastel.otf'),
@@ -33,6 +42,18 @@ export default function RootLayout() {
     DonGraffiti: require('../assets/fonts/DonGraffiti.otf'),
   });
   const [showStudioScreen, setShowStudioScreen] = useState(true);
+
+  // Initialize Google Mobile Ads
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .then(() => {
+        if (__DEV__) console.log('📱 AdMob initialized');
+      })
+      .catch((error) => {
+        if (__DEV__) console.error('📱 AdMob initialization failed:', error);
+      });
+  }, []);
 
   React.useEffect(() => {
     if (fontsLoaded || fontError) {

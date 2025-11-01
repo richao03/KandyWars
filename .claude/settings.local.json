@@ -33,7 +33,13 @@
       "Bash(npm install:*)",
       "Bash(do echo \"=== Checking $game.tsx for instruction state ===\")",
       "Bash(npm test:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(pod install)",
+      "Bash(npx expo run:ios)",
+      "Bash(xcodebuild:*)",
+      "Bash(tee:*)",
+      "Bash(npx expo run:ios:*)",
+      "Bash(xcrun simctl list:*)"
     ],
     "deny": [],
     "ask": []

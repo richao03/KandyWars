@@ -23,7 +23,7 @@ export const useBackgroundMusic = (shouldPlay: boolean = true, volume: number = 
         });
 
         if (isMounted && shouldPlay) {
-          console.log('🎵 Loading background music...');
+          if (__DEV__) console.log('🎵 Loading background music...');
           const { sound: loadedSound } = await Audio.Sound.createAsync(
             require('../../assets/music/background.mp3'),
             {
@@ -35,21 +35,21 @@ export const useBackgroundMusic = (shouldPlay: boolean = true, volume: number = 
 
           sound.current = loadedSound;
           isLoadedRef.current = true;
-          console.log('🎵 Background music loaded and playing');
+          if (__DEV__) console.log('🎵 Background music loaded and playing');
         }
       } catch (error) {
-        console.error('🎵 Error loading background music:', error);
+        if (__DEV__) console.error('🎵 Error loading background music:', error);
       }
     };
 
     const cleanupAudio = async () => {
       if (sound.current && isLoadedRef.current) {
-        console.log('🎵 Stopping and unloading background music...');
+        if (__DEV__) console.log('🎵 Stopping and unloading background music...');
         try {
           await sound.current.stopAsync();
           await sound.current.unloadAsync();
         } catch (error) {
-          console.error('🎵 Error unloading music:', error);
+          if (__DEV__) console.error('🎵 Error unloading music:', error);
         }
         isLoadedRef.current = false;
         sound.current = null;
@@ -66,7 +66,7 @@ export const useBackgroundMusic = (shouldPlay: boolean = true, volume: number = 
     return () => {
       isMounted = false;
       if (sound.current && isLoadedRef.current) {
-        console.log('🎵 Component unmounting - unloading background music...');
+        if (__DEV__) console.log('🎵 Component unmounting - unloading background music...');
         sound.current.stopAsync().catch(() => {});
         sound.current.unloadAsync().catch(() => {});
         isLoadedRef.current = false;
@@ -84,17 +84,17 @@ export const useBackgroundMusic = (shouldPlay: boolean = true, volume: number = 
             const status = await sound.current.getStatusAsync();
             if (status.isLoaded && !status.isPlaying) {
               await sound.current.playAsync();
-              console.log('🎵 Music resumed');
+              if (__DEV__) console.log('🎵 Music resumed');
             }
           } else {
             const status = await sound.current.getStatusAsync();
             if (status.isLoaded && status.isPlaying) {
               await sound.current.pauseAsync();
-              console.log('🎵 Music paused');
+              if (__DEV__) console.log('🎵 Music paused');
             }
           }
         } catch (error) {
-          console.error('🎵 Error updating playback:', error);
+          if (__DEV__) console.error('🎵 Error updating playback:', error);
         }
       }
     };
@@ -108,9 +108,9 @@ export const useBackgroundMusic = (shouldPlay: boolean = true, volume: number = 
       if (sound.current && isLoadedRef.current) {
         try {
           await sound.current.setVolumeAsync(volume);
-          console.log(`🎵 Volume set to ${volume}`);
+          if (__DEV__) console.log(`🎵 Volume set to ${volume}`);
         } catch (error) {
-          console.error('🎵 Error setting volume:', error);
+          if (__DEV__) console.error('🎵 Error setting volume:', error);
         }
       }
     };

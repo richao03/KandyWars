@@ -30,7 +30,6 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
-import { useBackgroundMusic } from '../../src/hooks/useBackgroundMusic';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { resetDailyStats } from '../../src/store/slices/candySalesSlice';
 import { getPeriodsPerDay } from '../../src/store/slices/gameSlice';
@@ -39,15 +38,14 @@ import {
   consumeEffect,
   selectActiveEffects,
 } from '../../src/store/slices/merchantSlice';
-import { HallPassUtils } from '../../src/utils/hallPassUtils';
 import { JokerService } from '../../src/utils/jokerService';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
+import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EventModal from '../components/EventModal';
 import { Location } from '../components/LocationModal';
 import MarketContent from '../components/MarketContent';
 import { Candy } from '../types';
-import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 
 // Lazy load modals that are shown less frequently
 const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
@@ -137,7 +135,9 @@ function Market(props) {
   const lunchPeriod = Math.floor(periodsPerDay / 2);
   useEffect(() => {
     if (period !== lunchPeriod && showLunchMinigames) {
-      console.log(`🍽️ Period advanced past ${lunchPeriod}, hiding lunch minigames`);
+      console.log(
+        `🍽️ Period advanced past ${lunchPeriod}, hiding lunch minigames`
+      );
       setShowLunchMinigames(false);
     }
   }, [period, lunchPeriod, showLunchMinigames]);
@@ -191,7 +191,9 @@ function Market(props) {
   const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
 
   // Get candy sales state for Vacuum Sealer penalty check
-  const hasEarlySaleToday = useAppSelector((state) => state.candySales.hasEarlySaleToday);
+  const hasEarlySaleToday = useAppSelector(
+    (state) => state.candySales.hasEarlySaleToday
+  );
 
   // Get merchant effects
   const merchantEffects = useAppSelector(selectActiveEffects);
@@ -353,7 +355,10 @@ function Market(props) {
           // Show period-specific flavor text instead of hint
           if (period <= 2) {
             setEvent('MORNING_TRADE');
-          } else if (period >= Math.floor(periodsPerDay / 2) && period <= Math.ceil(periodsPerDay * 0.75)) {
+          } else if (
+            period >= Math.floor(periodsPerDay / 2) &&
+            period <= Math.ceil(periodsPerDay * 0.75)
+          ) {
             setEvent('LUNCH_RUSH');
           } else if (period >= periodsPerDay - 1) {
             setEvent('FINAL_PERIOD');
@@ -366,7 +371,10 @@ function Market(props) {
       // Period-specific flavor text based on time of day
       if (period <= 2) {
         setEvent('MORNING_TRADE');
-      } else if (period >= Math.floor(periodsPerDay / 2) && period <= Math.ceil(periodsPerDay * 0.75)) {
+      } else if (
+        period >= Math.floor(periodsPerDay / 2) &&
+        period <= Math.ceil(periodsPerDay * 0.75)
+      ) {
         setEvent('LUNCH_RUSH');
       } else if (period >= periodsPerDay - 1) {
         setEvent('FINAL_PERIOD');
@@ -494,8 +502,10 @@ function Market(props) {
 
   // Play background music during school day (stop when schools out modal shows or after-school starts)
   const shouldPlayMusic = !isAfterSchool && !schoolsOutModalVisible;
-  console.log(`🎵 Market music check - isAfterSchool: ${isAfterSchool}, schoolsOutModalVisible: ${schoolsOutModalVisible}, shouldPlayMusic: ${shouldPlayMusic}`);
-  useBackgroundMusic(shouldPlayMusic, 0.3); // Play at 30% volume
+  console.log(
+    `🎵 Market music check - isAfterSchool: ${isAfterSchool}, schoolsOutModalVisible: ${schoolsOutModalVisible}, shouldPlayMusic: ${shouldPlayMusic}`
+  );
+  // useBackgroundMusic(shouldPlayMusic, 0.3); // Play at 30% volume
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -617,11 +627,15 @@ function Market(props) {
             // Consume Influencer Shoutout if active (before calculation)
             if (MerchantUtils.hasInfluencerShoutout(merchantEffects)) {
               dispatch(consumeEffect({ itemId: 'influencer_shoutout' }));
-              console.log('📣 Influencer Shoutout consumed (will be applied in calculation)');
+              console.log(
+                '📣 Influencer Shoutout consumed (will be applied in calculation)'
+              );
             }
 
             // === CALCULATE SALE USING SHARED FUNCTION ===
-            const inventoryItem = inventory.find((item) => item.name === candy.name);
+            const inventoryItem = inventory.find(
+              (item) => item.name === candy.name
+            );
             const purchasePrice = inventoryItem?.price ?? candy.cost;
 
             const saleResult = calculateSaleTotal({
@@ -690,7 +704,9 @@ function Market(props) {
 
             // Track sale for period-based hall pass unlocks (Time Crunch, Final Exam)
             // IMPORTANT: Pass finalProfit (profit after all bonuses/penalties) not revenue for accurate tracking
-            console.log(`📊 Tracking sale for hall pass: ${candy.name}, Period: ${periodCount}, Profit: ${finalProfit.toFixed(2)}`);
+            console.log(
+              `📊 Tracking sale for hall pass: ${candy.name}, Period: ${periodCount}, Profit: ${finalProfit.toFixed(2)}`
+            );
             addSale({
               candyId: candy.name,
               candyName: candy.name,
@@ -778,7 +794,9 @@ function Market(props) {
       console.log('🔵 setDayStatsModalVisible(true) called');
     } else if (period === lunchPeriod && !showLunchMinigames) {
       // Lunch period - Show lunch confirmation modal
-      console.log(`🍽️ Period ${lunchPeriod} (lunch) - Showing lunch confirmation modal`);
+      console.log(
+        `🍽️ Period ${lunchPeriod} (lunch) - Showing lunch confirmation modal`
+      );
       setLunchConfirmVisible(true);
     } else {
       // Check if there's an active event
@@ -802,7 +820,14 @@ function Market(props) {
         }, 100);
       }
     }
-  }, [period, day, hasActiveEvent, dayStatsModalVisible, showLunchMinigames, periodsPerDay]);
+  }, [
+    period,
+    day,
+    hasActiveEvent,
+    dayStatsModalVisible,
+    showLunchMinigames,
+    periodsPerDay,
+  ]);
 
   const dispatch = useAppDispatch();
 
@@ -1036,7 +1061,9 @@ function Market(props) {
   // Day stats modal handlers
   const handleDayStatsClose = useCallback(() => {
     console.log('📊 Day stats modal closing - checking if game should end');
-    console.log(`📊 Current state: day=${day}, period=${period}, periodCount=${periodCount}, periodsPerDay=${periodsPerDay}`);
+    console.log(
+      `📊 Current state: day=${day}, period=${period}, periodCount=${periodCount}, periodsPerDay=${periodsPerDay}`
+    );
     setDayStatsModalVisible(false);
 
     // If we're on day 5 OR the last period of the game, end the game

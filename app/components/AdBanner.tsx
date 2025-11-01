@@ -44,10 +44,10 @@ export default function AdBanner({ visible = true }: AdBannerProps) {
           requestNonPersonalizedAdsOnly: true, // For GDPR compliance
         }}
         onAdLoaded={() => {
-          console.log('📱 Ad loaded successfully');
+          if (__DEV__) console.log('📱 Ad loaded successfully');
         }}
         onAdFailedToLoad={(error) => {
-          console.log('📱 Ad failed to load:', error);
+          if (__DEV__) console.log('📱 Ad failed to load:', error);
         }}
       />
     </View>

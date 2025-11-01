@@ -14,7 +14,8 @@ import TextWithEmojis from './TextWithEmojis';
 
 interface StatusIndicatorsProps {
   theme?: 'school' | 'evening';
-  type?: 'merchant' | 'joker';
+  type?: 'merchant' | 'joker' | 'combined'; // Add combined option
+  singleRow?: boolean; // New prop for single-row layout
 }
 
 interface StatusIcon {
@@ -29,6 +30,7 @@ interface StatusIcon {
 function StatusIndicators({
   theme = 'school',
   type = 'merchant',
+  singleRow = false,
 }: StatusIndicatorsProps) {
   const merchantActiveEffects = useSelector(selectActiveEffects);
   const jokerActiveEffects = useSelector(selectJokerActiveEffects);
@@ -457,7 +459,10 @@ function StatusIndicators({
   ]);
 
   // Filter icons based on type prop
-  const iconsToShow = type === 'merchant' ? merchantIcons : jokerIcons;
+  const iconsToShow =
+    type === 'merchant' ? merchantIcons :
+    type === 'joker' ? jokerIcons :
+    [...jokerIcons, ...merchantIcons]; // Combined shows both
 
   const handleLongPress = (name: string) => {
     if (name) {
@@ -478,21 +483,21 @@ function StatusIndicators({
 
   // Always render container with fixed width, even if empty
   return (
-    <View style={styles.fixedWidthContainer}>
+    <View style={singleRow ? styles.singleRowContainer : styles.fixedWidthContainer}>
       {iconsToShow.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.scrollView}
         >
-          <View style={styles.gridContainer}>
+          <View style={singleRow ? styles.singleRowGridContainer : styles.gridContainer}>
             {iconsToShow.map((indicator) => (
               <Pressable
                 key={indicator.key}
                 onLongPress={() => handleLongPress(indicator.name || '')}
                 style={styles.iconContainer}
               >
-                {type === 'merchant' ? (
+                {(type === 'merchant' || (type === 'combined' && indicator.type === 'merchant')) ? (
                   <>
                     <Image
                       source={indicator.icon}
@@ -539,6 +544,10 @@ const styles = StyleSheet.create({
     width: 119, // Fixed width: 4.25 icons × 28px (24px icon + 4px gap)
     height: 52, // Fixed height: 2 rows (24px + 4px gap + 24px)
   },
+  singleRowContainer: {
+    height: 28, // Single row: 24px icon + 4px padding
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
@@ -548,6 +557,11 @@ const styles = StyleSheet.create({
     height: 52, // 2 rows: 24px + 4px gap + 24px
     gap: 4,
     alignContent: 'flex-start',
+  },
+  singleRowGridContainer: {
+    flexDirection: 'row',
+    gap: 4,
+    alignItems: 'center',
   },
   iconContainer: {
     width: 24,
