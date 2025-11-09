@@ -14,6 +14,7 @@ import {
   setPricesUpdating,
   setIsInitialized,
   setMinigameContext,
+  setIsAfterSchool,
   selectDay,
   selectPeriod,
   selectGameResetSignal,
@@ -90,6 +91,10 @@ export const useGame = () => {
     dispatch(setMinigameContext(context));
   }, [dispatch]);
 
+  const setIsAfterSchoolAction = useCallback((isAfterSchool: boolean) => {
+    dispatch(setIsAfterSchool(isAfterSchool));
+  }, [dispatch]);
+
   // Return object directly - useAppSelector calls are already optimized
   return {
     day,
@@ -118,5 +123,6 @@ export const useGame = () => {
     setPricesUpdating: setPricesUpdatingAction,
     setIsInitialized: setIsInitializedAction,
     setMinigameContext: setMinigameContextAction,
+    setIsAfterSchool: setIsAfterSchoolAction,
   };
 };

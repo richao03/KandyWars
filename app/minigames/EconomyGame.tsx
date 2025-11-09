@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -367,6 +369,7 @@ function DraggableTile({
             y: evt.nativeEvent.pageY,
           };
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          SoundEffects.playRandomPop();
           onDragStart(tileRef.current);
         }
       },
@@ -488,6 +491,7 @@ function Slot({
           dragMoved.current = false;
           setIsDragging(true);
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          SoundEffects.playRandomPop();
           onDragFromSlot(slotRef.current, slotIndex);
         }
       },
@@ -633,6 +637,13 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     };
   }, []);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   // Game over handler
   const handleGameOver = (reason: string) => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -667,6 +678,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   // Start game
   const startGame = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('economy');
@@ -801,11 +813,13 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   /** ---------- Actions ---------- */
   const clearAll = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSlots(Array(puzzle.steps).fill(null));
   };
 
   const executePlan = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     let inv: Inventory = { ...puzzle.startInventory };
     let tradesExecuted = 0;
@@ -816,6 +830,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
       if (!canAfford(inv, tile.give)) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        SoundEffects.playRandomPop();
         showModal(
           'Plan Failed',
           `Step ${i + 1} not affordable.\nTrade: ${tile.label}\nInv: ${fmtInv(inv) || 'Empty'}`,
@@ -843,6 +858,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
         // All levels complete - go to joker selection
         console.log('🎯 Economy Game: Showing victory modal...');
+        SoundEffects.playCongratsSound();
         showModal(
           'Trading Master!',
           `Incredible! You've mastered all trading levels!\nTime left: ${timeLeft}s`,
@@ -862,6 +878,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         setCompletedLevel(levelIndex + 1);
 
         // Level complete - advance to next level
+        SoundEffects.playCongratsSound();
         showModal(
           'Level Complete!',
           `Excellent! \nYou used ${tradesExecuted} trades.\nReady for Level ${levelIndex + 2}?
@@ -877,6 +894,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       }
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      SoundEffects.playRandomPop();
       showModal('Not There Yet', `❌ Did not reach goal candy`, '📉');
     }
   };
@@ -907,6 +925,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   };
 
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
@@ -952,7 +971,10 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#42a5f5"

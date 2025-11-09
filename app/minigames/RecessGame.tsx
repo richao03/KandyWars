@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -396,6 +398,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
     console.log('🎮 Processing choice:', choice);
     if (choice) {
+      SoundEffects.playRandomPop();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setIsProcessingRound(true);
@@ -643,6 +646,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       const stageNames = ['', 'Beginner', 'Intermediate', 'Expert'];
       const nextStageNames = ['', 'Intermediate', 'Expert', ''];
 
+      SoundEffects.playCongratsSound();
       showModal(
         `${stageNames[stage]} Stage Complete!`,
         `You got 4 wins in a row!\nReady for ${nextStageNames[stage + 1]} Stage?`,
@@ -692,6 +696,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Start game
   const startGame = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('recess');
@@ -761,6 +766,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
     };
   }, []);
+
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
 
   // Animated styles
   const countdownAnimatedStyle = useAnimatedStyle(() => ({
@@ -950,6 +962,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Handle forfeit
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
@@ -990,7 +1003,10 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#4A90C1"
@@ -1052,6 +1068,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
           <PressableButton
             onPress={() => {
+              SoundEffects.playRandomPop();
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}

@@ -11,6 +11,8 @@
 		35DBD5EA47A04D5B77B2A8FF /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2922D44C7D8866B186A5D5 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		509BAE476B37F29C9205B3D8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9DE5F9CD80B4298371E39750 /* PrivacyInfo.xcprivacy */; };
+		87B20C702EB64B700094551A /* AdMobInitializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B20C6F2EB64B700094551A /* AdMobInitializer.swift */; };
+		87B20C712EB64B700094551A /* AdMobInitializer.m in Sources */ = {isa = PBXBuildFile; fileRef = 87B20C6E2EB64B700094551A /* AdMobInitializer.m */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		F268579ADC667E0782798ECE /* libPods-candyWarz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DEFE196AABAA7FB7D350B10E /* libPods-candyWarz.a */; };
@@ -22,7 +24,9 @@
 		13B07F961A680F5B00A75B9A /* candyWarz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = candyWarz.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = candyWarz/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = candyWarz/Info.plist; sourceTree = "<group>"; };
-		9DE5F9CD80B4298371E39750 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = candyWarz/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		87B20C6E2EB64B700094551A /* AdMobInitializer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AdMobInitializer.m; sourceTree = "<group>"; };
+		87B20C6F2EB64B700094551A /* AdMobInitializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobInitializer.swift; sourceTree = "<group>"; };
+		9DE5F9CD80B4298371E39750 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = candyWarz/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = candyWarz/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		DEFE196AABAA7FB7D350B10E /* libPods-candyWarz.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-candyWarz.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -47,6 +51,8 @@
 		13B07FAE1A68108700A75B9A /* candyWarz */ = {
 			isa = PBXGroup;
 			children = (
+				87B20C6E2EB64B700094551A /* AdMobInitializer.m */,
+				87B20C6F2EB64B700094551A /* AdMobInitializer.swift */,
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* candyWarz-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
@@ -120,7 +126,6 @@
 				ED5C50D310A6E397DB7FDDA7 /* Pods-candyWarz.debug.xcconfig */,
 				01B80BDD8810BB302E764698 /* Pods-candyWarz.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -349,6 +354,8 @@
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				35DBD5EA47A04D5B77B2A8FF /* ExpoModulesProvider.swift in Sources */,
+				87B20C702EB64B700094551A /* AdMobInitializer.swift in Sources */,
+				87B20C712EB64B700094551A /* AdMobInitializer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

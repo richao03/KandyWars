@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppDispatch } from '../../src/store/hooks';
@@ -165,6 +166,7 @@ function StashMoneyModal({
       const quickAmount = Math.floor(balance * percent);
       setAmount(quickAmount);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      SoundEffects.playRandomPop();
     },
     [balance]
   );

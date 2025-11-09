@@ -11,6 +11,7 @@ import React, {
 } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { MusicController } from '../../src/utils/musicController';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
@@ -100,10 +101,27 @@ function AfterSchoolPage() {
 
   // Set after-school flavor text when component loads and track active view
   useEffect(() => {
+    console.log('🏠 [AFTER-SCHOOL] Setting AFTER_SCHOOL flavor text');
     setEvent('AFTER_SCHOOL');
     // Track that user is now in after-school view
     setLastActiveView('after-school');
   }, [setEvent, setLastActiveView]);
+
+  // Music is managed by the showStudySubjects effect below
+  // (removed duplicate music effect to prevent race conditions)
+
+  // Play day2 music when study subject selection is shown
+  useEffect(() => {
+    // Select appropriate music track
+    const targetTrack = showStudySubjects ? 'day2' : 'day5';
+
+    console.log(
+      `🎵 [AFTER-SCHOOL] Music effect - showStudySubjects: ${showStudySubjects}, setting track: ${targetTrack}`
+    );
+
+    // MusicController handles transitions smoothly
+    MusicController.setTrack(targetTrack);
+  }, [showStudySubjects]);
 
   const handleStudy = useCallback(() => {
     if (hasStudiedTonight) {

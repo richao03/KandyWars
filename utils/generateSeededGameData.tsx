@@ -180,7 +180,11 @@ const foundMoneySubtitles = [
   "Today's your day!",
 ];
 
-export function generateSeededGameData(seed: string, totalPeriods = 40, difficultyLevel?: number) {
+export function generateSeededGameData(
+  seed: string,
+  totalPeriods = 40,
+  difficultyLevel?: number
+) {
   const rng = seedrandom(seed);
 
   // Helper to pick random from array (supports both mutable and readonly arrays)
@@ -207,7 +211,9 @@ export function generateSeededGameData(seed: string, totalPeriods = 40, difficul
     basePrices = {};
     candyNames.forEach((name, index) => {
       basePrices[name] = priceRanges[index];
-      console.log(`🍬 ${name}: [${priceRanges[index][0]}, ${priceRanges[index][1]}]`);
+      console.log(
+        `🍬 ${name}: [${priceRanges[index][0]}, ${priceRanges[index][1]}]`
+      );
     });
   }
 
@@ -378,8 +384,8 @@ export function generateSeededGameData(seed: string, totalPeriods = 40, difficul
         location,
         candy,
         multiplier,
-        hint: `${candy} is going to ${verb} in ${location}`,
-        flavorText: `${candy} is ${verbPresent} in ${location}`,
+        hint: `${candy} is going to ${verb} in the ${location}`,
+        flavorText: `${candy} is ${verbPresent} in the ${location}`,
         category: 'neutral',
       };
 
@@ -421,7 +427,9 @@ export function generateSeededGameData(seed: string, totalPeriods = 40, difficul
     };
 
     periodEvents.push(guaranteedBullyEvent);
-    console.log(`🎯 Guaranteed bully event added on Day ${dayIndex + 1}, Period ${period}`);
+    console.log(
+      `🎯 Guaranteed bully event added on Day ${dayIndex + 1}, Period ${period}`
+    );
   }
 
   if (guaranteedStashLock) {
@@ -451,7 +459,9 @@ export function generateSeededGameData(seed: string, totalPeriods = 40, difficul
     };
 
     periodEvents.push(guaranteedStashEvent);
-    console.log(`🎯 Guaranteed stash lock event added on Day ${dayIndex + 1}, Period ${period}`);
+    console.log(
+      `🎯 Guaranteed stash lock event added on Day ${dayIndex + 1}, Period ${period}`
+    );
   }
 
   console.log(`📊 Total events generated: ${periodEvents.length}`);

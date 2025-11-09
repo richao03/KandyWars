@@ -40,6 +40,7 @@ import {
 } from '../../src/store/slices/merchantSlice';
 import { JokerService } from '../../src/utils/jokerService';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
+import { MusicController } from '../../src/utils/musicController';
 import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EventModal from '../components/EventModal';
@@ -114,10 +115,15 @@ function Market(props) {
     console.log(
       `🟢 Market component MOUNTED - Instance: ${instanceIdRef.current}`
     );
+
+    // Music will be managed by the showLunchMinigames effect below
+    // No need to manually stop/start here - MusicController handles transitions
+
     return () => {
       console.log(
         `🔴 Market component UNMOUNTED - Instance: ${instanceIdRef.current}`
       );
+      // No cleanup needed - next view will set its own music
     };
   }, []);
 
@@ -162,6 +168,9 @@ function Market(props) {
     markLunchMinigamePlayed,
     isAfterSchool,
   } = useGame();
+
+  // Music is managed by the showLunchMinigames effect below
+  // (removed duplicate music effect to prevent race conditions)
 
   // Log every render to see how many instances are active
   console.log(
@@ -273,7 +282,7 @@ function Market(props) {
     );
 
     // Use the already-calculated period instead of recalculating
-    if (period === 1 && periodCount > 0) {
+    if (period === 0) {
       setEvent('NEW_DAY');
     } else if (currentEvent) {
       // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
@@ -500,12 +509,18 @@ function Market(props) {
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
   const [isDroneDeposit, setIsDroneDeposit] = useState(false);
 
-  // Play background music during school day (stop when schools out modal shows or after-school starts)
-  const shouldPlayMusic = !isAfterSchool && !schoolsOutModalVisible;
-  console.log(
-    `🎵 Market music check - isAfterSchool: ${isAfterSchool}, schoolsOutModalVisible: ${schoolsOutModalVisible}, shouldPlayMusic: ${shouldPlayMusic}`
-  );
-  // useBackgroundMusic(shouldPlayMusic, 0.3); // Play at 30% volume
+  // Play day2 music when lunch minigame selection is shown
+  useEffect(() => {
+    // Select appropriate music track
+    const targetTrack = showLunchMinigames ? 'day2' : 'day1';
+
+    console.log(
+      `🎵 [MARKET] Music effect - showLunchMinigames: ${showLunchMinigames}, setting track: ${targetTrack}`
+    );
+
+    // MusicController handles transitions smoothly
+    MusicController.setTrack(targetTrack);
+  }, [showLunchMinigames]);
 
   const openModal = useCallback((index: number) => {
     setIsTransactionModalOpening(true);
@@ -795,7 +810,10 @@ function Market(props) {
     } else if (period === lunchPeriod && !showLunchMinigames) {
       // Lunch period - Show lunch confirmation modal
       console.log(
-        `🍽️ Period ${lunchPeriod} (lunch) - Showing lunch confirmation modal`
+        `🍽️ [MARKET] 🎯 LUNCH PERIOD DETECTED! Period ${lunchPeriod} (lunch) - Showing lunch confirmation modal`
+      );
+      console.log(
+        `🍽️ [MARKET] Day: ${day}, Period: ${period}, PeriodsPerDay: ${periodsPerDay}`
       );
       setLunchConfirmVisible(true);
     } else {
@@ -943,7 +961,8 @@ function Market(props) {
   );
 
   const handleLunchConfirm = useCallback(() => {
-    console.log('🍽️ Lunch confirmed - showing minigame selection');
+    console.log('🍽️ [MARKET] Lunch confirmed - showing minigame selection');
+    console.log('🍽️ [MARKET] Setting showLunchMinigames = true');
     setLunchConfirmVisible(false);
     setShowLunchMinigames(true);
   }, []);
@@ -1281,7 +1300,7 @@ function Market(props) {
       <ConfirmationModal
         visible={lunchConfirmVisible}
         title="Time for Lunch!"
-        message="Ready to take a break and play a minigame?"
+        message="Ready to take a break and play a game?"
         emoji="🍽️"
         confirmText="Let's Go!"
         cancelText="Not Yet"

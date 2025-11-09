@@ -103,6 +103,7 @@ function GameHUD({
   showLunchMinigames,
   disableBalanceAnimation = false,
 }: GameHUDProps) {
+  console.log('theme', theme);
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
@@ -353,7 +354,7 @@ function GameHUD({
       PRICE_SPIKE: '#32CD32', // Orange for price increases
       PRICE_DROP: '#FF4444', // Green for price drops
       JOKER_UNLOCKED: '#9C27B0', // Purple for jokers
-      NEW_DAY: '#2196F3', // Blue for new day
+      NEW_DAY: '#f4d03f', // Blue for new day
       DEFAULT: '#f4d03f', // Default yellow
     };
 
@@ -564,11 +565,10 @@ export default React.memo(GameHUD);
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(254, 247, 227, 0.7)', // Warm cream paper background
+    backgroundColor: 'rgba(254, 247, 227, 0.6)', // Warm cream paper background
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 0,
-    borderBottomWidth: 3,
     borderColor: '#d4a574', // Brown crayon border
     fontFamily: 'PixeloidMono',
   },
@@ -577,7 +577,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 0,
-    borderBottomWidth: 3,
     borderColor: '#f7e98e', // Evening theme border
   },
   headerRow: {

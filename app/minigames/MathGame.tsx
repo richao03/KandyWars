@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -264,6 +266,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
   // Handle bottom number click
   const handleBottomNumberClick = (clickedNumber: number) => {
+    SoundEffects.playRandomPop();
     if (!gameActive) return;
 
     const rightmost = getRightmostNumber();
@@ -297,6 +300,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         setJokerRewardTier(level); // Also set reward tier immediately
         jokerRewardTierRef.current = level; // Set ref for immediate access
 
+        SoundEffects.playCongratsSound();
         showModal(
           'Level Complete!',
           `Great job! You completed all ${config.requiredMatches} matches. Ready for the next level?`,
@@ -331,6 +335,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     }
 
     if (level < 3) {
+      SoundEffects.playCongratsSound();
       showModal(
         `Level ${level} Complete!`,
         `Great job! Ready for Level ${level + 1}?`,
@@ -426,6 +431,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
   // Start game
   const startGame = () => {
+    SoundEffects.playRandomPop();
     // Track minigame play for analytics
     trackMinigamePlayed('math');
     trackMinigameProgress('math');
@@ -480,6 +486,13 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     }
   }, [gameActive]);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   // Animated styles
   const scrollAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -513,7 +526,10 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           {/* Joker icon button */}
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#f5f5dc"
@@ -572,7 +588,10 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
             </PixelBorder>
           </PressableButton>
           <PressableButton
-            onPress={onBack || (() => router.back())}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              (onBack || (() => router.back()))();
+            }}
             shadowColor="rgba(185,28,28,1)"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
@@ -725,6 +744,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         <TouchableOpacity
           style={styles.pixelButtonInner}
           onPress={() => {
+            SoundEffects.playRandomPop();
             showModal(
               'Leave Math Study?',
               "You'll lose your progress!",

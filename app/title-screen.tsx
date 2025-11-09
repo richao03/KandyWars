@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import StudioTitleScreen from './components/StudioTitleScreen';
 import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
 import { useGame } from '../src/hooks/useGame';
 import colors from '../src/constants/colors';
+import { MusicController } from '../src/utils/musicController';
 
 
 export default function TitleScreenPage() {
@@ -13,6 +14,16 @@ export default function TitleScreenPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showStudioScreen, setShowStudioScreen] = useState(true);
   const navigation = useNavigation();
+
+  // Play menu music when showing CandyWars title screen
+  useEffect(() => {
+    // Only play music when showing CandyWars title screen (not studio screen)
+    if (!showStudioScreen) {
+      MusicController.setTrack('menu');
+    }
+
+    // No cleanup needed - next view will set its own music
+  }, [showStudioScreen]);
 
   // Force component refresh when screen comes into focus
   useFocusEffect(
@@ -30,6 +41,8 @@ export default function TitleScreenPage() {
       console.log('📱 TitleScreen: handleNewGame called with difficulty:', difficulty);
       console.log('📱 TitleScreen: Resetting navigation stack and navigating to market...');
 
+      // Music will continue playing until market view is reached
+
       // Reset the entire navigation state to only have (tabs)/market
       // This ensures all old screen instances are unmounted
       navigation.dispatch(
@@ -46,6 +59,8 @@ export default function TitleScreenPage() {
 
   const handleContinue = () => {
     console.log('🎮 Continue pressed - periodCount:', periodCount, 'isInitialized:', isInitialized);
+
+    // Music will continue playing until market view is reached
 
     // If this is a newly created game (difficulty selected but not started)
     if (isInitialized && periodCount === 0) {
@@ -71,6 +86,7 @@ export default function TitleScreenPage() {
   };
 
   const handleSettings = () => {
+    // Music continues playing in settings
     router.push('/title-settings');
   };
 

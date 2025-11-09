@@ -7,6 +7,8 @@ import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
@@ -128,6 +130,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     }
   }, [cards, gameState, isGameActive]);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   const handleCardPress = (cardId: string) => {
     if (!isGameActive || showingAllCards) return;
 
@@ -135,6 +144,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2)
       return;
 
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const newFlippedCards = [...flippedCards, cardId];
     setFlippedCards(newFlippedCards);
@@ -226,6 +236,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   // Start game
   const startGame = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('computer');
@@ -244,6 +255,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     setCompletedLevel(level);
 
     if (level < 3) {
+      SoundEffects.playCongratsSound();
       showModal(
         `Level ${level} Complete!`,
         `Great memory work! Ready for Level ${level + 1}?`,
@@ -253,6 +265,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         }
       );
     } else {
+      SoundEffects.playCongratsSound();
       showModal(
         'System Infiltrated!',
         "Incredible! You've hacked through all security layers!",
@@ -272,6 +285,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   };
 
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
       'Abort Hack Session?',
@@ -319,7 +333,10 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         <View style={styles.instructionsContainer}>
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#00d4ff"
@@ -383,6 +400,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
           <PressableButton
             onPress={() => {
+              SoundEffects.playRandomPop();
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}

@@ -13,13 +13,15 @@ import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GEOGRAPHY_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 
 interface GeographyGameProps {
   onComplete: () => void;
@@ -170,6 +172,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       return;
     }
 
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsAnimating(true);
 
@@ -271,6 +274,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       setCompletedLevel(level);
 
       if (level < 3) {
+        SoundEffects.playCongratsSound();
         showModal(
           `Level ${level} Complete!`,
           `Solved in ${moves} moves! Ready for Level ${level + 1}?`,
@@ -281,6 +285,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
           }
         );
       } else {
+        SoundEffects.playCongratsSound();
         showModal(
           'All Levels Complete!',
           `Amazing puzzle solving! You completed all levels!`,
@@ -367,6 +372,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
   // Start game
   const startGame = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     trackMinigamePlayed('geography');
     trackMinigameProgress('geography');
@@ -378,11 +384,16 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
   // Handle forfeit
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (timerRef.current) clearInterval(timerRef.current);
     if (scrambleTimeoutRef.current) clearTimeout(scrambleTimeoutRef.current);
 
-    if (gameState === 'playing' || gameState === 'preview' || gameState === 'scrambling') {
+    if (
+      gameState === 'playing' ||
+      gameState === 'preview' ||
+      gameState === 'scrambling'
+    ) {
       showModal(
         'Leave Geography?',
         "You'll lose your progress!",
@@ -406,6 +417,13 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       if (scrambleTimeoutRef.current) clearTimeout(scrambleTimeoutRef.current);
     };
   }, []);
+
+  // Start minigame music when game starts (preview begins)
+  useEffect(() => {
+    if (gameState === 'preview' || gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
 
   // Render tile
   const renderTile = (position: number) => {
@@ -461,7 +479,10 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#3b82f6"
@@ -523,6 +544,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
           <PressableButton
             onPress={() => {
+              SoundEffects.playRandomPop();
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}
@@ -581,7 +603,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     <View style={styles.container}>
       <MinigameHUD
         title="Pangea Puzzle"
-        subtitle={selectedDogName}
+        subtitle={'Unscramble!'}
         leftInfo={`Level ${level}/3`}
         centerInfo={`Moves: ${moves}`}
         rightInfo={`Time: ${timeLeft}s`}

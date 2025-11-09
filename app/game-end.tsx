@@ -27,6 +27,7 @@ import { resetLocalAnalytics } from '../src/store/slices/localAnalyticsSlice';
 import { setWonDifficulties } from '../src/store/slices/scoreboardSlice';
 import { setCachedUserObject } from '../src/store/slices/userObjectSlice';
 import { forceSave } from '../src/store/store';
+import { MusicController } from '../src/utils/musicController';
 import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
 
@@ -69,6 +70,12 @@ export default function GameEndScreen() {
 
   // Track total wins from Firebase for hall pass progress
   const [totalWinCount, setTotalWinCount] = React.useState(0);
+
+  // Play results music when screen loads
+  useEffect(() => {
+    console.log('🎵 [GAME-END] Setting results music');
+    MusicController.setTrack('results');
+  }, []);
 
   // Helper function to get hall pass progress
   const getHallPassProgress = (passId: string) => {
@@ -953,7 +960,7 @@ export default function GameEndScreen() {
                     fontStyle: 'italic',
                   }}
                 >
-                  * "This game" stats show current playthrough only
+                  *stats show current playthrough only
                 </Text>
               </PixelBorder>
             )}

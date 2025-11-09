@@ -1,13 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  FlatList,
-  Image,
-  SectionList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, SectionList, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
@@ -15,16 +7,15 @@ import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { setStashedAmount } from '../../src/store/slices/walletSlice';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
 import FastModal from '../components/FastModal';
-import GameHUD from '../components/GameHUD';
 import JokerCard from '../components/JokerCard';
 import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { setStashedAmount } from '../../src/store/slices/walletSlice';
 
 const CANDY_TYPES = [
   'Snickers',
@@ -39,7 +30,7 @@ const CANDY_TYPES = [
 function JokersPage() {
   // Always call all hooks first - before any conditional returns
   const dispatch = useAppDispatch();
-  const stashedAmount = useAppSelector(state => state.wallet.stashedAmount);
+  const stashedAmount = useAppSelector((state) => state.wallet.stashedAmount);
   const gameContext = useGame();
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
@@ -288,11 +279,14 @@ function JokersPage() {
     const newBalance = stashedAmount - GLITCH_COST;
     dispatch(setStashedAmount(newBalance));
 
-    const balanceMessage = newBalance < 0
-      ? `You now owe $${Math.abs(newBalance).toLocaleString()}!`
-      : `New piggy bank balance: $${newBalance.toLocaleString()}`;
+    const balanceMessage =
+      newBalance < 0
+        ? `You now owe $${Math.abs(newBalance).toLocaleString()}!`
+        : `New piggy bank balance: $${newBalance.toLocaleString()}`;
 
-    console.log(`💰 Glitch in the Matrix: Deducted $${GLITCH_COST.toLocaleString()} from piggy bank. ${balanceMessage}`);
+    console.log(
+      `💰 Glitch in the Matrix: Deducted $${GLITCH_COST.toLocaleString()} from piggy bank. ${balanceMessage}`
+    );
 
     // Create a copy of the selected joker
     // Strategy: Give copy a unique ID for removal, but store original ID for activation
@@ -561,7 +555,6 @@ function JokersPage() {
   const currentJokers = inventoryJokers; // Only used for inventory tab
 
   // Use consistent daytime styles
-  const containerStyles = styles.container;
   const headerStyles = styles.header;
   const titleStyles = styles.title;
 
@@ -609,12 +602,7 @@ function JokersPage() {
   // Show loading view if needed
   if (showLoading) {
     return (
-      <View style={containerStyles}>
-        <GameHUD
-          theme="evening"
-          customHeaderText="School"
-          customLocationText="Collection"
-        />
+      <View style={styles.container}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Loading jokers...</Text>
         </View>
@@ -623,15 +611,9 @@ function JokersPage() {
   }
 
   return (
-    <View style={containerStyles}>
-      <GameHUD
-        theme="evening"
-        customHeaderText={`Jokers Collection`}
-        customLocationText="Collection"
-      />
-
+    <View style={styles.container}>
       <View style={headerStyles}>
-        <View style={styles.headerTop}>
+        {/* <View style={styles.headerTop}>
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={handleDebugTap} activeOpacity={0.7}>
               <Image
@@ -646,7 +628,7 @@ function JokersPage() {
               {activeTab === 'inventory' ? jokers.length : allJokersCount}
             </Text>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.tabContainer}>
           <PressableButton

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { MusicController } from '../../src/utils/musicController';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useAppSelector } from '../../src/store/hooks';
@@ -69,6 +71,11 @@ export default function JokerSelection({
   const availableJokers = jokers.filter(
     (joker) => !ownedJokerIds.includes(joker.id)
   );
+
+  // Play victory music when component mounts
+  useEffect(() => {
+    MusicController.setTrack('victory');
+  }, []);
 
   const selectRandomJokers = () => {
     console.log(
@@ -173,6 +180,9 @@ export default function JokerSelection({
 
       // Add joker with source and minigame type for analytics
       addJoker(jokerToAdd, 'minigame', subject);
+
+      // Play achievement sound
+      SoundEffects.playAchievementSound();
     }
     onComplete();
   };
@@ -392,12 +402,6 @@ export default function JokerSelection({
     // Add Forged Pass bonus
     const rerollBonus = hallPassModifiers.rerollBonusCount || 0;
     const totalRerolls = baseRerolls + rerollBonus;
-
-    if (rerollBonus > 0) {
-      console.log(
-        `🎖️ Hall Pass reroll bonus: +${rerollBonus} rerolls (total: ${totalRerolls})`
-      );
-    }
 
     return totalRerolls;
   };

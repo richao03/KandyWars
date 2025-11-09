@@ -2,6 +2,7 @@ import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -350,6 +351,9 @@ function TransactionModal({
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
+      // Play pop sound when confirming transaction
+      SoundEffects.playRandomPop();
+
       // Track highest single sale for SELL transactions
       if (mode === 'Sell' && priceBreakdown) {
         const saleRevenue = priceBreakdown.finalPrice * quantity;
@@ -383,14 +387,17 @@ function TransactionModal({
       if (newMode === 'Buy' && maxBuyQuantity > 0) {
         setQuantity(maxBuyQuantity);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        SoundEffects.playRandomPop();
       } else if (newMode === 'Sell' && maxSellQuantity > 0) {
         setQuantity(maxSellQuantity);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        SoundEffects.playRandomPop();
       }
     } else {
       // If switching modes, change mode and reset quantity
       setMode(newMode);
       setQuantity(1);
+      SoundEffects.playRandomPop();
     }
   };
 

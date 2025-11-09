@@ -36,7 +36,6 @@ import {
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import { resetFirebaseSession } from '../components/CandyWarsTitleScreen';
 import ConfirmationModal from '../components/ConfirmationModal';
-import GameHUD from '../components/GameHUD';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
 
@@ -407,8 +406,6 @@ function Settings() {
 
   return (
     <View style={styles.container}>
-      <GameHUD customHeaderText="Game Settings" customLocationText="Office" />
-
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}

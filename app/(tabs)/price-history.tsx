@@ -6,7 +6,6 @@ import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useSeed } from '../../src/hooks/useSeed';
 import CandyPriceChart from '../components/CandyPriceChart';
-import GameHUD from '../components/GameHUD';
 
 // Memoized chart component to prevent unnecessary re-renders
 const MemoizedCandyPriceChart = React.memo(CandyPriceChart);
@@ -47,12 +46,6 @@ export default function PriceHistory() {
 
   return (
     <View style={styles.container}>
-      <GameHUD
-        theme="evening"
-        customHeaderText="Price History"
-        customLocationText="History"
-      />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

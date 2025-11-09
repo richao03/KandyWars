@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -232,6 +234,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     });
 
     if (caughtByMonitor || crossedPaths) {
+    SoundEffects.playRandomPop();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setGameActive(false);
 
@@ -293,6 +296,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       if (level < 3) {
+        SoundEffects.playCongratsSound();
         showModal(
           'Level Complete!',
           `Amazing! You covered all ${totalCells} cells in ${moves + 1} moves. Ready for Level ${level + 1}?`,
@@ -303,6 +307,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
           }
         );
       } else {
+        SoundEffects.playCongratsSound();
         showModal(
           'Gym Master!',
           `Incredible! You completed all levels with excellent stealth skills!`,
@@ -351,8 +356,16 @@ export default function GymGame({ onComplete }: GymGameProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameActive, handleMove]);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   // Handle swipe gestures with new Gesture API
   const panGesture = Gesture.Pan().onEnd((event) => {
+    runOnJS(SoundEffects.playRandomPop)();
     const { translationX, translationY } = event;
     const absX = Math.abs(translationX);
     const absY = Math.abs(translationY);
@@ -373,6 +386,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   });
 
   const startGame = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('gym');
@@ -384,6 +398,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
   };
 
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
       'Leave Gym Class?',
@@ -485,7 +500,10 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#ef4444"
@@ -562,6 +580,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
 
           <PressableButton
             onPress={() => {
+              SoundEffects.playRandomPop();
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.back();
             }}

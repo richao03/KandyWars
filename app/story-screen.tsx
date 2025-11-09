@@ -20,6 +20,9 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { useWallet } from '../src/hooks/useWallet';
+import { useGame } from '../src/hooks/useGame';
+import { MusicController } from '../src/utils/musicController';
+import { SoundEffects } from '../src/utils/soundEffects';
 import NamePromptModal from './components/NamePromptModal';
 import PixelBorder from './components/PixelBorder';
 import PressableButton from './components/PressableButton';
@@ -347,6 +350,7 @@ const getStoryLines = (breed: string, cost: string) => {
 
 export default function StoryScreen() {
   const wallet = useWallet();
+  const { setIsAfterSchool } = useGame();
   const navigation = useNavigation();
   const currentLevel = wallet?.difficultyLevel || 1;
   const dogBreed = getDogBreed(currentLevel);
@@ -396,6 +400,14 @@ export default function StoryScreen() {
       setIsReady(true);
     }, 100);
     return () => clearTimeout(initTimer);
+  }, []);
+
+  // Play minigame music for story screen
+  useEffect(() => {
+    console.log('🎵 StoryScreen: Setting minigame music');
+    MusicController.setTrack('minigame');
+
+    // No cleanup needed - next view will set its own music
   }, []);
 
   // Typewriter effect with proper cleanup
@@ -563,6 +575,7 @@ export default function StoryScreen() {
   const handleSkip = () => {
     setUserHasInteracted(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    SoundEffects.playRandomPop();
     // Check if user has a name, if not show name modal, otherwise go to market
     if (!wallet?.playerName || wallet.playerName.trim() === '') {
       setShowNameModal(true);
@@ -580,6 +593,12 @@ export default function StoryScreen() {
   const handleContinue = () => {
     setUserHasInteracted(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Reset isAfterSchool to false when starting Day 1
+    // This ensures that if user loaded a saved game where they were in after-school,
+    // starting Day 1 properly resets them to the market view
+    setIsAfterSchool(false);
+
     // Check if user has a name, if not show name modal, otherwise go to market
     if (!wallet?.playerName || wallet.playerName.trim() === '') {
       setShowNameModal(true);
@@ -646,6 +665,9 @@ export default function StoryScreen() {
       wallet?.initializeWallet(wallet.difficultyLevel, name);
     }
 
+    // Reset isAfterSchool to false when starting Day 1
+    setIsAfterSchool(false);
+
     // Reset navigation stack to only have (tabs)/market
     navigation.dispatch(
       CommonActions.reset({
@@ -663,6 +685,9 @@ export default function StoryScreen() {
       wallet?.initializeWallet(wallet.difficultyLevel, 'Player');
       wallet?.setPlayerName('Player');
     }
+
+    // Reset isAfterSchool to false when starting Day 1
+    setIsAfterSchool(false);
 
     // Reset navigation stack to only have (tabs)/market
     navigation.dispatch(

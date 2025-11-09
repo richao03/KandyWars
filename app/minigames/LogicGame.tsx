@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
@@ -90,6 +92,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   // Start game
   const startGame = () => {
+    SoundEffects.playRandomPop();
     // Track minigame play for analytics
     trackMinigamePlayed('logic');
     trackMinigameProgress('logic');
@@ -142,6 +145,13 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     }
   }, [attempts]);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   // Calculate Wordle-style feedback
   const calculateFeedback = (
     guess: string[]
@@ -179,6 +189,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   // Handle guess submission
   const handleSubmitGuess = () => {
+    SoundEffects.playRandomPop();
     // Validate input
     if (currentGuess.some((candy) => candy === '')) {
       showModal('⚠️ Incomplete Pattern', 'Please select all 4 candies');
@@ -206,6 +217,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
       if (level < 3) {
         // Level complete, move to next level
+        SoundEffects.playCongratsSound();
         showModal(
           `Level ${level} Complete!`,
           `Excellent! You solved Level ${level} in ${newAttempts.length} attempts!\n Ready for Level ${level + 1}?`,
@@ -218,6 +230,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       } else {
         // All levels complete!
         setAllLevelsComplete(true);
+        SoundEffects.playCongratsSound();
         showModal(
           'Master Candy Detective!',
           `Incredible! You've solved all 3 difficulty levels! You are a true Logic Master!`,
@@ -256,6 +269,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     } else {
       // Incorrect guess - medium haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      SoundEffects.playRandomPop();
 
       // Continue guessing
       setCurrentGuess(['', '', '', '']);
@@ -264,6 +278,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   // Handle candy selection - fill next empty slot
   const handleCandySelect = (candy: string) => {
+    SoundEffects.playRandomPop();
     const nextEmptyIndex = currentGuess.findIndex((slot) => slot === '');
     if (nextEmptyIndex !== -1) {
       // Light haptic feedback for candy selection
@@ -277,6 +292,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   // Handle position selection - allow clearing a specific slot
   const handlePositionSelect = (position: number) => {
+    SoundEffects.playRandomPop();
     if (currentGuess[position] !== '') {
       const newGuess = [...currentGuess];
       newGuess[position] = '';
@@ -292,6 +308,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   };
 
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     if (gameState === 'playing') {
       showModal(
         'Leave Candy Riddle?',
@@ -342,7 +359,10 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#ff6ec7"

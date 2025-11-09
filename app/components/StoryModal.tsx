@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { MusicController } from '../../src/utils/musicController';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 
@@ -18,6 +19,10 @@ export default function StoryModal({
 
   useEffect(() => {
     if (visible) {
+      // Start minigame music when modal appears
+      console.log('🎵 StoryModal: Setting minigame music');
+      MusicController.setTrack('minigame');
+
       // Fade in
       Animated.timing(fadeAnim, {
         toValue: 1,

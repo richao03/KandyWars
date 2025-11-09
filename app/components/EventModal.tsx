@@ -20,6 +20,7 @@ import ReAnimated, {
 import colors from '../../src/constants/colors';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useWallet } from '../../src/hooks/useWallet';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
@@ -182,8 +183,11 @@ const EventModal = React.memo(function EventModal() {
       }
 
       if (currentEvent.category === 'bad') {
-        // Trigger warning haptic feedback for negative events
+        // Trigger warning haptic feedback and negative sound for negative events
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setTimeout(() => {
+          SoundEffects.playNegativeSound();
+        }, 300);
 
         // For BAD events: Immediate appearance with shake
         fadeAnim.setValue(1);
@@ -282,8 +286,9 @@ const EventModal = React.memo(function EventModal() {
           }),
         ]).start();
 
-        // If it's a money-gaining event, start count-up animation
+        // If it's a money-gaining event, start count-up animation and play positive sound
         if (isMoneyGainingEvent) {
+          SoundEffects.playPositiveSound();
           // Get the actual amount from the event data
           const moneyGained = currentEvent.dollarAmount || 10;
           // For FOUND_MONEY events, the money has already been added to balance

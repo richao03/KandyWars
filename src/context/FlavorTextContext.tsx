@@ -17,10 +17,10 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
   FOUND_MONEY: ['He who finds it keeps it - Confucious'],
   resale_bonus: ['What does this even mean?'],
   NEW_DAY: [
-    'Ziippp goes your backpack & Burrr goes your cash counting machine',
     'New day, same kingpin',
     'Another day, another candy dollar.',
     'The road to candy empire starts with one trade',
+    'First one in, last one out.',
   ],
   LOSE_MONEY: [
     'Whats a Candy King without a couple of haters?',
@@ -60,21 +60,23 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
   ],
   MORNING_TRADE: [
     'Morning sugar rush!',
-    'First one in, last one out.',
     'Early bird gets the sour worms!',
     'Love the smell of sugar in the morning',
+    'Mary broke up with Charlie because Jenny broke up with Johnny',
   ],
   LUNCH_RUSH: [
-    'Lunch rush approaching - get the deserts ready!',
-    'Mid-day trading frenzy begins!',
-    'Where to have lunch today?',
-    'Lunch time chaos = candy opportunity!',
+    'Lunch means dessert!',
+    'Mid-day trading for a fast buck.',
+    'Peak hour for peak trading',
+    'Lunch chaos = candy opportunity!',
     'Lunch money burning holes in pockets...',
+    'Mary said Johnny only like Jenny because Charlie said she liked him',
   ],
   FINAL_PERIOD: [
     'Last period - final trades of the day!',
     'School day ending - last chance for deals!',
     'Time to secure those final profits!',
+    'Jenny said that Johnny said that Charlie said that Mary likes him',
     'Almost time to count your candy coins!',
   ],
   DEFAULT: ['Something interesting happens...'],
@@ -96,6 +98,7 @@ export const useFlavorText = () => {
         return;
       }
       const randomText = texts[Math.floor(Math.random() * texts.length)];
+      console.log(`🎭 [FlavorText] Setting event: ${event}, text: "${randomText}"`);
       dispatch(setFlavorEvent({ event, text: randomText }));
     },
     [dispatch]

@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -528,10 +530,18 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     }
   }, [gameState]);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   // Progress to next stage
   const nextStage = () => {
     if (stage >= 3) {
       // All stages complete!
+      SoundEffects.playCongratsSound();
       showModal(
         'Master Artist!',
         "Incredible! You've completed all artistic challenges!",
@@ -593,6 +603,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     // Only respond to adjacent tiles
     if (!isAdjacent) return;
 
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (isValidMove(currentPosition.row, currentPosition.col, row, col)) {
@@ -621,6 +632,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         setTimeout(() => {
           if (stage < 3) {
             const nextConfig = getStageConfig(stage + 1);
+            SoundEffects.playCongratsSound();
             showModal(
               `Level ${stage} Complete!`,
               `Beautiful artwork! Ready for Level ${stage + 1}? `,
@@ -630,6 +642,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
               }
             );
           } else {
+            SoundEffects.playCongratsSound();
             showModal(
               'Master Artist!',
               "Incredible! You've completed all artistic challenges!",
@@ -675,6 +688,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   // No cleanup needed for mistake-based system
 
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
@@ -722,7 +736,10 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         <View style={styles.instructionsContainer}>
           <TouchableOpacity
             style={styles.jokerIconButton}
-            onPress={() => setShowAvailableJokers(true)}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
           >
             <PixelBorder
               borderColor="#ff6b35"
@@ -768,6 +785,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
           <PressableButton
             onPress={() => {
+              SoundEffects.playRandomPop();
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setGameState('playing');
             }}

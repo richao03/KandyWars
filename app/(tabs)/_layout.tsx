@@ -1,16 +1,63 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Image, View } from 'react-native';
+import { Tabs, usePathname } from 'expo-router';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Image, InteractionManager, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
-import AdBanner from '../components/AdBanner';
+import GameHUD from '../components/GameHUD';
+
+// Lazy load AdBanner for better initial render performance
+const AdBanner = lazy(() => import('../components/AdBanner'));
 
 export default function TabLayout() {
   const gameContext = useGame();
   const tabBarContext = useTabBar();
+  const [shouldRenderAd, setShouldRenderAd] = useState(false);
+  const pathname = usePathname();
 
   const isAfterSchool = gameContext?.isAfterSchool || false;
   const isTabBarVisible = tabBarContext?.isTabBarVisible || false;
+  const day = gameContext?.day || 1;
+  const showLunchMinigames = gameContext?.showLunchMinigames || false;
+
+  // Determine GameHUD visibility and config based on current route
+  const gameHUDConfig = useMemo(() => {
+    // Don't show GameHUD on market or after-school (they have their own HUD)
+    const shouldShow = pathname !== '/market' && pathname !== '/after-school';
+
+    // Map routes to their GameHUD configurations (using actual pathname format)
+    const routeConfig: Record<
+      string,
+      { header: string; location: string; bgColor: string; theme: 'school' | 'evening' }
+    > = {
+      '/jokers': { header: 'JOKERS', location: 'Collection', bgColor: '#00512C', theme: 'evening' },
+      '/price-history': { header: 'Price History', location: 'History', bgColor: '#1a1a1a', theme: 'evening' },
+      '/settings': { header: 'Game Settings', location: 'Office', bgColor: '#fef7e7', theme: 'school' },
+      '/home': { header: 'Home', location: 'Home', bgColor: '#00512C', theme: 'evening' },
+    };
+
+    const config = routeConfig[pathname];
+
+    return {
+      visible: shouldShow && config !== undefined,
+      customHeaderText: config?.header || 'Home',
+      customLocationText: config?.location || 'Home',
+      bgColor: config?.bgColor || '#000000',
+      theme: (config?.theme || 'evening') as 'school' | 'evening',
+    };
+  }, [pathname]);
+
+  // Set layout background to match current tab so GameHUD's semi-transparent overlay shows correctly
+  const layoutBgColor = gameHUDConfig.bgColor;
+
+  // Defer ad rendering until after initial UI is interactive
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      // Wait for UI to settle before rendering ad
+      setShouldRenderAd(true);
+    });
+
+    return () => task.cancel();
+  }, []);
 
   // Memoize screen options to prevent recreation on every render
   const screenOptions = React.useMemo(
@@ -40,9 +87,24 @@ export default function TabLayout() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Ad Banner at the top */}
-      <AdBanner />
+    <View style={{ flex: 1, backgroundColor: layoutBgColor }}>
+      {/* Ad Banner at the top - lazy loaded and deferred for performance */}
+      {shouldRenderAd && (
+        <Suspense
+          fallback={<View style={{ height: 50, backgroundColor: '#000' }} />}
+        >
+          <AdBanner />
+        </Suspense>
+      )}
+      {/* Shared GameHUD - stays mounted across tab switches for smooth marquee */}
+      <View style={{ opacity: gameHUDConfig.visible ? 1 : 0, height: gameHUDConfig.visible ? undefined : 0, overflow: 'hidden' }}>
+        <GameHUD
+          theme={gameHUDConfig.theme}
+          customHeaderText={gameHUDConfig.customHeaderText}
+          customLocationText={gameHUDConfig.customLocationText}
+          showLunchMinigames={showLunchMinigames}
+        />
+      </View>
       <Tabs screenOptions={screenOptions} initialRouteName="market">
         {/* Main visible tabs */}
         <Tabs.Screen

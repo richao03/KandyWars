@@ -11,6 +11,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { SoundEffects } from '../../src/utils/soundEffects';
 
 interface PressableButtonProps {
   onPress?: () => void;
@@ -51,8 +52,9 @@ export default function PressableButton({
 
   const handlePressIn = () => {
     if (disabled) return;
-    // Trigger light haptic feedback on press
+    // Trigger light haptic feedback and pop sound on press
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    SoundEffects.playRandomPop();
     // Push down effect - very fast and no bounce
     translateY.value = withSpring(4, {
       damping: 1000,

@@ -1,15 +1,16 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useState, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import mobileAds from 'react-native-google-mobile-ads';
+import { NativeModules } from 'react-native';
 import { persistor, store } from '../src/store/store';
 import GameEffectsManager from './components/GameEffectsManager';
 import StudioTitleScreen from './components/StudioTitleScreen';
+import { AdVisibilityProvider } from '../src/context/AdVisibilityContext';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -43,16 +44,51 @@ export default function RootLayout() {
   });
   const [showStudioScreen, setShowStudioScreen] = useState(true);
 
-  // Initialize Google Mobile Ads
+  // Initialize Google Mobile Ads using native background thread
   useEffect(() => {
-    mobileAds()
-      .initialize()
-      .then(() => {
-        if (__DEV__) console.log('📱 AdMob initialized');
-      })
-      .catch((error) => {
-        if (__DEV__) console.error('📱 AdMob initialization failed:', error);
+    const { AdMobInitializer } = NativeModules;
+
+    if (AdMobInitializer) {
+      // Use native module for background thread initialization (better performance)
+      AdMobInitializer.initialize()
+        .then((result: any) => {
+          if (__DEV__) {
+            console.log('📱 AdMob initialized on background thread');
+            console.log('📱 Adapters:', result.adapters);
+          }
+        })
+        .catch((error: Error) => {
+          if (__DEV__) {
+            console.error('📱 AdMob native initialization failed:', error);
+            console.log('📱 Falling back to JS initialization...');
+          }
+          // Fallback to JS initialization if native module fails
+          import('react-native-google-mobile-ads').then((mobileAds) => {
+            mobileAds.default()
+              .initialize()
+              .then(() => {
+                if (__DEV__) console.log('📱 AdMob initialized (JS fallback)');
+              })
+              .catch((fallbackError: Error) => {
+                if (__DEV__)
+                  console.error('📱 AdMob fallback initialization failed:', fallbackError);
+              });
+          });
+        });
+    } else {
+      // Native module not available, use JS initialization
+      if (__DEV__) console.log('📱 Using JS AdMob initialization');
+      import('react-native-google-mobile-ads').then((mobileAds) => {
+        mobileAds.default()
+          .initialize()
+          .then(() => {
+            if (__DEV__) console.log('📱 AdMob initialized (JS)');
+          })
+          .catch((error: Error) => {
+            if (__DEV__) console.error('📱 AdMob initialization failed:', error);
+          });
       });
+    }
   }, []);
 
   React.useEffect(() => {
@@ -69,9 +105,10 @@ export default function RootLayout() {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <GameEffectsManager />
-        <SafeAreaProvider>
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
+        <AdVisibilityProvider>
+          <SafeAreaProvider>
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+              <GestureHandlerRootView style={{ flex: 1 }}>
                   {showStudioScreen ? (
                       <StudioTitleScreen
                         onComplete={() => {
@@ -85,6 +122,7 @@ export default function RootLayout() {
                           animationEnabled: false,
                         }}
                       >
+                      <RouteTracker />
                       <Stack.Screen
                         name="index"
                         options={{ headerShown: false }}
@@ -165,10 +203,30 @@ export default function RootLayout() {
                       />
                     </Stack>
                   )}
-            </GestureHandlerRootView>
-          </SafeAreaView>
-        </SafeAreaProvider>
+              </GestureHandlerRootView>
+            </SafeAreaView>
+          </SafeAreaProvider>
+        </AdVisibilityProvider>
       </PersistGate>
     </Provider>
   );
+}
+
+/**
+ * Route Tracker Component
+ * Updates ad visibility based on current route
+ */
+function RouteTracker() {
+  const pathname = usePathname();
+  const { setCurrentRoute } = React.useContext(
+    require('../src/context/AdVisibilityContext').AdVisibilityContext
+  );
+
+  React.useEffect(() => {
+    if (pathname) {
+      setCurrentRoute(pathname);
+    }
+  }, [pathname, setCurrentRoute]);
+
+  return null;
 }

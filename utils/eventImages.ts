@@ -89,6 +89,7 @@ export const EMOJI_IMAGES = {
   hallpass: require('../assets/images/emojis/hallpass.png'),
   bulkSale: require('../assets/images/emojis/bulkSale.png'),
   jumpRope: require('../assets/images/emojis/jumpRope.png'),
+  cafeteria: require('../assets/images/emojis/cafeteria.png'),
   // Add more emoji images as needed
   // heart: require('../assets/images/emojis/heart.png'),
   // etc...
@@ -146,6 +147,7 @@ export const EMOJI_TO_IMAGE_MAP = {
   '🎖️': 'hallpass', // Hall pass / military medal emoji
   '🛒': 'bulkSale', // Shopping cart emoji
   '🪢': 'jumpRope', // Knot/rope emoji (jump rope)
+  '🍽️': 'cafeteria', // Fork and knife with plate emoji (cafeteria)
   // Add more mappings as images become available
 } as const;
 

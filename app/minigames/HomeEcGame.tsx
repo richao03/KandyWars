@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -153,6 +155,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         return;
 
       isSwipingRef.current = true;
+      SoundEffects.playRandomPop();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       const currentCandy = candyA;
@@ -235,6 +238,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               }
               modalTimeoutRef.current = setTimeout(() => {
                 console.log(`Level ${level} complete! Showing modal...`);
+                SoundEffects.playCongratsSound();
                 showModal(
                   `Level ${level} Complete!`,
                   `Ready for Level ${level + 1}?`,
@@ -253,6 +257,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
               }
               modalTimeoutRef.current = setTimeout(() => {
                 console.log('All levels complete! Showing final modal...');
+                SoundEffects.playCongratsSound();
                 showModal(
                   'All Levels Complete!',
                   'Amazing work, Master Chef!',
@@ -320,6 +325,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   // Start game
   const startGame = useCallback(() => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Track minigame play for analytics
     trackMinigamePlayed('home-ec');
@@ -459,6 +465,13 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     };
   }, []);
 
+  // Start minigame music when game starts playing
+  useEffect(() => {
+    if (gameState === 'playing') {
+      MusicController.setTrack('minigame');
+    }
+  }, [gameState]);
+
   // Animated styles
   const candyAStyle = useAnimatedStyle(() => ({
     opacity: candyAOpacity.value,
@@ -474,6 +487,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   // Handle forfeit
   const handleForfeit = () => {
+    SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
@@ -512,7 +526,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
         <TouchableOpacity
           style={styles.jokerIconButton}
-          onPress={() => setShowAvailableJokers(true)}
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            setShowAvailableJokers(true);
+          }}
         >
           <PixelBorder
             borderColor="#6c757d"
