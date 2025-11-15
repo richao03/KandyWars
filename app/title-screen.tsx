@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import { View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import StudioTitleScreen from './components/StudioTitleScreen';
-import CandyWarsTitleScreen from './components/CandyWarsTitleScreen';
+import SugarHustleTitleScreen from './components/SugarHustleTitleScreen';
 import { useGame } from '../src/hooks/useGame';
 import colors from '../src/constants/colors';
 import { MusicController } from '../src/utils/musicController';
@@ -11,7 +11,6 @@ import { MusicController } from '../src/utils/musicController';
 
 export default function TitleScreenPage() {
   const { lastActiveView, periodCount, isInitialized } = useGame();
-  const [refreshKey, setRefreshKey] = useState(0);
   const [showStudioScreen, setShowStudioScreen] = useState(true);
   const navigation = useNavigation();
 
@@ -24,17 +23,6 @@ export default function TitleScreenPage() {
 
     // No cleanup needed - next view will set its own music
   }, [showStudioScreen]);
-
-  // Force component refresh when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log('📱 DEBUG: Title screen focused');
-      // Only refresh if we're showing CandyWars screen, not during studio screen
-      if (!showStudioScreen) {
-        setRefreshKey(prev => prev + 1);
-      }
-    }, [showStudioScreen])
-  );
 
   const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
     try {
@@ -91,7 +79,7 @@ export default function TitleScreenPage() {
   };
 
   const handleStudioComplete = () => {
-    console.log('🎬 DEBUG: Studio completed, showing CandyWars title screen');
+    console.log('🎬 DEBUG: Studio completed, showing Sugar Hustle title screen');
     setShowStudioScreen(false);
   };
 
@@ -106,8 +94,7 @@ export default function TitleScreenPage() {
       )}
 
       {!showStudioScreen && (
-        <CandyWarsTitleScreen
-          key={refreshKey}
+        <SugarHustleTitleScreen
           onNewGame={handleNewGame}
           onContinue={handleContinue}
           onSettings={handleSettings}

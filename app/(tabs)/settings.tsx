@@ -25,6 +25,7 @@ import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
+import { fullResetGame } from '../../src/store/slices/gameSlice';
 import {
   setTotalCompletions,
   setWonDifficulties,
@@ -34,7 +35,7 @@ import {
   updateCachedUserObject,
 } from '../../src/store/slices/userObjectSlice';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
-import { resetFirebaseSession } from '../components/CandyWarsTitleScreen';
+import { resetFirebaseSession } from '../components/SugarHustleTitleScreen';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import TextWithEmojis from '../components/TextWithEmojis';
@@ -334,7 +335,7 @@ function Settings() {
           console.log('✅ All Redux slices reset in memory');
 
           // STEP 2: Reset all game contexts
-          await resetGame();
+          dispatch(fullResetGame()); // Use fullResetGame to clear isInitialized
           resetWallet();
           resetInventory();
           resetJokers();
@@ -719,7 +720,7 @@ function Settings() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>About</Text>
             <Text style={styles.aboutText}>
-              CandyWarz - The ultimate school trading simulation game
+              Sugar Hustle - The ultimate school trading simulation game
             </Text>
             <Text style={styles.aboutText}>
               Build your candy empire, collect jokers, and dominate the market!

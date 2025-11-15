@@ -11,8 +11,6 @@ interface MarketContentProps {
   isLunchPeriod: boolean;
   showLunchMinigames: boolean;
   hasPlayedLunchMinigame: boolean;
-  isTransactionModalOpening: boolean;
-  selectedCandyIndex: number | null;
   period: number;
   day: number;
   periodsPerDay: number;
@@ -24,15 +22,13 @@ interface MarketContentProps {
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
 }
 
-export default function MarketContent({
+function MarketContent({
   candies,
   localPricesUpdating,
   isFocused,
   isLunchPeriod,
   showLunchMinigames,
   hasPlayedLunchMinigame,
-  isTransactionModalOpening,
-  selectedCandyIndex,
   period,
   day,
   periodsPerDay,
@@ -51,8 +47,6 @@ export default function MarketContent({
     >
       <View style={styles.contentContainer}>
         <GameHUD
-          isModalOpening={isTransactionModalOpening}
-          isModalOpen={selectedCandyIndex !== null}
           onInventoryPress={onInventoryPress}
           flavorTextWrapper={flavorTextWrapper}
           showLunchMinigames={showLunchMinigames}
@@ -86,6 +80,9 @@ export default function MarketContent({
     </ImageBackground>
   );
 }
+
+// Memoize to prevent unnecessary re-renders when parent state changes
+export default React.memo(MarketContent);
 
 const styles = StyleSheet.create({
   backgroundImage: {

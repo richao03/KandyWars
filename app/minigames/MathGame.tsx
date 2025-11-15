@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   StyleSheet,
@@ -11,8 +11,10 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  cancelAnimation,
   runOnJS,
   useAnimatedStyle,
+  useFrameCallback,
   useSharedValue,
 } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
@@ -58,10 +60,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   // Animation values
   const translateX = useSharedValue(0);
   const flashValue = useSharedValue(0);
+  const isAnimating = useSharedValue(false);
+  const animationSpeed = useSharedValue(0);
 
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const animationRef = useRef<NodeJS.Timeout | null>(null);
   const startScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameActiveRef = useRef(false);
   const containerRef = useRef<View>(null);
@@ -69,8 +72,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const numbersSequenceRef = useRef<number[]>([]);
   const matchedIndicesRef = useRef<number[]>([]);
   const matchesCompletedRef = useRef(0);
-  const completedLevelRef = useRef(0); // Track completed level with ref for immediate access
-  const jokerRewardTierRef = useRef(0); // Track joker reward tier with ref
+  const completedLevelRef = useRef(0);
+  const jokerRewardTierRef = useRef(0);
 
   // Constants
   const NUMBER_WIDTH = 60;
@@ -130,12 +133,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     translateX.value = -totalWidth; // Extra padding to ensure they're fully off-screen
   };
 
-  // Start scrolling animation using setInterval
+  // Start scrolling animation on UI thread
   const startScrollAnimation = (currentLevel?: number) => {
-    if (animationRef.current) {
-      clearInterval(animationRef.current);
-    }
-
     const levelToUse = currentLevel !== undefined ? currentLevel : level;
     const config = getLevelConfig(levelToUse);
     const speed = SCROLL_SPEED * config.speed;
@@ -143,56 +142,65 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       `🎮 MathGame: Starting scroll animation for level ${levelToUse} with speed ${speed}`
     );
 
-    animationRef.current = setInterval(() => {
-      if (!gameActiveRef.current) {
-        stopScrollAnimation();
-        return;
-      }
-
-      // Directly update the shared value
-      translateX.value = translateX.value + speed;
-
-      // Check if rightmost unmatched number reached the edge
-      // Find rightmost unmatched number using refs for better performance
-      let rightmostIndex = -1;
-      for (let i = numbersSequenceRef.current.length - 1; i >= 0; i--) {
-        if (!matchedIndicesRef.current.includes(i)) {
-          rightmostIndex = i;
-          break;
-        }
-      }
-
-      if (rightmostIndex >= 0 && containerWidth.current > 0) {
-        const currentX = translateX.value;
-        // Calculate position relative to the scrollingRow
-        // The scrollingRow starts with translateX of -600 and moves right
-        const numberLeftEdge = rightmostIndex * TOTAL_NUMBER_WIDTH;
-        const numberRightEdge = numberLeftEdge + NUMBER_WIDTH;
-
-        // The visible area starts at x=0 in container coordinates
-        // When translateX + numberRightEdge >= containerWidth, the number hits the edge
-        const absoluteRightEdge = currentX + numberRightEdge;
-
-        // Container width is the visible area
-        if (absoluteRightEdge >= containerWidth.current) {
-          // Game over!
-          runOnJS(() => {
-            stopScrollAnimation();
-            handleGameOver();
-          })();
-        }
-      }
-    }, 16); // ~60fps
+    animationSpeed.value = speed;
+    isAnimating.value = true;
   };
 
-  // Stop scrolling animation - ensure cleanup is complete
+  // Stop scrolling animation on UI thread
   const stopScrollAnimation = () => {
-    if (animationRef.current) {
-      clearInterval(animationRef.current);
-      animationRef.current = null;
-    }
+    isAnimating.value = false;
+    animationSpeed.value = 0;
     gameActiveRef.current = false;
   };
+
+  // Check game over condition (JS thread function)
+  const checkGameOver = useCallback((currentX: number) => {
+    if (!gameActiveRef.current) return;
+
+    // Find rightmost unmatched number
+    let rightmostIndex = -1;
+    for (let i = numbersSequenceRef.current.length - 1; i >= 0; i--) {
+      if (!matchedIndicesRef.current.includes(i)) {
+        rightmostIndex = i;
+        break;
+      }
+    }
+
+    if (rightmostIndex >= 0 && containerWidth.current > 0) {
+      // Count how many unmatched numbers exist before the rightmost
+      let visiblePosition = 0;
+      for (let i = 0; i <= rightmostIndex; i++) {
+        if (!matchedIndicesRef.current.includes(i)) {
+          visiblePosition++;
+        }
+      }
+      visiblePosition--; // Convert to 0-based index
+
+      // Calculate position based on actual visible position in flex layout
+      const numberLeftEdge = visiblePosition * TOTAL_NUMBER_WIDTH;
+      const numberRightEdge = numberLeftEdge + NUMBER_WIDTH;
+      const absoluteRightEdge = currentX + numberRightEdge;
+
+      // Container width is the visible area
+      if (absoluteRightEdge >= containerWidth.current) {
+        console.log('🚨 GAME OVER TRIGGERED!');
+        isAnimating.value = false;
+        handleGameOver();
+      }
+    }
+  }, []);
+
+  // UI thread animation loop - runs at 60fps independently of JS thread
+  useFrameCallback(() => {
+    'worklet';
+    if (!isAnimating.value || animationSpeed.value === 0) return;
+
+    // Update position on UI thread (won't be blocked by JS operations)
+    translateX.value = translateX.value + animationSpeed.value;
+
+    // Check game over every frame (call JS function)
+    runOnJS(checkGameOver)(translateX.value);
+  });
 
   // Handle game over
   const handleGameOver = () => {
@@ -266,7 +274,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
   // Handle bottom number click
   const handleBottomNumberClick = (clickedNumber: number) => {
-    SoundEffects.playRandomPop();
     if (!gameActive) return;
 
     const rightmost = getRightmostNumber();
@@ -275,7 +282,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     const sum = rightmost.number + clickedNumber;
 
     if (sum === 10) {
-      // Correct match!
+      // Correct match! Only play sound on correct answers to prevent JS blocking
+      SoundEffects.playRandomPop();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const newMatchedIndices = [...matchedIndices, rightmost.index];
       setMatchedIndices(newMatchedIndices);
@@ -320,8 +328,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       // Add score
       setScore((prev) => prev + 10);
     } else {
-      // Wrong answer
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Wrong answer - play wrong answer sound and apply penalty
+      SoundEffects.playWrongAnswerSound();
       setScore((prev) => Math.max(0, prev - 5));
     }
   };
@@ -458,11 +466,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   // Cleanup - ensure all timers/intervals are cleared on unmount
   useEffect(() => {
     return () => {
-      // Stop scroll animation interval
-      if (animationRef.current) {
-        clearInterval(animationRef.current);
-        animationRef.current = null;
-      }
+      // Stop scroll animation on UI thread
+      stopScrollAnimation();
       // Stop game timer interval
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -654,7 +659,9 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           ref={containerRef}
           style={styles.numbersContainer}
           onLayout={(e) => {
-            containerWidth.current = e.nativeEvent.layout.width;
+            const width = e.nativeEvent.layout.width;
+            containerWidth.current = width;
+            console.log(`📏 Container measured - width: ${width}px, screenWidth: ${screenWidth}px`);
           }}
         >
           <Animated.View style={[styles.scrollingRow, scrollAnimatedStyle]}>

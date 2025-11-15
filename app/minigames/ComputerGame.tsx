@@ -137,6 +137,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     }
   }, [gameState]);
 
+
   const handleCardPress = (cardId: string) => {
     if (!isGameActive || showingAllCards) return;
 
@@ -162,6 +163,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       if (firstCard && secondCard && firstCard.emoji === secondCard.emoji) {
         // Match found! Don't increment turns for correct guesses
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        SoundEffects.playCongratsSound();
         setFlippedCards([]);
 
         setTimeout(() => {
@@ -178,6 +180,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       } else {
         // No match - increment turns only for wrong guesses
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        SoundEffects.playWrongAnswerSound();
         setFlippedCards([]); // Allow new clicks immediately
 
         const newTurns = turns + 1;

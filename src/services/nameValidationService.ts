@@ -1,6 +1,6 @@
 /**
- * Name Validation Service for CandyWarz
- * 
+ * Name Validation Service for Sugar Hustle
+ *
  * This service handles unique player name validation using Firebase.
  * It ensures no two players can use the same name in the game.
  */

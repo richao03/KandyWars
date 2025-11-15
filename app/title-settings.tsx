@@ -26,7 +26,7 @@ import {
   setCachedUserObject,
   updateCachedUserObject,
 } from '../src/store/slices/userObjectSlice';
-import { resetFirebaseSession } from './components/CandyWarsTitleScreen';
+import { resetFirebaseSession } from './components/SugarHustleTitleScreen';
 import ConfirmationModal from './components/ConfirmationModal';
 import PixelBorder from './components/PixelBorder';
 

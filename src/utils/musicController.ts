@@ -18,6 +18,8 @@ type MusicTrack =
   | 'minigame'
   | 'results'
   | 'victory'
+  | 'bird'
+  | 'cricket'
   | 'none';
 
 interface MusicState {
@@ -44,6 +46,8 @@ const MUSIC_FILES: Record<Exclude<MusicTrack, 'none'>, any> = {
   minigame: require('../../assets/music/results.wav'),
   results: require('../../assets/music/results.wav'),
   victory: require('../../assets/music/victory.wav'),
+  bird: require('../../assets/soundEffects/birds1.m4a'),
+  cricket: require('../../assets/soundEffects/crickets1.mp3'),
 };
 
 const LOOPING_TRACKS: Set<MusicTrack> = new Set([
@@ -75,11 +79,10 @@ function stopCurrentPlayer() {
 
 /**
  * Play a specific track
+ * Note: initializeAudioMode() should be called once at app startup, not here
  */
 async function playTrack(track: Exclude<MusicTrack, 'none'>) {
   try {
-    await initializeAudioMode();
-
     const player = createAudioPlayer(MUSIC_FILES[track]);
     player.loop = LOOPING_TRACKS.has(track);
     player.volume = 0.5;

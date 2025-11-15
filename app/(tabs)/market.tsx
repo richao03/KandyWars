@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, {
   Suspense,
   lazy,
@@ -46,6 +46,9 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import EventModal from '../components/EventModal';
 import { Location } from '../components/LocationModal';
 import MarketContent from '../components/MarketContent';
+import TransactionModalManager, {
+  TransactionModalHandle,
+} from '../components/TransactionModalManager';
 import { Candy } from '../types';
 
 // Lazy load modals that are shown less frequently
@@ -53,7 +56,6 @@ const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
 const SchoolsOutModal = lazy(() => import('../components/SchoolsOutModal'));
 const SleepConfirmModal = lazy(() => import('../components/SleepConfirmModal'));
 const StashMoneyModal = lazy(() => import('../components/StashMoneyModal'));
-const TransactionModal = lazy(() => import('../components/TransactionModal'));
 const InventoryModal = lazy(() => import('../components/InventoryModal'));
 const LocationModal = lazy(() => import('../components/LocationModal'));
 
@@ -243,6 +245,9 @@ function Market(props) {
   const lastEventPeriodRef = useRef<number>(-1);
   const lastHintPeriodRef = useRef<number>(-1);
 
+  // Ref for transaction modal manager (prevents parent re-renders)
+  const transactionModalRef = useRef<TransactionModalHandle>(null);
+
   // Log all events once when game is initialized
   const hasLoggedEventsRef = useRef(false);
   if (!hasLoggedEventsRef.current && gameData.periodEvents.length > 0) {
@@ -264,7 +269,9 @@ function Market(props) {
       return;
     }
 
-    // Check for current event
+    // Debounce flavor text updates to prevent rapid re-renders during navigation
+    const timeoutId = setTimeout(() => {
+      // Check for current event
     // Universal events (isUniversal=true) trigger at any location
     // Location-based events (isUniversal=false) require matching location
     // Note: periodCount is 0-indexed (0-39), but event periods are 1-indexed (1-40)
@@ -391,6 +398,9 @@ function Market(props) {
         setEvent('PERIOD_CHANGE');
       }
     }
+  }, 50); // 50ms debounce
+
+  return () => clearTimeout(timeoutId);
   }, [
     isFocused,
     periodCount,
@@ -469,12 +479,7 @@ function Market(props) {
     setCandies(calculatedCandies);
   }, [calculatedCandies]);
 
-  const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(
-    null
-  );
-  const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
-  const [isTransactionModalOpening, setIsTransactionModalOpening] =
-    useState(false);
+  // Modal state moved to TransactionModalManager to prevent parent re-renders
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [dayStatsModalVisible, setDayStatsModalVisible] = useState(false);
   const [dayStatsBonuses, setDayStatsBonuses] = useState<
@@ -509,41 +514,52 @@ function Market(props) {
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
   const [isDroneDeposit, setIsDroneDeposit] = useState(false);
 
-  // Play day2 music when lunch minigame selection is shown
+  // Set music when screen is focused or lunch minigames toggle
+  // This handles both initial mount and returning from minigames
+  useFocusEffect(
+    useCallback(() => {
+      const targetTrack = showLunchMinigames ? 'day2' : 'day1';
+      // Only change music if it's different from current track
+      if (MusicController.getCurrentTrack() !== targetTrack) {
+        console.log(
+          `🎵 [MARKET] Setting music: ${targetTrack}`
+        );
+        MusicController.setTrack(targetTrack);
+      }
+    }, [showLunchMinigames])
+  );
+
+  // Stop cricket music when schoolsOut modal is dismissed
   useEffect(() => {
-    // Select appropriate music track
-    const targetTrack = showLunchMinigames ? 'day2' : 'day1';
-
-    console.log(
-      `🎵 [MARKET] Music effect - showLunchMinigames: ${showLunchMinigames}, setting track: ${targetTrack}`
-    );
-
-    // MusicController handles transitions smoothly
-    MusicController.setTrack(targetTrack);
-  }, [showLunchMinigames]);
+    if (!schoolsOutModalVisible) {
+      MusicController.stop();
+    }
+  }, [schoolsOutModalVisible]);
 
   const openModal = useCallback((index: number) => {
-    setIsTransactionModalOpening(true);
-    setSelectedCandyIndex(index);
-    setModalMode('buy'); // default to buy, but modal will let user pick
+    // Open modal via ref - this does NOT cause parent re-render!
+    transactionModalRef.current?.open(index);
   }, []);
 
   const closeModal = useCallback(() => {
-    setIsTransactionModalOpening(false);
-    setSelectedCandyIndex(null);
+    transactionModalRef.current?.close();
+  }, []);
+
+  const handleInventoryPress = useCallback(() => {
+    setInventoryModalVisible(true);
   }, []);
 
   const handleTransaction = useCallback(
-    (quantity: number, mode: 'buy' | 'sell') => {
-      if (selectedCandyIndex === null) return;
-      const selectedCandy = candies[selectedCandyIndex];
+    (candyIndex: number, quantity: number, mode: 'buy' | 'sell') => {
+      if (candyIndex === null || candyIndex === undefined) return;
+      const selectedCandy = candies[candyIndex];
       const isFirstBuy =
         day === 1 && getTotalInventoryCount() === 0 && mode === 'buy';
       const isFirstSell = day === 1 && mode === 'sell';
 
       setCandies((prev) =>
         prev.map((candy, i) => {
-          if (i !== selectedCandyIndex) return candy;
+          if (i !== candyIndex) return candy;
 
           if (mode === 'buy') {
             // Check for Time Zone Arbitrage joker effect (morning purchase discount)
@@ -746,7 +762,6 @@ function Market(props) {
       closeModal();
     },
     [
-      selectedCandyIndex,
       candies,
       balance,
       day,
@@ -1103,6 +1118,9 @@ function Market(props) {
 
     // Show schools out modal first (only for days 1-4)
     console.log('📊 Showing schools out modal');
+    // Stop current music and play cricket sounds
+    MusicController.stop();
+    MusicController.setTrack('cricket');
     setSchoolsOutModalVisible(true);
   }, [periodCount, day, period, periodsPerDay]);
 
@@ -1117,7 +1135,9 @@ function Market(props) {
     console.log('🏫 Schools out modal complete');
     setSchoolsOutModalVisible(false);
 
-    // Now navigate to after school
+    // Stop cricket sounds before navigating
+    MusicController.stop();
+    // Now navigate to after school - after-school screen will start its own music
     console.log('🏫 Navigating to after school');
     startAfterSchool();
     router.replace('/(tabs)/after-school');
@@ -1160,23 +1180,10 @@ function Market(props) {
     setStashMoneyModalVisible(false);
   }, [isDroneDeposit, dispatch]);
 
-  const selectedCandy =
-    selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
-
-  // Calculate max buy quantity considering both money and inventory space
+  // Calculate available inventory space for modal
   const totalInventory = getTotalInventoryCount();
   const inventoryCapacity = getInventoryLimit();
   const availableInventorySpace = inventoryCapacity - totalInventory;
-
-  const maxBuyQty =
-    selectedCandy && selectedCandy.cost > 0
-      ? Math.min(
-          Math.floor(balance / selectedCandy.cost), // Money constraint
-          availableInventorySpace // Inventory space constraint
-        )
-      : 0;
-
-  const maxSellQty = selectedCandy ? selectedCandy.quantityOwned : 0;
 
   // Check if current period is lunch period (dynamically calculated based on periodsPerDay)
   const isLunchPeriod = period === Math.floor(periodsPerDay / 2);
@@ -1194,25 +1201,41 @@ function Market(props) {
     setStashMoneyModalVisible(true);
   }, []);
 
-  // Common props for both market components
-  const marketProps = {
-    candies,
-    localPricesUpdating,
-    isFocused,
-    isLunchPeriod,
-    showLunchMinigames,
-    hasPlayedLunchMinigame,
-    isTransactionModalOpening,
-    selectedCandyIndex,
-    period,
-    day,
-    periodsPerDay,
-    onCandyPress: openModal,
-    onLunchBack: handleLunchBack,
-    onInventoryPress: () => setInventoryModalVisible(true),
-    onNextPeriod: handleNextDay,
-    onEndDay: handleEndDay,
-  };
+  // Common props for both market components (memoized to prevent re-renders)
+  const marketProps = useMemo(
+    () => ({
+      candies,
+      localPricesUpdating,
+      isFocused,
+      isLunchPeriod,
+      showLunchMinigames,
+      hasPlayedLunchMinigame,
+      period,
+      day,
+      periodsPerDay,
+      onCandyPress: openModal,
+      onLunchBack: handleLunchBack,
+      onInventoryPress: handleInventoryPress,
+      onNextPeriod: handleNextDay,
+      onEndDay: handleEndDay,
+    }),
+    [
+      candies,
+      localPricesUpdating,
+      isFocused,
+      isLunchPeriod,
+      showLunchMinigames,
+      hasPlayedLunchMinigame,
+      period,
+      day,
+      periodsPerDay,
+      openModal,
+      handleLunchBack,
+      handleInventoryPress,
+      handleNextDay,
+      handleEndDay,
+    ]
+  );
 
   return (
     <View style={styles.container}>
@@ -1327,20 +1350,14 @@ function Market(props) {
         dismissible={false}
       />
 
-      {selectedCandy && (
-        <Suspense fallback={null}>
-          <TransactionModal
-            visible={selectedCandyIndex !== null}
-            onClose={closeModal}
-            onConfirm={handleTransaction}
-            maxBuyQuantity={maxBuyQty}
-            maxSellQuantity={maxSellQty}
-            candy={selectedCandy}
-            playerBalance={balance}
-            availableInventorySpace={availableInventorySpace}
-          />
-        </Suspense>
-      )}
+      {/* Transaction Modal Manager - manages its own state to prevent parent re-renders */}
+      <TransactionModalManager
+        ref={transactionModalRef}
+        candies={candies}
+        onTransaction={handleTransaction}
+        playerBalance={balance}
+        availableInventorySpace={availableInventorySpace}
+      />
 
       {/* Inventory Modal - only render when visible */}
       {inventoryModalVisible && (

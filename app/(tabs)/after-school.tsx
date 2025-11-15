@@ -107,22 +107,6 @@ function AfterSchoolPage() {
     setLastActiveView('after-school');
   }, [setEvent, setLastActiveView]);
 
-  // Music is managed by the showStudySubjects effect below
-  // (removed duplicate music effect to prevent race conditions)
-
-  // Play day2 music when study subject selection is shown
-  useEffect(() => {
-    // Select appropriate music track
-    const targetTrack = showStudySubjects ? 'day2' : 'day5';
-
-    console.log(
-      `🎵 [AFTER-SCHOOL] Music effect - showStudySubjects: ${showStudySubjects}, setting track: ${targetTrack}`
-    );
-
-    // MusicController handles transitions smoothly
-    MusicController.setTrack(targetTrack);
-  }, [showStudySubjects]);
-
   const handleStudy = useCallback(() => {
     if (hasStudiedTonight) {
       return; // Don't show subjects if already studied
@@ -143,6 +127,18 @@ function AfterSchoolPage() {
     }, [hasStudiedTonight, showStudySubjects])
   );
 
+  // Set music when screen is focused or study subjects toggle
+  // This handles both initial mount and returning from minigames
+  useFocusEffect(
+    useCallback(() => {
+      const targetTrack = showStudySubjects ? 'day2' : 'day5';
+      console.log(
+        `🎵 [AFTER-SCHOOL] Setting music: ${targetTrack}`
+      );
+      MusicController.setTrack(targetTrack);
+    }, [showStudySubjects])
+  );
+
   const handleStashMoney = useCallback(() => {
     console.log('🏦 Stash button clicked, setting showStash to true');
     setShowStash(true);
@@ -152,6 +148,13 @@ function AfterSchoolPage() {
   useEffect(() => {
     console.log('🏦 showStash state changed to:', showStash);
   }, [showStash]);
+
+  // Stop bird music when modal is dismissed
+  useEffect(() => {
+    if (!goingToSchoolModalVisible) {
+      MusicController.stop();
+    }
+  }, [goingToSchoolModalVisible]);
 
   const handleGoDeli = useCallback(() => {
     console.log('🍖 Deli button clicked');
@@ -224,6 +227,9 @@ function AfterSchoolPage() {
     setGuaranteedEventWarnings(warnings);
     console.log('🚨 Guaranteed events for tomorrow:', warnings);
 
+    // Stop current music and play bird sounds
+    MusicController.stop();
+    MusicController.setTrack('bird');
     setGoingToSchoolModalVisible(true);
   };
 
@@ -255,6 +261,8 @@ function AfterSchoolPage() {
         'Max:',
         maxPeriods
       );
+      // Stop bird sounds before navigating to game end
+      MusicController.stop();
       router.push('/game-end');
       return;
     }
@@ -269,7 +277,9 @@ function AfterSchoolPage() {
     // Start new day (this will exit after-school mode and increment to next day)
     startNewDay(periodsPerDay);
     console.log('🌙 AfterSchool: startNewDay completed, navigating to market');
-    // Navigate back to market (school)
+    // Stop bird sounds before navigating
+    MusicController.stop();
+    // Navigate back to market (school) - market screen will start its own music via useFocusEffect
     router.replace('/(tabs)/market');
   }, [
     balance,

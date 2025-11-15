@@ -39,7 +39,9 @@
       "Bash(xcodebuild:*)",
       "Bash(tee:*)",
       "Bash(npx expo run:ios:*)",
-      "Bash(xcrun simctl list:*)"
+      "Bash(xcrun simctl list:*)",
+      "WebFetch(domain:docs.expo.dev)",
+      "WebFetch(domain:stackoverflow.com)"
     ],
     "deny": [],
     "ask": []

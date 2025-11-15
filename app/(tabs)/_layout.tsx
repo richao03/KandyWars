@@ -1,12 +1,56 @@
 import { Tabs, usePathname } from 'expo-router';
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Image, InteractionManager, View } from 'react-native';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, InteractionManager, Pressable, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import GameHUD from '../components/GameHUD';
 
 // Lazy load AdBanner for better initial render performance
 const AdBanner = lazy(() => import('../components/AdBanner'));
+
+// Animated tab button component
+const AnimatedTabButton = (props: any) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePress = (e: any) => {
+    // Play sound and haptic feedback
+    SoundEffects.playRandomPop();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Animate scale: grow to 1.3x then back to 1x
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.3,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Call original press handler
+    props.onPress?.(e);
+  };
+
+  return (
+    <Pressable {...props} onPress={handlePress}>
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {props.children}
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 export default function TabLayout() {
   const gameContext = useGame();
@@ -82,6 +126,7 @@ export default function TabLayout() {
       tabBarIconStyle: {
         tintColor: isAfterSchool ? '#ffffff' : undefined,
       },
+      tabBarButton: (props: any) => <AnimatedTabButton {...props} />,
     }),
     [isAfterSchool, isTabBarVisible]
   );

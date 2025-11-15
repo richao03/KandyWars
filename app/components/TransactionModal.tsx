@@ -85,6 +85,7 @@ function TransactionModal({
 }: Props) {
   const [mode, setMode] = useState<'Buy' | 'Sell'>('Buy');
   const [quantity, setQuantity] = useState(1);
+  const [isClosing, setIsClosing] = useState(false);
   const { jokers, activeEffects } = useJokers();
   const { getInventoryLimit, inventory } = useInventory();
   const { periodCount } = useGame();
@@ -351,6 +352,9 @@ function TransactionModal({
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
+      // Mark modal as closing to prevent slider events
+      setIsClosing(true);
+
       // Play pop sound when confirming transaction
       SoundEffects.playRandomPop();
 
@@ -381,6 +385,18 @@ function TransactionModal({
     }
   };
 
+  const handleClose = () => {
+    setIsClosing(true);
+    onClose();
+  };
+
+  // Reset closing state when modal visibility changes
+  useEffect(() => {
+    if (visible) {
+      setIsClosing(false);
+    }
+  }, [visible]);
+
   const changeMode = (newMode: 'Buy' | 'Sell') => {
     if (mode === newMode) {
       // If clicking the same mode, set to max quantity
@@ -402,10 +418,18 @@ function TransactionModal({
   };
 
   const handleSliderChange = (value: number) => {
-    // Trigger light haptic feedback on slider value change
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Prevent slider updates if modal is closing
+    if (isClosing) return;
+
     // Ensure quantity never goes below 0
     setQuantity(Math.max(0, Math.round(value)));
+  };
+
+  const handleSliderComplete = (value: number) => {
+    // Trigger haptic feedback only when slider is released (not on every drag)
+    if (!isClosing) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
   };
 
   // Calculate number of sparks based on transaction value - dramatic tiers
@@ -1609,6 +1633,7 @@ function TransactionModal({
                 Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0)
               )}
               onValueChange={handleSliderChange}
+              onSlidingComplete={handleSliderComplete}
               minimumTrackTintColor={mode === 'Buy' ? '#ef4444' : '#4ade80'}
               maximumTrackTintColor="#ccc"
               disabled={mode === 'Buy' && maxQuantity <= 0}
@@ -1691,7 +1716,7 @@ function TransactionModal({
 
           <View style={styles.buttonRow}>
             <PressableButton
-              onPress={onClose}
+              onPress={handleClose}
               shadowColor="rgba(185,28,28,1)"
               shadowOffset={{ width: 0, height: 4 }}
               shadowOpacity={0.5}

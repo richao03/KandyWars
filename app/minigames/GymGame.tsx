@@ -234,7 +234,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     });
 
     if (caughtByMonitor || crossedPaths) {
-    SoundEffects.playRandomPop();
+      SoundEffects.playWrongAnswerSound();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setGameActive(false);
 

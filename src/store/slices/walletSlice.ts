@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { resetGame } from './gameSlice';
+import { SoundEffects } from '../../utils/soundEffects';
 
 interface WalletState {
   balance: number;
@@ -30,6 +31,12 @@ const walletSlice = createSlice({
     },
     addBalance: (state, action: PayloadAction<number>) => {
       state.balance += action.payload;
+
+      // Play coin sound when money is added (positive amount only)
+      if (action.payload > 0) {
+        SoundEffects.playCoinSound();
+      }
+
       if (__DEV__) {
         console.log(
           '💾 Balance added:',
@@ -101,6 +108,11 @@ const walletSlice = createSlice({
       if (state.stashedAmount >= action.payload) {
         state.stashedAmount -= action.payload;
         state.balance += action.payload;
+
+        // Play coin sound when withdrawing from stash
+        if (action.payload > 0) {
+          SoundEffects.playCoinSound();
+        }
       }
     },
     setDifficultyLevel: (state, action: PayloadAction<number | null>) => {

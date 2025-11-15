@@ -1,7 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
@@ -9,8 +9,8 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { NativeModules } from 'react-native';
 import { persistor, store } from '../src/store/store';
 import GameEffectsManager from './components/GameEffectsManager';
-import StudioTitleScreen from './components/StudioTitleScreen';
 import { AdVisibilityProvider } from '../src/context/AdVisibilityContext';
+import { initializeAudioMode } from '../src/utils/audioConfig';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -42,7 +42,6 @@ export default function RootLayout() {
     Graffiti: require('../assets/fonts/Graffiti.ttf'),
     DonGraffiti: require('../assets/fonts/DonGraffiti.otf'),
   });
-  const [showStudioScreen, setShowStudioScreen] = useState(true);
 
   // Initialize Google Mobile Ads using native background thread
   useEffect(() => {
@@ -91,6 +90,17 @@ export default function RootLayout() {
     }
   }, []);
 
+  // Initialize audio mode once at app startup
+  useEffect(() => {
+    initializeAudioMode()
+      .then(() => {
+        if (__DEV__) console.log('🎵 App-level audio mode initialized');
+      })
+      .catch((error) => {
+        if (__DEV__) console.error('🎵 Failed to initialize audio mode:', error);
+      });
+  }, []);
+
   React.useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
@@ -109,20 +119,13 @@ export default function RootLayout() {
           <SafeAreaProvider>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
               <GestureHandlerRootView style={{ flex: 1 }}>
-                  {showStudioScreen ? (
-                      <StudioTitleScreen
-                        onComplete={() => {
-                          setShowStudioScreen(false);
-                        }}
-                      />
-                    ) : (
-                      <Stack
-                        screenOptions={{
-                          animation: 'none',
-                          animationEnabled: false,
-                        }}
-                      >
-                      <RouteTracker />
+                <Stack
+                  screenOptions={{
+                    animation: 'none',
+                    animationEnabled: false,
+                  }}
+                >
+                  <RouteTracker />
                       <Stack.Screen
                         name="index"
                         options={{ headerShown: false }}
@@ -201,8 +204,7 @@ export default function RootLayout() {
                           animation: 'none',
                         }}
                       />
-                    </Stack>
-                  )}
+                </Stack>
               </GestureHandlerRootView>
             </SafeAreaView>
           </SafeAreaProvider>

@@ -434,6 +434,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         return newLosses;
       });
       setLastResult('lose');
+      SoundEffects.playWrongAnswerSound();
 
       if (isGameOver) {
         console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
@@ -510,6 +511,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
       if (result === 'win') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        SoundEffects.playCongratsSound();
         setScore((prev) => prev + 10);
         const newWins = wins + 1;
         setWins(newWins);
@@ -529,6 +531,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         setScore((prev) => prev + 5);
       } else {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        SoundEffects.playWrongAnswerSound();
         setLosses((currentLosses) => {
           const newLosses = currentLosses + 1;
           console.log(`Loss! Losses: ${newLosses}/3 on stage ${stage}`);
@@ -702,6 +705,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     trackMinigamePlayed('recess');
     trackMinigameProgress('recess');
 
+    // Start minigame music immediately
+    MusicController.setTrack('minigame');
+
     setGameState('countdown');
     setStage(1);
     setScore(0);
@@ -766,13 +772,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
     };
   }, []);
-
-  // Start minigame music when game starts playing
-  useEffect(() => {
-    if (gameState === 'playing') {
-      MusicController.setTrack('minigame');
-    }
-  }, [gameState]);
 
   // Animated styles
   const countdownAnimatedStyle = useAnimatedStyle(() => ({

@@ -275,6 +275,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         });
         setFeedback('✅ +1');
       } else {
+        // Wrong match - play wrong answer sound and apply penalty
+        SoundEffects.playWrongAnswerSound();
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setScore((prev) => Math.max(0, prev - 1)); // Subtract 1 but don't go below 0
         setFeedback('❌ -1');

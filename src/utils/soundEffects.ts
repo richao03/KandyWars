@@ -23,17 +23,41 @@ const POP_SOUNDS = [
 ];
 
 const POSITIVE_SOUND = require('../../assets/soundEffects/coinCluster1.wav');
+const COIN_SOUND = require('../../assets/soundEffects/coinCluster2.wav');
 const NEGATIVE_SOUND = require('../../assets/soundEffects/negative1.mp3');
+const WRONG_ANSWER_SOUND = require('../../assets/soundEffects/wrong1.wav');
 const ACHIEVEMENT_SOUND = require('../../assets/soundEffects/achievement.wav');
 const CONGRATS_SOUND = require('../../assets/soundEffects/congrats1.mp3');
+const BIRD_SOUND = require('../../assets/soundEffects/birds1.m4a');
 
-// Audio pooling - create all players once at module initialization
+// Audio pooling - create multiple players per sound for overlapping playback
 let audioInitialized = false;
-let popPlayers: any[] = [];
-let positivePlayer: any = null;
-let negativePlayer: any = null;
-let achievementPlayer: any = null;
-let congratsPlayer: any = null;
+
+// Pool of 5 pop players (allows up to 5 simultaneous pops)
+let popPlayerPool: any[] = [];
+let popPlayerIndex = 0;
+
+// Pool of 2 instances for each other sound (allows overlapping playback)
+let positivePlayerPool: any[] = [];
+let positivePlayerIndex = 0;
+
+let coinPlayerPool: any[] = [];
+let coinPlayerIndex = 0;
+
+let negativePlayerPool: any[] = [];
+let negativePlayerIndex = 0;
+
+let wrongAnswerPlayerPool: any[] = [];
+let wrongAnswerPlayerIndex = 0;
+
+let achievementPlayerPool: any[] = [];
+let achievementPlayerIndex = 0;
+
+let congratsPlayerPool: any[] = [];
+let congratsPlayerIndex = 0;
+
+let birdPlayerPool: any[] = [];
+let birdPlayerIndex = 0;
 
 /**
  * Initialize all audio players (called lazily on first sound play)
@@ -41,41 +65,151 @@ let congratsPlayer: any = null;
 async function initializeAudioPlayers() {
   if (audioInitialized) return;
 
-  console.log('🔊 [SoundEffects] Initializing audio players (one-time setup)...');
+  console.log('🔊 [SoundEffects] Initializing audio player pools (one-time setup)...');
 
   try {
-    // Ensure global audio mode is configured for mixing
-    await initializeAudioMode();
+    // Note: Global audio mode should be initialized once at app startup
+    // No need to call initializeAudioMode() here
 
-    // Create pop sound players
-    popPlayers = POP_SOUNDS.map((sound, index) => {
+    // Create one player per pop sound file (10 total)
+    // This allows up to 10 simultaneous pops (all 10 different sounds playing at once)
+    POP_SOUNDS.forEach((sound, index) => {
       const player = createAudioPlayer(sound);
       player.volume = 0.6;
-      console.log(`🔊 [SoundEffects] Created pop${index + 1} player`);
-      return player;
+      popPlayerPool.push(player);
     });
+    console.log(`🔊 [SoundEffects] Created pop sound pool (${POP_SOUNDS.length} unique players)`);
 
-    // Create other sound players
-    positivePlayer = createAudioPlayer(POSITIVE_SOUND);
-    positivePlayer.volume = 0.7;
-    console.log('🔊 [SoundEffects] Created positive sound player');
+    // Create pool of 2 instances for each other sound
+    const SOUND_POOL_SIZE = 2;
 
-    negativePlayer = createAudioPlayer(NEGATIVE_SOUND);
-    negativePlayer.volume = 0.7;
-    console.log('🔊 [SoundEffects] Created negative sound player');
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const posPlayer = createAudioPlayer(POSITIVE_SOUND);
+      posPlayer.volume = 0.7;
+      positivePlayerPool.push(posPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created positive sound pool (${SOUND_POOL_SIZE} players)`);
 
-    achievementPlayer = createAudioPlayer(ACHIEVEMENT_SOUND);
-    achievementPlayer.volume = 0.7;
-    console.log('🔊 [SoundEffects] Created achievement sound player');
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const coinPlayer = createAudioPlayer(COIN_SOUND);
+      coinPlayer.volume = 0.7;
+      coinPlayerPool.push(coinPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created coin sound pool (${SOUND_POOL_SIZE} players)`);
 
-    congratsPlayer = createAudioPlayer(CONGRATS_SOUND);
-    congratsPlayer.volume = 0.7;
-    console.log('🔊 [SoundEffects] Created congrats sound player');
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const negPlayer = createAudioPlayer(NEGATIVE_SOUND);
+      negPlayer.volume = 0.7;
+      negativePlayerPool.push(negPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created negative sound pool (${SOUND_POOL_SIZE} players)`);
+
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const wrongPlayer = createAudioPlayer(WRONG_ANSWER_SOUND);
+      wrongPlayer.volume = 2.0; // Boosted volume (may cause slight distortion)
+      wrongAnswerPlayerPool.push(wrongPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created wrong answer sound pool (${SOUND_POOL_SIZE} players)`);
+
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const achPlayer = createAudioPlayer(ACHIEVEMENT_SOUND);
+      achPlayer.volume = 0.7;
+      achievementPlayerPool.push(achPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created achievement sound pool (${SOUND_POOL_SIZE} players)`);
+
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const congPlayer = createAudioPlayer(CONGRATS_SOUND);
+      congPlayer.volume = 0.7;
+      congratsPlayerPool.push(congPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created congrats sound pool (${SOUND_POOL_SIZE} players)`);
+
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const birdPlayer = createAudioPlayer(BIRD_SOUND);
+      birdPlayer.volume = 0.7;
+      birdPlayerPool.push(birdPlayer);
+    }
+    console.log(`🔊 [SoundEffects] Created bird sound pool (${SOUND_POOL_SIZE} players)`);
 
     audioInitialized = true;
-    console.log('🔊 [SoundEffects] ✅ Audio players initialized successfully!');
+    console.log('🔊 [SoundEffects] ✅ Audio player pools initialized successfully!');
   } catch (error) {
     console.error('🔊 [SoundEffects] ❌ ERROR initializing audio players:', error);
+  }
+}
+
+/**
+ * Cleanup all audio players (call when returning to title screen)
+ * Properly destroys all audio resources to prevent memory leaks
+ */
+async function cleanupAudioPlayers() {
+  if (!audioInitialized) {
+    console.log('🔊 [SoundEffects] Audio not initialized, nothing to cleanup');
+    return;
+  }
+
+  console.log('🔊 [SoundEffects] 🧹 Cleaning up audio player pools...');
+
+  try {
+    // Cleanup pop players
+    for (const player of popPlayerPool) {
+      try {
+        await player.pause();
+        await player.remove();
+      } catch (error) {
+        // Ignore individual player cleanup errors
+      }
+    }
+
+    // Cleanup all other player pools
+    const allPools = [
+      positivePlayerPool,
+      coinPlayerPool,
+      negativePlayerPool,
+      wrongAnswerPlayerPool,
+      achievementPlayerPool,
+      congratsPlayerPool,
+      birdPlayerPool,
+    ];
+
+    for (const pool of allPools) {
+      for (const player of pool) {
+        try {
+          await player.pause();
+          await player.remove();
+        } catch (error) {
+          // Ignore individual player cleanup errors
+        }
+      }
+    }
+
+    // Clear all pools
+    popPlayerPool = [];
+    positivePlayerPool = [];
+    coinPlayerPool = [];
+    negativePlayerPool = [];
+    wrongAnswerPlayerPool = [];
+    achievementPlayerPool = [];
+    congratsPlayerPool = [];
+    birdPlayerPool = [];
+
+    // Reset indices
+    popPlayerIndex = 0;
+    positivePlayerIndex = 0;
+    coinPlayerIndex = 0;
+    negativePlayerIndex = 0;
+    wrongAnswerPlayerIndex = 0;
+    achievementPlayerIndex = 0;
+    congratsPlayerIndex = 0;
+    birdPlayerIndex = 0;
+
+    // Reset initialization flag
+    audioInitialized = false;
+
+    console.log('🔊 [SoundEffects] ✅ Audio player pools cleaned up successfully!');
+  } catch (error) {
+    console.error('🔊 [SoundEffects] ❌ ERROR cleaning up audio players:', error);
   }
 }
 
@@ -84,29 +218,27 @@ export const SoundEffects = {
    * Play a random pop sound
    */
   async playRandomPop() {
-    console.log('🔊 [SoundEffects] playRandomPop() called');
     try {
       // Lazy initialization
       if (!audioInitialized) {
         await initializeAudioPlayers();
       }
 
-      // Pick random pop sound player
-      const randomIndex = Math.floor(Math.random() * popPlayers.length);
-      const player = popPlayers[randomIndex];
+      // Pick random pop sound player from pool
+      const randomIndex = Math.floor(Math.random() * popPlayerPool.length);
+      const player = popPlayerPool[randomIndex];
 
-      console.log(
-        `🔊 [SoundEffects] Selected pop${randomIndex + 1}.ogg (index ${randomIndex})`
-      );
+      // Reset to beginning (expo-audio doesn't auto-reset)
+      player.seekTo(0);
 
-      console.log('🔊 [SoundEffects] Calling play()...');
+      // Play immediately
       player.play();
-      console.log(
-        '🔊 [SoundEffects] ✅ play() called - sound should be playing!'
-      );
+
+      if (__DEV__) {
+        console.log(`🔊 [SoundEffects] Playing pop${randomIndex + 1} (pool index ${randomIndex})`);
+      }
     } catch (error) {
       console.error('🔊 [SoundEffects] ❌ ERROR playing pop sound:', error);
-      console.error('🔊 [SoundEffects] Error stack:', error.stack);
     }
   },
 
@@ -114,20 +246,25 @@ export const SoundEffects = {
    * Play positive event sound (success, win, correct answer)
    */
   async playPositiveSound() {
-    console.log('🔊 [SoundEffects] playPositiveSound() called');
     try {
       // Lazy initialization
       if (!audioInitialized) {
         await initializeAudioPlayers();
       }
 
-      positivePlayer.play();
-      console.log('🔊 [SoundEffects] ✅ Positive sound playing!');
+      // Get next player from pool (round-robin)
+      const player = positivePlayerPool[positivePlayerIndex];
+      positivePlayerIndex = (positivePlayerIndex + 1) % positivePlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing positive sound');
+      }
     } catch (error) {
-      console.error(
-        '🔊 [SoundEffects] ❌ ERROR playing positive sound:',
-        error
-      );
+      console.error('🔊 [SoundEffects] ❌ ERROR playing positive sound:', error);
     }
   },
 
@@ -135,20 +272,51 @@ export const SoundEffects = {
    * Play negative event sound (failure, loss, wrong answer)
    */
   async playNegativeSound() {
-    console.log('🔊 [SoundEffects] playNegativeSound() called');
     try {
       // Lazy initialization
       if (!audioInitialized) {
         await initializeAudioPlayers();
       }
 
-      negativePlayer.play();
-      console.log('🔊 [SoundEffects] ✅ Negative sound playing!');
+      // Get next player from pool (round-robin)
+      const player = negativePlayerPool[negativePlayerIndex];
+      negativePlayerIndex = (negativePlayerIndex + 1) % negativePlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing negative sound');
+      }
     } catch (error) {
-      console.error(
-        '🔊 [SoundEffects] ❌ ERROR playing negative sound:',
-        error
-      );
+      console.error('🔊 [SoundEffects] ❌ ERROR playing negative sound:', error);
+    }
+  },
+
+  /**
+   * Play wrong answer sound (minigame incorrect answers)
+   */
+  async playWrongAnswerSound() {
+    try {
+      // Lazy initialization
+      if (!audioInitialized) {
+        await initializeAudioPlayers();
+      }
+
+      // Get next player from pool (round-robin)
+      const player = wrongAnswerPlayerPool[wrongAnswerPlayerIndex];
+      wrongAnswerPlayerIndex = (wrongAnswerPlayerIndex + 1) % wrongAnswerPlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing wrong answer sound');
+      }
+    } catch (error) {
+      console.error('🔊 [SoundEffects] ❌ ERROR playing wrong answer sound:', error);
     }
   },
 
@@ -156,20 +324,25 @@ export const SoundEffects = {
    * Play achievement sound (joker selection, level complete)
    */
   async playAchievementSound() {
-    console.log('🔊 [SoundEffects] playAchievementSound() called');
     try {
       // Lazy initialization
       if (!audioInitialized) {
         await initializeAudioPlayers();
       }
 
-      achievementPlayer.play();
-      console.log('🔊 [SoundEffects] ✅ Achievement sound playing!');
+      // Get next player from pool (round-robin)
+      const player = achievementPlayerPool[achievementPlayerIndex];
+      achievementPlayerIndex = (achievementPlayerIndex + 1) % achievementPlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing achievement sound');
+      }
     } catch (error) {
-      console.error(
-        '🔊 [SoundEffects] ❌ ERROR playing achievement sound:',
-        error
-      );
+      console.error('🔊 [SoundEffects] ❌ ERROR playing achievement sound:', error);
     }
   },
 
@@ -177,20 +350,85 @@ export const SoundEffects = {
    * Play congratulations sound (level complete)
    */
   async playCongratsSound() {
-    console.log('🔊 [SoundEffects] playCongratsSound() called');
     try {
       // Lazy initialization
       if (!audioInitialized) {
         await initializeAudioPlayers();
       }
 
-      congratsPlayer.play();
-      console.log('🔊 [SoundEffects] ✅ Congrats sound playing!');
+      // Get next player from pool (round-robin)
+      const player = congratsPlayerPool[congratsPlayerIndex];
+      congratsPlayerIndex = (congratsPlayerIndex + 1) % congratsPlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing congrats sound');
+      }
     } catch (error) {
-      console.error(
-        '🔊 [SoundEffects] ❌ ERROR playing congrats sound:',
-        error
-      );
+      console.error('🔊 [SoundEffects] ❌ ERROR playing congrats sound:', error);
     }
+  },
+
+  /**
+   * Play bird sound (morning/going to school)
+   */
+  async playBirdSound() {
+    try {
+      // Lazy initialization
+      if (!audioInitialized) {
+        await initializeAudioPlayers();
+      }
+
+      // Get next player from pool (round-robin)
+      const player = birdPlayerPool[birdPlayerIndex];
+      birdPlayerIndex = (birdPlayerIndex + 1) % birdPlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing bird sound');
+      }
+    } catch (error) {
+      console.error('🔊 [SoundEffects] ❌ ERROR playing bird sound:', error);
+    }
+  },
+
+  /**
+   * Play coin sound (wallet balance increase)
+   */
+  async playCoinSound() {
+    try {
+      // Lazy initialization
+      if (!audioInitialized) {
+        await initializeAudioPlayers();
+      }
+
+      // Get next player from pool (round-robin)
+      const player = coinPlayerPool[coinPlayerIndex];
+      coinPlayerIndex = (coinPlayerIndex + 1) % coinPlayerPool.length;
+
+      // Reset and play
+      player.seekTo(0);
+      player.play();
+
+      if (__DEV__) {
+        console.log('🔊 [SoundEffects] Playing coin sound');
+      }
+    } catch (error) {
+      console.error('🔊 [SoundEffects] ❌ ERROR playing coin sound:', error);
+    }
+  },
+
+  /**
+   * Cleanup all audio players
+   * Call this when returning to title screen to free memory
+   */
+  async cleanup() {
+    await cleanupAudioPlayers();
   },
 };

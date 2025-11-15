@@ -19,8 +19,8 @@ import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { setPeriodCount } from '../../src/store/slices/gameSlice';
-import { syncHallPassesFromFirebase } from '../../src/store/slices/hallPassSlice';
 import { setHallPassModifiers } from '../../src/store/slices/hallPassModifiersSlice';
+import { syncHallPassesFromFirebase } from '../../src/store/slices/hallPassSlice';
 import {
   setTotalCompletions,
   setWonDifficulties,
@@ -31,6 +31,7 @@ import {
   setStashedAmount,
 } from '../../src/store/slices/walletSlice';
 import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import DifficultySelectionModal from './DifficultySelectionModal';
 import ExactFontHandwriting from './ExactFontHandwriting';
@@ -50,31 +51,28 @@ export const resetFirebaseSession = () => {
   firebaseSessionInitialized = false;
 };
 
-interface CandyWarsTitleScreenProps {
+interface SugarHustleTitleScreenProps {
   onNewGame?: (level: number) => void;
   onContinue?: () => void;
   onSettings?: () => void;
 }
 
-export default function CandyWarsTitleScreen({
+export default function SugarHustleTitleScreen({
   onNewGame,
   onContinue,
   onSettings,
-}: CandyWarsTitleScreenProps) {
+}: SugarHustleTitleScreenProps) {
   const wallet = useWallet();
   const dispatch = useAppDispatch();
-  const {
-    resetGame,
-    periodCount,
-    isInitialized,
-    setIsInitialized,
-  } = useGame();
+  const { resetGame, periodCount, isInitialized, setIsInitialized } = useGame();
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
   const { setSeed, setGameData } = useSeed();
   const { selectPass, selectedPasses, unlockedPasses } = useHallPass();
-  const cachedUserObject = useAppSelector((state) => state.userObject.cachedUser);
+  const cachedUserObject = useAppSelector(
+    (state) => state.userObject.cachedUser
+  );
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
@@ -88,7 +86,13 @@ export default function CandyWarsTitleScreen({
 
   // Reset component state when it mounts/re-mounts
   useEffect(() => {
-    console.log('🎬 CandyWarsTitleScreen: Component mounted, resetting state');
+    console.log(
+      '🎬 SugarHustleTitleScreen: Component mounted, resetting state'
+    );
+
+    // Cleanup sound effect pools to free memory when returning to title screen
+    SoundEffects.cleanup();
+
     setAnimationComplete(false);
     setShowButtons(false);
     setShowDifficultyModal(false);
@@ -101,7 +105,7 @@ export default function CandyWarsTitleScreen({
     screenOpacity.setValue(1);
 
     console.log(
-      '🎬 CandyWarsTitleScreen: Starting fully visible to avoid white screen'
+      '🎬 SugarHustleTitleScreen: Starting fully visible to avoid white screen'
     );
 
     // Initialize Firebase and fetch user object on game load (ONCE PER SESSION)
@@ -132,7 +136,10 @@ export default function CandyWarsTitleScreen({
         console.log('💰 Highest single sale:', userObject.highestSingleSale);
 
         // Sync hall passes from Firebase to Redux (batch operation)
-        if (userObject.unlockedHallPasses && userObject.unlockedHallPasses.length > 0) {
+        if (
+          userObject.unlockedHallPasses &&
+          userObject.unlockedHallPasses.length > 0
+        ) {
           console.log('🎓 Syncing hall passes from Firebase to Redux...');
           dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
           console.log('✅ Hall passes synced:', userObject.unlockedHallPasses);
@@ -161,7 +168,11 @@ export default function CandyWarsTitleScreen({
       return computeHallPassModifiers(selectedPasses);
     }
     return null;
-  }, [selectedPasses.length, hallPassModifiersState.isInitialized, selectedPasses]);
+  }, [
+    selectedPasses.length,
+    hallPassModifiersState.isInitialized,
+    selectedPasses,
+  ]);
 
   // Only dispatch once when modifiers are computed
   useEffect(() => {
@@ -175,13 +186,13 @@ export default function CandyWarsTitleScreen({
     setAnimationComplete(true);
   };
 
-  const handleCandyComplete = () => {
+  const handleSugarComplete = () => {
     // Prevent multiple calls using ref
     if (buttonsShown.current) return;
     buttonsShown.current = true;
 
-    console.log('🎨 CandyWarsTitleScreen: Showing buttons');
-    // Buttons appear after "Candy" is done
+    console.log('🎨 SugarHustleTitleScreen: Showing buttons');
+    // Buttons appear after "Sugar" is done
     setShowButtons(true);
     // Fade in buttons
     Animated.timing(buttonOpacity, {
@@ -200,10 +211,14 @@ export default function CandyWarsTitleScreen({
 
       // Only show hall pass selection if user has unlocked hall passes
       if (unlockedPasses.length > 0) {
-        console.log('🎬 NEW GAME: User has unlocked hall passes, showing hall pass selection');
+        console.log(
+          '🎬 NEW GAME: User has unlocked hall passes, showing hall pass selection'
+        );
         setShowHallPassModal(true);
       } else {
-        console.log('🎬 NEW GAME: No unlocked hall passes, going straight to difficulty selection');
+        console.log(
+          '🎬 NEW GAME: No unlocked hall passes, going straight to difficulty selection'
+        );
         setShowDifficultyModal(true);
       }
     } catch (error) {
@@ -249,7 +264,10 @@ export default function CandyWarsTitleScreen({
 
       // Sync hall passes from Firebase (batch operation)
       if (userObject.unlockedHallPasses?.length > 0) {
-        console.log('🎖️ Syncing hall passes from Firebase:', userObject.unlockedHallPasses);
+        console.log(
+          '🎖️ Syncing hall passes from Firebase:',
+          userObject.unlockedHallPasses
+        );
         dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
       }
 
@@ -405,7 +423,7 @@ export default function CandyWarsTitleScreen({
             <View style={styles.titleWrapper}>
               <ExactFontHandwriting
                 onAnimationComplete={handleAnimationComplete}
-                onCandyComplete={handleCandyComplete}
+                onSugarComplete={handleSugarComplete}
               />
             </View>
 
@@ -598,10 +616,7 @@ export default function CandyWarsTitleScreen({
                           '🔧 DEBUG: Getting total completions from cache...'
                         );
                         const total = scoreboardService.getTotalWinCount();
-                        console.log(
-                          '🏆 TOTAL WIN COUNT FROM CACHE:',
-                          total
-                        );
+                        console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
                         alert(`Total Win Count: ${total}`);
                       }}
                       shadowColor="#7e22ce"
@@ -681,7 +696,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: 60,
     alignItems: 'center',
-    gap: 20,
+    gap: 15,
   },
   button: {
     paddingVertical: 4,

@@ -1,5 +1,5 @@
 /**
- * Firebase Configuration for CandyWarz
+ * Firebase Configuration for Sugar Hustle
  *
  * This file handles Firebase setup with optimized data structure:
  * - Single user object per device

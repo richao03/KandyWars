@@ -103,7 +103,6 @@ function GameHUD({
   showLunchMinigames,
   disableBalanceAnimation = false,
 }: GameHUDProps) {
-  console.log('theme', theme);
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
