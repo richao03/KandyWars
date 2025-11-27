@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 import colors from '../src/constants/colors';
 import { useScoreboard } from '../src/hooks/useScoreboard';
 import { scoreboardService } from '../src/services/firebase';
+import PixelBorder from './components/PixelBorder';
 import TextWithEmojis from './components/TextWithEmojis';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -157,22 +157,9 @@ export default function LeaderboardScreen() {
 
   const renderMoneyLeaderboard = () => (
     <ScrollView style={styles.tabContent}>
-      <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>🚀 Live Tracking Active</Text>
-        <Text style={styles.infoSubtitle}>
-          Your progress is automatically tracked as you play!
-        </Text>
-
-        {playerRank > 0 && (
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>Your Rank: #{playerRank}</Text>
-          </View>
-        )}
-      </View>
-
       <View style={styles.leaderboardSection}>
-        <TextWithEmojis style={styles.sectionTitle}>
-          💰 Top Players by Net Worth
+        <TextWithEmojis imageSize={44} style={styles.sectionTitle}>
+          Top Players by Net Worth
         </TextWithEmojis>
 
         {isLoading ? (
@@ -209,13 +196,12 @@ export default function LeaderboardScreen() {
                       { backgroundColor: getDifficultyColor(score.difficulty) },
                     ]}
                   >
-                    <Text style={styles.difficultyText}>
+                    <Text style={styles.difficultyText} numberOfLines={1}>
                       {getDifficultyName(score.difficulty).toUpperCase()}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.gameStats}>
-                  {score.daysPlayed} days • {formatTime(score.completionTime)} •{' '}
                   {score.jokersCollected} jokers
                 </Text>
               </View>
@@ -257,7 +243,7 @@ export default function LeaderboardScreen() {
         <>
           <View style={styles.analyticsSection}>
             <TextWithEmojis style={styles.sectionTitle}>
-              🎮 Most Played Minigames
+              Most Played Minigames
             </TextWithEmojis>
             {topMinigames.length === 0 ? (
               <Text style={styles.emptyAnalyticsText}>
@@ -280,10 +266,6 @@ export default function LeaderboardScreen() {
 
           <View style={styles.analyticsSection}>
             <View style={styles.sectionTitleRow}>
-              <Image
-                source={require('../assets/images/emojis/joker.png')}
-                style={styles.sectionTitleIcon}
-              />
               <Text style={styles.sectionTitle}>Most Obtained Jokers</Text>
             </View>
             {topJokersFromMinigames.length === 0 ? (
@@ -317,14 +299,21 @@ export default function LeaderboardScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
+        <PixelBorder
+          borderColor="#ff85c0"
+          borderWidth={3}
+          backgroundColor="rgba(255, 255, 255, 0.4)"
+          innerPadding={0}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>🏆 Leaderboard</Text>
-        <View style={{ width: 80 }} />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+        </PixelBorder>
+        <Text style={styles.headerTitle}>Leaderboard</Text>
+        <View style={{ width: 90 }} />
       </View>
 
       {/* Tab Bar */}
@@ -338,6 +327,7 @@ export default function LeaderboardScreen() {
               styles.tabText,
               activeTab === 'money' && styles.activeTabText,
             ]}
+            imageSize={22}
           >
             💰 Leaderboard
           </TextWithEmojis>
@@ -347,14 +337,15 @@ export default function LeaderboardScreen() {
           style={[styles.tab, activeTab === 'analytics' && styles.activeTab]}
           onPress={() => setActiveTab('analytics')}
         >
-          <Text
+          <TextWithEmojis
             style={[
               styles.tabText,
               activeTab === 'analytics' && styles.activeTabText,
             ]}
+            imageSize={22}
           >
-            Analytics
-          </Text>
+            🎮 Analytics
+          </TextWithEmojis>
         </TouchableOpacity>
       </View>
 
@@ -367,33 +358,42 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray.dark,
+    backgroundColor: '#fff5f7', // Cotton Candy Pink
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: colors.gray.medium,
-    borderBottomWidth: 3,
-    borderBottomColor: '#d4a574',
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 12,
+    backgroundColor: '#ffb3d9', // Bubblegum
+    borderBottomWidth: 4,
+    borderBottomColor: '#ff85c0',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
   },
   backButton: {
-    padding: 8,
+    padding: 12,
+    width: 76,
+    backgroundColor: 'transparent',
   },
   backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   title: {
     fontSize: 20,
@@ -409,77 +409,93 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(212, 165, 116, 0.3)',
-    borderBottomWidth: 3,
-    borderBottomColor: '#F4A460',
+    backgroundColor: '#ffa3cc', // Cherry Blossom lighter
+    borderBottomWidth: 4,
+    borderBottomColor: '#ff6bb3',
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: 'center',
-    borderBottomWidth: 3,
+    borderBottomWidth: 4,
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#F4A460',
+    borderBottomColor: '#cc2a6f', // Cherry Blossom
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontFamily: 'PixeloidMono',
   },
   activeTabText: {
-    color: '#F4A460',
+    color: '#ffffff',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   tabContent: {
     flex: 1,
   },
   infoSection: {
-    padding: 20,
-    backgroundColor: 'rgba(212, 165, 116, 0.3)',
-    margin: 16,
-    borderRadius: 12,
+    padding: 24,
+    backgroundColor: '#ffc0cb', // Strawberry Milk
+    margin: 20,
+    borderRadius: 16,
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#d4a574',
+    borderWidth: 4,
+    borderColor: '#ff91a4',
   },
   infoTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#32CD32',
-    marginBottom: 8,
+    color: '#00a372', // Mint green for success
+    marginBottom: 10,
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(255, 255, 255, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   infoSubtitle: {
-    fontSize: 14,
-    color: '#ffffff',
+    fontSize: 16,
+    color: '#4a2c5c', // Deep Purple
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     fontFamily: 'PixeloidMono',
+    lineHeight: 22,
   },
   rankBadge: {
-    backgroundColor: '#F4A460',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: '#e65c00', // Orange Creamsicle darker
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 3,
+    borderColor: '#ff9955',
   },
   rankText: {
-    color: '#8B4513',
+    color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   leaderboardSection: {
-    padding: 16,
+    padding: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 16,
+    color: '#cc2a6f', // Cherry Blossom
+    marginBottom: 20,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -495,92 +511,102 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     alignItems: 'center',
-    padding: 40,
+    padding: 50,
   },
   loadingText: {
-    color: '#9ca3af',
-    marginTop: 12,
-    fontSize: 16,
+    color: '#cc2a6f', // Cherry Blossom
+    marginTop: 16,
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
   },
   emptyContainer: {
     alignItems: 'center',
-    padding: 40,
+    padding: 50,
   },
   emptyText: {
-    color: '#9ca3af',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
+    color: '#cc2a6f', // Cherry Blossom
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    fontFamily: 'PixeloidMono',
   },
   emptySubtext: {
-    color: '#6b7280',
-    fontSize: 14,
+    color: '#6b5080', // Medium Purple
+    fontSize: 16,
+    fontFamily: 'PixeloidMono',
   },
   leaderboardItem: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(244, 164, 96, 0.2)',
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#ffdab9', // Peach Sorbet
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#d4a574',
+    borderWidth: 4,
+    borderColor: '#ffb380',
   },
   topThreeItem: {
-    backgroundColor: 'rgba(255, 215, 0, 0.3)',
-    borderWidth: 3,
-    borderColor: '#F4A460',
+    backgroundColor: '#fffacd', // Lemon Meringue for top 3
+    borderWidth: 4,
+    borderColor: '#ffe55c',
   },
   rankContainer: {
-    marginRight: 16,
-    minWidth: 40,
+    marginRight: 20,
+    minWidth: 50,
     alignItems: 'center',
   },
   rankEmoji: {
-    fontSize: 24,
+    fontSize: 32,
   },
   playerInfo: {
     flex: 1,
   },
   playerName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: colors.white,
-    marginBottom: 4,
+    color: '#4a2c5c', // Deep Purple
+    marginBottom: 6,
+    fontFamily: 'PixeloidMono',
   },
   scoreDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   finalBalance: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#32CD32',
-    marginRight: 12,
+    color: '#00a372', // Mint green for money
     fontFamily: 'PixeloidMono',
   },
   difficultyBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    flexShrink: 1,
   },
   difficultyText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
-    color: colors.white,
+    color: '#ffffff',
+    fontFamily: 'PixeloidMono',
   },
   gameStats: {
-    fontSize: 12,
-    color: '#9ca3af',
+    fontSize: 14,
+    color: '#6b5080', // Medium Purple
+    fontFamily: 'PixeloidMono',
   },
   statsSection: {
-    padding: 16,
-    backgroundColor: 'rgba(222, 184, 135, 0.3)',
-    margin: 16,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: '#DEB887',
+    padding: 24,
+    backgroundColor: '#b3f0d9', // Mint Ice Cream
+    margin: 20,
+    borderRadius: 16,
+    borderWidth: 4,
+    borderColor: '#66e0b8',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -590,54 +616,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#F4A460',
+    color: '#00a372', // Mint darker
     fontFamily: 'PixeloidMono',
   },
   statLabel: {
-    fontSize: 12,
-    color: '#ffffff',
-    marginTop: 4,
+    fontSize: 14,
+    color: '#4a2c5c', // Deep Purple
+    marginTop: 6,
     fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   analyticsSection: {
-    padding: 16,
+    padding: 20,
   },
   analyticsItem: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(205, 133, 63, 0.2)',
-    marginBottom: 8,
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: '#e6d5ff', // Lavender Taffy
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#CD853F',
+    borderWidth: 4,
+    borderColor: '#c79fff',
   },
   analyticsRank: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#F4A460',
-    marginRight: 12,
-    minWidth: 30,
+    color: '#8e44cc', // Grape Soda darker
+    marginRight: 16,
+    minWidth: 40,
     fontFamily: 'PixeloidMono',
   },
   analyticsName: {
     flex: 1,
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: 18,
+    color: '#4a2c5c', // Deep Purple
     fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   analyticsCount: {
-    fontSize: 14,
-    color: '#DEB887',
+    fontSize: 16,
+    color: '#7700cc', // Purple accent
     fontFamily: 'PixeloidMono',
+    fontWeight: 'bold',
   },
   emptyAnalyticsText: {
-    color: '#ffffff',
+    color: '#6b5080', // Medium Purple
     textAlign: 'center',
-    padding: 20,
-    fontStyle: 'italic',
+    padding: 24,
+    fontSize: 16,
     fontFamily: 'PixeloidMono',
+    lineHeight: 22,
   },
 });

@@ -79,6 +79,33 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
     'Jenny said that Johnny said that Charlie said that Mary likes him',
     'Almost time to count your candy coins!',
   ],
+  STUDY_TIME: [
+    'Time to hit the books!',
+    'Knowledge is power... and better jokers!',
+    'Study hard, earn smarter tools.',
+    'The lamplight flickers as you crack open your textbook.',
+    'Tonight we study, tomorrow we hustle harder.',
+  ],
+  STUDY_COMPLETE: [
+    "Nice work! You've earned your rest.",
+    'Brain gains achieved. Sleep well, candy king.',
+    'Another night, another lesson learned.',
+    'Your mind is sharper now. Time to rest.',
+  ],
+  DELI_VISIT: [
+    'The corner store awaits...',
+    'Time to stock up on supplies!',
+    'The deli owner nods as you walk in.',
+    'What treasures await at the neighborhood store?',
+    'Maybe they have something useful...',
+  ],
+  READY_FOR_SLEEP: [
+    'Ready to call it a night?',
+    'Time to rest up for tomorrow.',
+    'The day is done. Sleep awaits.',
+    "You've earned your rest, candy king.",
+    'Another day in the books. Literally.',
+  ],
   DEFAULT: ['Something interesting happens...'],
 };
 

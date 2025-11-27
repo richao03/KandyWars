@@ -1,7 +1,25 @@
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import { Platform, StyleSheet, View, Text } from 'react-native';
+import Constants from 'expo-constants';
 import { useAdVisibility } from '../../src/hooks/useAdVisibility';
+
+// Dynamically import AdMob types only when available
+let BannerAd: any;
+let BannerAdSize: any;
+let TestIds: any;
+
+const isExpoGo = Constants.appOwnership === 'expo';
+
+if (!isExpoGo) {
+  try {
+    const adMobModule = require('react-native-google-mobile-ads');
+    BannerAd = adMobModule.BannerAd;
+    BannerAdSize = adMobModule.BannerAdSize;
+    TestIds = adMobModule.TestIds;
+  } catch (error) {
+    console.warn('Google Mobile Ads not available');
+  }
+}
 
 /**
  * AdBanner Component
@@ -30,13 +48,15 @@ import { useAdVisibility } from '../../src/hooks/useAdVisibility';
  * Dedicated Ad Unit Configuration
  * Using standard 320x50 banner size for optimal performance
  */
+const TEST_AD_UNIT = 'ca-app-pub-3940256099942544/6300978111'; // Google's test banner ad unit
+
 const AD_UNITS = {
   STANDARD_BANNER: {
     ios: __DEV__
-      ? TestIds.BANNER
+      ? (TestIds?.BANNER || TEST_AD_UNIT)
       : 'ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-IOS-320x50', // Replace with your iOS ad unit ID
     android: __DEV__
-      ? TestIds.BANNER
+      ? (TestIds?.BANNER || TEST_AD_UNIT)
       : 'ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-ANDROID-320x50', // Replace with your Android ad unit ID
   },
 };
@@ -45,7 +65,7 @@ const AD_UNITS = {
 const AD_UNIT_ID = Platform.select({
   ios: AD_UNITS.STANDARD_BANNER.ios,
   android: AD_UNITS.STANDARD_BANNER.android,
-}) || TestIds.BANNER;
+}) || TEST_AD_UNIT;
 
 interface AdBannerProps {
   /**
@@ -61,6 +81,20 @@ function AdBanner({ visible = true }: AdBannerProps) {
 
   // Combine manual visibility prop with route-based visibility
   const isVisible = visible && shouldShowAd;
+
+  // Return placeholder in Expo Go
+  if (isExpoGo) {
+    return (
+      <View style={[styles.container, styles.placeholder]}>
+        {__DEV__ && <Text style={styles.placeholderText}>Ad Banner (Expo Go)</Text>}
+      </View>
+    );
+  }
+
+  // Return null if AdMob module not available
+  if (!BannerAd) {
+    return null;
+  }
 
   /**
    * PERFORMANCE OPTIMIZATION: Hide instead of destroy
@@ -112,6 +146,18 @@ const styles = StyleSheet.create({
     opacity: 0, // Make invisible (backup)
     height: 0, // Collapse height
     overflow: 'hidden', // Hide any overflow
+  },
+  placeholder: {
+    height: 50,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderStyle: 'dashed',
+  },
+  placeholderText: {
+    color: '#666',
+    fontSize: 12,
+    fontFamily: 'monospace',
   },
 });
 

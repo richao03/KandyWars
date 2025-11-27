@@ -68,14 +68,15 @@ async function initializeAudioPlayers() {
   console.log('🔊 [SoundEffects] Initializing audio player pools (one-time setup)...');
 
   try {
-    // Note: Global audio mode should be initialized once at app startup
-    // No need to call initializeAudioMode() here
+    // Ensure audio mode is initialized first (critical for physical devices)
+    await initializeAudioMode();
+    console.log('🔊 [SoundEffects] Audio mode ready, creating player pools...');
 
     // Create one player per pop sound file (10 total)
     // This allows up to 10 simultaneous pops (all 10 different sounds playing at once)
     POP_SOUNDS.forEach((sound, index) => {
       const player = createAudioPlayer(sound);
-      player.volume = 0.6;
+      player.volume = 1.0; // Boosted from 0.6 for better audibility on physical devices
       popPlayerPool.push(player);
     });
     console.log(`🔊 [SoundEffects] Created pop sound pool (${POP_SOUNDS.length} unique players)`);
@@ -85,49 +86,49 @@ async function initializeAudioPlayers() {
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const posPlayer = createAudioPlayer(POSITIVE_SOUND);
-      posPlayer.volume = 0.7;
+      posPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       positivePlayerPool.push(posPlayer);
     }
     console.log(`🔊 [SoundEffects] Created positive sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const coinPlayer = createAudioPlayer(COIN_SOUND);
-      coinPlayer.volume = 0.7;
+      coinPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       coinPlayerPool.push(coinPlayer);
     }
     console.log(`🔊 [SoundEffects] Created coin sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const negPlayer = createAudioPlayer(NEGATIVE_SOUND);
-      negPlayer.volume = 0.7;
+      negPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       negativePlayerPool.push(negPlayer);
     }
     console.log(`🔊 [SoundEffects] Created negative sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const wrongPlayer = createAudioPlayer(WRONG_ANSWER_SOUND);
-      wrongPlayer.volume = 2.0; // Boosted volume (may cause slight distortion)
+      wrongPlayer.volume = 1.0; // Reduced from 2.0 to prevent distortion
       wrongAnswerPlayerPool.push(wrongPlayer);
     }
     console.log(`🔊 [SoundEffects] Created wrong answer sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const achPlayer = createAudioPlayer(ACHIEVEMENT_SOUND);
-      achPlayer.volume = 0.7;
+      achPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       achievementPlayerPool.push(achPlayer);
     }
     console.log(`🔊 [SoundEffects] Created achievement sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const congPlayer = createAudioPlayer(CONGRATS_SOUND);
-      congPlayer.volume = 0.7;
+      congPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       congratsPlayerPool.push(congPlayer);
     }
     console.log(`🔊 [SoundEffects] Created congrats sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const birdPlayer = createAudioPlayer(BIRD_SOUND);
-      birdPlayer.volume = 0.7;
+      birdPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       birdPlayerPool.push(birdPlayer);
     }
     console.log(`🔊 [SoundEffects] Created bird sound pool (${SOUND_POOL_SIZE} players)`);

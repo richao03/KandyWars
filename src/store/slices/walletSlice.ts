@@ -10,6 +10,7 @@ interface WalletState {
   playerName: string | null;
   playerId: string | null;
   isFirstTimeDifficultySelection: boolean;
+  hasDuplicatedVacuumSealer: boolean;
 }
 
 const initialState: WalletState = {
@@ -20,6 +21,7 @@ const initialState: WalletState = {
   playerName: null,
   playerId: null,
   isFirstTimeDifficultySelection: true,
+  hasDuplicatedVacuumSealer: false,
 };
 
 const walletSlice = createSlice({
@@ -130,10 +132,14 @@ const walletSlice = createSlice({
     ) => {
       state.isFirstTimeDifficultySelection = action.payload;
     },
+    setHasDuplicatedVacuumSealer: (state, action: PayloadAction<boolean>) => {
+      state.hasDuplicatedVacuumSealer = action.payload;
+    },
     resetWallet: (state) => {
       state.balance = 20;
       state.adoptionFee = 5000;
       state.stashedAmount = -state.adoptionFee;
+      state.hasDuplicatedVacuumSealer = false;
     },
     completeReset: () => initialState,
     initializeWallet: (
@@ -202,6 +208,7 @@ export const {
   setPlayerName,
   setPlayerId,
   setIsFirstTimeDifficultySelection,
+  setHasDuplicatedVacuumSealer,
   resetWallet,
   completeReset,
   initializeWallet,

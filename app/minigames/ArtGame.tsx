@@ -1,6 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -18,22 +16,23 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { ART_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
-import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
-import AvailableJokersModal from '../components/AvailableJokersModal';
-import colors from '../../src/constants/colors';
-
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface Tile {
   id: string;
@@ -598,7 +597,8 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     // Check if tile is adjacent (up, down, left, right only)
     const rowDiff = Math.abs(row - currentPosition.row);
     const colDiff = Math.abs(col - currentPosition.col);
-    const isAdjacent = (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+    const isAdjacent =
+      (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 
     // Only respond to adjacent tiles
     if (!isAdjacent) return;
@@ -865,7 +865,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         {/* Color Key - matches current grid colors exactly */}
         <View style={styles.header}>
           <MinigameHUD
-            title="🎨 Art Creation"
+            title="Color Theory"
             subtitle="Follow the subtle color gradation path - artistic precision required!"
             leftInfo={`Level ${stage}/3`}
             centerInfo={' '}

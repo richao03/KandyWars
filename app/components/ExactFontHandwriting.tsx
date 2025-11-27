@@ -211,25 +211,25 @@ export default function ExactFontHandwriting({
       <View style={styles.titleContainer}>
         {/* "Sugar" positioned like final layout */}
         <View style={styles.sugarContainer}>
-          <Svg width="300" height="250" viewBox="0 0 300 150">
+          <Svg width="300" height="170" viewBox="0 0 300 50">
             <G>
-              {renderLetter(letters[0], 0, 'translate(0, -33) scale(1.6)')}
-              {renderLetter(letters[1], 1, 'translate(65, 15) scale(1.26)')}
-              {renderLetter(letters[2], 2, 'translate(110, 15) scale(1.26)')}
-              {renderLetter(letters[3], 3, 'translate(150, 15) scale(1.26)')}
-              {renderLetter(letters[4], 4, 'translate(210, 15) scale(1.26)')}
+              {renderLetter(letters[0], 0, 'translate(0, -43) scale(1.6)')}
+              {renderLetter(letters[1], 1, 'translate(65, 5) scale(1.26)')}
+              {renderLetter(letters[2], 2, 'translate(105, 5) scale(1.26)')}
+              {renderLetter(letters[3], 3, 'translate(145, 5) scale(1.26)')}
+              {renderLetter(letters[4], 4, 'translate(205, 5) scale(1.26)')}
             </G>
           </Svg>
         </View>
 
         {/* "Hustle" positioned like final layout */}
         <View style={styles.hustleContainer}>
-          <Svg width="300" height="250" viewBox="0 20 300 150">
+          <Svg width="300" height="170" viewBox="0 20 300 50">
             <G>
-              {renderLetter(letters[5], 5, 'translate(60, 22) scale(1.26)')}
-              {renderLetter(letters[6], 6, 'translate(95, 22) scale(1.26)')}
-              {renderLetter(letters[7], 7, 'translate(155, 22) scale(1.26)')}
-              {renderLetter(letters[8], 8, 'translate(195, 22) scale(1.6)')}
+              {renderLetter(letters[8], 8, 'translate(190, 22) scale(1.6)')}
+              {renderLetter(letters[5], 5, 'translate(45, 22) scale(1.26)')}
+              {renderLetter(letters[6], 6, 'translate(85, 22) scale(1.26)')}
+              {renderLetter(letters[7], 7, 'translate(145, 22) scale(1.26)')}
             </G>
           </Svg>
         </View>
@@ -241,7 +241,6 @@ export default function ExactFontHandwriting({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    minHeight: 270,
   },
   titleContainer: {
     width: '100%',
@@ -249,13 +248,13 @@ const styles = StyleSheet.create({
   sugarContainer: {
     alignSelf: 'flex-start',
     marginLeft: 30,
-    marginTop: 0,
+    marginTop: -10,
     marginBottom: 10,
   },
   hustleContainer: {
     alignSelf: 'flex-end',
     marginRight: 5,
-    marginTop: -160,
+    marginTop: -50,
     paddingBottom: 0,
   },
 });

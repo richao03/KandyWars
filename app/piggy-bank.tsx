@@ -188,7 +188,13 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
   const handleSliderChange = (percentage: number) => {
     // Convert percentage (0-100) to dollar amount and round to 2 decimals
     const dollarAmount = (percentage / 100) * maxAmount;
-    const roundedAmount = Math.round(dollarAmount * 100) / 100;
+    let roundedAmount = Math.round(dollarAmount * 100) / 100;
+
+    // If slider is at or very close to 100%, set to exact max to avoid floating point issues
+    if (percentage >= 99.5 || Math.abs(roundedAmount - maxAmount) < 0.01) {
+      roundedAmount = maxAmount;
+    }
+
     setAmount(roundedAmount);
     // Also update typing value if currently focused so input reflects slider position
     if (isTyping) {

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Sugar Hustle",
+    "name": "Sugar Wars",
     "slug": "candyWarz",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,13 +17,13 @@
       }
     },
     "android": {
+      "versionCode": 7,
+      "package": "com.richao03.candyWarz",
       "adaptiveIcon": {
-        "versionCode": "7",
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.richao03.candyWarz"
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",

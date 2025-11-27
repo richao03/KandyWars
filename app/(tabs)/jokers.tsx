@@ -8,7 +8,10 @@ import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { setStashedAmount } from '../../src/store/slices/walletSlice';
+import {
+  setHasDuplicatedVacuumSealer,
+  setStashedAmount,
+} from '../../src/store/slices/walletSlice';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
 import FastModal from '../components/FastModal';
 import JokerCard from '../components/JokerCard';
@@ -31,6 +34,9 @@ function JokersPage() {
   // Always call all hooks first - before any conditional returns
   const dispatch = useAppDispatch();
   const stashedAmount = useAppSelector((state) => state.wallet.stashedAmount);
+  const hasDuplicatedVacuumSealer = useAppSelector(
+    (state) => state.wallet.hasDuplicatedVacuumSealer
+  );
   const gameContext = useGame();
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
@@ -301,6 +307,15 @@ function JokersPage() {
 
     // Add the duplicated joker to inventory
     addJoker(duplicatedJoker);
+
+    // If Vacuum Sealer was duplicated, mark it as duplicated for this game
+    if (
+      selectedJoker.id === JOKER_IDS.VACUUM_SEALER ||
+      selectedJoker.id === JOKER_IDS.VACUUM_SEALER.toString()
+    ) {
+      dispatch(setHasDuplicatedVacuumSealer(true));
+      console.log('🚫 Vacuum Sealer has been duplicated - cannot duplicate again this game');
+    }
 
     // Remove the Glitch in the Matrix joker (one-time use only)
     removeJoker(joker.id);
@@ -859,10 +874,26 @@ function JokersPage() {
             Choose Joker to Copy
           </TextWithEmojis>
 
-          {jokers.filter((j) => j.name !== 'Glitch in the Matrix').length >
-          0 ? (
+          {jokers
+            .filter((j) => j.name !== 'Glitch in the Matrix')
+            .filter((j) => {
+              // Filter out Vacuum Sealer if it's already been duplicated this game
+              const isVacuumSealer =
+                j.id === JOKER_IDS.VACUUM_SEALER ||
+                j.id === JOKER_IDS.VACUUM_SEALER.toString() ||
+                j.name === 'Vacuum Sealer';
+              return !isVacuumSealer || !hasDuplicatedVacuumSealer;
+            }).length > 0 ? (
             jokers
               .filter((j) => j.name !== 'Glitch in the Matrix')
+              .filter((j) => {
+                // Filter out Vacuum Sealer if it's already been duplicated this game
+                const isVacuumSealer =
+                  j.id === JOKER_IDS.VACUUM_SEALER ||
+                  j.id === JOKER_IDS.VACUUM_SEALER.toString() ||
+                  j.name === 'Vacuum Sealer';
+                return !isVacuumSealer || !hasDuplicatedVacuumSealer;
+              })
               .map((availableJoker) => (
                 <PressableButton
                   key={availableJoker.id}

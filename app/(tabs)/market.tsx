@@ -272,135 +272,135 @@ function Market(props) {
     // Debounce flavor text updates to prevent rapid re-renders during navigation
     const timeoutId = setTimeout(() => {
       // Check for current event
-    // Universal events (isUniversal=true) trigger at any location
-    // Location-based events (isUniversal=false) require matching location
-    // Note: periodCount is 0-indexed (0-39), but event periods are 1-indexed (1-40)
-    const currentEvent = gameData.periodEvents.find(
-      (e) =>
-        e.period === periodCount + 1 &&
-        (e.isUniversal || e.location === currentLocation)
-    );
-
-    // Check for upcoming events in next period (for hints)
-    // Always show hints for all upcoming events (Option 3: Hybrid)
-    // Note: periodCount is 0-indexed, event periods are 1-indexed, so +2 for next period
-    const nextPeriodEvents = gameData.periodEvents.filter(
-      (e) => e.period === periodCount + 2
-    );
-
-    // Use the already-calculated period instead of recalculating
-    if (period === 0) {
-      setEvent('NEW_DAY');
-    } else if (currentEvent) {
-      // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
-      // Minor events: PRICE_SPIKE, PRICE_DROP - show flavor text only
-
-      // Set event type for tracking
-      setEvent(currentEvent.effect);
-
-      // Only trigger event if we haven't already triggered it for this period
-      // This prevents duplicate event triggers when other dependencies change
-      console.log(
-        `🔄 Event trigger check - lastEventPeriod: ${lastEventPeriodRef.current}, currentPeriod: ${periodCount}`
+      // Universal events (isUniversal=true) trigger at any location
+      // Location-based events (isUniversal=false) require matching location
+      // Note: periodCount is 0-indexed (0-39), but event periods are 1-indexed (1-40)
+      const currentEvent = gameData.periodEvents.find(
+        (e) =>
+          e.period === periodCount + 1 &&
+          (e.isUniversal || e.location === currentLocation)
       );
-      if (lastEventPeriodRef.current !== periodCount) {
-        lastEventPeriodRef.current = periodCount;
 
-        // Minor events (PRICE_SPIKE, PRICE_DROP): Show flavor text only, no modal
-        if (
-          currentEvent.effect === 'PRICE_SPIKE' ||
-          currentEvent.effect === 'PRICE_DROP'
-        ) {
-          console.log(
-            '🎯 MINOR EVENT: Showing flavor text only (no modal):',
-            currentEvent.flavorText
-          );
-          setFlavorText(currentEvent.flavorText || '');
-        }
-        // Major events (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED): Show modal
-        else {
-          console.log(
-            '🎯 MAJOR EVENT: Triggering event modal for period',
-            period,
-            ':',
-            currentEvent.title
-          );
-          handleEvent(currentEvent);
-        }
-      } else {
+      // Check for upcoming events in next period (for hints)
+      // Always show hints for all upcoming events (Option 3: Hybrid)
+      // Note: periodCount is 0-indexed, event periods are 1-indexed, so +2 for next period
+      const nextPeriodEvents = gameData.periodEvents.filter(
+        (e) => e.period === periodCount + 2
+      );
+
+      // Use the already-calculated period instead of recalculating
+      if (period === 0) {
+        setEvent('NEW_DAY');
+      } else if (currentEvent) {
+        // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
+        // Minor events: PRICE_SPIKE, PRICE_DROP - show flavor text only
+
+        // Set event type for tracking
+        setEvent(currentEvent.effect);
+
+        // Only trigger event if we haven't already triggered it for this period
+        // This prevents duplicate event triggers when other dependencies change
         console.log(
-          `⏭️ Event already triggered for period ${periodCount}, skipping`
+          `🔄 Event trigger check - lastEventPeriod: ${lastEventPeriodRef.current}, currentPeriod: ${periodCount}`
         );
-      }
-    } else if (nextPeriodEvents.length > 0) {
-      // Show hints for all upcoming events in next period
-      // Only check hint once per period to avoid re-rolling on tab switches
-      if (lastHintPeriodRef.current !== periodCount) {
-        lastHintPeriodRef.current = periodCount;
+        if (lastEventPeriodRef.current !== periodCount) {
+          lastEventPeriodRef.current = periodCount;
 
-        // Check if jokers affect hint chance
-        const baseHintChance = 0.7; // 70% base chance
-        const effectiveHintChance = jokerService.applyJokerEffects(
-          baseHintChance,
-          'hint_chance',
-          jokers,
-          periodCount,
-          baseHintChance,
-          undefined,
-          activeEffects,
-          periodsPerDay
-        );
-
-        console.log(
-          `💡 Hint check - ${nextPeriodEvents.length} events next period, baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}`
-        );
-
-        if (Math.random() < effectiveHintChance) {
-          // Show all hints from upcoming events (multiple hints possible)
-          const allHints = nextPeriodEvents
-            .map((e) => e.hint)
-            .filter((h) => h)
-            .join('\n\n');
-          console.log(
-            `💡 Showing hints for ${nextPeriodEvents.length} events:\n${allHints}`
-          );
-          setHint(allHints);
-        } else {
-          console.log(`💡 Random check failed, showing flavor text instead`);
-
-          // Show period-specific flavor text instead of hint
-          if (period <= 2) {
-            setEvent('MORNING_TRADE');
-          } else if (
-            period >= Math.floor(periodsPerDay / 2) &&
-            period <= Math.ceil(periodsPerDay * 0.75)
+          // Minor events (PRICE_SPIKE, PRICE_DROP): Show flavor text only, no modal
+          if (
+            currentEvent.effect === 'PRICE_SPIKE' ||
+            currentEvent.effect === 'PRICE_DROP'
           ) {
-            setEvent('LUNCH_RUSH');
-          } else if (period >= periodsPerDay - 1) {
-            setEvent('FINAL_PERIOD');
+            console.log(
+              '🎯 MINOR EVENT: Showing flavor text only (no modal):',
+              currentEvent.flavorText
+            );
+            setFlavorText(currentEvent.flavorText || '');
+          }
+          // Major events (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED): Show modal
+          else {
+            console.log(
+              '🎯 MAJOR EVENT: Triggering event modal for period',
+              period,
+              ':',
+              currentEvent.title
+            );
+            handleEvent(currentEvent);
+          }
+        } else {
+          console.log(
+            `⏭️ Event already triggered for period ${periodCount}, skipping`
+          );
+        }
+      } else if (nextPeriodEvents.length > 0) {
+        // Show hints for all upcoming events in next period
+        // Only check hint once per period to avoid re-rolling on tab switches
+        if (lastHintPeriodRef.current !== periodCount) {
+          lastHintPeriodRef.current = periodCount;
+
+          // Check if jokers affect hint chance
+          const baseHintChance = 0.7; // 70% base chance
+          const effectiveHintChance = jokerService.applyJokerEffects(
+            baseHintChance,
+            'hint_chance',
+            jokers,
+            periodCount,
+            baseHintChance,
+            undefined,
+            activeEffects,
+            periodsPerDay
+          );
+
+          console.log(
+            `💡 Hint check - ${nextPeriodEvents.length} events next period, baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}`
+          );
+
+          if (Math.random() < effectiveHintChance) {
+            // Show all hints from upcoming events (multiple hints possible)
+            const allHints = nextPeriodEvents
+              .map((e) => e.hint)
+              .filter((h) => h)
+              .join('\n\n');
+            console.log(
+              `💡 Showing hints for ${nextPeriodEvents.length} events:\n${allHints}`
+            );
+            setHint(allHints);
           } else {
-            setEvent('PERIOD_CHANGE');
+            console.log(`💡 Random check failed, showing flavor text instead`);
+
+            // Show period-specific flavor text instead of hint
+            if (period <= 2) {
+              setEvent('MORNING_TRADE');
+            } else if (
+              period >= Math.floor(periodsPerDay / 2) &&
+              period <= Math.ceil(periodsPerDay * 0.75)
+            ) {
+              setEvent('LUNCH_RUSH');
+            } else if (period >= periodsPerDay - 1) {
+              setEvent('FINAL_PERIOD');
+            } else {
+              setEvent('PERIOD_CHANGE');
+            }
           }
         }
-      }
-    } else {
-      // Period-specific flavor text based on time of day
-      if (period <= 2) {
-        setEvent('MORNING_TRADE');
-      } else if (
-        period >= Math.floor(periodsPerDay / 2) &&
-        period <= Math.ceil(periodsPerDay * 0.75)
-      ) {
-        setEvent('LUNCH_RUSH');
-      } else if (period >= periodsPerDay - 1) {
-        setEvent('FINAL_PERIOD');
       } else {
-        setEvent('PERIOD_CHANGE');
+        // Period-specific flavor text based on time of day
+        if (period <= 2) {
+          setEvent('MORNING_TRADE');
+        } else if (
+          period >= Math.floor(periodsPerDay / 2) &&
+          period <= Math.ceil(periodsPerDay * 0.75)
+        ) {
+          setEvent('LUNCH_RUSH');
+        } else if (period >= periodsPerDay - 1) {
+          setEvent('FINAL_PERIOD');
+        } else {
+          setEvent('PERIOD_CHANGE');
+        }
       }
-    }
-  }, 50); // 50ms debounce
+    }, 50); // 50ms debounce
 
-  return () => clearTimeout(timeoutId);
+    return () => clearTimeout(timeoutId);
   }, [
     isFocused,
     periodCount,
@@ -521,9 +521,7 @@ function Market(props) {
       const targetTrack = showLunchMinigames ? 'day2' : 'day1';
       // Only change music if it's different from current track
       if (MusicController.getCurrentTrack() !== targetTrack) {
-        console.log(
-          `🎵 [MARKET] Setting music: ${targetTrack}`
-        );
+        console.log(`🎵 [MARKET] Setting music: ${targetTrack}`);
         MusicController.setTrack(targetTrack);
       }
     }, [showLunchMinigames])
@@ -1338,8 +1336,8 @@ function Market(props) {
         title={day === 5 ? 'End Game?' : 'End School Day?'}
         message={
           day === 5
-            ? `This is the final day!\n\nEnding the game will take you to the results screen where you can see if you've paid off your debt.`
-            : `You're currently in period ${period} of 8.\n\nEnding the day will skip the remaining periods and take you directly to after-school activities.`
+            ? `This is the final day!\n\n Go to result screen?`
+            : `You're currently in period ${period}.\n\n Go to after-school activities?`
         }
         emoji={day === 5 ? '🎮' : '🏠'}
         confirmText={day === 5 ? 'End Game' : 'End Day'}

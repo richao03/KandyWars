@@ -17,6 +17,10 @@ export type FlavorEvent =
   | 'MORNING_TRADE'
   | 'LUNCH_RUSH'
   | 'FINAL_PERIOD'
+  | 'STUDY_TIME'
+  | 'STUDY_COMPLETE'
+  | 'DELI_VISIT'
+  | 'READY_FOR_SLEEP'
   | 'DEFAULT';
 
 interface FlavorTextState {

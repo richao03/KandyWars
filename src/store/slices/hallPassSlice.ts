@@ -212,7 +212,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'minimalist_master',
     name: 'Minimalist Master',
-    description: 'Less is more.',
+    description: 'Les is mor.',
     unlockRequirement: 'Win without using any jokers',
     effects: [
       {

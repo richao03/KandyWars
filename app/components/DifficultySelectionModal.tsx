@@ -41,9 +41,7 @@ export default function DifficultySelectionModal({
           '🏆 DifficultyModal: Got won difficulties from cache:',
           won
         );
-        if (
-          JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)
-        ) {
+        if (JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)) {
           console.log(
             '🏆 DifficultyModal: Cache data differs from Redux, updating...'
           );
@@ -53,6 +51,13 @@ export default function DifficultySelectionModal({
       checkCachedWonDifficulties();
     }
   }, [visible, wonDifficultiesFromRedux]);
+
+  // Determine if a difficulty level is unlocked
+  const isDifficultyUnlocked = (level: number): boolean => {
+    if (level === 1) return true; // Level 1 is always unlocked
+    return wonDifficulties.includes(level - 1); // Must have beaten previous level
+  };
+
   const levelOptions = [
     {
       level: 1,
@@ -60,9 +65,9 @@ export default function DifficultySelectionModal({
       petName: 'Pet Rock',
       piggyBank: 5000,
       image: require('../../assets/images/doggs/rock.png'),
-      color: '#e8e8e8',
-      borderColor: '#6a6a6a',
-      textColor: '#3a3a3a',
+      color: '#fffbf5', // Vanilla Cream
+      borderColor: '#e8d5c4',
+      textColor: '#9d8472',
     },
     {
       level: 2,
@@ -70,9 +75,9 @@ export default function DifficultySelectionModal({
       petName: 'Peg the Pug',
       piggyBank: 10000,
       image: require('../../assets/images/doggs/pug.png'),
-      color: '#e8f5e8',
-      borderColor: '#4a7c4a',
-      textColor: '#2d5a2d',
+      color: '#fffacd', // Lemon Meringue
+      borderColor: '#ffe55c',
+      textColor: '#cc9900',
     },
     {
       level: 3,
@@ -80,9 +85,9 @@ export default function DifficultySelectionModal({
       petName: 'Hamster',
       piggyBank: 20000,
       image: require('../../assets/images/doggs/hamster.png'),
-      color: '#f5f0e8',
-      borderColor: '#8a7c4a',
-      textColor: '#6b5a2d',
+      color: '#fff9b3', // Banana Taffy
+      borderColor: '#ffeb3b',
+      textColor: '#d4af37',
     },
     {
       level: 4,
@@ -90,9 +95,9 @@ export default function DifficultySelectionModal({
       petName: 'Brussels Griffon',
       piggyBank: 25000,
       image: require('../../assets/images/doggs/brussleGriffon.png'),
-      color: '#f0e8f5',
-      borderColor: '#7c4a7c',
-      textColor: '#5a2d5a',
+      color: '#ffdab9', // Peach Sorbet
+      borderColor: '#ffb380',
+      textColor: '#cc6633',
     },
     {
       level: 5,
@@ -100,9 +105,9 @@ export default function DifficultySelectionModal({
       petName: 'Clownfish',
       piggyBank: 35000,
       image: require('../../assets/images/doggs/clownfish.png'),
-      color: '#e8f0f5',
-      borderColor: '#4a7c8a',
-      textColor: '#2d5a6b',
+      color: '#ffc299', // Orange Creamsicle
+      borderColor: '#ff9955',
+      textColor: '#e65c00',
     },
     {
       level: 6,
@@ -110,9 +115,9 @@ export default function DifficultySelectionModal({
       petName: 'Evee Cat',
       piggyBank: 45000,
       image: require('../../assets/images/doggs/evee.png'),
-      color: '#e8f0f5',
-      borderColor: '#4a7c8a',
-      textColor: '#2d5a6b',
+      color: '#ffb3b3', // Coral Candy
+      borderColor: '#ff8080',
+      textColor: '#cc3333',
     },
     {
       level: 7,
@@ -120,9 +125,9 @@ export default function DifficultySelectionModal({
       petName: 'Chicken',
       piggyBank: 55000,
       image: require('../../assets/images/doggs/chicken.png'),
-      color: '#f5f0e8',
-      borderColor: '#8a7c4a',
-      textColor: '#6b5a2d',
+      color: '#ffc0cb', // Strawberry Milk
+      borderColor: '#ff91a4',
+      textColor: '#d6577a',
     },
     {
       level: 8,
@@ -130,9 +135,9 @@ export default function DifficultySelectionModal({
       petName: 'Byul Terrier',
       piggyBank: 60000,
       image: require('../../assets/images/doggs/byul.png'),
-      color: '#f5f0e8',
-      borderColor: '#8a7c4a',
-      textColor: '#6b5a2d',
+      color: '#ffb3d9', // Bubblegum
+      borderColor: '#ff85c0',
+      textColor: '#cc4a8a',
     },
     {
       level: 9,
@@ -140,9 +145,9 @@ export default function DifficultySelectionModal({
       petName: 'Parrot',
       piggyBank: 75000,
       image: require('../../assets/images/doggs/parrot.png'),
-      color: '#e8f5e8',
-      borderColor: '#4a7c4a',
-      textColor: '#2d5a2d',
+      color: '#ffa3cc', // Cherry Blossom
+      borderColor: '#ff6bb3',
+      textColor: '#cc2a6f',
     },
     {
       level: 10,
@@ -150,9 +155,9 @@ export default function DifficultySelectionModal({
       petName: 'Cane Corso',
       piggyBank: 100000,
       image: require('../../assets/images/doggs/caneCorso.png'),
-      color: '#f5e8e8',
-      borderColor: '#8a4a4a',
-      textColor: '#6b2d2d',
+      color: '#e6d5ff', // Lavender Taffy
+      borderColor: '#c79fff',
+      textColor: '#8e44cc',
     },
     {
       level: 11,
@@ -160,9 +165,9 @@ export default function DifficultySelectionModal({
       petName: 'Bearded Dragon',
       piggyBank: 250000,
       image: require('../../assets/images/doggs/beardedDragon.png'),
-      color: '#f5f0e8',
-      borderColor: '#8a7c4a',
-      textColor: '#6b5a2d',
+      color: '#d9b3ff', // Grape Soda
+      borderColor: '#b366ff',
+      textColor: '#7700cc',
     },
     {
       level: 12,
@@ -170,9 +175,9 @@ export default function DifficultySelectionModal({
       petName: 'Pitbull',
       piggyBank: 450000,
       image: require('../../assets/images/doggs/pitbull.png'),
-      color: '#f0f5e8',
-      borderColor: '#7c8a4a',
-      textColor: '#5a6b2d',
+      color: '#ccddff', // Periwinkle Dream
+      borderColor: '#99bbff',
+      textColor: '#3366cc',
     },
     {
       level: 13,
@@ -180,9 +185,9 @@ export default function DifficultySelectionModal({
       petName: 'Horse',
       piggyBank: 500000,
       image: require('../../assets/images/doggs/petHorse.png'),
-      color: '#f0e8f5',
-      borderColor: '#7c4a7c',
-      textColor: '#5a2d5a',
+      color: '#b3d9ff', // Blueberry Ice
+      borderColor: '#66b3ff',
+      textColor: '#0066cc',
     },
     {
       level: 14,
@@ -190,9 +195,9 @@ export default function DifficultySelectionModal({
       petName: 'Afghan Hound',
       piggyBank: 600000,
       image: require('../../assets/images/doggs/afghan.png'),
-      color: '#e8e8f5',
-      borderColor: '#4a4a8a',
-      textColor: '#2d2d6b',
+      color: '#b3e6ff', // Cotton Candy Sky
+      borderColor: '#66d4ff',
+      textColor: '#0099cc',
     },
     {
       level: 15,
@@ -200,9 +205,9 @@ export default function DifficultySelectionModal({
       petName: 'German Shepherd',
       piggyBank: 750000,
       image: require('../../assets/images/doggs/germanShepard.png'),
-      color: '#f5f5f0',
-      borderColor: '#8a8a7c',
-      textColor: '#6b6b5a',
+      color: '#b3f0d9', // Mint Ice Cream
+      borderColor: '#66e0b8',
+      textColor: '#00a372',
     },
     {
       level: 16,
@@ -210,9 +215,9 @@ export default function DifficultySelectionModal({
       petName: 'Dragon',
       piggyBank: 1000000,
       image: require('../../assets/images/doggs/dragon.png'),
-      color: '#f5e8e8',
-      borderColor: '#8a4a4a',
-      textColor: '#6b2d2d',
+      color: '#ffe6f0', // Rainbow Swirl
+      borderColor: '#ff80bf',
+      textColor: '#ff1493',
     },
   ];
 
@@ -244,16 +249,22 @@ export default function DifficultySelectionModal({
                 <View style={styles.optionsContainer}>
                   {levelOptions.map((option) => {
                     const isWon = wonDifficulties.includes(option.level);
+                    const isUnlocked = isDifficultyUnlocked(option.level);
                     return (
                       <PressableButton
                         key={option.level}
-                        onPress={() => onSelectDifficulty(option.level)}
+                        onPress={() => {
+                          if (isUnlocked) {
+                            onSelectDifficulty(option.level);
+                          }
+                        }}
                         shadowColor={option.borderColor}
                         shadowOffset={{ width: 0, height: 3 }}
-                        shadowOpacity={0.4}
+                        shadowOpacity={isUnlocked ? 0.4 : 0.1}
                         shadowRadius={4}
-                        elevation={6}
+                        elevation={isUnlocked ? 6 : 2}
                         style={styles.pixelBorderWrapper}
+                        disabled={!isUnlocked}
                       >
                         <PixelBorder
                           borderColor={option.borderColor}
@@ -261,19 +272,36 @@ export default function DifficultySelectionModal({
                           backgroundColor={option.color}
                           innerPadding={0}
                         >
-                          <View style={styles.difficultyButton}>
+                          <View
+                            style={[
+                              styles.difficultyButton,
+                              !isUnlocked && styles.lockedButton,
+                            ]}
+                          >
                             <View style={styles.buttonContent}>
                               <View style={styles.imageContainer}>
                                 <Image
                                   source={option.image}
-                                  style={styles.dogImage}
+                                  style={[
+                                    styles.dogImage,
+                                    !isUnlocked && styles.lockedImage,
+                                  ]}
                                 />
+                                {!isUnlocked && (
+                                  <View style={styles.lockOverlay}>
+                                    <Image
+                                      source={require('../../assets/images/emojis/lock.png')}
+                                      style={styles.lockIcon}
+                                    />
+                                  </View>
+                                )}
                               </View>
                               <View style={styles.textContent}>
                                 <Text
                                   style={[
                                     styles.difficultyTitle,
                                     { color: option.textColor },
+                                    !isUnlocked && styles.lockedText,
                                   ]}
                                 >
                                   {option.petName}
@@ -288,10 +316,12 @@ export default function DifficultySelectionModal({
                                   style={[
                                     styles.piggyBankText,
                                     { color: option.textColor },
+                                    !isUnlocked && styles.lockedText,
                                   ]}
                                 >
-                                  Adoption Fee: $
-                                  {option.piggyBank.toLocaleString()}
+                                  {isUnlocked
+                                    ? `Adoption Fee: $${option.piggyBank.toLocaleString()}`
+                                    : `Beat Level ${option.level - 1} to unlock`}
                                 </Text>
                               </View>
                             </View>
@@ -438,5 +468,30 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     color: '#666',
     fontWeight: 'bold',
+  },
+  lockedButton: {
+    opacity: 0.5,
+  },
+  lockedImage: {
+    opacity: 0.3,
+  },
+  lockedText: {
+    opacity: 0.6,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 10,
+  },
+  lockIcon: {
+    width: 48,
+    height: 48,
+    resizeMode: 'contain',
   },
 });

@@ -18,14 +18,14 @@ export async function initializeAudioMode() {
 
   try {
     await setAudioModeAsync({
-      playsInSilentMode: true,
-      allowsRecording: false,
-      shouldPlayInBackground: false,
-      interruptionMode: 'mixWithOthers', // CRITICAL: Allow multiple audio sources
+      playsInSilentMode: false, // Respect device silent mode
+      allowsRecording: false, // Not using microphone
+      shouldPlayInBackground: false, // Stop when app is backgrounded
+      interruptionMode: 'mixWithOthers', // CRITICAL: Allow multiple audio sources to play simultaneously
     });
 
     isAudioConfigured = true;
-    console.log('🎵 [AudioConfig] ✅ Global audio mode initialized with mixWithOthers');
+    console.log('🎵 [AudioConfig] ✅ Global audio mode initialized for audio mixing');
   } catch (error) {
     console.error('🎵 [AudioConfig] ❌ Failed to initialize audio mode:', error);
   }

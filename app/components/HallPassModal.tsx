@@ -78,7 +78,7 @@ export default function HallPassModal({
       case 'common':
         return 'grey'; // White
       case 'magical':
-        return '#1eff00'; // Green
+        return '#00A86B'; // Green
       case 'rare':
         return '#0070dd'; // Blue
       case 'epic':
@@ -276,27 +276,6 @@ export default function HallPassModal({
                   {pass.description}
                 </Text>
 
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginBottom: 8,
-                  }}
-                >
-                  <Image
-                    source={require('../../assets/images/emojis/lock.png')}
-                    style={{
-                      width: 20,
-                      height: 20,
-                      resizeMode: 'contain',
-                      marginRight: 6,
-                    }}
-                  />
-                  <Text style={styles.unlockRequirement}>
-                    {pass.unlockRequirement}
-                  </Text>
-                </View>
-
                 <View style={styles.effectsContainer}>
                   <Text style={styles.effectsTitle}>Effects:</Text>
                   {pass.effects.map((effect, index) => (
@@ -320,10 +299,47 @@ export default function HallPassModal({
 
             {!isUnlocked && (
               <View style={styles.lockedOverlay}>
-                <Image
-                  source={require('../../assets/images/emojis/lock.png')}
-                  style={styles.lockIcon}
-                />
+                {!isExpanded && (
+                  <Image
+                    source={require('../../assets/images/emojis/lock.png')}
+                    style={styles.lockIcon}
+                  />
+                )}
+                {isExpanded && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 8,
+                      zIndex: !isUnlocked ? 10 : 0,
+                      position: 'relative',
+                      borderWidth: 2,
+                      padding: 4,
+                      borderColor: getRarityColor(pass.rarity),
+                      backgroundColor: colors.offWhite,
+                    }}
+                  >
+                    <Image
+                      source={require('../../assets/images/emojis/lock.png')}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        resizeMode: 'contain',
+                        marginRight: 6,
+                      }}
+                    />
+                    (
+                    <Text
+                      style={[
+                        styles.unlockRequirement,
+                        !isUnlocked && styles.unlockRequirementLocked,
+                      ]}
+                    >
+                      {pass.unlockRequirement}
+                    </Text>
+                    )
+                  </View>
+                )}
               </View>
             )}
           </PressableButton>
@@ -344,7 +360,7 @@ export default function HallPassModal({
         borderColor={colors.brown.secondary}
         borderWidth={3}
         backgroundColor={colors.offWhite}
-        innerPadding={20}
+        innerPadding={14}
       >
         <View style={styles.headerContainer}>
           <Image
@@ -675,6 +691,14 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     fontStyle: 'italic',
     color: colors.gray.medium,
+  },
+  unlockRequirementLocked: {
+    color: colors.gray.dark,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   effectsContainer: {
     marginTop: 4,

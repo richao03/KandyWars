@@ -7,33 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A42A1AFF12701A931A2033A /* libPods-SugarWars.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 91AA2E783836088DBF77C147 /* libPods-SugarWars.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		35DBD5EA47A04D5B77B2A8FF /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C2922D44C7D8866B186A5D5 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		509BAE476B37F29C9205B3D8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9DE5F9CD80B4298371E39750 /* PrivacyInfo.xcprivacy */; };
-		87B20C702EB64B700094551A /* AdMobInitializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87B20C6F2EB64B700094551A /* AdMobInitializer.swift */; };
-		87B20C712EB64B700094551A /* AdMobInitializer.m in Sources */ = {isa = PBXBuildFile; fileRef = 87B20C6E2EB64B700094551A /* AdMobInitializer.m */; };
+		6812D10E262DE65517DCAA72 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A09D74DDF18BA1673AB0DACC /* PrivacyInfo.xcprivacy */; };
+		6EFEC814F54605E98DC60FE6 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08F92B6F1027221434C5BA2D /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		F268579ADC667E0782798ECE /* libPods-candyWarz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DEFE196AABAA7FB7D350B10E /* libPods-candyWarz.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		01B80BDD8810BB302E764698 /* Pods-candyWarz.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-candyWarz.release.xcconfig"; path = "Target Support Files/Pods-candyWarz/Pods-candyWarz.release.xcconfig"; sourceTree = "<group>"; };
-		0C2922D44C7D8866B186A5D5 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-candyWarz/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		13B07F961A680F5B00A75B9A /* candyWarz.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = candyWarz.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = candyWarz/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = candyWarz/Info.plist; sourceTree = "<group>"; };
-		87B20C6E2EB64B700094551A /* AdMobInitializer.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AdMobInitializer.m; sourceTree = "<group>"; };
-		87B20C6F2EB64B700094551A /* AdMobInitializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobInitializer.swift; sourceTree = "<group>"; };
-		9DE5F9CD80B4298371E39750 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = candyWarz/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = candyWarz/SplashScreen.storyboard; sourceTree = "<group>"; };
+		08F92B6F1027221434C5BA2D /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-SugarWars/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* SugarWars.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SugarWars.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SugarWars/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SugarWars/Info.plist; sourceTree = "<group>"; };
+		91AA2E783836088DBF77C147 /* libPods-SugarWars.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SugarWars.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A09D74DDF18BA1673AB0DACC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = SugarWars/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = SugarWars/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		DEFE196AABAA7FB7D350B10E /* libPods-candyWarz.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-candyWarz.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5C5CF457C5FBEBAEF16FD6B /* Pods-SugarWars.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SugarWars.debug.xcconfig"; path = "Target Support Files/Pods-SugarWars/Pods-SugarWars.debug.xcconfig"; sourceTree = "<group>"; };
+		E0882101DE89D2424AC03E9F /* Pods-SugarWars.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SugarWars.release.xcconfig"; path = "Target Support Files/Pods-SugarWars/Pods-SugarWars.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		ED5C50D310A6E397DB7FDDA7 /* Pods-candyWarz.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-candyWarz.debug.xcconfig"; path = "Target Support Files/Pods-candyWarz/Pods-candyWarz.debug.xcconfig"; sourceTree = "<group>"; };
-		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = candyWarz/AppDelegate.swift; sourceTree = "<group>"; };
-		F11748442D0722820044C1D9 /* candyWarz-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "candyWarz-Bridging-Header.h"; path = "candyWarz/candyWarz-Bridging-Header.h"; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SugarWars/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* SugarWars-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "SugarWars-Bridging-Header.h"; path = "SugarWars/SugarWars-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,42 +37,40 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F268579ADC667E0782798ECE /* libPods-candyWarz.a in Frameworks */,
+				0A42A1AFF12701A931A2033A /* libPods-SugarWars.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* candyWarz */ = {
+		13B07FAE1A68108700A75B9A /* SugarWars */ = {
 			isa = PBXGroup;
 			children = (
-				87B20C6E2EB64B700094551A /* AdMobInitializer.m */,
-				87B20C6F2EB64B700094551A /* AdMobInitializer.swift */,
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-				F11748442D0722820044C1D9 /* candyWarz-Bridging-Header.h */,
+				F11748442D0722820044C1D9 /* SugarWars-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				9DE5F9CD80B4298371E39750 /* PrivacyInfo.xcprivacy */,
+				A09D74DDF18BA1673AB0DACC /* PrivacyInfo.xcprivacy */,
 			);
-			name = candyWarz;
+			name = SugarWars;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				DEFE196AABAA7FB7D350B10E /* libPods-candyWarz.a */,
+				91AA2E783836088DBF77C147 /* libPods-SugarWars.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		823D9CBBA9D0CE1125CF0AEB /* ExpoModulesProviders */ = {
+		5A8689954E5D97041E837388 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				E31E0F39E27BDF3CA816E4CD /* candyWarz */,
+				AA008B805CDAC89DDAE1ED48 /* SugarWars */,
 			);
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
@@ -91,12 +85,12 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* candyWarz */,
+				13B07FAE1A68108700A75B9A /* SugarWars */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				DC3FE49A7362914D71953828 /* Pods */,
-				823D9CBBA9D0CE1125CF0AEB /* ExpoModulesProviders */,
+				C48F3BB21BB898D5BFA5368C /* Pods */,
+				5A8689954E5D97041E837388 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -106,9 +100,17 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* candyWarz.app */,
+				13B07F961A680F5B00A75B9A /* SugarWars.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AA008B805CDAC89DDAE1ED48 /* SugarWars */ = {
+			isa = PBXGroup;
+			children = (
+				08F92B6F1027221434C5BA2D /* ExpoModulesProvider.swift */,
+			);
+			name = SugarWars;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -117,50 +119,43 @@
 				BB2F792C24A3F905000567C9 /* Expo.plist */,
 			);
 			name = Supporting;
-			path = candyWarz/Supporting;
+			path = SugarWars/Supporting;
 			sourceTree = "<group>";
 		};
-		DC3FE49A7362914D71953828 /* Pods */ = {
+		C48F3BB21BB898D5BFA5368C /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				ED5C50D310A6E397DB7FDDA7 /* Pods-candyWarz.debug.xcconfig */,
-				01B80BDD8810BB302E764698 /* Pods-candyWarz.release.xcconfig */,
+				D5C5CF457C5FBEBAEF16FD6B /* Pods-SugarWars.debug.xcconfig */,
+				E0882101DE89D2424AC03E9F /* Pods-SugarWars.release.xcconfig */,
 			);
+			name = Pods;
 			path = Pods;
-			sourceTree = "<group>";
-		};
-		E31E0F39E27BDF3CA816E4CD /* candyWarz */ = {
-			isa = PBXGroup;
-			children = (
-				0C2922D44C7D8866B186A5D5 /* ExpoModulesProvider.swift */,
-			);
-			name = candyWarz;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* candyWarz */ = {
+		13B07F861A680F5B00A75B9A /* SugarWars */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "candyWarz" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "SugarWars" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				C65D50D9E4815D0C74C8F836 /* [Expo] Configure project */,
+				37455EB57B5DAA5AFF798184 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				D5E71CBBA12D98A0179DDC94 /* [CP] Embed Pods Frameworks */,
-				77121BDED2518C1C00F605CD /* [CP-User] [RNGoogleMobileAds] Configuration */,
+				1888F9E82E432070DAEE219D /* [CP] Embed Pods Frameworks */,
+				7362E6824D5B488BD1F93D41 /* [CP-User] [RNGoogleMobileAds] Configuration */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = candyWarz;
-			productName = candyWarz;
-			productReference = 13B07F961A680F5B00A75B9A /* candyWarz.app */;
+			name = SugarWars;
+			productName = SugarWars;
+			productReference = 13B07F961A680F5B00A75B9A /* SugarWars.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -176,7 +171,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "candyWarz" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "SugarWars" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -189,7 +184,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* candyWarz */,
+				13B07F861A680F5B00A75B9A /* SugarWars */,
 			);
 		};
 /* End PBXProject section */
@@ -202,7 +197,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				509BAE476B37F29C9205B3D8 /* PrivacyInfo.xcprivacy in Resources */,
+				6812D10E262DE65517DCAA72 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -241,14 +236,60 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-candyWarz-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-SugarWars-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		77121BDED2518C1C00F605CD /* [CP-User] [RNGoogleMobileAds] Configuration */ = {
+		1888F9E82E432070DAEE219D /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-SugarWars/Pods-SugarWars-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SugarWars/Pods-SugarWars-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		37455EB57B5DAA5AFF798184 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/SugarWars/SugarWars.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-SugarWars/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(SRCROOT)/Pods/Target Support Files/Pods-SugarWars/ExpoModulesProvider.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-SugarWars/expo-configure-project.sh\"\n";
+		};
+		7362E6824D5B488BD1F93D41 /* [CP-User] [RNGoogleMobileAds] Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -267,7 +308,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-candyWarz/Pods-candyWarz-resources.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-SugarWars/Pods-SugarWars-resources.sh",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoDevice/ExpoDevice_privacy.bundle",
@@ -296,53 +337,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-candyWarz/Pods-candyWarz-resources.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		C65D50D9E4815D0C74C8F836 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/candyWarz/candyWarz.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-candyWarz/expo-configure-project.sh",
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-candyWarz/ExpoModulesProvider.swift",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-candyWarz/expo-configure-project.sh\"\n";
-		};
-		D5E71CBBA12D98A0179DDC94 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-candyWarz/Pods-candyWarz-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-candyWarz/Pods-candyWarz-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SugarWars/Pods-SugarWars-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -353,9 +348,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				35DBD5EA47A04D5B77B2A8FF /* ExpoModulesProvider.swift in Sources */,
-				87B20C702EB64B700094551A /* AdMobInitializer.swift in Sources */,
-				87B20C712EB64B700094551A /* AdMobInitializer.m in Sources */,
+				6EFEC814F54605E98DC60FE6 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -364,18 +357,18 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = ED5C50D310A6E397DB7FDDA7 /* Pods-candyWarz.debug.xcconfig */;
+			baseConfigurationReference = D5C5CF457C5FBEBAEF16FD6B /* Pods-SugarWars.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = candyWarz/candyWarz.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SugarWars/SugarWars.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
-				INFOPLIST_FILE = candyWarz/Info.plist;
+				INFOPLIST_FILE = SugarWars/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -389,8 +382,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.richao03.candyWarz;
-				PRODUCT_NAME = candyWarz;
-				SWIFT_OBJC_BRIDGING_HEADER = "candyWarz/candyWarz-Bridging-Header.h";
+				PRODUCT_NAME = SugarWars;
+				SWIFT_OBJC_BRIDGING_HEADER = "SugarWars/SugarWars-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -400,13 +393,13 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 01B80BDD8810BB302E764698 /* Pods-candyWarz.release.xcconfig */;
+			baseConfigurationReference = E0882101DE89D2424AC03E9F /* Pods-SugarWars.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = candyWarz/candyWarz.entitlements;
+				CODE_SIGN_ENTITLEMENTS = SugarWars/SugarWars.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = candyWarz/Info.plist;
+				INFOPLIST_FILE = SugarWars/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -420,8 +413,8 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.richao03.candyWarz;
-				PRODUCT_NAME = candyWarz;
-				SWIFT_OBJC_BRIDGING_HEADER = "candyWarz/candyWarz-Bridging-Header.h";
+				PRODUCT_NAME = SugarWars;
+				SWIFT_OBJC_BRIDGING_HEADER = "SugarWars/SugarWars-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -549,7 +542,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "candyWarz" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "SugarWars" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
@@ -558,7 +551,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "candyWarz" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "SugarWars" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,

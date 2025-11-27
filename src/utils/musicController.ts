@@ -79,10 +79,12 @@ function stopCurrentPlayer() {
 
 /**
  * Play a specific track
- * Note: initializeAudioMode() should be called once at app startup, not here
  */
 async function playTrack(track: Exclude<MusicTrack, 'none'>) {
   try {
+    // Ensure audio mode is initialized first (critical for physical devices)
+    await initializeAudioMode();
+
     const player = createAudioPlayer(MUSIC_FILES[track]);
     player.loop = LOOPING_TRACKS.has(track);
     player.volume = 0.5;

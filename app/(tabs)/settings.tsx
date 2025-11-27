@@ -24,8 +24,8 @@ import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
 import { fullResetGame } from '../../src/store/slices/gameSlice';
+import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
 import {
   setTotalCompletions,
   setWonDifficulties,
@@ -35,9 +35,9 @@ import {
   updateCachedUserObject,
 } from '../../src/store/slices/userObjectSlice';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
-import { resetFirebaseSession } from '../components/SugarHustleTitleScreen';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
+import { resetFirebaseSession } from '../components/SugarWarsTitleScreen';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 function Settings() {
@@ -412,14 +412,14 @@ function Settings() {
         contentContainerStyle={styles.contentContainer}
       >
         <PixelBorder
-          borderColor="#d4a574"
-          borderWidth={2}
-          backgroundColor="rgba(255, 255, 255, 0.8)"
-          innerPadding={20}
+          borderColor="#ff91a4"
+          borderWidth={4}
+          backgroundColor="#ffc0cb"
+          innerPadding={24}
           style={styles.sectionWrapper}
         >
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Player Info</Text>
+            <Text style={styles.sectionTitle}>🎮 Player Info</Text>
 
             <View style={styles.playerInfoContainer}>
               <Text style={styles.playerInfoLabel}>Player Name:</Text>
@@ -513,19 +513,19 @@ function Settings() {
         </PixelBorder>
 
         <PixelBorder
-          borderColor="#d4a574"
-          borderWidth={2}
-          backgroundColor="rgba(255, 255, 255, 0.8)"
-          innerPadding={20}
+          borderColor="#ff85c0"
+          borderWidth={4}
+          backgroundColor="#ffb3d9"
+          innerPadding={24}
           style={styles.sectionWrapper}
         >
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Game Controls</Text>
+            <Text style={styles.sectionTitle}>🎮 Game Controls</Text>
 
             <PixelBorder
-              borderColor="#3b82f6"
-              borderWidth={3}
-              backgroundColor="#dbeafe"
+              borderColor="#66b3ff"
+              borderWidth={4}
+              backgroundColor="#b3d9ff"
               innerPadding={0}
               style={styles.buttonWrapper}
             >
@@ -549,9 +549,9 @@ function Settings() {
             </PixelBorder>
 
             <PixelBorder
-              borderColor="#ef4444"
-              borderWidth={3}
-              backgroundColor="#fee2e2"
+              borderColor="#ff8080"
+              borderWidth={4}
+              backgroundColor="#ffb3b3"
               innerPadding={0}
               style={styles.buttonWrapper}
             >
@@ -614,9 +614,9 @@ function Settings() {
             )}
 
             <PixelBorder
-              borderColor="#660000"
-              borderWidth={3}
-              backgroundColor="#8b0000"
+              borderColor="#ff80bf"
+              borderWidth={4}
+              backgroundColor="#ffe6f0"
               innerPadding={0}
               style={styles.buttonWrapper}
             >
@@ -637,18 +637,18 @@ function Settings() {
         </PixelBorder>
 
         <PixelBorder
-          borderColor="#d4a574"
-          borderWidth={2}
-          backgroundColor="rgba(255, 255, 255, 0.8)"
-          innerPadding={20}
+          borderColor="#c79fff"
+          borderWidth={4}
+          backgroundColor="#e6d5ff"
+          innerPadding={24}
           style={styles.sectionWrapper}
         >
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Beta Leaderboard</Text>
+            <Text style={styles.sectionTitle}>🏆 Leaderboard</Text>
             <PixelBorder
-              borderColor="#fbbf24"
-              borderWidth={3}
-              backgroundColor="#f3e8ff"
+              borderColor="#b366ff"
+              borderWidth={4}
+              backgroundColor="#d9b3ff"
               innerPadding={0}
               style={styles.buttonWrapper}
             >
@@ -711,16 +711,16 @@ function Settings() {
         )}
 
         <PixelBorder
-          borderColor="#d4a574"
-          borderWidth={2}
-          backgroundColor="rgba(255, 255, 255, 0.8)"
-          innerPadding={20}
+          borderColor="#66e0b8"
+          borderWidth={4}
+          backgroundColor="#b3f0d9"
+          innerPadding={24}
           style={styles.sectionWrapper}
         >
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.sectionTitle}>ℹ️ About</Text>
             <Text style={styles.aboutText}>
-              Sugar Hustle - The ultimate school trading simulation game
+              Sugar Wars - The ultimate school trading simulation game
             </Text>
             <Text style={styles.aboutText}>
               Build your candy empire, collect jokers, and dominate the market!
@@ -747,39 +747,43 @@ function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fef7e7', // Warm paper background
+    backgroundColor: '#fff5f7', // Cotton Candy Pink background
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    padding: 24,
+    paddingBottom: 40,
   },
   sectionWrapper: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   section: {
     // PixelBorder now handles background and padding
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.brown.primary, // Dark brown
-    marginBottom: 15,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#cc2a6f', // Cherry Blossom
+    marginBottom: 18,
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   buttonWrapper: {
     marginBottom: 10,
   },
   button: {
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
   },
   titleScreenButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1d4ed8', // Dark blue text
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0066cc', // Blueberry Ice
+    marginBottom: 6,
     fontFamily: 'PixeloidMono',
   },
   titleScreenButtonRow: {
@@ -793,10 +797,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dangerButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.red.error, // Dark red text
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#cc3333', // Coral Candy
+    marginBottom: 6,
     fontFamily: 'PixeloidMono',
   },
   buttonSubtext: {
@@ -806,24 +810,24 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   aboutText: {
-    fontSize: 14,
-    color: '#8b5a3c',
-    lineHeight: 20,
-    marginBottom: 8,
+    fontSize: 15,
+    color: '#00a372',
+    lineHeight: 24,
+    marginBottom: 10,
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
   },
   leaderboardButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7c2d93', // Dark purple text
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#7700cc', // Grape Soda
+    marginBottom: 6,
     fontFamily: 'PixeloidMono',
   },
   clearDataButtonText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: colors.white,
+    color: '#ff1493',
     fontFamily: 'PixeloidMono',
   },
   // Player info styles
@@ -831,25 +835,26 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   playerInfoLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.brown.primary,
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#8b0045',
+    marginBottom: 12,
     fontFamily: 'PixeloidMono',
   },
   nameDisplayContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fef7e7',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#d4a574',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    padding: 16,
+    borderWidth: 3,
+    borderColor: '#ff91a4',
+    borderRadius: 8,
   },
   playerNameText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.brown.primary,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#8b0045',
     fontFamily: 'PixeloidMono',
     flex: 1,
   },
@@ -870,14 +875,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   nameInput: {
-    backgroundColor: '#fef7e7',
-    borderWidth: 2,
-    borderColor: '#d4a574',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 3,
+    borderColor: '#ff91a4',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 18,
     fontFamily: 'PixeloidMono',
-    color: colors.brown.primary,
+    color: '#8b0045',
   },
   nameButtonContainer: {
     flexDirection: 'row',

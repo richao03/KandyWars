@@ -6,11 +6,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { NativeModules } from 'react-native';
 import { persistor, store } from '../src/store/store';
 import GameEffectsManager from './components/GameEffectsManager';
 import { AdVisibilityProvider } from '../src/context/AdVisibilityContext';
 import { initializeAudioMode } from '../src/utils/audioConfig';
+import Constants from 'expo-constants';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -43,51 +43,26 @@ export default function RootLayout() {
     DonGraffiti: require('../assets/fonts/DonGraffiti.otf'),
   });
 
-  // Initialize Google Mobile Ads using native background thread
+  // Initialize Google Mobile Ads (only in dev/production builds, not Expo Go)
   useEffect(() => {
-    const { AdMobInitializer } = NativeModules;
+    const isExpoGo = Constants.appOwnership === 'expo';
 
-    if (AdMobInitializer) {
-      // Use native module for background thread initialization (better performance)
-      AdMobInitializer.initialize()
-        .then((result: any) => {
-          if (__DEV__) {
-            console.log('📱 AdMob initialized on background thread');
-            console.log('📱 Adapters:', result.adapters);
-          }
-        })
-        .catch((error: Error) => {
-          if (__DEV__) {
-            console.error('📱 AdMob native initialization failed:', error);
-            console.log('📱 Falling back to JS initialization...');
-          }
-          // Fallback to JS initialization if native module fails
-          import('react-native-google-mobile-ads').then((mobileAds) => {
-            mobileAds.default()
-              .initialize()
-              .then(() => {
-                if (__DEV__) console.log('📱 AdMob initialized (JS fallback)');
-              })
-              .catch((fallbackError: Error) => {
-                if (__DEV__)
-                  console.error('📱 AdMob fallback initialization failed:', fallbackError);
-              });
-          });
-        });
-    } else {
-      // Native module not available, use JS initialization
-      if (__DEV__) console.log('📱 Using JS AdMob initialization');
-      import('react-native-google-mobile-ads').then((mobileAds) => {
-        mobileAds.default()
-          .initialize()
-          .then(() => {
-            if (__DEV__) console.log('📱 AdMob initialized (JS)');
-          })
-          .catch((error: Error) => {
-            if (__DEV__) console.error('📱 AdMob initialization failed:', error);
-          });
-      });
+    if (isExpoGo) {
+      if (__DEV__) console.log('📱 Running in Expo Go - skipping AdMob initialization');
+      return;
     }
+
+    // Dynamically import AdMob only when needed (not in Expo Go)
+    import('react-native-google-mobile-ads')
+      .then((mobileAdsModule) => {
+        return mobileAdsModule.default().initialize();
+      })
+      .then(() => {
+        if (__DEV__) console.log('📱 AdMob initialized');
+      })
+      .catch((error: Error) => {
+        if (__DEV__) console.error('📱 AdMob initialization failed:', error);
+      });
   }, []);
 
   // Initialize audio mode once at app startup

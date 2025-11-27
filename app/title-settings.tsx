@@ -1,4 +1,3 @@
-import colors from '@/src/constants/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -26,9 +25,10 @@ import {
   setCachedUserObject,
   updateCachedUserObject,
 } from '../src/store/slices/userObjectSlice';
-import { resetFirebaseSession } from './components/SugarHustleTitleScreen';
 import ConfirmationModal from './components/ConfirmationModal';
 import PixelBorder from './components/PixelBorder';
+import { resetFirebaseSession } from './components/SugarWarsTitleScreen';
+import TextWithEmojis from './components/TextWithEmojis';
 
 export default function TitleSettings() {
   const walletContext = useWallet();
@@ -254,9 +254,9 @@ export default function TitleSettings() {
       {/* Header */}
       <View style={styles.header}>
         <PixelBorder
-          borderColor="#d4a574"
+          borderColor="#ff85c0"
           borderWidth={3}
-          backgroundColor="rgba(212, 165, 116, 0.3)"
+          backgroundColor="rgba(255, 255, 255, 0.4)"
           innerPadding={0}
         >
           <TouchableOpacity
@@ -266,19 +266,21 @@ export default function TitleSettings() {
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
         </PixelBorder>
-        <Text style={styles.title}>⚙️ Settings</Text>
-        <View style={{ width: 80 }} />
+        <Text style={styles.title}>Settings</Text>
+        <View style={{ width: 90 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Player Profile */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎮 Player Profile</Text>
+          <TextWithEmojis imageSize={42} style={styles.sectionTitle}>
+            🎮 Player Profile
+          </TextWithEmojis>
 
           <PixelBorder
-            borderColor="#d4a574"
+            borderColor="#ff91a4"
             borderWidth={4}
-            backgroundColor="rgba(212, 165, 116, 0.2)"
+            backgroundColor="#ffc0cb"
             innerPadding={0}
           >
             {isLoading ? (
@@ -287,7 +289,7 @@ export default function TitleSettings() {
                   <Text style={styles.settingTitle}>Player Name</Text>
                   <Text style={styles.settingDescription}>Loading...</Text>
                 </View>
-                <ActivityIndicator size="small" color="#3b82f6" />
+                <ActivityIndicator size="small" color="#ff91a4" />
               </View>
             ) : editingName ? (
               <View style={styles.settingItem}>
@@ -336,9 +338,9 @@ export default function TitleSettings() {
           </PixelBorder>
 
           <PixelBorder
-            borderColor="#F4A460"
+            borderColor="#ffb380"
             borderWidth={4}
-            backgroundColor="rgba(244, 164, 96, 0.2)"
+            backgroundColor="#ffdab9"
             innerPadding={0}
           >
             <TouchableOpacity
@@ -346,7 +348,9 @@ export default function TitleSettings() {
               onPress={handleViewLeaderboard}
             >
               <View style={styles.settingLeft}>
-                <Text style={styles.settingTitle}>🏆 View Leaderboard</Text>
+                <TextWithEmojis style={styles.settingTitle}>
+                  View Leaderboard
+                </TextWithEmojis>
                 <Text style={styles.settingDescription}>
                   See how you rank against other players
                 </Text>
@@ -358,12 +362,14 @@ export default function TitleSettings() {
 
         {/* Data Management */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🗑️ Data Management</Text>
+          <TextWithEmojis imageSize={42} style={styles.sectionTitle}>
+            📊 Data Management
+          </TextWithEmojis>
 
           <PixelBorder
-            borderColor="#CD853F"
+            borderColor="#ff8080"
             borderWidth={4}
-            backgroundColor="rgba(205, 133, 63, 0.2)"
+            backgroundColor="#ffb3b3"
             innerPadding={0}
           >
             <TouchableOpacity
@@ -380,7 +386,7 @@ export default function TitleSettings() {
                 </Text>
               </View>
               {isResetting ? (
-                <ActivityIndicator size="small" color="#ff4444" />
+                <ActivityIndicator size="small" color="#cc3333" />
               ) : (
                 <Text style={[styles.actionText, styles.dangerText]}>
                   Delete
@@ -392,16 +398,20 @@ export default function TitleSettings() {
 
         {/* Info Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ℹ️ About</Text>
+          <TextWithEmojis imageSize={42} style={styles.sectionTitle}>
+            🗣️ About
+          </TextWithEmojis>
 
           <PixelBorder
-            borderColor="#DEB887"
+            borderColor="#66e0b8"
             borderWidth={4}
-            backgroundColor="rgba(222, 184, 135, 0.2)"
+            backgroundColor="#b3f0d9"
             innerPadding={0}
           >
             <View style={styles.infoItem}>
-              <Text style={styles.infoTitle}>🍬 Candy Warz</Text>
+              <TextWithEmojis style={styles.infoTitle}>
+                Candy Warz
+              </TextWithEmojis>
               <Text style={styles.infoDescription}>
                 A strategic candy trading game where you manage debt, buy and
                 sell candy, and collect powerful jokers to succeed.
@@ -410,13 +420,13 @@ export default function TitleSettings() {
           </PixelBorder>
 
           <PixelBorder
-            borderColor="#d4a574"
+            borderColor="#c79fff"
             borderWidth={4}
-            backgroundColor="rgba(212, 165, 116, 0.2)"
+            backgroundColor="#e6d5ff"
             innerPadding={0}
           >
             <View style={styles.infoItem}>
-              <Text style={styles.infoTitle}>📱 Version</Text>
+              <TextWithEmojis style={styles.infoTitle}>Version</TextWithEmojis>
               <Text style={styles.infoDescription}>1.0.0</Text>
             </View>
           </PixelBorder>
@@ -440,73 +450,83 @@ export default function TitleSettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.black,
+    backgroundColor: '#fff5f7', // Cotton Candy Pink background
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: colors.black,
-    borderBottomWidth: 3,
-    borderBottomColor: '#d4a574',
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 12,
+    backgroundColor: '#ffb3d9', // Bubblegum header
+    borderBottomWidth: 4,
+    borderBottomColor: '#ff85c0',
   },
   backButton: {
-    padding: 8,
-    width: 80,
+    padding: 12,
+    width: 76,
     backgroundColor: 'transparent',
   },
   backButtonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   title: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 24,
   },
   section: {
-    marginBottom: 30,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 15,
+    color: '#cc2a6f', // Cherry Blossom
+    marginBottom: 16,
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: 'transparent',
-    padding: 16,
+    padding: 20,
   },
   settingLeft: {
     flex: 1,
-    marginRight: 16,
+    marginRight: 20,
   },
   settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4a2c5c', // Deep Purple
+    marginBottom: 6,
     fontFamily: 'PixeloidMono',
   },
   settingDescription: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: 15,
+    color: '#6b5080', // Medium Purple
     fontFamily: 'PixeloidMono',
+    lineHeight: 20,
   },
   toggle: {
     paddingHorizontal: 12,
@@ -528,64 +548,70 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   actionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFD700',
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#cc6633', // Peach accent
     fontFamily: 'PixeloidMono',
   },
   dangerText: {
-    color: '#DC143C',
+    color: '#cc3333', // Coral Candy danger
   },
   infoItem: {
     backgroundColor: 'transparent',
-    padding: 16,
-    marginBottom: 10,
+    padding: 20,
+    marginBottom: 12,
   },
   infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4a2c5c', // Deep Purple
+    marginBottom: 8,
     fontFamily: 'PixeloidMono',
   },
   infoDescription: {
-    fontSize: 14,
-    color: '#9ca3af',
-    lineHeight: 20,
+    fontSize: 15,
+    color: '#6b5080', // Medium Purple
+    lineHeight: 22,
     fontFamily: 'PixeloidMono',
   },
   nameInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderColor: '#d4a574',
-    borderWidth: 3,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderColor: '#ff91a4',
+    borderWidth: 4,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 18,
+    color: '#4a2c5c', // Deep Purple
     fontFamily: 'PixeloidMono',
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 12,
+    marginBottom: 16,
   },
   nameActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
   nameButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 3,
   },
   saveButton: {
-    backgroundColor: '#32CD32',
+    backgroundColor: '#66e0b8', // Mint Ice Cream
+    borderColor: '#00a372',
   },
   cancelButton: {
-    backgroundColor: '#8B4513',
+    backgroundColor: '#ff8080', // Coral Candy
+    borderColor: '#cc3333',
   },
   nameButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });

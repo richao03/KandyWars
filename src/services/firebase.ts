@@ -1,5 +1,5 @@
 /**
- * Firebase Configuration for Sugar Hustle
+ * Firebase Configuration for Sugar Wars
  *
  * This file handles Firebase setup with optimized data structure:
  * - Single user object per device
@@ -7,27 +7,34 @@
  * - In-memory caching for performance
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
-import { Auth, User, initializeAuth, getAuth, signInAnonymously, onAuthStateChanged, getReactNativePersistence } from 'firebase/auth';
+import {
+  Auth,
+  User,
+  getAuth,
+  getReactNativePersistence,
+  initializeAuth,
+  onAuthStateChanged,
+  signInAnonymously,
+} from 'firebase/auth';
 import {
   Firestore,
+  addDoc,
+  collection,
+  deleteDoc,
   doc,
   getDoc,
-  setDoc,
-  increment,
-  collection,
   getDocs,
   getFirestore,
+  increment,
   limit,
   orderBy,
   query,
   serverTimestamp,
-  addDoc,
+  setDoc,
   where,
-  deleteDoc,
 } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 // Firebase configuration
@@ -53,7 +60,7 @@ export const initializeFirebase = () => {
 
     // Initialize Auth with AsyncStorage persistence for React Native
     auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage)
+      persistence: getReactNativePersistence(AsyncStorage),
     });
 
     console.log('🔐 Firebase Auth initialized with AsyncStorage persistence');
@@ -118,13 +125,21 @@ class ScoreboardService {
             unsubscribe(); // Clean up listener
 
             if (user) {
-              console.log('📊 User already signed in (persisted session):', user.uid);
+              console.log(
+                '📊 User already signed in (persisted session):',
+                user.uid
+              );
               resolve(user);
             } else {
-              console.log('📊 No persisted session found, signing in anonymously...');
+              console.log(
+                '📊 No persisted session found, signing in anonymously...'
+              );
               try {
                 const userCredential = await signInAnonymously(auth);
-                console.log('📊 New anonymous user created:', userCredential.user.uid);
+                console.log(
+                  '📊 New anonymous user created:',
+                  userCredential.user.uid
+                );
                 resolve(userCredential.user);
               } catch (error) {
                 reject(error);
@@ -246,10 +261,14 @@ class ScoreboardService {
     if (!force && this.cachedUserObject && this.lastFetchTime) {
       const cacheAge = Date.now() - this.lastFetchTime;
       if (cacheAge < this.CACHE_STALE_MS) {
-        console.log(`📊 Cache is still fresh (${Math.round(cacheAge / 1000)}s old), skipping refresh`);
+        console.log(
+          `📊 Cache is still fresh (${Math.round(cacheAge / 1000)}s old), skipping refresh`
+        );
         return this.cachedUserObject;
       }
-      console.log(`🔄 Cache is stale (${Math.round(cacheAge / 1000)}s old), refreshing...`);
+      console.log(
+        `🔄 Cache is stale (${Math.round(cacheAge / 1000)}s old), refreshing...`
+      );
     }
 
     console.log('🔄 Refreshing user object from Firebase...');
@@ -275,7 +294,9 @@ class ScoreboardService {
   clearUserObjectCache(): void {
     this.cachedUserObject = null;
     this.lastFetchTime = null;
-    console.log('🗑️ User object cache cleared - next access will fetch from Firebase');
+    console.log(
+      '🗑️ User object cache cleared - next access will fetch from Firebase'
+    );
   }
 
   // Write user object to Firebase (call at game end)
@@ -314,10 +335,17 @@ class ScoreboardService {
     try {
       // Delete user-scoped analytics subcollection
       console.log('🗑️ Deleting user analytics subcollection...');
-      const analyticsCollectionRef = collection(db, 'users', this.deviceId, 'analytics');
+      const analyticsCollectionRef = collection(
+        db,
+        'users',
+        this.deviceId,
+        'analytics'
+      );
       const analyticsSnapshot = await getDocs(analyticsCollectionRef);
 
-      const deletePromises = analyticsSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      const deletePromises = analyticsSnapshot.docs.map((doc) =>
+        deleteDoc(doc.ref)
+      );
       await Promise.all(deletePromises);
       console.log(`✅ Deleted ${analyticsSnapshot.size} analytics documents`);
 
@@ -380,7 +408,7 @@ class ScoreboardService {
     console.log('📊 Fetching top scores...');
     console.log('  - Difficulty:', difficulty);
     console.log('  - Limit:', limitCount);
-    
+
     if (!this.isInitialized) {
       console.warn('❌ Scoreboard not initialized, cannot fetch scores');
       return [];
@@ -407,7 +435,7 @@ class ScoreboardService {
       console.log('📊 Executing Firestore query...');
       const querySnapshot = await getDocs(q);
       console.log('📊 Query returned', querySnapshot.size, 'documents');
-      
+
       const scores: ScoreboardEntry[] = [];
 
       querySnapshot.forEach((doc) => {
@@ -515,10 +543,17 @@ class ScoreboardService {
 
   // Auto-tracking methods for real-time updates
   async trackJokerUsage(jokerId: number, playerName: string): Promise<void> {
-    console.log('🃏 Tracking joker usage - ID:', jokerId, 'Player:', playerName);
+    console.log(
+      '🃏 Tracking joker usage - ID:',
+      jokerId,
+      'Player:',
+      playerName
+    );
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log('❌ Cannot track joker usage - not initialized or no device ID');
+      console.log(
+        '❌ Cannot track joker usage - not initialized or no device ID'
+      );
       console.log('  - isInitialized:', this.isInitialized);
       console.log('  - deviceId:', this.deviceId);
       return;
@@ -543,8 +578,8 @@ class ScoreboardService {
   }
 
   async trackGameCompletion(
-    finalBalance: number, 
-    difficulty: string, 
+    finalBalance: number,
+    difficulty: string,
     daysPlayed: number,
     playerName: string,
     totalProfit: number,
@@ -559,9 +594,11 @@ class ScoreboardService {
     console.log('  - Days Played:', daysPlayed);
     console.log('  - Player Name:', playerName);
     console.log('  - Total Periods:', totalPeriodsPlayed);
-    
+
     if (!this.isInitialized || !this.deviceId) {
-      console.log('❌ Cannot track game completion - not initialized or no device ID');
+      console.log(
+        '❌ Cannot track game completion - not initialized or no device ID'
+      );
       return;
     }
 
@@ -584,9 +621,12 @@ class ScoreboardService {
         timestamp: serverTimestamp(),
       };
       console.log('🎮 Document data:', docData);
-      
+
       const docRef = await addDoc(collection(db, 'scoreboard'), docData);
-      console.log('✅ Game completion tracked successfully! Doc ID:', docRef.id);
+      console.log(
+        '✅ Game completion tracked successfully! Doc ID:',
+        docRef.id
+      );
     } catch (error) {
       console.error('❌ Failed to track game completion:', error);
     }
@@ -594,7 +634,9 @@ class ScoreboardService {
 
   // Batch update minigame stats - called at game end
   // Writes to BOTH user-scoped AND global analytics for hybrid approach
-  async batchUpdateMinigameStats(minigameCounts: { [minigameName: string]: number }): Promise<void> {
+  async batchUpdateMinigameStats(minigameCounts: {
+    [minigameName: string]: number;
+  }): Promise<void> {
     if (!this.isInitialized || !this.deviceId) return;
 
     try {
@@ -606,14 +648,23 @@ class ScoreboardService {
       });
 
       // Write to user-scoped analytics (secure, audit trail)
-      const userAnalyticsRef = doc(db, 'users', this.deviceId, 'analytics', 'minigameStats');
+      const userAnalyticsRef = doc(
+        db,
+        'users',
+        this.deviceId,
+        'analytics',
+        'minigameStats'
+      );
       await setDoc(userAnalyticsRef, updates, { merge: true });
 
       // Write to global analytics (fast reads for leaderboard)
       const globalAnalyticsRef = doc(db, 'analytics', 'minigameStats');
       await setDoc(globalAnalyticsRef, updates, { merge: true });
 
-      console.log('✅ Batch updated minigame stats (user-scoped + global):', minigameCounts);
+      console.log(
+        '✅ Batch updated minigame stats (user-scoped + global):',
+        minigameCounts
+      );
     } catch (error) {
       console.error('❌ Failed to batch update minigame stats:', error);
       throw error;
@@ -622,7 +673,9 @@ class ScoreboardService {
 
   // Deprecated - use batchUpdateMinigameStats
   async trackMinigamePlay(minigameType: string): Promise<void> {
-    console.warn('⚠️ trackMinigamePlay is deprecated - use batchUpdateMinigameStats');
+    console.warn(
+      '⚠️ trackMinigamePlay is deprecated - use batchUpdateMinigameStats'
+    );
     await this.batchUpdateMinigameStats({ [minigameType]: 1 });
   }
 
@@ -649,7 +702,9 @@ class ScoreboardService {
   }
 
   // Get global minigame stats for leaderboard/popularity display
-  async getGlobalMinigameStats(): Promise<{ [minigameName: string]: number } | null> {
+  async getGlobalMinigameStats(): Promise<{
+    [minigameName: string]: number;
+  } | null> {
     if (!this.isInitialized) return null;
 
     try {
@@ -674,7 +729,9 @@ class ScoreboardService {
     console.log('🎮 Fetching played minigames...');
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log('❌ Cannot fetch played minigames - not initialized or no device ID');
+      console.log(
+        '❌ Cannot fetch played minigames - not initialized or no device ID'
+      );
       return [];
     }
 
@@ -688,7 +745,7 @@ class ScoreboardService {
       const querySnapshot = await getDocs(q);
       const minigames = new Set<string>();
 
-      querySnapshot.docs.forEach(doc => {
+      querySnapshot.docs.forEach((doc) => {
         const data = doc.data();
         if (data.minigameType) {
           minigames.add(data.minigameType);
@@ -706,7 +763,9 @@ class ScoreboardService {
 
   // Batch update joker stats - called at game end
   // Writes to BOTH user-scoped AND global analytics for hybrid approach
-  async batchUpdateJokerStats(jokerCounts: { [jokerName: string]: number }): Promise<void> {
+  async batchUpdateJokerStats(jokerCounts: {
+    [jokerName: string]: number;
+  }): Promise<void> {
     if (!this.isInitialized || !this.deviceId) return;
 
     try {
@@ -718,14 +777,23 @@ class ScoreboardService {
       });
 
       // Write to user-scoped analytics (secure, audit trail)
-      const userAnalyticsRef = doc(db, 'users', this.deviceId, 'analytics', 'jokerStats');
+      const userAnalyticsRef = doc(
+        db,
+        'users',
+        this.deviceId,
+        'analytics',
+        'jokerStats'
+      );
       await setDoc(userAnalyticsRef, updates, { merge: true });
 
       // Write to global analytics (fast reads for leaderboard)
       const globalAnalyticsRef = doc(db, 'analytics', 'jokerStats');
       await setDoc(globalAnalyticsRef, updates, { merge: true });
 
-      console.log('✅ Batch updated joker stats (user-scoped + global):', jokerCounts);
+      console.log(
+        '✅ Batch updated joker stats (user-scoped + global):',
+        jokerCounts
+      );
     } catch (error) {
       console.error('❌ Failed to batch update joker stats:', error);
       throw error;
@@ -734,11 +802,16 @@ class ScoreboardService {
 
   // Deprecated - use batchUpdateJokerStats
   async trackJokerFromMinigame(jokerName: string): Promise<void> {
-    console.warn('⚠️ trackJokerFromMinigame is deprecated - use batchUpdateJokerStats');
+    console.warn(
+      '⚠️ trackJokerFromMinigame is deprecated - use batchUpdateJokerStats'
+    );
     await this.batchUpdateJokerStats({ [jokerName]: 1 });
   }
 
-  async trackDailyPeriods(periodsCount: number, playerName: string): Promise<void> {
+  async trackDailyPeriods(
+    periodsCount: number,
+    playerName: string
+  ): Promise<void> {
     if (!this.isInitialized || !this.deviceId) return;
 
     try {
@@ -758,7 +831,9 @@ class ScoreboardService {
   // Deprecated - use updateLocalUserObject and saveUserObject instead
   // Kept for backward compatibility during migration
   async incrementGameCompletions(): Promise<number> {
-    console.log('⚠️ incrementGameCompletions is deprecated - use user object methods');
+    console.log(
+      '⚠️ incrementGameCompletions is deprecated - use user object methods'
+    );
     return this.getTotalWinCount();
   }
 
@@ -785,12 +860,17 @@ class ScoreboardService {
     console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log('❌ Cannot track difficulty win - not initialized or no device ID');
+      console.log(
+        '❌ Cannot track difficulty win - not initialized or no device ID'
+      );
       return;
     }
 
     if (!difficultyLevel || difficultyLevel < 1) {
-      console.error('❌ Cannot track difficulty win - invalid difficulty level:', difficultyLevel);
+      console.error(
+        '❌ Cannot track difficulty win - invalid difficulty level:',
+        difficultyLevel
+      );
       return;
     }
 
@@ -801,7 +881,12 @@ class ScoreboardService {
         difficultyLevel,
         timestamp: serverTimestamp(),
       });
-      console.log('✅ Difficulty win tracked for level:', difficultyLevel, 'for device:', this.deviceId);
+      console.log(
+        '✅ Difficulty win tracked for level:',
+        difficultyLevel,
+        'for device:',
+        this.deviceId
+      );
     } catch (error) {
       console.error('❌ Failed to track difficulty win:', error);
     }
@@ -826,7 +911,9 @@ class ScoreboardService {
   }
 
   // Analytics methods for leaderboard - reads from universal counters
-  async getMostObtainedJokersFromMinigames(limit: number = 10): Promise<Array<{jokerName: string, count: number}>> {
+  async getMostObtainedJokersFromMinigames(
+    limit: number = 10
+  ): Promise<Array<{ jokerName: string; count: number }>> {
     if (!this.isInitialized) await this.initialize();
 
     try {
@@ -843,7 +930,7 @@ class ScoreboardService {
       const jokerStats = statsDoc.data() as JokerStats;
 
       const sortedJokers = Object.entries(jokerStats)
-        .map(([jokerName, count]) => ({jokerName, count}))
+        .map(([jokerName, count]) => ({ jokerName, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, limit);
 
@@ -855,7 +942,9 @@ class ScoreboardService {
     }
   }
 
-  async getMostPlayedMinigames(limit: number = 10): Promise<Array<{minigameType: string, count: number}>> {
+  async getMostPlayedMinigames(
+    limit: number = 10
+  ): Promise<Array<{ minigameType: string; count: number }>> {
     if (!this.isInitialized) await this.initialize();
 
     try {
@@ -872,7 +961,7 @@ class ScoreboardService {
       const minigameStats = statsDoc.data() as MinigameStats;
 
       const sortedMinigames = Object.entries(minigameStats)
-        .map(([minigameType, count]) => ({minigameType, count}))
+        .map(([minigameType, count]) => ({ minigameType, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, limit);
 
@@ -883,7 +972,6 @@ class ScoreboardService {
       return [];
     }
   }
-
 }
 
 // Export singleton instance

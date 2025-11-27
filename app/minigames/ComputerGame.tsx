@@ -3,21 +3,20 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FlipCard from 'react-native-flip-card';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
-import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
-import AvailableJokersModal from '../components/AvailableJokersModal';
-import colors from '../../src/constants/colors';
-
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MemoryCard {
   id: string;
@@ -65,6 +64,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [showingAllCards, setShowingAllCards] = useState(false);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [showAvailableJokers, setShowAvailableJokers] = useState(false);
+  const [isChecking, setIsChecking] = useState(false); // Prevent clicks during match checking
 
   // Level configuration: [pairs, maxTurns]
   const levelConfig = {
@@ -137,9 +137,8 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     }
   }, [gameState]);
 
-
   const handleCardPress = (cardId: string) => {
-    if (!isGameActive || showingAllCards) return;
+    if (!isGameActive || showingAllCards || isChecking) return;
 
     const card = cards.find((c) => c.id === cardId);
     if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2)
@@ -164,6 +163,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         // Match found! Don't increment turns for correct guesses
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         SoundEffects.playCongratsSound();
+        setIsChecking(true); // Block new clicks during animation
         setFlippedCards([]);
 
         setTimeout(() => {
@@ -174,14 +174,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                 : c
             )
           );
-
+          setIsChecking(false); // Allow clicks again
           // Win condition check is now handled by useEffect
         }, 1000);
       } else {
         // No match - increment turns only for wrong guesses
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         SoundEffects.playWrongAnswerSound();
-        setFlippedCards([]); // Allow new clicks immediately
+        setIsChecking(true); // Block new clicks during flip back animation
+        setFlippedCards([]);
 
         const newTurns = turns + 1;
         setTurns(newTurns);
@@ -194,6 +195,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                 : c
             )
           );
+          setIsChecking(false); // Allow clicks again
         }, 400);
 
         // Check if out of turns (only for wrong guesses)
@@ -455,7 +457,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         ]}
       >
         <MinigameHUD
-          title="💻 Hack the System"
+          title="Hack the System"
           subtitle="Match the tech pairs to infiltrate the network!"
           leftInfo={`Level ${level}/3`}
           centerInfo={`❌: ${turns}/${maxTurns}`}

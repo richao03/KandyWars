@@ -51,17 +51,17 @@ export const resetFirebaseSession = () => {
   firebaseSessionInitialized = false;
 };
 
-interface SugarHustleTitleScreenProps {
+interface SugarWarsTitleScreenProps {
   onNewGame?: (level: number) => void;
   onContinue?: () => void;
   onSettings?: () => void;
 }
 
-export default function SugarHustleTitleScreen({
+export default function SugarWarsTitleScreen({
   onNewGame,
   onContinue,
   onSettings,
-}: SugarHustleTitleScreenProps) {
+}: SugarWarsTitleScreenProps) {
   const wallet = useWallet();
   const dispatch = useAppDispatch();
   const { resetGame, periodCount, isInitialized, setIsInitialized } = useGame();
@@ -86,9 +86,7 @@ export default function SugarHustleTitleScreen({
 
   // Reset component state when it mounts/re-mounts
   useEffect(() => {
-    console.log(
-      '🎬 SugarHustleTitleScreen: Component mounted, resetting state'
-    );
+    console.log('🎬 SugarWarsTitleScreen: Component mounted, resetting state');
 
     // Cleanup sound effect pools to free memory when returning to title screen
     SoundEffects.cleanup();
@@ -105,7 +103,7 @@ export default function SugarHustleTitleScreen({
     screenOpacity.setValue(1);
 
     console.log(
-      '🎬 SugarHustleTitleScreen: Starting fully visible to avoid white screen'
+      '🎬 SugarWarsTitleScreen: Starting fully visible to avoid white screen'
     );
 
     // Initialize Firebase and fetch user object on game load (ONCE PER SESSION)
@@ -191,7 +189,7 @@ export default function SugarHustleTitleScreen({
     if (buttonsShown.current) return;
     buttonsShown.current = true;
 
-    console.log('🎨 SugarHustleTitleScreen: Showing buttons');
+    console.log('🎨 SugarWarsTitleScreen: Showing buttons');
     // Buttons appear after "Sugar" is done
     setShowButtons(true);
     // Fade in buttons
@@ -692,6 +690,7 @@ const styles = StyleSheet.create({
 
   titleWrapper: {
     width: '100%',
+    marginTop: 60,
   },
   buttonContainer: {
     paddingHorizontal: 60,

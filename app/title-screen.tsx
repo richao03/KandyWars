@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { router } from 'expo-router';
-import { View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
-import StudioTitleScreen from './components/StudioTitleScreen';
-import SugarHustleTitleScreen from './components/SugarHustleTitleScreen';
-import { useGame } from '../src/hooks/useGame';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import colors from '../src/constants/colors';
+import { useGame } from '../src/hooks/useGame';
 import { MusicController } from '../src/utils/musicController';
-
+import StudioTitleScreen from './components/StudioTitleScreen';
+import SugarWarsTitleScreen from './components/SugarWarsTitleScreen';
 
 export default function TitleScreenPage() {
   const { lastActiveView, periodCount, isInitialized } = useGame();
@@ -24,10 +23,17 @@ export default function TitleScreenPage() {
     // No cleanup needed - next view will set its own music
   }, [showStudioScreen]);
 
-  const handleNewGame = async (difficulty: 'easy' | 'medium' | 'hard' | number) => {
+  const handleNewGame = async (
+    difficulty: 'easy' | 'medium' | 'hard' | number
+  ) => {
     try {
-      console.log('📱 TitleScreen: handleNewGame called with difficulty:', difficulty);
-      console.log('📱 TitleScreen: Resetting navigation stack and navigating to market...');
+      console.log(
+        '📱 TitleScreen: handleNewGame called with difficulty:',
+        difficulty
+      );
+      console.log(
+        '📱 TitleScreen: Resetting navigation stack and navigating to market...'
+      );
 
       // Music will continue playing until market view is reached
 
@@ -46,7 +52,12 @@ export default function TitleScreenPage() {
   };
 
   const handleContinue = () => {
-    console.log('🎮 Continue pressed - periodCount:', periodCount, 'isInitialized:', isInitialized);
+    console.log(
+      '🎮 Continue pressed - periodCount:',
+      periodCount,
+      'isInitialized:',
+      isInitialized
+    );
 
     // Music will continue playing until market view is reached
 
@@ -63,7 +74,8 @@ export default function TitleScreenPage() {
     }
 
     // Navigate to the last active view for games in progress
-    const targetScreen = lastActiveView === 'after-school' ? 'after-school' : 'market';
+    const targetScreen =
+      lastActiveView === 'after-school' ? 'after-school' : 'market';
     console.log('🎮 Continuing game in progress - going to', targetScreen);
     navigation.dispatch(
       CommonActions.reset({
@@ -79,7 +91,7 @@ export default function TitleScreenPage() {
   };
 
   const handleStudioComplete = () => {
-    console.log('🎬 DEBUG: Studio completed, showing Sugar Hustle title screen');
+    console.log('🎬 DEBUG: Studio completed, showing Sugar Wars title screen');
     setShowStudioScreen(false);
   };
 
@@ -94,7 +106,7 @@ export default function TitleScreenPage() {
       )}
 
       {!showStudioScreen && (
-        <SugarHustleTitleScreen
+        <SugarWarsTitleScreen
           onNewGame={handleNewGame}
           onContinue={handleContinue}
           onSettings={handleSettings}
