@@ -1,8 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import FlipCard from 'react-native-flip-card';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
@@ -27,6 +26,73 @@ interface MemoryCard {
 
 interface ComputerGameProps {
   onComplete: () => void;
+}
+
+// Custom flip card component with instant state sync
+interface AnimatedFlipCardProps {
+  isFlipped: boolean;
+  frontContent: React.ReactNode;
+  backContent: React.ReactNode;
+  style?: any;
+}
+
+function AnimatedFlipCard({ isFlipped, frontContent, backContent, style }: AnimatedFlipCardProps) {
+  // Initialize with the correct value based on initial isFlipped state
+  const flipAnim = useRef(new Animated.Value(isFlipped ? 180 : 0)).current;
+  const prevFlipped = useRef(isFlipped);
+
+  useEffect(() => {
+    // Only animate if the flipped state actually changed
+    if (prevFlipped.current !== isFlipped) {
+      prevFlipped.current = isFlipped;
+      Animated.timing(flipAnim, {
+        toValue: isFlipped ? 180 : 0,
+        duration: 150, // Fast flip animation
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isFlipped, flipAnim]);
+
+  const frontInterpolate = flipAnim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const backInterpolate = flipAnim.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['180deg', '360deg'],
+  });
+
+  const frontOpacity = flipAnim.interpolate({
+    inputRange: [89, 90],
+    outputRange: [1, 0],
+  });
+
+  const backOpacity = flipAnim.interpolate({
+    inputRange: [89, 90],
+    outputRange: [0, 1],
+  });
+
+  return (
+    <View style={style}>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ rotateY: frontInterpolate }], opacity: frontOpacity, backfaceVisibility: 'hidden' },
+        ]}
+      >
+        {frontContent}
+      </Animated.View>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ rotateY: backInterpolate }], opacity: backOpacity, backfaceVisibility: 'hidden' },
+        ]}
+      >
+        {backContent}
+      </Animated.View>
+    </View>
+  );
 }
 
 // Computer/tech-themed emojis for memory game
@@ -66,6 +132,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [showAvailableJokers, setShowAvailableJokers] = useState(false);
   const [isChecking, setIsChecking] = useState(false); // Prevent clicks during match checking
 
+  // Ref to track flipped cards synchronously (prevents race conditions from rapid clicks)
+  const flippedCardsRef = React.useRef<string[]>([]);
+  // Ref to track isChecking synchronously (prevents race conditions)
+  const isCheckingRef = React.useRef<boolean>(false);
+  // Ref to store the loss modal timeout (to prevent stale modals after restarting)
+  const lossModalTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   // Level configuration: [pairs, maxTurns]
   const levelConfig = {
     1: { pairs: 6, maxTurns: 12 }, // 6 pairs, 12 turns (2x2 grid)
@@ -99,6 +172,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     const shuffledCards = [...cardPairs].sort(() => Math.random() - 0.5);
 
     setCards(shuffledCards);
+    flippedCardsRef.current = []; // Clear ref
     setFlippedCards([]);
     setTurns(0);
     setMaxTurns(config.maxTurns);
@@ -138,23 +212,61 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   }, [gameState]);
 
   const handleCardPress = (cardId: string) => {
-    if (!isGameActive || showingAllCards || isChecking) return;
+    console.log('🎮 CARD CLICKED:', cardId.slice(0, 10), {
+      isGameActive,
+      showingAllCards,
+      isCheckingRef: isCheckingRef.current,
+      flippedCardsRef: flippedCardsRef.current.length,
+      flippedCardsRefIds: flippedCardsRef.current.map(id => id.slice(0, 10)),
+    });
+
+    // Check isChecking ref synchronously FIRST to block all input during transitions
+    if (!isGameActive || showingAllCards || isCheckingRef.current) {
+      console.log('❌ BLOCKED: Game state check failed');
+      return;
+    }
 
     const card = cards.find((c) => c.id === cardId);
-    if (!card || card.isFlipped || card.isMatched || flippedCards.length >= 2)
+
+    console.log('🔍 Card state:', {
+      cardExists: !!card,
+      cardIsFlipped: card?.isFlipped,
+      cardIsMatched: card?.isMatched,
+      alreadyInRef: flippedCardsRef.current.includes(cardId),
+      refLength: flippedCardsRef.current.length,
+    });
+
+    // Use ref for synchronous check to prevent race conditions from rapid clicks
+    // Check if card is already being flipped (in the ref) to prevent double-flipping
+    if (!card || card.isFlipped || card.isMatched ||
+        flippedCardsRef.current.includes(cardId) ||
+        flippedCardsRef.current.length >= 2) {
+      console.log('❌ BLOCKED: Card state check failed');
       return;
+    }
 
-    SoundEffects.playRandomPop();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newFlippedCards = [...flippedCards, cardId];
+    // Update ref synchronously FIRST (before sounds) to block subsequent rapid clicks
+    const newFlippedCards = [...flippedCardsRef.current, cardId];
+    flippedCardsRef.current = newFlippedCards;
+
+    console.log('✅ FLIP ACCEPTED! Ref updated to:', newFlippedCards.length, 'cards:', newFlippedCards.map(id => id.slice(0, 10)));
+
+    // Update state immediately (before sounds/haptics)
     setFlippedCards(newFlippedCards);
-
-    // Update card state to show it's flipped
     setCards((prev) =>
       prev.map((c) => (c.id === cardId ? { ...c, isFlipped: true } : c))
     );
 
+    // Then play sounds and haptics
+    SoundEffects.playRandomPop();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (newFlippedCards.length === 2) {
+      console.log('🔒 LOCKING INPUT - 2 cards flipped');
+      // Block all input immediately when 2 cards are flipped (update ref AND state)
+      isCheckingRef.current = true;
+      setIsChecking(true);
+
       const [firstCardId, secondCardId] = newFlippedCards;
       const firstCard = cards.find((c) => c.id === firstCardId);
       const secondCard = cards.find((c) => c.id === secondCardId);
@@ -163,31 +275,43 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         // Match found! Don't increment turns for correct guesses
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         SoundEffects.playCongratsSound();
-        setIsChecking(true); // Block new clicks during animation
+
+        // Clear ref and state immediately
+        console.log('✅ MATCH FOUND! Clearing flipped cards ref');
+        flippedCardsRef.current = [];
         setFlippedCards([]);
 
+        // Mark cards as matched
+        setCards((prev) =>
+          prev.map((c) =>
+            c.id === firstCardId || c.id === secondCardId
+              ? { ...c, isMatched: true, isFlipped: true }
+              : c
+          )
+        );
+
+        // Re-enable input after delay (update both ref and state)
         setTimeout(() => {
-          setCards((prev) =>
-            prev.map((c) =>
-              c.id === firstCardId || c.id === secondCardId
-                ? { ...c, isMatched: true }
-                : c
-            )
-          );
-          setIsChecking(false); // Allow clicks again
-          // Win condition check is now handled by useEffect
-        }, 1000);
+          console.log('🔓 UNLOCKING INPUT after match');
+          isCheckingRef.current = false;
+          setIsChecking(false);
+        }, 200);
+        // Win condition check is now handled by useEffect
       } else {
         // No match - increment turns only for wrong guesses
+        console.log('❌ NO MATCH! Clearing flipped cards ref');
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         SoundEffects.playWrongAnswerSound();
-        setIsChecking(true); // Block new clicks during flip back animation
+        // isChecking is already true from above
+        flippedCardsRef.current = []; // Clear ref
         setFlippedCards([]);
 
         const newTurns = turns + 1;
         setTurns(newTurns);
 
+        // Short delay to let player see the cards before flipping back
         setTimeout(() => {
+          console.log('🔓 UNLOCKING INPUT after wrong guess');
           setCards((prev) =>
             prev.map((c) =>
               c.id === firstCardId || c.id === secondCardId
@@ -195,12 +319,15 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                 : c
             )
           );
-          setIsChecking(false); // Allow clicks again
+          // Re-enable input (update both ref and state)
+          isCheckingRef.current = false;
+          setIsChecking(false);
         }, 400);
 
         // Check if out of turns (only for wrong guesses)
         if (newTurns >= maxTurns) {
-          setTimeout(() => {
+          // Store timeout ref so we can clear it if player restarts before it fires
+          lossModalTimeoutRef.current = setTimeout(() => {
             setIsGameActive(false);
 
             if (completedLevel > 0) {
@@ -233,6 +360,8 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                 }
               );
             }
+            // Clear the ref after showing modal
+            lossModalTimeoutRef.current = null;
           }, 2000);
         }
       }
@@ -243,6 +372,19 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const startGame = () => {
     SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Clear any pending loss modal timeout from previous game
+    if (lossModalTimeoutRef.current) {
+      clearTimeout(lossModalTimeoutRef.current);
+      lossModalTimeoutRef.current = null;
+    }
+
+    // Hide any existing modals
+    hideModal();
+
+    // Reset game state
+    setCompletedLevel(0);
+
     // Track minigame play for analytics
     trackMinigamePlayed('computer');
     trackMinigameProgress('computer');
@@ -478,36 +620,32 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                       onPress={() => handleCardPress(card.id)}
                       disabled={!isGameActive || card.isMatched}
                     >
-                      <FlipCard
+                      <AnimatedFlipCard
                         style={styles.flipCard}
-                        friction={6}
-                        perspective={1000}
-                        flipHorizontal={true}
-                        flipVertical={false}
-                        flip={card.isFlipped || card.isMatched}
-                        clickable={false}
-                      >
-                        {/* Front (back of card) */}
-                        <View style={styles.cardBack}>
-                          <Text style={styles.cardBackText}></Text>
-                        </View>
-                        {/* Back (front of card with emoji) */}
-                        <View
-                          style={[
-                            styles.cardFront,
-                            card.isMatched && styles.cardMatched,
-                          ]}
-                        >
-                          <Text
+                        isFlipped={card.isFlipped || card.isMatched}
+                        frontContent={
+                          <View style={styles.cardBack}>
+                            <Text style={styles.cardBackText}></Text>
+                          </View>
+                        }
+                        backContent={
+                          <View
                             style={[
-                              styles.cardEmoji,
-                              level === 3 && styles.cardEmojiSmall,
+                              styles.cardFront,
+                              card.isMatched && styles.cardMatched,
                             ]}
                           >
-                            {card.emoji}
-                          </Text>
-                        </View>
-                      </FlipCard>
+                            <Text
+                              style={[
+                                styles.cardEmoji,
+                                level === 3 && styles.cardEmojiSmall,
+                              ]}
+                            >
+                              {card.emoji}
+                            </Text>
+                          </View>
+                        }
+                      />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -525,36 +663,32 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                       onPress={() => handleCardPress(card.id)}
                       disabled={!isGameActive || card.isMatched}
                     >
-                      <FlipCard
+                      <AnimatedFlipCard
                         style={styles.flipCard}
-                        friction={6}
-                        perspective={1000}
-                        flipHorizontal={true}
-                        flipVertical={false}
-                        flip={card.isFlipped || card.isMatched}
-                        clickable={false}
-                      >
-                        {/* Front (back of card) */}
-                        <View style={styles.cardBack}>
-                          <Text style={styles.cardBackText}></Text>
-                        </View>
-                        {/* Back (front of card with emoji) */}
-                        <View
-                          style={[
-                            styles.cardFront,
-                            card.isMatched && styles.cardMatched,
-                          ]}
-                        >
-                          <Text
+                        isFlipped={card.isFlipped || card.isMatched}
+                        frontContent={
+                          <View style={styles.cardBack}>
+                            <Text style={styles.cardBackText}></Text>
+                          </View>
+                        }
+                        backContent={
+                          <View
                             style={[
-                              styles.cardEmoji,
-                              level === 3 && styles.cardEmojiSmall,
+                              styles.cardFront,
+                              card.isMatched && styles.cardMatched,
                             ]}
                           >
-                            {card.emoji}
-                          </Text>
-                        </View>
-                      </FlipCard>
+                            <Text
+                              style={[
+                                styles.cardEmoji,
+                                level === 3 && styles.cardEmojiSmall,
+                              ]}
+                            >
+                              {card.emoji}
+                            </Text>
+                          </View>
+                        }
+                      />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -569,36 +703,32 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
                   onPress={() => handleCardPress(card.id)}
                   disabled={!isGameActive || card.isMatched}
                 >
-                  <FlipCard
+                  <AnimatedFlipCard
                     style={styles.flipCard}
-                    friction={6}
-                    perspective={1000}
-                    flipHorizontal={true}
-                    flipVertical={false}
-                    flip={card.isFlipped || card.isMatched}
-                    clickable={false}
-                  >
-                    {/* Front (back of card) */}
-                    <View style={styles.cardBack}>
-                      <Text style={styles.cardBackText}></Text>
-                    </View>
-                    {/* Back (front of card with emoji) */}
-                    <View
-                      style={[
-                        styles.cardFront,
-                        card.isMatched && styles.cardMatched,
-                      ]}
-                    >
-                      <Text
+                    isFlipped={card.isFlipped || card.isMatched}
+                    frontContent={
+                      <View style={styles.cardBack}>
+                        <Text style={styles.cardBackText}></Text>
+                      </View>
+                    }
+                    backContent={
+                      <View
                         style={[
-                          styles.cardEmoji,
-                          level === 3 && styles.cardEmojiSmall,
+                          styles.cardFront,
+                          card.isMatched && styles.cardMatched,
                         ]}
                       >
-                        {card.emoji}
-                      </Text>
-                    </View>
-                  </FlipCard>
+                        <Text
+                          style={[
+                            styles.cardEmoji,
+                            level === 3 && styles.cardEmojiSmall,
+                          ]}
+                        >
+                          {card.emoji}
+                        </Text>
+                      </View>
+                    }
+                  />
                 </TouchableOpacity>
               ))}
             </View>

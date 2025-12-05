@@ -254,7 +254,17 @@ function JokerCard({
     ) {
       // Show candy selector modal for Double Up
       onShowCandySelector?.(joker);
-    } else if (joker.effect === 'revert_period') {
+    } else if (activationId === JOKER_IDS.TIME_EQUATION) {
+      // Check if we're in period 1 - can't revert from first period
+      if (periodCount <= 1) {
+        showAlert(
+          'Cannot Use Time Equation',
+          'You cannot revert time from the first period. This joker can only be used in period 2 or later.',
+          '⏰'
+        );
+        return;
+      }
+
       // Show confirmation for time revert
       showConfirm(
         'Time Equation',
@@ -432,6 +442,10 @@ function JokerCard({
     onShowJokerSelector,
     showConfirm,
     showAlert,
+    periodCount,
+    revertToPreviousPeriod,
+    markJokerUsedToday,
+    removeJoker,
   ]);
 
   const handleTimeRevert = async () => {

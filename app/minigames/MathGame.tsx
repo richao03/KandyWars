@@ -1,6 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -11,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import Animated, {
-  cancelAnimation,
   runOnJS,
   useAnimatedStyle,
   useFrameCallback,
@@ -21,6 +18,8 @@ import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -81,17 +80,17 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const TOTAL_NUMBER_WIDTH = NUMBER_WIDTH + NUMBER_SPACING;
   const SCROLL_SPEED = 1; // pixels per interval (16ms)
 
-  // Level configurations
+  // Level configurations (speeds reduced by 25% for better playability)
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
       case 1:
-        return { speed: 1, requiredMatches: 10 };
+        return { speed: 1.0, requiredMatches: 10 };
       case 2:
-        return { speed: 1.8, requiredMatches: 15 };
+        return { speed: 1.35, requiredMatches: 15 };
       case 3:
-        return { speed: 2.5, requiredMatches: 20 };
+        return { speed: 1.875, requiredMatches: 15 };
       default:
-        return { speed: 1, requiredMatches: 10 };
+        return { speed: 0.75, requiredMatches: 10 };
     }
   };
 
@@ -661,7 +660,9 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           onLayout={(e) => {
             const width = e.nativeEvent.layout.width;
             containerWidth.current = width;
-            console.log(`📏 Container measured - width: ${width}px, screenWidth: ${screenWidth}px`);
+            console.log(
+              `📏 Container measured - width: ${width}px, screenWidth: ${screenWidth}px`
+            );
           }}
         >
           <Animated.View style={[styles.scrollingRow, scrollAnimatedStyle]}>

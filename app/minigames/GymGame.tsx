@@ -1,6 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -21,7 +19,9 @@ import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -71,8 +71,8 @@ const initializeHallMonitors = (
 ): Position[] => {
   // Monitor counts per level
   let numMonitors = 1; // Level 1
-  if (levelNum === 2) numMonitors = 3;
-  if (levelNum === 3) numMonitors = 5;
+  if (levelNum === 2) numMonitors = 2;
+  if (levelNum === 3) numMonitors = 3;
   const monitors: Position[] = [];
   const usedPositions = new Set<string>();
 
@@ -472,13 +472,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
     );
   };
 
-  // Get level pattern size for display
-  const getLevelPatternSize = () => {
-    if (level === 1) return 5;
-    if (level === 2) return 7;
-    return 8;
-  };
-
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
@@ -547,8 +540,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
               <Text style={styles.stepNumber}>3.</Text>
               <View>
                 <Text style={styles.stepText}>lvl 1: 5x5 grid, 1 monitor</Text>
-                <Text style={styles.stepText}>lvl 2: 6x6 grid, 3 monitors</Text>
-                <Text style={styles.stepText}>lvl 3: 7x7 grid, 6 monitors</Text>
+                <Text style={styles.stepText}>lvl 2: 6x6 grid, 2 monitors</Text>
+                <Text style={styles.stepText}>lvl 3: 7x7 grid, 3 monitors</Text>
               </View>
             </View>
 

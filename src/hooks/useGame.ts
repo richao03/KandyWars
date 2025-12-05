@@ -115,7 +115,7 @@ export const useGame = () => {
     startNewDay: startNewDayAction,
     resetGame: resetGameAction,
     fullResetGame: fullResetGameAction,
-    revertToPeriousPeriod: revertToPreviousPeriodAction,
+    revertToPreviousPeriod: revertToPreviousPeriodAction,
     jumpToPeriod: jumpToPeriodAction,
     markStudiedTonight: markStudiedTonightAction,
     markLunchMinigamePlayed: markLunchMinigamePlayedAction,

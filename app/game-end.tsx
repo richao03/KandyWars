@@ -742,6 +742,7 @@ export default function GameEndScreen() {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
+                      minWidth: '100%',
                       marginBottom: 12,
                     }}
                   >
@@ -761,8 +762,33 @@ export default function GameEndScreen() {
                   </View>
 
                   <View style={styles.merchantGrid}>
-                    {playthroughStats.merchantPurchases.map(
-                      (purchase, index) => (
+                    {(() => {
+                      // Filter to show only the highest level of each item
+                      const highestLevelItems =
+                        playthroughStats.merchantPurchases.reduce(
+                          (acc, purchase) => {
+                            const existing = acc.find(
+                              (p) => p.itemId === purchase.itemId
+                            );
+                            if (
+                              !existing ||
+                              (purchase.level &&
+                                existing.level &&
+                                purchase.level > existing.level)
+                            ) {
+                              return [
+                                ...acc.filter(
+                                  (p) => p.itemId !== purchase.itemId
+                                ),
+                                purchase,
+                              ];
+                            }
+                            return acc;
+                          },
+                          [] as typeof playthroughStats.merchantPurchases
+                        );
+
+                      return highestLevelItems.map((purchase, index) => (
                         <PixelBorder
                           key={index}
                           borderColor="#DAA520"
@@ -802,8 +828,8 @@ export default function GameEndScreen() {
                             ${(purchase.price / 1000).toFixed(1)}k
                           </Text>
                         </PixelBorder>
-                      )
-                    )}
+                      ));
+                    })()}
                   </View>
                 </PixelBorder>
               )}
@@ -885,14 +911,6 @@ export default function GameEndScreen() {
               </PixelBorder>
             )}
 
-            {/* Leaderboard notification */}
-            <TextWithEmojis style={styles.leaderboardText} imageSize={95}>
-              🏆
-            </TextWithEmojis>
-            <Text style={styles.leaderboardText}>
-              Your score has been submitted to the leaderboard!
-            </Text>
-
             {/* Hall Pass Progress - Only show locked passes */}
             {(() => {
               console.log(
@@ -964,6 +982,36 @@ export default function GameEndScreen() {
                 </Text>
               </PixelBorder>
             )}
+            {/* Leaderboard notification */}
+            <PixelBorder
+              borderColor="#FFD700"
+              borderWidth={4}
+              backgroundColor="rgba(255, 250, 205, 0.95)"
+              innerPadding={16}
+              style={styles.section}
+            >
+              <View
+                style={{
+                  alignItems: 'center',
+                  width: '100%',
+                  marginBottom: 12,
+                  minWidth: '100%',
+                }}
+              >
+                <TextWithEmojis
+                  style={{
+                    ...styles.leaderboardText,
+                    alignSelf: 'center',
+                  }}
+                  imageSize={95}
+                >
+                  🏆
+                </TextWithEmojis>
+              </View>
+              <Text style={styles.leaderboardText}>
+                Your score has been submitted to the leaderboard!
+              </Text>
+            </PixelBorder>
 
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>

@@ -281,6 +281,26 @@ const ItemInfoModal = React.memo(function ItemInfoModal({
 
           <View style={styles.modalButtons}>
             <PressableButton
+              onPress={onClose}
+              shadowColor="#f44336"
+              shadowOffset={{ width: 0, height: 2 }}
+              shadowOpacity={0.4}
+              shadowRadius={3}
+              elevation={5}
+              style={{ flex: 1 }}
+            >
+              <PixelBorder
+                borderColor="#c62828"
+                borderWidth={3}
+                backgroundColor="#f44336"
+                innerPadding={0}
+              >
+                <View style={styles.modalButtonInner}>
+                  <Text style={styles.modalButtonText}>Back</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
+            <PressableButton
               onPress={onPurchase}
               disabled={!canAfford || isMaxed}
               shadowColor="#4CAF50"
@@ -298,27 +318,6 @@ const ItemInfoModal = React.memo(function ItemInfoModal({
               >
                 <View style={styles.modalButtonInner}>
                   <Text style={styles.modalButtonText}>Buy</Text>
-                </View>
-              </PixelBorder>
-            </PressableButton>
-
-            <PressableButton
-              onPress={onClose}
-              shadowColor="#f44336"
-              shadowOffset={{ width: 0, height: 2 }}
-              shadowOpacity={0.4}
-              shadowRadius={3}
-              elevation={5}
-              style={{ flex: 1 }}
-            >
-              <PixelBorder
-                borderColor="#c62828"
-                borderWidth={3}
-                backgroundColor="#f44336"
-                innerPadding={0}
-              >
-                <View style={styles.modalButtonInner}>
-                  <Text style={styles.modalButtonText}>Back</Text>
                 </View>
               </PixelBorder>
             </PressableButton>
@@ -657,9 +656,9 @@ const styles = StyleSheet.create({
   itemLevel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#ffffff',
+    color: 'green',
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#000',
+    textShadowColor: 'green',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },

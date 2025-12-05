@@ -1,5 +1,5 @@
 import { ActiveMerchantEffect } from '../store/slices/merchantSlice';
-import { applyPercentageBonus, applyMultiplier } from './priceUtils';
+import { applyMultiplier, applyPercentageBonus } from './priceUtils';
 
 export class MerchantUtils {
   /**
@@ -117,7 +117,7 @@ export class MerchantUtils {
 
     if (result) {
       console.log(
-        `🪙 Merchant - Double Sided Coin Lvl ${doubleSidedCoin.level}: Converting negative event (${chance * 100}% chance)`
+        `🪙 Merchant - Lucky Coin Lvl ${doubleSidedCoin.level}: Converting negative event (${chance * 100}% chance)`
       );
     }
 
@@ -127,12 +127,8 @@ export class MerchantUtils {
   /**
    * Check if Hall Monitor Bribe is available
    */
-  static hasHallMonitorBribe(
-    activeEffects: ActiveMerchantEffect[]
-  ): boolean {
-    const bribe = activeEffects.find(
-      (e) => e.itemId === 'hall_monitor_bribe'
-    );
+  static hasHallMonitorBribe(activeEffects: ActiveMerchantEffect[]): boolean {
+    const bribe = activeEffects.find((e) => e.itemId === 'hall_monitor_bribe');
     return bribe !== undefined && (bribe.count || 0) > 0;
   }
 
@@ -161,7 +157,9 @@ export class MerchantUtils {
   /**
    * Get count of Air Delivery Drones available
    */
-  static getAirDeliveryDroneCount(activeEffects: ActiveMerchantEffect[]): number {
+  static getAirDeliveryDroneCount(
+    activeEffects: ActiveMerchantEffect[]
+  ): number {
     const drone = activeEffects.find((e) => e.itemId === 'air_delivery_drone');
     return drone?.count || 0;
   }
@@ -170,7 +168,9 @@ export class MerchantUtils {
    * Check if Influencer Shoutout is available (+200% profit on next sale)
    */
   static hasInfluencerShoutout(activeEffects: ActiveMerchantEffect[]): boolean {
-    const shoutout = activeEffects.find((e) => e.itemId === 'influencer_shoutout');
+    const shoutout = activeEffects.find(
+      (e) => e.itemId === 'influencer_shoutout'
+    );
     return shoutout !== undefined && (shoutout.count || 0) > 0;
   }
 

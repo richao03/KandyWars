@@ -1,6 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -19,14 +17,16 @@ import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 
 // Candy emoji to image mapping
 const getCandyImage = (emoji: string) => {
@@ -109,9 +109,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       case 1:
         return { matches: 10, time: 15 };
       case 2:
-        return { matches: 12, time: 15 };
-      case 3:
         return { matches: 15, time: 15 };
+      case 3:
+        return { matches: 20, time: 15 };
       default:
         return { matches: 10, time: 15 };
     }

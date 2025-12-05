@@ -1,5 +1,12 @@
-import React, { useMemo, useRef, useEffect } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSelector } from 'react-redux';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useGame } from '../../src/hooks/useGame';
@@ -39,7 +46,10 @@ function StatusIndicators({
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { consecutivePeriodSales, totalCandiesSold } = useCandySales();
 
-  const [tooltip, setTooltip] = React.useState<{ name: string; visible: boolean }>({ name: '', visible: false });
+  const [tooltip, setTooltip] = React.useState<{
+    name: string;
+    visible: boolean;
+  }>({ name: '', visible: false });
   const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup tooltip timeout on unmount
@@ -116,7 +126,7 @@ function StatusIndicators({
         icon: require('../../assets/images/icons/luckyCoin.png'),
         key: 'doublesidedcoin',
         level: doubleSidedCoinLevel,
-        name: 'Double Sided Coin',
+        name: 'Lucky Coin',
       });
     }
 
@@ -460,9 +470,11 @@ function StatusIndicators({
 
   // Filter icons based on type prop
   const iconsToShow =
-    type === 'merchant' ? merchantIcons :
-    type === 'joker' ? jokerIcons :
-    [...jokerIcons, ...merchantIcons]; // Combined shows both
+    type === 'merchant'
+      ? merchantIcons
+      : type === 'joker'
+        ? jokerIcons
+        : [...jokerIcons, ...merchantIcons]; // Combined shows both
 
   const handleLongPress = (name: string) => {
     if (name) {
@@ -483,21 +495,28 @@ function StatusIndicators({
 
   // Always render container with fixed width, even if empty
   return (
-    <View style={singleRow ? styles.singleRowContainer : styles.fixedWidthContainer}>
+    <View
+      style={singleRow ? styles.singleRowContainer : styles.fixedWidthContainer}
+    >
       {iconsToShow.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.scrollView}
         >
-          <View style={singleRow ? styles.singleRowGridContainer : styles.gridContainer}>
+          <View
+            style={
+              singleRow ? styles.singleRowGridContainer : styles.gridContainer
+            }
+          >
             {iconsToShow.map((indicator) => (
               <Pressable
                 key={indicator.key}
                 onLongPress={() => handleLongPress(indicator.name || '')}
                 style={styles.iconContainer}
               >
-                {(type === 'merchant' || (type === 'combined' && indicator.type === 'merchant')) ? (
+                {type === 'merchant' ||
+                (type === 'combined' && indicator.type === 'merchant') ? (
                   <>
                     <Image
                       source={indicator.icon}

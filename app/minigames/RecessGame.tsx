@@ -422,13 +422,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       setLosses((currentLosses) => {
         const newLosses = currentLosses + 1;
         console.log(
-          `Player timed out! Losses: ${newLosses}/3 on stage ${stage}`
+          `Player timed out! Losses: ${newLosses}/4 on stage ${stage}`
         );
 
-        // Check if player has lost 3 times (game over)
-        isGameOver = newLosses >= 3;
+        // Check if player has lost 4 times (game over)
+        isGameOver = newLosses >= 4;
         if (isGameOver) {
-          console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
+          console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
         }
 
         return newLosses;
@@ -474,7 +474,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
               'Game Over!',
-              'You lost 3 times! Try again from Stage 1?',
+              'You lost 4 times! Try again from Stage 1?',
               '💀',
               () => {
                 setStage(1);
@@ -515,16 +515,16 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         setScore((prev) => prev + 10);
         const newWins = wins + 1;
         setWins(newWins);
-        console.log(`✅ Win! Total wins: ${newWins}/4 on stage ${stage}`);
+        console.log(`✅ Win! Total wins: ${newWins}/3 on stage ${stage}`);
 
-        if (newWins >= 4) {
+        if (newWins >= 3) {
           shouldCompleteStage = true;
           console.log(
             `🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins! shouldCompleteStage=${shouldCompleteStage}`
           );
         } else {
           console.log(
-            `✨ Win ${newWins}/4 on stage ${stage} - need ${4 - newWins} more wins`
+            `✨ Win ${newWins}/3 on stage ${stage} - need ${3 - newWins} more wins`
           );
         }
       } else if (result === 'tie') {
@@ -534,11 +534,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         SoundEffects.playWrongAnswerSound();
         setLosses((currentLosses) => {
           const newLosses = currentLosses + 1;
-          console.log(`Loss! Losses: ${newLosses}/3 on stage ${stage}`);
+          console.log(`Loss! Losses: ${newLosses}/4 on stage ${stage}`);
 
-          // Check if player has lost 3 times (game over)
-          if (newLosses >= 3) {
-            console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
+          // Check if player has lost 4 times (game over)
+          if (newLosses >= 4) {
+            console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
             isGameOver = true;
           }
 
@@ -594,7 +594,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             showModal(
               'Game Over!',
-              'You lost 3 times! Try again from Stage 1?',
+              'You lost 4 times! Try again from Stage 1?',
               '💀',
               () => {
                 setStage(1);
@@ -652,7 +652,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       SoundEffects.playCongratsSound();
       showModal(
         `${stageNames[stage]} Stage Complete!`,
-        `You got 4 wins in a row!\nReady for ${nextStageNames[stage + 1]} Stage?`,
+        `You got 3 wins!\nReady for ${nextStageNames[stage + 1]} Stage?`,
         '🎉',
         () => {
           let newStage: number;
@@ -669,7 +669,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           setTimeout(() => {
             setRoundsPlayed(0);
             setWins(0); // Reset wins for new stage
-            setLosses(0); // Reset losses for new stage
+            // Losses are NOT reset - they accumulate across all stages
 
             // Pass the new stage to ensure correct stage logic is used
             setTimeout(() => {
@@ -1042,7 +1042,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
               <Text style={styles.stepText}>
-                Need 4 wins in a row per stage, 3 losses = game over
+                Need 3 wins per stage, 4 losses = game over
               </Text>
             </View>
           </PixelBorder>
@@ -1122,8 +1122,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         title="Rock Paper Scissors"
         subtitle={``}
         leftInfo={`Stage ${stage}/3`}
-        centerInfo={`Losses:${losses}/3`}
-        rightInfo={`Wins:${wins}/4 `}
+        centerInfo={`Losses:${losses}/4`}
+        rightInfo={`Wins:${wins}/3 `}
         theme="recess"
       />
 

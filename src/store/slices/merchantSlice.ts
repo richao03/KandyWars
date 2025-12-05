@@ -80,7 +80,7 @@ export const MERCHANT_ITEMS: MerchantItemDefinition[] = [
   },
   {
     id: 'double_sided_coin',
-    name: 'Double Sided Coin',
+    name: 'Lucky Coin',
     description: 'Positive Event Magnet',
     type: 'leveled',
     maxLevel: 3,
@@ -104,7 +104,7 @@ export const MERCHANT_ITEMS: MerchantItemDefinition[] = [
   },
   {
     id: 'sixth_grade_bodyguard',
-    name: '6th Grade Bodyguard',
+    name: 'Kid Guard',
     description: "Can't get bullied",
     type: 'consumable',
     basePrice: 2000,

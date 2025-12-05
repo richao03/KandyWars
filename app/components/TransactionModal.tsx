@@ -1,8 +1,7 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SoundEffects } from '../../src/utils/soundEffects';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -22,6 +21,7 @@ import { useAppSelector } from '../../src/store/hooks';
 import { selectActiveEffects } from '../../src/store/slices/merchantSlice';
 import { Candy } from '../../src/types/candy';
 import { calculateSaleTotal } from '../../src/utils/saleCalculations';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -110,16 +110,14 @@ function TransactionModal({
     [getInventoryLimit]
   );
 
-  // Reset quantity when modal opens or when maxQuantity changes
+  // Set quantity to max when modal opens
   useEffect(() => {
     if (visible) {
-      // Clamp quantity to valid range
-      const validQuantity = Math.max(0, Math.min(quantity, maxQuantity));
-      if (validQuantity !== quantity) {
-        setQuantity(validQuantity);
-      }
+      console.log('isVisible maxQuantity: ', maxQuantity);
+      // Set to max quantity for current mode (minimum 1)
+      setQuantity(Math.max(1, maxQuantity));
     }
-  }, [visible, maxQuantity]);
+  }, [visible]);
 
   // Check for Time Zone Arbitrage joker (morning purchase discount)
   const timeZoneArbitrageJoker = findJokerById(
@@ -398,31 +396,28 @@ function TransactionModal({
   }, [visible]);
 
   const changeMode = (newMode: 'Buy' | 'Sell') => {
-    if (mode === newMode) {
-      // If clicking the same mode, set to max quantity
-      if (newMode === 'Buy' && maxBuyQuantity > 0) {
-        setQuantity(maxBuyQuantity);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        SoundEffects.playRandomPop();
-      } else if (newMode === 'Sell' && maxSellQuantity > 0) {
-        setQuantity(maxSellQuantity);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        SoundEffects.playRandomPop();
-      }
-    } else {
-      // If switching modes, change mode and reset quantity
-      setMode(newMode);
-      setQuantity(1);
-      SoundEffects.playRandomPop();
-    }
+    const newMaxQuantity =
+      newMode === 'Buy' ? clampedMaxBuyQuantity : clampedMaxSellQuantity;
+
+    // Update mode first
+    setMode(newMode);
+
+    // Set to 0 temporarily, then to max - this "wakes up" the slider
+    setQuantity(0);
+    requestAnimationFrame(() => {
+      setQuantity(newMaxQuantity);
+    });
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    SoundEffects.playRandomPop();
   };
 
   const handleSliderChange = (value: number) => {
     // Prevent slider updates if modal is closing
     if (isClosing) return;
 
-    // Ensure quantity never goes below 0
-    setQuantity(Math.max(0, Math.round(value)));
+    // Ensure quantity is at least 1 (since minimumValue is 1)
+    setQuantity(Math.max(1, Math.round(value)));
   };
 
   const handleSliderComplete = (value: number) => {
@@ -1623,21 +1618,63 @@ function TransactionModal({
                 : `Quantity: ${quantity} / ${maxQuantity}`}
             </Text>
 
-            <Slider
-              style={{ width: '100%', height: 50, marginVertical: 2 }}
-              minimumValue={0}
-              maximumValue={maxQuantity > 0 ? maxQuantity : 1}
-              step={1}
-              value={Math.max(
-                0,
-                Math.min(quantity, maxQuantity > 0 ? maxQuantity : 0)
-              )}
-              onValueChange={handleSliderChange}
-              onSlidingComplete={handleSliderComplete}
-              minimumTrackTintColor={mode === 'Buy' ? '#ef4444' : '#4ade80'}
-              maximumTrackTintColor="#ccc"
-              disabled={mode === 'Buy' && maxQuantity <= 0}
-            />
+            {mode === 'Buy' ? (
+              maxQuantity > 0 ? (
+                <Slider
+                  key={`buy-${maxQuantity}`}
+                  style={{ width: '100%', height: 50, marginVertical: 2 }}
+                  minimumValue={0}
+                  maximumValue={maxQuantity}
+                  step={1}
+                  value={Math.max(0, Math.min(quantity, maxQuantity))}
+                  onValueChange={handleSliderChange}
+                  onSlidingComplete={handleSliderComplete}
+                  minimumTrackTintColor="#ef4444"
+                  maximumTrackTintColor="#ccc"
+                />
+              ) : (
+                <Slider
+                  key="buy-disabled"
+                  style={{ width: '100%', height: 50, marginVertical: 2 }}
+                  minimumValue={0}
+                  maximumValue={1}
+                  step={1}
+                  value={0}
+                  onValueChange={() => {}}
+                  minimumTrackTintColor="#ef4444"
+                  maximumTrackTintColor="#ccc"
+                  disabled={true}
+                />
+              )
+            ) : (
+              maxQuantity > 0 ? (
+                <Slider
+                  key={`sell-${maxQuantity}`}
+                  style={{ width: '100%', height: 50, marginVertical: 2 }}
+                  minimumValue={10000}
+                  maximumValue={10000 + maxQuantity}
+                  step={1}
+                  value={10000 + Math.max(0, Math.min(quantity, maxQuantity))}
+                  onValueChange={(value) => handleSliderChange(value - 10000)}
+                  onSlidingComplete={(value) => handleSliderComplete(value - 10000)}
+                  minimumTrackTintColor="#4ade80"
+                  maximumTrackTintColor="#ccc"
+                />
+              ) : (
+                <Slider
+                  key="sell-disabled"
+                  style={{ width: '100%', height: 50, marginVertical: 2 }}
+                  minimumValue={10000}
+                  maximumValue={10001}
+                  step={1}
+                  value={10000}
+                  onValueChange={() => {}}
+                  minimumTrackTintColor="#4ade80"
+                  maximumTrackTintColor="#ccc"
+                  disabled={true}
+                />
+              )
+            )}
             <View style={styles.tabContainer}>
               <PixelBorder
                 borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
@@ -1649,9 +1686,7 @@ function TransactionModal({
                   style={styles.tab}
                   onPress={() => changeMode('Buy')}
                 >
-                  <Text style={styles.tabText}>
-                    {mode === 'Buy' ? 'Buy Max' : 'Buy'}
-                  </Text>
+                  <Text style={styles.tabText}>Buy</Text>
                 </TouchableOpacity>
               </PixelBorder>
               <PixelBorder
@@ -1664,9 +1699,7 @@ function TransactionModal({
                   style={styles.tab}
                   onPress={() => changeMode('Sell')}
                 >
-                  <Text style={styles.tabText}>
-                    {mode === 'Sell' ? 'Sell Max' : 'Sell'}
-                  </Text>
+                  <Text style={styles.tabText}>Sell</Text>
                 </TouchableOpacity>
               </PixelBorder>
             </View>
