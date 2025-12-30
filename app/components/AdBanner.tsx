@@ -1,6 +1,6 @@
-import React from 'react';
-import { Platform, StyleSheet, View, Text } from 'react-native';
 import Constants from 'expo-constants';
+import React from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useAdVisibility } from '../../src/hooks/useAdVisibility';
 
 // Dynamically import AdMob types only when available
@@ -53,19 +53,20 @@ const TEST_AD_UNIT = 'ca-app-pub-3940256099942544/6300978111'; // Google's test 
 const AD_UNITS = {
   STANDARD_BANNER: {
     ios: __DEV__
-      ? (TestIds?.BANNER || TEST_AD_UNIT)
-      : 'ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-IOS-320x50', // Replace with your iOS ad unit ID
+      ? TestIds?.BANNER || TEST_AD_UNIT
+      : 'ca-app-pub-1627354972629832~6967053316', // Replace with your iOS ad unit ID
     android: __DEV__
-      ? (TestIds?.BANNER || TEST_AD_UNIT)
+      ? TestIds?.BANNER || TEST_AD_UNIT
       : 'ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-ANDROID-320x50', // Replace with your Android ad unit ID
   },
 };
 
 // Select the appropriate ad unit based on platform
-const AD_UNIT_ID = Platform.select({
-  ios: AD_UNITS.STANDARD_BANNER.ios,
-  android: AD_UNITS.STANDARD_BANNER.android,
-}) || TEST_AD_UNIT;
+const AD_UNIT_ID =
+  Platform.select({
+    ios: AD_UNITS.STANDARD_BANNER.ios,
+    android: AD_UNITS.STANDARD_BANNER.android,
+  }) || TEST_AD_UNIT;
 
 interface AdBannerProps {
   /**
@@ -86,7 +87,9 @@ function AdBanner({ visible = true }: AdBannerProps) {
   if (isExpoGo) {
     return (
       <View style={[styles.container, styles.placeholder]}>
-        {__DEV__ && <Text style={styles.placeholderText}>Ad Banner (Expo Go)</Text>}
+        {__DEV__ && (
+          <Text style={styles.placeholderText}>Ad Banner (Expo Go)</Text>
+        )}
       </View>
     );
   }
