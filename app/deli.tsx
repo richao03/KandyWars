@@ -1,9 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Animated,
   FlatList,
   StyleSheet,
   Text,
@@ -21,6 +20,7 @@ import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
 import TransactionModal from './components/TransactionModal';
 import { Candy } from './types';
+import { CANDY_REGISTRY } from '../src/constants/candyRegistry';
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -28,15 +28,13 @@ type CandyForDeli = Candy & {
   averagePrice: number | null;
 };
 
-const baseCandies = [
-  { name: 'Snickers', baseMin: 1.5, baseMax: 20 },
-  { name: 'M&Ms', baseMin: 2.0, baseMax: 35 },
-  { name: 'Skittles', baseMin: 1, baseMax: 22 },
-  { name: 'Warheads', baseMin: 0.5, baseMax: 10 },
-  { name: 'Sour Patch Kids', baseMin: 1.8, baseMax: 30 },
-  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 7 },
-  { name: 'Jaw Breaker', baseMin: 3, baseMax: 50 },
-];
+const baseCandies = CANDY_REGISTRY.map((c) => ({
+  name: c.name,
+  baseMin: c.baseMin,
+  baseMax: c.baseMax,
+  types: c.types,
+  size: c.size,
+}));
 
 interface DeliPageProps {
   onBack?: () => void;
@@ -90,38 +88,6 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
   );
   const [modalMode, setModalMode] = useState<'buy' | 'sell'>('buy');
 
-  // Pulsating glow animation
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const pulsate = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-      ])
-    );
-    pulsate.start();
-    return () => pulsate.stop();
-  }, [glowAnim]);
-
-  const shadowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.9],
-  });
-
-  const shadowRadius = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [8, 16],
-  });
-
   // Update candy prices when jokers or inventory changes
   useEffect(() => {
     const currentVendorKickbackJoker = findJokerById(
@@ -139,9 +105,6 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
         // Apply Vendor Kickback discount if joker is present
         if (currentVendorKickbackJoker) {
           averageCost = averageCost * 0.5; // 50% discount
-          console.log(
-            `🏪 Vendor Kickback: Applied 50% discount to ${candy.name} at deli`
-          );
         }
 
         // Get inventory information for this candy
@@ -180,28 +143,8 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
 
       spend(totalCost);
       addToInventory(candy.name, quantity, candy.cost);
-      console.log(
-        '🍭 Deli: Bought candy:',
-        candy.name,
-        'quantity:',
-        quantity,
-        'price:',
-        candy.cost,
-        'totalCost:',
-        totalCost
-      );
     } else {
       const totalGain = candy.cost * quantity;
-      console.log(
-        '🍭 Deli: Selling candy:',
-        candy.name,
-        'quantity:',
-        quantity,
-        'price:',
-        candy.cost,
-        'totalGain:',
-        totalGain
-      );
       add(totalGain);
       removeFromInventory(candy.name, quantity);
     }

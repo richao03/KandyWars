@@ -18,23 +18,33 @@ import {
   selectDay,
   selectPeriod,
   selectGameResetSignal,
+  selectPeriodCount,
+  selectCurrentLocation,
+  selectLastActiveView,
+  selectHasStudiedTonight,
+  selectHasPlayedLunchMinigame,
+  selectMinigameContext,
+  selectPricesUpdating,
+  selectIsInitialized,
+  selectLocationHistory,
+  selectIsAfterSchool,
 } from '../store/slices/gameSlice';
 
 export const useGame = () => {
   const dispatch = useAppDispatch();
-  // Subscribe to specific values instead of entire state slice
+  // Subscribe to specific values using named selectors
   const day = useAppSelector(selectDay);
   const period = useAppSelector(selectPeriod);
-  const periodCount = useAppSelector(state => state.game.periodCount);
-  const currentLocation = useAppSelector(state => state.game.currentLocation);
-  const lastActiveView = useAppSelector(state => state.game.lastActiveView);
-  const hasStudiedTonight = useAppSelector(state => state.game.hasStudiedTonight);
-  const hasPlayedLunchMinigame = useAppSelector(state => state.game.hasPlayedLunchMinigame);
-  const minigameContext = useAppSelector(state => state.game.minigameContext);
-  const pricesUpdating = useAppSelector(state => state.game.pricesUpdating);
-  const isInitialized = useAppSelector(state => state.game.isInitialized);
-  const locationHistory = useAppSelector(state => state.game.locationHistory);
-  const isAfterSchool = useAppSelector(state => state.game.isAfterSchool);
+  const periodCount = useAppSelector(selectPeriodCount);
+  const currentLocation = useAppSelector(selectCurrentLocation);
+  const lastActiveView = useAppSelector(selectLastActiveView);
+  const hasStudiedTonight = useAppSelector(selectHasStudiedTonight);
+  const hasPlayedLunchMinigame = useAppSelector(selectHasPlayedLunchMinigame);
+  const minigameContext = useAppSelector(selectMinigameContext);
+  const pricesUpdating = useAppSelector(selectPricesUpdating);
+  const isInitialized = useAppSelector(selectIsInitialized);
+  const locationHistory = useAppSelector(selectLocationHistory);
+  const isAfterSchool = useAppSelector(selectIsAfterSchool);
   const gameResetSignal = useAppSelector(selectGameResetSignal);
 
   const incrementPeriodAction = useCallback((location: Parameters<typeof incrementPeriod>[0]) => {

@@ -47,7 +47,6 @@ let firebaseSessionInitialized = false;
 
 // Export function to reset Firebase session (called when user wants fresh data)
 export const resetFirebaseSession = () => {
-  console.log('🔄 Resetting Firebase session flag for fresh fetch');
   firebaseSessionInitialized = false;
 };
 
@@ -86,8 +85,6 @@ export default function SugarWarsTitleScreen({
 
   // Reset component state when it mounts/re-mounts
   useEffect(() => {
-    console.log('🎬 SugarWarsTitleScreen: Component mounted, resetting state');
-
     // Cleanup sound effect pools to free memory when returning to title screen
     SoundEffects.cleanup();
 
@@ -102,24 +99,13 @@ export default function SugarWarsTitleScreen({
     // Start fully visible to avoid white screen flash
     screenOpacity.setValue(1);
 
-    console.log(
-      '🎬 SugarWarsTitleScreen: Starting fully visible to avoid white screen'
-    );
-
     // Initialize Firebase and fetch user object on game load (ONCE PER SESSION)
     const initializeFirebaseAndUserData = async () => {
-      // Guard: Only initialize once per app session (persists across component remounts)
-      if (firebaseSessionInitialized) {
-        console.log('🔥 Firebase already initialized this session, skipping');
-        return;
-      }
+      if (firebaseSessionInitialized) return;
       firebaseSessionInitialized = true;
 
       try {
-        console.log('🔥 Initializing Firebase and fetching user object...');
         const userObject = await scoreboardService.initialize();
-
-        console.log('✅ User object loaded:', userObject);
 
         // Store user object in Redux (persisted across app restarts)
         dispatch(setCachedUserObject(userObject));
@@ -128,22 +114,15 @@ export default function SugarWarsTitleScreen({
         dispatch(setWonDifficulties(userObject.difficultyWon));
         dispatch(setTotalCompletions(userObject.totalWinCount));
 
-        console.log('🏆 Won difficulties:', userObject.difficultyWon);
-        console.log('🏆 Total wins:', userObject.totalWinCount);
-        console.log('🏆 Unlocked hall passes:', userObject.unlockedHallPasses);
-        console.log('💰 Highest single sale:', userObject.highestSingleSale);
-
         // Sync hall passes from Firebase to Redux (batch operation)
         if (
           userObject.unlockedHallPasses &&
           userObject.unlockedHallPasses.length > 0
         ) {
-          console.log('🎓 Syncing hall passes from Firebase to Redux...');
           dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
-          console.log('✅ Hall passes synced:', userObject.unlockedHallPasses);
         }
       } catch (error) {
-        console.error('❌ Failed to initialize Firebase:', error);
+        console.error('Failed to initialize Firebase:', error);
       }
     };
     initializeFirebaseAndUserData();
@@ -158,11 +137,6 @@ export default function SugarWarsTitleScreen({
 
   const computedModifiers = useMemo(() => {
     if (selectedPasses.length > 0 && !hallPassModifiersState.isInitialized) {
-      console.log(
-        '🎖️ Title Screen: Found',
-        selectedPasses.length,
-        'selected passes but modifiers not initialized, computing now'
-      );
       return computeHallPassModifiers(selectedPasses);
     }
     return null;
@@ -176,7 +150,6 @@ export default function SugarWarsTitleScreen({
   useEffect(() => {
     if (computedModifiers) {
       dispatch(setHallPassModifiers(computedModifiers));
-      console.log('🎖️ Title Screen: Modifiers initialized:', computedModifiers);
     }
   }, [computedModifiers, dispatch]);
 
@@ -189,7 +162,6 @@ export default function SugarWarsTitleScreen({
     if (buttonsShown.current) return;
     buttonsShown.current = true;
 
-    console.log('🎨 SugarWarsTitleScreen: Showing buttons');
     // Buttons appear after "Sugar" is done
     setShowButtons(true);
     // Fade in buttons
@@ -203,46 +175,30 @@ export default function SugarWarsTitleScreen({
   const [isNewGameFlow, setIsNewGameFlow] = useState(false);
 
   const handleNewGamePress = async () => {
-    try {
-      console.log('🎬 NEW GAME: Starting new game process');
-      setIsNewGameFlow(true); // Mark this as new game flow
+    setIsNewGameFlow(true);
 
-      // Only show hall pass selection if user has unlocked hall passes
-      if (unlockedPasses.length > 0) {
-        console.log(
-          '🎬 NEW GAME: User has unlocked hall passes, showing hall pass selection'
-        );
-        setShowHallPassModal(true);
-      } else {
-        console.log(
-          '🎬 NEW GAME: No unlocked hall passes, going straight to difficulty selection'
-        );
-        setShowDifficultyModal(true);
-      }
-    } catch (error) {
-      console.error('❌ NEW GAME: Error in handleNewGamePress:', error);
+    // Only show hall pass selection if user has unlocked hall passes
+    if (unlockedPasses.length > 0) {
+      setShowHallPassModal(true);
+    } else {
+      setShowDifficultyModal(true);
     }
   };
 
   // Hall Passes button shows selection mode for toggling active Hall Pass
   const handleHallPassesPress = () => {
-    console.log('🎬 HALL PASSES: Opening Hall Pass selection');
-    setIsNewGameFlow(false); // Not part of new game flow
+    setIsNewGameFlow(false);
     setShowHallPassModal(true);
   };
 
   // Handle when user packs hall passes in new game flow
   const handlePackHallPasses = () => {
-    console.log(
-      '🎬 NEW GAME: Hall passes packed, showing difficulty selection'
-    );
     setShowHallPassModal(false);
     setShowDifficultyModal(true);
   };
 
   // Hall Pass selection handler for toggling active pass
   const handleHallPassToggle = (passId: string) => {
-    console.log('🎬 HALL PASSES: Hall Pass toggled:', passId);
     selectPass(passId);
     // Don't close modal - user can select multiple
     // Note: Modifiers will be computed when difficulty is selected and game starts
@@ -250,69 +206,35 @@ export default function SugarWarsTitleScreen({
 
   const handleDifficultySelect = async (level: number) => {
     try {
-      console.log('🎯 ===== STARTING NEW GAME =====');
       setShowDifficultyModal(false);
       setSelectedLevel(level);
 
       // Refresh user object from Firebase to get latest data
-      console.log('🔄 Refreshing user object from Firebase...');
       const userObject = await scoreboardService.refreshUserObject();
       dispatch(setCachedUserObject(userObject));
-      console.log('✅ User object refreshed and cached:', userObject);
 
       // Sync hall passes from Firebase (batch operation)
       if (userObject.unlockedHallPasses?.length > 0) {
-        console.log(
-          '🎖️ Syncing hall passes from Firebase:',
-          userObject.unlockedHallPasses
-        );
         dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
       }
 
-      // Immediately save game state when difficulty is selected
-      console.log('💾 Auto-saving game with difficulty level:', level);
-      console.log('🎖️ STEP 1: Checking selected hall passes...');
-      console.log('🎖️ selectedPasses.length:', selectedPasses.length);
-      console.log(
-        '🎖️ selectedPasses:',
-        selectedPasses.map((p) => p.name)
-      );
-
-      // IMPORTANT: Compute hall pass modifiers from selected passes FIRST
+      // Compute hall pass modifiers from selected passes FIRST
       // This must happen BEFORE resetting or generating anything
-      console.log(
-        '🎖️ STEP 2: Computing hall pass modifiers from selected passes'
-      );
       const hallPassModifiers = computeHallPassModifiers(selectedPasses);
-      console.log(
-        '🎖️ Hall pass modifiers computed:',
-        JSON.stringify(hallPassModifiers)
-      );
 
-      // Calculate total periods
       const totalPeriods = 40;
-      console.log(`🎲 Total periods: ${totalPeriods}`);
 
       // Generate new seed for fresh game data
       const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       setSeed(newSeed);
-      console.log('🔄 New seed set:', newSeed);
 
       // Generate game data using the seed with hall pass-adjusted periods
       // Pass difficulty level to enable price range shuffling for level > 3
       const gameData = generateSeededGameData(newSeed, totalPeriods, level);
       setGameData(gameData);
-      console.log(
-        '🎲 Generated game data with',
-        totalPeriods,
-        'periods:',
-        gameData.periodEvents.length,
-        'events'
-      );
 
       // Reset all game state (this preserves selectedPassIds and clears hallPassModifiers)
-      console.log('🎖️ STEP 4: Resetting all game state for new game');
-      resetGame(); // Preserves selectedPassIds, clears hallPassModifiers via extraReducer
+      resetGame();
       resetInventory();
       resetJokers();
       resetFlavorText();
@@ -320,38 +242,25 @@ export default function SugarWarsTitleScreen({
       // Initialize wallet with the selected difficulty level
       // NOTE: This will trigger another resetGame() call internally, which clears modifiers
       const existingPlayerName = wallet?.playerName;
-      console.log(
-        '🎖️ STEP 5: Initializing wallet (this will call resetGame again)'
-      );
       wallet?.initializeWallet(level, existingPlayerName);
 
-      // IMPORTANT: Set hall pass modifiers AFTER wallet initialization
+      // Set hall pass modifiers AFTER wallet initialization
       // Because initializeWallet calls resetGame which clears the modifiers
-      console.log('🎖️ STEP 6: Setting hall pass modifiers AFTER wallet init');
-      console.log(
-        '🎖️ About to dispatch setHallPassModifiers with:',
-        JSON.stringify(hallPassModifiers)
-      );
       dispatch(setHallPassModifiers(hallPassModifiers));
-      console.log('🎖️ ✅ Hall pass modifiers dispatched successfully');
 
       // Mark game as initialized so continue button works
       setIsInitialized(true);
-      console.log('💾 Auto-save complete - game can now be continued');
 
       // Start fade to black, then show story modal
-      console.log('🎬 Starting fade to black for level:', level);
       Animated.timing(backgroundOpacity, {
         toValue: 0,
         duration: 800,
         useNativeDriver: true,
       }).start(() => {
-        // Show story modal after fade to black completes
-        console.log('🎬 Showing story modal for level:', level);
         setShowStoryModal(true);
       });
     } catch (error) {
-      console.error('❌ Error in handleDifficultySelect:', error);
+      console.error('Error in handleDifficultySelect:', error);
     }
   };
 
@@ -361,35 +270,19 @@ export default function SugarWarsTitleScreen({
 
   const handleStoryContinue = async () => {
     try {
-      console.log(
-        '🎬 NEW GAME: Story continue pressed, selectedLevel:',
-        selectedLevel
-      );
       setShowStoryModal(false);
 
-      if (!selectedLevel) {
-        console.error('❌ NEW GAME: No selected level!');
-        return;
-      }
+      if (!selectedLevel) return;
 
-      // Game is already initialized from difficulty selection, just navigate to story screen
-      console.log(
-        '🎬 NEW GAME: Game already initialized, navigating to story screen'
-      );
       router.push('/story-screen');
-      console.log('🎬 NEW GAME: Navigation command sent');
     } catch (error) {
-      console.error(
-        '❌ NEW GAME: Critical error in handleStoryContinue:',
-        error
-      );
+      console.error('Error in handleStoryContinue:', error);
     }
   };
 
   const handleTapToSkip = () => {
     // Skip animation and immediately show buttons
     if (!showButtons && !buttonsShown.current) {
-      console.log('👆 Screen tapped - skipping to buttons');
       buttonsShown.current = true;
       setShowButtons(true);
       setAnimationComplete(true);
@@ -411,11 +304,8 @@ export default function SugarWarsTitleScreen({
             source={require('../../assets/images/titleScreen.png')}
             style={styles.backgroundContainer}
             resizeMode="cover"
-            onLoad={() =>
-              console.log('🖼️ Background image loaded successfully')
-            }
             onError={(error) =>
-              console.error('❌ Background image failed to load:', error)
+              console.error('Background image failed to load:', error)
             }
           >
             <View style={styles.titleWrapper}>

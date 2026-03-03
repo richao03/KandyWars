@@ -1,4 +1,5 @@
 import seedrandom from 'seedrandom';
+import { CANDY_REGISTRY, CANDY_NAMES } from '../src/constants/candyRegistry';
 
 // Image mapping to resolve references at runtime
 const getBackgroundImage = (imageType: string) => {
@@ -52,25 +53,24 @@ export type SpecialEventEffect = {
   priceOverride?: number;
 };
 
-// [minPrice, maxPrice, floorPrice]
-const candyBasePrices: Record<string, [number, number, number]> = {
-  Snickers: [1.5, 2.0, 0.55],
-  'M&Ms': [2.0, 3.5, 2.35],
-  Skittles: [1, 2.25, 3.2],
-  Warheads: [0.5, 1.0, 4.15],
-  'Sour Patch Kids': [1.8, 3.0, 1.3],
-  'Bubble Gum': [0.1, 0.5, 0.05],
-  'Jaw Breaker': [3, 5, 4.5],
-};
+// Build candy base prices from the registry
+// Price tiers by size: Small ($1-$10), Medium ($500-$1,000), Big ($1,000-$2,000)
+const candyBasePrices: Record<string, [number, number, number]> = {};
+CANDY_REGISTRY.forEach((candy) => {
+  // [minPrice, maxPrice, floorPrice]
+  const floorPrice = candy.baseMin * 0.5;
+  candyBasePrices[candy.name] = [candy.baseMin, candy.baseMax, floorPrice];
+});
 
 const subjects = [
   'Math',
-  'Science',
-  'History',
+  'Computer',
+  'Home Economics',
   'Art',
+  'Economy',
   'Gym',
-  'Music',
-  'English',
+  'Logic',
+  'Recess',
   'Geography',
 ];
 
@@ -219,19 +219,71 @@ export function generateSeededGameData(
 
   // Price table (0-indexed: periods 0-39 for internal array indexing)
   const candyPrices: CandyPriceTable = {};
+  const numDays = Math.floor(totalPeriods / 8);
+
   Object.entries(basePrices).forEach(
     ([candy, [min, max, _unusedFloorPrice]]) => {
-      candyPrices[candy] = Array.from({ length: totalPeriods }, () => {
-        const maxSpikePrice = max * 14;
-        const floorPrice = Math.max(maxSpikePrice * 0.03, 0.01);
-        const price = rng() * (maxSpikePrice - floorPrice) + floorPrice;
-        return parseFloat(price.toFixed(2));
-      });
+      const maxSpikePrice = max * 14;
+      const floorPrice = Math.max(maxSpikePrice * 0.03, 0.01);
+
+      // Feature 1: Per-candy volatility (0.3 = stable, 2.0 = wild)
+      const volatility = 0.3 + rng() * 1.7;
+
+      // Feature 4: Per-candy personality band (unique center + width within tier)
+      const bandCenter = floorPrice + rng() * (maxSpikePrice - floorPrice);
+      const bandWidth = (maxSpikePrice - floorPrice) * (0.15 + rng() * 0.25);
+
+      // Starting price near band center, clamped to early-game range
+      let price = bandCenter + (rng() - 0.5) * bandWidth;
+      price = Math.max(floorPrice, Math.min(maxSpikePrice * 0.6, price));
+
+      // Feature 5: Trend cluster state (runs of 2–5 periods)
+      let trendDirection = rng() < 0.5 ? 1 : -1;
+      let runLength = 2 + Math.floor(rng() * 4);
+      let runCounter = 0;
+
+      const prices: number[] = [];
+
+      for (let i = 0; i < totalPeriods; i++) {
+        const day = Math.floor(i / 8);
+
+        // Feature 3: Day scaling — compress early, expand late
+        const dayProgress = numDays > 1 ? day / (numDays - 1) : 1;
+        const dayScale = 0.5 + dayProgress * 0.5;  // 0.5 on Day 1 → 1.0 on Day 5
+        const periodCeiling = maxSpikePrice * dayScale;
+
+        // Feature 5: Reverse trend when run ends
+        runCounter++;
+        if (runCounter >= runLength) {
+          trendDirection *= -1;
+          runLength = 2 + Math.floor(rng() * 4);
+          runCounter = 0;
+        }
+
+        // Feature 2: Random walk — trend bias + random noise
+        const maxDelta = volatility * 0.15;
+        const trendBias = trendDirection * 0.05 * volatility;
+        const noise = (rng() - 0.5) * maxDelta * 2;
+
+        // Mean reversion toward band center (prevents permanent drift to extremes)
+        const reversion = (bandCenter * dayScale - price) / (bandCenter * dayScale) * 0.08;
+
+        // Occasional shock (10% chance of extra-large move)
+        const shock = rng() < 0.10 ? (rng() - 0.5) * maxDelta * 2 : 0;
+
+        price = price * (1 + trendBias + noise + reversion + shock);
+
+        // Clamp to valid range
+        price = Math.max(floorPrice, Math.min(periodCeiling, price));
+
+        prices.push(parseFloat(price.toFixed(2)));
+      }
+
+      candyPrices[candy] = prices;
     }
   );
 
   const periodEvents: SpecialEventEffect[] = [];
-  const numDays = Math.floor(totalPeriods / 8); // 5 days
 
   // Generate events for each day
   for (let day = 0; day < numDays; day++) {
@@ -360,7 +412,7 @@ export function generateSeededGameData(
     }
 
     // Generate minor events (price changes)
-    const candies = Object.keys(candyBasePrices);
+    const candies = CANDY_NAMES;
     for (
       let i = 0;
       i < numMinorEvents && eventIndex < selectedPeriods.length;

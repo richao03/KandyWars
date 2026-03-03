@@ -1,12 +1,33 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useState } from 'react';
 import { Suspense, lazy } from 'react';
+import { useStore } from 'react-redux';
+import type { RootState } from '../../src/store/store';
+import { selectDay, selectPeriod, getPeriodsPerDay } from '../../src/store/slices/gameSlice';
 
-// Lazy load the heavy TransactionModal
-const TransactionModal = lazy(() => import('./TransactionModal'));
+// Start fetching the chunk immediately when this module is evaluated
+const transactionModalPromise = import('./TransactionModal');
+const TransactionModal = lazy(() => transactionModalPromise);
 
 export interface TransactionModalHandle {
   open: (index: number) => void;
   close: () => void;
+}
+
+export interface SaleInputs {
+  jokers: any[];
+  activeEffects: any[];
+  periodCount: number;
+  hallPassModifiers: any;
+  hasEarlySaleToday: boolean;
+  merchantEffects: any[];
+  computedInventoryLimit: number;
+  candySales: any[];
+  totalCandiesSold: number;
+  inventoryCount: number;
+  day: number;
+  uniqueLocationsToday: number;
+  period: number;
+  periodsPerDay: number;
 }
 
 interface Props {
@@ -16,11 +37,19 @@ interface Props {
   availableInventorySpace: number;
 }
 
+// Stable placeholder candy so TransactionModal stays mounted but hidden
+const PLACEHOLDER_CANDY = {
+  name: '',
+  cost: 0,
+  quantityOwned: 0,
+  averagePrice: null,
+};
+
 /**
  * TransactionModalManager
  *
- * Manages modal state internally to prevent parent component re-renders.
- * Uses imperative handle to expose open/close methods via ref.
+ * Keeps TransactionModal mounted after first open to avoid expensive remounts.
+ * The modal's visible prop controls show/hide instead of mount/unmount.
  */
 const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
   (
@@ -32,28 +61,59 @@ const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
     },
     ref
   ) => {
-    // Modal state is managed INTERNALLY - parent doesn't re-render when this changes
     const [selectedCandyIndex, setSelectedCandyIndex] = useState<number | null>(null);
-    const [isTransactionModalOpening, setIsTransactionModalOpening] = useState(false);
+    const [saleInputs, setSaleInputs] = useState<SaleInputs | null>(null);
+    const store = useStore<RootState>();
 
-    // Expose imperative API to parent via ref
     useImperativeHandle(
       ref,
       () => ({
         open: (index: number) => {
-          setIsTransactionModalOpening(true);
+          const state = store.getState();
+          const periodsPerDay = getPeriodsPerDay(state);
+          const currentDay = selectDay(state);
+          const currentPeriod = selectPeriod(state);
+
+          // Count total candy in inventory
+          const inventoryItems = state.inventory?.inventory ?? [];
+          const inventoryCount = inventoryItems.reduce((sum: number, item: any) => sum + (item.quantity ?? 0), 0);
+
+          // Count unique locations visited today
+          const locationHistory = state.game?.locationHistory ?? [];
+          const periodCount = state.game?.periodCount ?? 0;
+          const dayStartPeriod = Math.floor(periodCount / periodsPerDay) * periodsPerDay;
+          const todayLocations = new Set(
+            locationHistory
+              .filter((h: any) => h.period >= dayStartPeriod)
+              .map((h: any) => h.location)
+          );
+
+          setSaleInputs({
+            jokers: state.joker.jokers,
+            activeEffects: state.joker.activeEffects ?? [],
+            periodCount: periodCount,
+            hallPassModifiers: state.hallPassModifiers,
+            hasEarlySaleToday: state.candySales.hasEarlySaleToday,
+            merchantEffects: state.merchant?.activeEffects ?? [],
+            computedInventoryLimit: state.joker.computedEffects?.inventoryLimit ?? 30,
+            candySales: state.candySales.sales,
+            totalCandiesSold: state.candySales.totalCandiesSold,
+            inventoryCount,
+            day: currentDay,
+            uniqueLocationsToday: todayLocations.size,
+            period: currentPeriod,
+            periodsPerDay,
+          });
           setSelectedCandyIndex(index);
         },
         close: () => {
-          setIsTransactionModalOpening(false);
           setSelectedCandyIndex(null);
         },
       }),
-      []
+      [store]
     );
 
     const handleClose = useCallback(() => {
-      setIsTransactionModalOpening(false);
       setSelectedCandyIndex(null);
     }, []);
 
@@ -66,19 +126,17 @@ const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
       [selectedCandyIndex, onTransaction, handleClose]
     );
 
-    const selectedCandy =
-      selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
+    const isVisible = selectedCandyIndex !== null;
+    const selectedCandy = isVisible ? candies[selectedCandyIndex] : null;
 
-    if (!selectedCandy || selectedCandyIndex === null) {
-      return null;
-    }
+    // Use selected candy or placeholder (modal is hidden when placeholder is used)
+    const candy = selectedCandy || PLACEHOLDER_CANDY;
 
-    // Calculate max buy/sell quantities based on selected candy
     const maxBuyQty =
       selectedCandy && selectedCandy.cost > 0
         ? Math.min(
-            Math.floor(playerBalance / selectedCandy.cost), // Money constraint
-            availableInventorySpace // Inventory space constraint
+            Math.floor(playerBalance / selectedCandy.cost),
+            availableInventorySpace
           )
         : 0;
 
@@ -87,14 +145,15 @@ const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
     return (
       <Suspense fallback={null}>
         <TransactionModal
-          visible={selectedCandyIndex !== null}
+          visible={isVisible}
           onClose={handleClose}
           onConfirm={handleConfirm}
           maxBuyQuantity={maxBuyQty}
           maxSellQuantity={maxSellQty}
-          candy={selectedCandy}
+          candy={candy as any}
           playerBalance={playerBalance}
           availableInventorySpace={availableInventorySpace}
+          saleInputs={saleInputs}
         />
       </Suspense>
     );
@@ -103,4 +162,4 @@ const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
 
 TransactionModalManager.displayName = 'TransactionModalManager';
 
-export default TransactionModalManager;
+export default React.memo(TransactionModalManager);

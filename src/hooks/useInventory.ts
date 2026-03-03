@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { selectComputedInventoryLimit, migrateJokerState } from '../store/slices/jokerSlice';
+import { selectComputedInventoryLimit, selectJokerComputedEffects, migrateJokerState } from '../store/slices/jokerSlice';
 import {
   addCandy,
   removeCandy,
@@ -67,17 +67,17 @@ export const useInventory = () => {
 
   // Use pre-computed inventory limit from Redux instead of calculating every time
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
-  const jokerState = useAppSelector(state => state.joker);
+  const jokerComputedEffects = useAppSelector(selectJokerComputedEffects);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
   const merchantEffects = useAppSelector(selectActiveEffects);
 
   // Ensure joker state is properly migrated on first use
   useEffect(() => {
-    if (!jokerState.computedEffects) {
-      console.log('🔧 Initializing joker computedEffects in useInventory');
+    if (!jokerComputedEffects) {
+      if (__DEV__) console.log('🔧 Initializing joker computedEffects in useInventory');
       dispatch(migrateJokerState());
     }
-  }, [dispatch, jokerState.computedEffects]);
+  }, [dispatch, jokerComputedEffects]);
 
   const getInventoryLimit = useCallback((): number => {
     // Apply Hall Pass inventory bonus from pre-computed modifiers

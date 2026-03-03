@@ -28,6 +28,8 @@ interface FastModalProps {
   backdropOpacity?: number;
   modalStyle?: ViewStyle;
   position?: 'center' | 'bottom';
+  /** Mount children immediately (hidden) so the first open has no mounting delay */
+  preMount?: boolean;
 }
 
 export default function FastModal({
@@ -38,13 +40,16 @@ export default function FastModal({
   backdropOpacity = 0.5,
   modalStyle,
   position = 'center',
+  preMount = false,
 }: FastModalProps) {
   const animationValue = useSharedValue(0);
   const backdropValue = useSharedValue(0);
-  const [isRendered, setIsRendered] = React.useState(false);
+  const [isRendered, setIsRendered] = React.useState(preMount);
+  const hasBeenVisible = React.useRef(false);
 
   useEffect(() => {
     if (visible) {
+      hasBeenVisible.current = true;
       setIsRendered(true);
       // Show modal
       backdropValue.value = withTiming(1, {
@@ -69,8 +74,8 @@ export default function FastModal({
           easing: Easing.out(Easing.ease),
         });
       }
-    } else {
-      // Hide modal
+    } else if (hasBeenVisible.current) {
+      // Hide modal (only after it's been shown at least once)
       animationValue.value = withTiming(0, {
         duration: 200,
         easing: Easing.in(Easing.ease),
@@ -132,8 +137,6 @@ export default function FastModal({
   if (!isRendered) {
     return null;
   }
-
-  console.log('🎭 FastModal rendering - visible:', visible, 'isRendered:', isRendered);
 
   return (
     <View

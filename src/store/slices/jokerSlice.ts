@@ -1,5 +1,6 @@
 import { createSlice, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import { JokerService } from '../../utils/jokerService';
+import { getJokerEffectsAtLevel } from '../../utils/jokerEffectEngine';
 import { resetGame } from './gameSlice';
 
 interface Joker {
@@ -8,6 +9,7 @@ interface Joker {
   tier: string;
   effect?: any;
   quantity?: number;
+  level?: number;
 }
 
 // Pre-computed joker effects to avoid repeated calculations
@@ -63,6 +65,23 @@ const jokerSlice = createSlice({
       if (!state.activeEffects) {
         state.activeEffects = [];
       }
+      // Default level on existing jokers for backward compat
+      state.jokers.forEach(j => { if (j.level == null) j.level = 1; });
+      state.jokersOwned.forEach(j => { if (j.level == null) j.level = 1; });
+    },
+    upgradeJoker: (state, action: PayloadAction<string>) => {
+      const jokerId = action.payload;
+      const upgradeInArray = (arr: Joker[]) => {
+        const joker = arr.find(j => j.id.toString() === jokerId.toString());
+        if (joker) {
+          const currentLevel = joker.level ?? 1;
+          if (currentLevel < 3) {
+            joker.level = currentLevel + 1;
+          }
+        }
+      };
+      upgradeInArray(state.jokers);
+      upgradeInArray(state.jokersOwned);
     },
     setJokers: (state, action: PayloadAction<Joker[]>) => {
       state.jokers = action.payload;
@@ -78,15 +97,17 @@ const jokerSlice = createSlice({
       state.jokersOwned.push(action.payload);
     },
     removeJoker: (state, action: PayloadAction<string>) => {
-      console.log('🔧 removeJoker reducer: Removing joker with ID:', action.payload, 'Type:', typeof action.payload);
-      console.log('🔧 removeJoker reducer: Current jokers:', state.jokers.map(j => ({ id: j.id, type: typeof j.id, name: j.name })));
+      if (__DEV__) {
+        console.log('🔧 removeJoker reducer: Removing joker with ID:', action.payload, 'Type:', typeof action.payload);
+        console.log('🔧 removeJoker reducer: Current jokers:', state.jokers.map(j => ({ id: j.id, type: typeof j.id, name: j.name })));
+      }
 
       const initialLength = state.jokers.length;
       // Handle both string and number IDs by converting both to strings for comparison
       state.jokers = state.jokers.filter(j => j.id.toString() !== action.payload.toString());
       state.jokersOwned = state.jokersOwned.filter(j => j.id.toString() !== action.payload.toString());
 
-      console.log('🔧 removeJoker reducer: Jokers after removal:', state.jokers.length, 'Removed:', initialLength - state.jokers.length);
+      if (__DEV__) console.log('🔧 removeJoker reducer: Jokers after removal:', state.jokers.length, 'Removed:', initialLength - state.jokers.length);
     },
     lockJoker: (state, action: PayloadAction<string>) => {
       if (!state.lockedJokerIds.includes(action.payload)) {
@@ -97,9 +118,9 @@ const jokerSlice = createSlice({
       state.lockedJokerIds = state.lockedJokerIds.filter(id => id !== action.payload);
     },
     // New action to recompute joker effects centrally
-    recomputeJokerEffects: (state, action: PayloadAction<{ baseInventoryLimit: number; periodCount: number }>) => {
+    recomputeJokerEffects: (state, action: PayloadAction<{ baseInventoryLimit: number; periodCount: number; day?: number }>) => {
       try {
-        const { baseInventoryLimit, periodCount } = action.payload;
+        const { baseInventoryLimit, periodCount, day = 1 } = action.payload;
         const jokerService = JokerService.getInstance();
 
         // Add Vacuum Sealer bonus to base BEFORE applying other joker effects
@@ -117,11 +138,23 @@ const jokerSlice = createSlice({
         );
 
         // Now compute all effects efficiently without re-initializing
-        const inventoryLimit = jokerService.computeEffect(
+        let inventoryLimit = jokerService.computeEffect(
           adjustedBaseInventory,
           'inventory_limit',
           periodCount
         );
+
+        // Handle day_scaled_inventory (Geometric Expansion): +X per day elapsed
+        for (const joker of state.jokers) {
+          const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : Number(joker.id);
+          const level = joker.level ?? 1;
+          const effects = getJokerEffectsAtLevel(jokerId, level);
+          for (const effect of effects) {
+            if (effect.target === 'day_scaled_inventory' && effect.operation === 'add') {
+              inventoryLimit += effect.amount * day;
+            }
+          }
+        }
 
         const hintChance = jokerService.computeEffect(
           0,
@@ -170,7 +203,7 @@ const jokerSlice = createSlice({
       state.activeEffects = state.activeEffects.filter(effect => effect.jokerId !== action.payload);
     },
     setVacuumSealerBonus: (state, action: PayloadAction<number>) => {
-      console.log('🔧 Vacuum Sealer: Setting one-time bonus to', action.payload);
+      if (__DEV__) console.log('🔧 Vacuum Sealer: Setting one-time bonus to', action.payload);
       state.vacuumSealerBonus = action.payload;
     },
     clearAllActiveEffects: (state) => {
@@ -178,27 +211,31 @@ const jokerSlice = createSlice({
     },
     markJokerUsedToday: (state, action: PayloadAction<string>) => {
       const jokerId = action.payload;
-      console.log('🔧 REDUCER markJokerUsedToday: Received ID:', jokerId, 'Type:', typeof jokerId);
-      console.log('🔧 REDUCER markJokerUsedToday: Current usedTodayJokerIds:', state.usedTodayJokerIds);
+      if (__DEV__) {
+        console.log('🔧 REDUCER markJokerUsedToday: Received ID:', jokerId, 'Type:', typeof jokerId);
+        console.log('🔧 REDUCER markJokerUsedToday: Current usedTodayJokerIds:', state.usedTodayJokerIds);
+      }
 
       // Initialize if doesn't exist (backwards compatibility)
       if (!state.usedTodayJokerIds) {
-        console.log('🔧 REDUCER markJokerUsedToday: Initializing usedTodayJokerIds array');
+        if (__DEV__) console.log('🔧 REDUCER markJokerUsedToday: Initializing usedTodayJokerIds array');
         state.usedTodayJokerIds = [];
       }
 
       if (!state.usedTodayJokerIds.includes(jokerId)) {
         state.usedTodayJokerIds.push(jokerId);
-        console.log(`✅ REDUCER markJokerUsedToday: Joker ${jokerId} marked as used today`);
-        console.log('✅ REDUCER markJokerUsedToday: New usedTodayJokerIds:', state.usedTodayJokerIds);
+        if (__DEV__) {
+          console.log(`✅ REDUCER markJokerUsedToday: Joker ${jokerId} marked as used today`);
+          console.log('✅ REDUCER markJokerUsedToday: New usedTodayJokerIds:', state.usedTodayJokerIds);
+        }
       } else {
-        console.log(`⚠️ REDUCER markJokerUsedToday: Joker ${jokerId} was ALREADY in usedTodayJokerIds!`);
+        if (__DEV__) console.log(`⚠️ REDUCER markJokerUsedToday: Joker ${jokerId} was ALREADY in usedTodayJokerIds!`);
       }
     },
     resetDailyJokerUsage: (state, action: PayloadAction<number>) => {
       const newDay = action.payload;
       if (newDay !== state.currentDay) {
-        console.log(`🌅 New day ${newDay}! Resetting daily joker usage (was day ${state.currentDay})`);
+        if (__DEV__) console.log(`🌅 New day ${newDay}! Resetting daily joker usage (was day ${state.currentDay})`);
         state.usedTodayJokerIds = [];
         state.currentDay = newDay;
       }
@@ -217,6 +254,7 @@ export const {
   setAllJokers,
   addJoker,
   removeJoker,
+  upgradeJoker,
   lockJoker,
   unlockJoker,
   recomputeJokerEffects,
@@ -260,5 +298,12 @@ export const selectUsedTodayJokerIds = (state: { joker: JokerState }) =>
 
 export const selectCurrentDay = (state: { joker: JokerState }) =>
   state.joker.currentDay ?? 1;
+
+// Named field selectors for useJokers hook optimization (avoids subscribing to entire slice)
+export const selectJokers = (state: { joker: JokerState }) => state.joker.jokers;
+export const selectJokersOwned = (state: { joker: JokerState }) => state.joker.jokersOwned;
+export const selectAllJokers = (state: { joker: JokerState }) => state.joker.allJokers;
+export const selectLockedJokerIds = (state: { joker: JokerState }) => state.joker.lockedJokerIds;
+export const selectJokerComputedEffects = (state: { joker: JokerState }) => state.joker.computedEffects;
 
 export default jokerSlice.reducer;

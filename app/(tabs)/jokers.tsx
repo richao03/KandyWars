@@ -19,24 +19,14 @@ import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
+import { CANDY_NAMES } from '../../src/constants/candyRegistry';
 
-const CANDY_TYPES = [
-  'Snickers',
-  'M&Ms',
-  'Skittles',
-  'Warheads',
-  'Sour Patch Kids',
-  'Bubble Gum',
-  'Jaw Breaker',
-];
+const CANDY_TYPES = CANDY_NAMES;
 
 function JokersPage() {
   // Always call all hooks first - before any conditional returns
   const dispatch = useAppDispatch();
   const stashedAmount = useAppSelector((state) => state.wallet.stashedAmount);
-  const hasDuplicatedVacuumSealer = useAppSelector(
-    (state) => state.wallet.hasDuplicatedVacuumSealer
-  );
   const gameContext = useGame();
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
@@ -64,15 +54,6 @@ function JokersPage() {
 
   // Candy Selector Modal state
   const [candySelectorModal, setCandySelectorModal] = useState<{
-    visible: boolean;
-    joker: any | null;
-  }>({
-    visible: false,
-    joker: null,
-  });
-
-  // Joker Selector Modal state (for Glitch in the Matrix)
-  const [jokerSelectorModal, setJokerSelectorModal] = useState<{
     visible: boolean;
     joker: any | null;
   }>({
@@ -132,7 +113,7 @@ function JokersPage() {
 
   // Debug log for modal state changes
   useEffect(() => {
-    console.log('📋 confirmModal.visible changed to:', confirmModal.visible);
+    if (__DEV__) console.log('📋 confirmModal.visible changed to:', confirmModal.visible);
   }, [confirmModal.visible]);
 
   // Extract values from contexts
@@ -151,18 +132,11 @@ function JokersPage() {
     cancelText = 'Cancel',
     onCancelCallback?: () => void
   ) => {
-    console.log(
-      '📋 Opening confirmation modal:',
-      title,
-      '| Current visible:',
-      confirmModal.visible,
-      '| Transitioning:',
-      isModalTransitioning
-    );
+    if (__DEV__) console.log('📋 Opening confirmation modal:', title);
 
     // If a modal is transitioning, queue the new modal
     if (isModalTransitioning) {
-      console.log('📋 Modal is transitioning, queueing request...');
+      if (__DEV__) console.log('📋 Modal is transitioning, queueing request...');
       setTimeout(() => {
         handleShowConfirmation(
           title,
@@ -179,7 +153,7 @@ function JokersPage() {
 
     // If a modal is already open, close it first then open the new one
     if (confirmModal.visible) {
-      console.log('📋 Modal already open, closing first...');
+      if (__DEV__) console.log('📋 Modal already open, closing first...');
       setIsModalTransitioning(true);
       setConfirmModal((prev) => ({ ...prev, visible: false }));
       setTimeout(() => {
@@ -223,7 +197,7 @@ function JokersPage() {
       message,
       emoji,
       onConfirm: () => {
-        console.log('📋 Confirm pressed, closing modal');
+        if (__DEV__) console.log('📋 Confirm pressed, closing modal');
         setIsModalTransitioning(true);
         setConfirmModal((prev) => ({ ...prev, visible: false }));
         // Use setTimeout to ensure modal closes before callback executes
@@ -236,7 +210,7 @@ function JokersPage() {
       },
       onCancel: onCancelCallback
         ? () => {
-            console.log('📋 Cancel pressed, closing modal');
+            if (__DEV__) console.log('📋 Cancel pressed, closing modal');
             setIsModalTransitioning(true);
             setConfirmModal((prev) => ({ ...prev, visible: false }));
             setTimeout(() => {
@@ -245,7 +219,7 @@ function JokersPage() {
             }, 200);
           }
         : () => {
-            console.log('📋 Closing modal (no cancel callback)');
+            if (__DEV__) console.log('📋 Closing modal (no cancel callback)');
             setIsModalTransitioning(true);
             setConfirmModal((prev) => ({ ...prev, visible: false }));
             setTimeout(() => {
@@ -265,70 +239,7 @@ function JokersPage() {
     });
   };
 
-  // Joker selector modal handler for JokerCard components (Glitch in the Matrix)
-  const handleShowJokerSelector = (joker: any) => {
-    setJokerSelectorModal({
-      visible: true,
-      joker,
-    });
-  };
-
-  // Handle joker selection for Glitch in the Matrix
-  const handleJokerSelection = (selectedJoker: any) => {
-    const { joker } = jokerSelectorModal;
-    if (!joker || !jokerContext) return;
-
-    const { addJoker, removeJoker } = jokerContext;
-
-    // Deduct $15,000 from piggy bank (can go into debt)
-    const GLITCH_COST = 15000;
-    const newBalance = stashedAmount - GLITCH_COST;
-    dispatch(setStashedAmount(newBalance));
-
-    const balanceMessage =
-      newBalance < 0
-        ? `You now owe $${Math.abs(newBalance).toLocaleString()}!`
-        : `New piggy bank balance: $${newBalance.toLocaleString()}`;
-
-    console.log(
-      `💰 Glitch in the Matrix: Deducted $${GLITCH_COST.toLocaleString()} from piggy bank. ${balanceMessage}`
-    );
-
-    // Create a copy of the selected joker
-    // Strategy: Give copy a unique ID for removal, but store original ID for activation
-    const copyId = Date.now() + Math.random(); // Unique ID for this copy
-    const duplicatedJoker = {
-      ...selectedJoker,
-      id: copyId, // Unique ID for removal
-      originalId: selectedJoker.id, // Original ID for activation handlers
-      isCopy: true,
-      name: selectedJoker.name + ' (Copy)',
-    };
-
-    // Add the duplicated joker to inventory
-    addJoker(duplicatedJoker);
-
-    // If Vacuum Sealer was duplicated, mark it as duplicated for this game
-    if (
-      selectedJoker.id === JOKER_IDS.VACUUM_SEALER ||
-      selectedJoker.id === JOKER_IDS.VACUUM_SEALER.toString()
-    ) {
-      dispatch(setHasDuplicatedVacuumSealer(true));
-      console.log('🚫 Vacuum Sealer has been duplicated - cannot duplicate again this game');
-    }
-
-    // Remove the Glitch in the Matrix joker (one-time use only)
-    removeJoker(joker.id);
-
-    // Close modal and show confirmation
-    setJokerSelectorModal({ visible: false, joker: null });
-    handleShowConfirmation(
-      'Glitch in the Matrix!',
-      `Created a copy of ${selectedJoker.name}! ($${GLITCH_COST.toLocaleString()} deducted from piggy bank)`,
-      'refresh'
-    );
-  };
-
+  // Joker selector modal handler (legacy — no longer used by Overclock)
   // Handle candy selection for various jokers
   const handleCandySelection = (selectedCandy: string) => {
     const { joker } = candySelectorModal;
@@ -346,23 +257,7 @@ function JokersPage() {
     const { getInventoryLimit } = inventoryContext;
     const { gameData, modifyCandyPrice } = seedContext;
 
-    if (joker.id === JOKER_IDS.PROPACANDIES) {
-      // Mark as used FIRST to prevent double-use
-      markJokerUsedToday(joker.id.toString());
-
-      // Drop the selected candy's price by 90%
-      const originalPrice =
-        gameData.candyPrices[selectedCandy]?.[periodCount] || 0;
-      const newPrice = Math.max(originalPrice * 0.1, 0.01); // 90% reduction, minimum $0.01
-
-      modifyCandyPrice(selectedCandy, newPrice, periodCount);
-
-      handleShowConfirmation(
-        'Propacandies Activated!',
-        `${selectedCandy} price dropped by 90%! New price: $${newPrice.toFixed(2)}`,
-        '📰'
-      );
-    } else if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
+    if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
       // Mark as used FIRST to prevent double-use
       markJokerUsedToday(joker.id.toString());
 
@@ -525,7 +420,7 @@ function JokersPage() {
   // Create sectioned data for browse tab with 2-column layout
   const sectionedJokers = useMemo(() => {
     const sections = [];
-    const subjects = Object.keys(ALL_JOKERS).sort();
+    const subjects = (Object.keys(ALL_JOKERS) as Array<keyof typeof ALL_JOKERS>).sort();
 
     for (const subject of subjects) {
       const subjectJokers = ALL_JOKERS[subject] || [];
@@ -585,7 +480,7 @@ function JokersPage() {
             disableActivation={false}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
-            onShowJokerSelector={handleShowJokerSelector}
+
             onTriggerEvent={triggerEvent}
           />
         </View>
@@ -606,7 +501,7 @@ function JokersPage() {
             debugMode={debugMode && __DEV__}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
-            onShowJokerSelector={handleShowJokerSelector}
+
             onTriggerEvent={triggerEvent}
           />
         </View>
@@ -714,36 +609,16 @@ function JokersPage() {
       )}
 
       {/* Confirmation Modal - rendered at page level for full screen overlay */}
-      {(() => {
-        console.log(
-          '📋 Rendering JokerConfirmationModal - visible:',
-          confirmModal.visible,
-          'title:',
-          confirmModal.title
-        );
-        return (
-          <JokerConfirmationModal
-            visible={confirmModal.visible}
-            title={confirmModal.title}
-            message={confirmModal.message}
-            emoji={confirmModal.emoji}
-            confirmText={confirmModal.confirmText}
-            cancelText={confirmModal.cancelText}
-            onConfirm={() => {
-              console.log('📋 JokerConfirmationModal onConfirm triggered');
-              confirmModal.onConfirm();
-            }}
-            onCancel={() => {
-              console.log('📋 JokerConfirmationModal onCancel triggered');
-              if (confirmModal.onCancel) {
-                confirmModal.onCancel();
-              } else {
-                setConfirmModal((prev) => ({ ...prev, visible: false }));
-              }
-            }}
-          />
-        );
-      })()}
+      <JokerConfirmationModal
+        visible={confirmModal.visible}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        emoji={confirmModal.emoji}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel || (() => setConfirmModal((prev) => ({ ...prev, visible: false })))}
+      />
 
       {/* Candy Selector Modal */}
       <FastModal
@@ -764,15 +639,13 @@ function JokersPage() {
                 ? '📈'
                 : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
                   ? '💸'
-                  : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
-                    ? '📰'
+                  : candySelectorModal.joker?.id ===
+                      JOKER_IDS.BET_YOU_IM_FASTER
+                    ? '⚡'
                     : candySelectorModal.joker?.id ===
-                        JOKER_IDS.BET_YOU_IM_FASTER
-                      ? '⚡'
-                      : candySelectorModal.joker?.id ===
-                          JOKER_IDS.MASTER_NEGOTIATOR
-                        ? '🤝'
-                        : '🍭'}
+                        JOKER_IDS.MASTER_NEGOTIATOR
+                      ? '🤝'
+                      : '🍭'}
             </TextWithEmojis>
           </View>
           <TextWithEmojis style={styles.modalTitle} imageSize={24}>
@@ -780,16 +653,14 @@ function JokersPage() {
               ? 'Choose Candy to Manipulate'
               : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
                 ? 'Choose Candy to Short'
-                : candySelectorModal.joker?.id === JOKER_IDS.PROPACANDIES
-                  ? 'Choose Candy to Drop Price'
-                  : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
-                    ? 'Choose Candy to Fill Inventory'
-                    : candySelectorModal.joker?.id ===
-                        JOKER_IDS.MASTER_NEGOTIATOR
-                      ? selectedSourceCandy
-                        ? `Choose Candy to Convert ${selectedSourceCandy} Into`
-                        : 'Choose Candy to Convert From'
-                      : 'Choose Candy Type'}
+                : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
+                  ? 'Choose Candy to Fill Inventory'
+                  : candySelectorModal.joker?.id ===
+                      JOKER_IDS.MASTER_NEGOTIATOR
+                    ? selectedSourceCandy
+                      ? `Choose Candy to Convert ${selectedSourceCandy} Into`
+                      : 'Choose Candy to Convert From'
+                    : 'Choose Candy Type'}
           </TextWithEmojis>
 
           {CANDY_TYPES.filter((candyType) => {
@@ -856,109 +727,6 @@ function JokersPage() {
         </>
       </FastModal>
 
-      {/* Joker Selector Modal (Glitch in the Matrix) */}
-      <FastModal
-        visible={jokerSelectorModal.visible}
-        onClose={() => setJokerSelectorModal({ visible: false, joker: null })}
-        animationType="spring"
-        backdropOpacity={0.5}
-        modalStyle={styles.modalContent}
-      >
-        <>
-          <View style={{ alignItems: 'center' }}>
-            <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
-              🔮
-            </TextWithEmojis>
-          </View>
-          <TextWithEmojis style={styles.modalTitle} imageSize={24}>
-            Choose Joker to Copy
-          </TextWithEmojis>
-
-          {jokers
-            .filter((j) => j.name !== 'Glitch in the Matrix')
-            .filter((j) => {
-              // Filter out Vacuum Sealer if it's already been duplicated this game
-              const isVacuumSealer =
-                j.id === JOKER_IDS.VACUUM_SEALER ||
-                j.id === JOKER_IDS.VACUUM_SEALER.toString() ||
-                j.name === 'Vacuum Sealer';
-              return !isVacuumSealer || !hasDuplicatedVacuumSealer;
-            }).length > 0 ? (
-            jokers
-              .filter((j) => j.name !== 'Glitch in the Matrix')
-              .filter((j) => {
-                // Filter out Vacuum Sealer if it's already been duplicated this game
-                const isVacuumSealer =
-                  j.id === JOKER_IDS.VACUUM_SEALER ||
-                  j.id === JOKER_IDS.VACUUM_SEALER.toString() ||
-                  j.name === 'Vacuum Sealer';
-                return !isVacuumSealer || !hasDuplicatedVacuumSealer;
-              })
-              .map((availableJoker) => (
-                <PressableButton
-                  key={availableJoker.id}
-                  onPress={() => handleJokerSelection(availableJoker)}
-                  shadowColor="rgba(123,169,101,1)"
-                  shadowOffset={{ width: 0, height: 4 }}
-                  shadowOpacity={0.5}
-                  shadowRadius={5}
-                  elevation={8}
-                  style={styles.candyButton}
-                >
-                  <PixelBorder
-                    borderColor="rgba(123,169,101,1)"
-                    borderWidth={3}
-                    backgroundColor="rgba(154,193,118,1)"
-                    innerPadding={0}
-                  >
-                    <View style={styles.candyButtonInner}>
-                      <TextWithEmojis
-                        style={styles.candyButtonText}
-                        imageSize={24}
-                      >
-                        {`${availableJoker.name} ${availableJoker.type === 'persistent' ? '🔮' : '⚡'}`}
-                      </TextWithEmojis>
-                    </View>
-                  </PixelBorder>
-                </PressableButton>
-              ))
-          ) : (
-            <View style={{ alignItems: 'center', padding: 20 }}>
-              <Text style={styles.candyButtonText}>
-                No other jokers to copy!
-              </Text>
-              <Text
-                style={{ color: '#888', marginTop: 8, textAlign: 'center' }}
-              >
-                Study to earn more jokers first
-              </Text>
-            </View>
-          )}
-
-          <PressableButton
-            onPress={() =>
-              setJokerSelectorModal({ visible: false, joker: null })
-            }
-            shadowColor="rgba(185,28,28,1)"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.cancelButton}
-          >
-            <PixelBorder
-              borderColor="rgba(185,28,28,1)"
-              borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
-              innerPadding={0}
-            >
-              <View style={styles.cancelButtonInner}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-        </>
-      </FastModal>
     </View>
   );
 }

@@ -162,288 +162,107 @@ function StatusIndicators({
       }
     });
 
-    // JOKERS - Check all owned jokers (deduplicate by name to show only one icon per joker type)
+    // JOKERS — Icon lookup by name (always show when owned)
+    const JOKER_ICON_MAP: Record<string, any> = {
+      'Double Up': require('../../assets/images/emojis/dice.png'),
+      'Median Formula': require('../../assets/images/emojis/bullseye.png'),
+      'Geometric Expansion': require('../../assets/images/emojis/backpack.png'),
+      'Ace the Test': require('../../assets/images/emojis/book.png'),
+      'Inductive Reasoning': require('../../assets/images/emojis/logic.png'),
+      'Temporary Emperor': require('../../assets/images/emojis/trophy.png'),
+      'Tapped in': require('../../assets/images/emojis/tappedIn.png'),
+      'Side Gig': require('../../assets/images/emojis/coin.png'),
+      'Micro Chip': require('../../assets/images/emojis/computer.png'),
+      'Data Compression': require('../../assets/images/emojis/gear.png'),
+      'Overclock': require('../../assets/images/emojis/lightning.png'),
+      'Diamond Hand': require('../../assets/images/emojis/diamondHand.png'),
+      'Vacuum Sealer': require('../../assets/images/emojis/vacuumsealer.png'),
+      'Fridge Organizer': require('../../assets/images/emojis/cooking.png'),
+      'Perfect Bake': require('../../assets/images/emojis/statusCupcake.png'),
+      'Bake Sale': require('../../assets/images/emojis/cupcake.png'),
+      'Home Made': require('../../assets/images/emojis/homemade.png'),
+      'Super Size Me': require('../../assets/images/emojis/slowcooker.png'),
+      'Treasure Chest': require('../../assets/images/emojis/vault.png'),
+      'Odd Todd': require('../../assets/images/emojis/theater.png'),
+      'Cocoa Futures': require('../../assets/images/emojis/chocolate.png'),
+      'Medieval Shield': require('../../assets/images/emojis/shield.png'),
+      'Art Auction': require('../../assets/images/emojis/palette.png'),
+      'The Good Old Days': require('../../assets/images/emojis/oldTv.png'),
+      'Bear Market': require('../../assets/images/emojis/priceCrash.png'),
+      'Market Manipulation': require('../../assets/images/emojis/priceSpike.png'),
+      'The Big Short': require('../../assets/images/emojis/chart.png'),
+      'Deposit Bonus': require('../../assets/images/emojis/piggyBank.png'),
+      'The Bounceback': require('../../assets/images/emojis/bounceback.png'),
+      'Roman Coin': require('../../assets/images/emojis/coin.png'),
+      'Farmers Carry': require('../../assets/images/emojis/farmersCarry.png'),
+      'Coaching': require('../../assets/images/emojis/gym.png'),
+      "Bet You I'm Faster": require('../../assets/images/emojis/recess.png'),
+      'Bulk Up': require('../../assets/images/emojis/bulkSale.png'),
+      'Perfect Change': require('../../assets/images/emojis/cent.png'),
+      'Hard Knocks': require('../../assets/images/emojis/diamondHand.png'),
+      'Master Negotiator': require('../../assets/images/emojis/money.png'),
+      'Therefore...': require('../../assets/images/emojis/logic.png'),
+      'Even Stevens': require('../../assets/images/emojis/scale.png'),
+      'Embrace the Grind': require('../../assets/images/emojis/grinder.png'),
+      'Sour Logic': require('../../assets/images/emojis/magic.png'),
+      'Double Dutch': require('../../assets/images/emojis/jumpRope.png'),
+      'Feed the Beast': require('../../assets/images/emojis/beast.png'),
+      'Hopscotch Bonus': require('../../assets/images/emojis/hopscotch.png'),
+      'Hide and Seek': require('../../assets/images/emojis/magnifyingGlass.png'),
+      'Swingset Momentum': require('../../assets/images/emojis/swingset.png'),
+      'Secret Hideout': require('../../assets/images/emojis/lock.png'),
+      'Golden Hour': require('../../assets/images/emojis/sunrise.png'),
+      'Trade Routes': require('../../assets/images/emojis/treasureMap.png'),
+      'Continental Drift': require('../../assets/images/emojis/geography.png'),
+      'Mysterious Artifact': require('../../assets/images/emojis/artifact.png'),
+      'Tropical Import': require('../../assets/images/emojis/clock.png'),
+      'Atlas Bonus': require('../../assets/images/emojis/mountain.png'),
+      'Jump Rope Rhythm': require('../../assets/images/emojis/jumpRope.png'),
+      'Pursuasion': require('../../assets/images/emojis/talkingHead.png'),
+    };
+
+    // Conditional jokers — only show icon when their condition is currently met
+    const CONDITIONAL_JOKERS: Record<string, () => boolean> = {
+      'Golden Hour': () => period >= 5 && period <= 8,
+      'Tropical Import': () => period >= 1 && period <= 4,
+      'Hopscotch Bonus': () => period % 2 === 0,
+      'Farmers Carry': () => inventoryLimit >= 75,
+      'Even Stevens': () => inventoryLimit % 2 === 0,
+      'Odd Todd': () => inventoryLimit % 2 === 1,
+      'Super Size Me': () => totalInventory > 0,
+      'Bulk Up': () => totalInventory / inventoryLimit > 0.5,
+      'Jump Rope Rhythm': () => ((totalCandiesSold || 0) + 1) % 3 === 0,
+      'Swingset Momentum': () => consecutivePeriodSales() > 1,
+    };
+
     const addedJokerNames = new Set<string>();
 
     jokers.forEach((joker) => {
-      // Skip if we've already added this joker type
-      if (addedJokerNames.has(joker.name)) {
-        return;
-      }
+      if (addedJokerNames.has(joker.name)) return;
 
-      // Protection jokers (always show when owned)
-      if (joker.name === 'Medieval Shield') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/shield.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Candy Vault') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/lock.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Tapped in') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/tappedIn.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Deposit Bonus') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/piggyBank.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Perfect Bake') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/statusCupcake.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Making Cents') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/cent.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Something from Nothing') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/magic.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'The Good Old Days') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/oldTv.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Vacuum Sealer') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/vacuumsealer.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Home Made') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/homemade.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'The Bounceback') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/bounceback.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Embrace the Grind') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/grinder.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Trade Routes') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/treasureMap.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Mysterious Artifact') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/artifact.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Feed the Beast') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/beast.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Hide and Seek') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/magnifyingGlass.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Diamond Hand') {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/diamondHand.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      }
-      // Time-based conditional jokers
-      else if (joker.name === 'Sunset Surge' && period >= 5 && period <= 8) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/sunrise.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (
-        joker.name === 'Time Zone Arbitrage' &&
-        period >= 1 &&
-        period <= 4
-      ) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/clock.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Hopscotch Bonus' && period % 2 === 0) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/hopscotch.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      }
-      // Inventory-based conditional jokers
-      else if (joker.name === 'Farmers Carry' && inventoryLimit >= 75) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/farmersCarry.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Even Stevens' && inventoryLimit % 2 === 0) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/scale.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Odd Todd' && inventoryLimit % 2 === 1) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/theater.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (joker.name === 'Slow Cooker' && totalInventory > 0) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/slowcooker.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      } else if (
-        joker.name === 'Bulk Sale' &&
-        totalInventory / inventoryLimit > 0.5
-      ) {
-        jokerIcons.push({
-          type: 'joker',
-          icon: require('../../assets/images/emojis/bulkSale.png'),
-          key: `${joker.name}-${joker.id}`,
-          name: joker.name,
-          isImage: true,
-        });
-        addedJokerNames.add(joker.name);
-      }
-      // Sales streak-based conditional jokers
-      else if (joker.name === 'Jump Rope Rhythm') {
-        const nextSaleNumber = (totalCandiesSold || 0) + 1;
-        if (nextSaleNumber % 3 === 0) {
-          jokerIcons.push({
-            type: 'joker',
-            icon: require('../../assets/images/emojis/jumpRope.png'),
-            key: `${joker.name}-${joker.id}`,
-            name: joker.name,
-            isImage: true,
-          });
-          addedJokerNames.add(joker.name);
-        }
-      } else if (joker.name === 'Swingset Momentum') {
-        const consecutiveCount = consecutivePeriodSales();
-        if (consecutiveCount > 1) {
-          jokerIcons.push({
-            type: 'joker',
-            icon: require('../../assets/images/emojis/swingset.png'),
-            key: `${joker.name}-${joker.id}`,
-            name: joker.name,
-            isImage: true,
-          });
-          addedJokerNames.add(joker.name);
-        }
-      }
+      const iconSource = JOKER_ICON_MAP[joker.name];
+      if (!iconSource) return;
+
+      // If it's a conditional joker, check if condition is met
+      const condition = CONDITIONAL_JOKERS[joker.name];
+      if (condition && !condition()) return;
+
+      jokerIcons.push({
+        type: 'joker',
+        icon: iconSource,
+        key: `${joker.name}-${joker.id}`,
+        name: joker.name,
+        isImage: true,
+      });
+      addedJokerNames.add(joker.name);
     });
 
     // ONE-TIME JOKERS - Check activeEffects for activated jokers
     jokerActiveEffects.forEach((effect: any) => {
-      // Check if Pursuasion is activated (jokerId 48)
       if (effect.jokerId === 48 || effect.jokerId === '48') {
         jokerIcons.push({
           type: 'joker',
-          icon: require('../../assets/images/emojis/talkingHead.png'),
+          icon: JOKER_ICON_MAP['Pursuasion'],
           key: 'pursuasion',
           name: 'Pursuasion',
           isImage: true,

@@ -216,54 +216,21 @@ describe('Specific Joker Implementations', () => {
     });
   });
 
-  describe('Trojan Horse Joker', () => {
-    it('should increase all candy prices by $10 each period', () => {
-      const originalPrices = {
-        'Snickers': 5.50,
-        'M&Ms': 8.25,
-        'Skittles': 3.75,
-        'Warheads': 2.10,
-      };
+  describe('Diamond Hand Joker', () => {
+    it('should add flat bonus per candy per period', () => {
+      const candyQuantity = 10;
+      const bonusPerCandy = 10; // $10/candy/period at level 1
+      const expectedBonus = candyQuantity * bonusPerCandy;
 
-      const priceIncrease = 10;
-      const expectedPrices = Object.fromEntries(
-        Object.entries(originalPrices).map(([candy, price]) => [
-          candy,
-          price + priceIncrease
-        ])
-      );
-
-      expect(expectedPrices['Snickers']).toBe(15.50);
-      expect(expectedPrices['M&Ms']).toBe(18.25);
-      expect(expectedPrices['Skittles']).toBe(13.75);
-      expect(expectedPrices['Warheads']).toBe(12.10);
+      expect(expectedBonus).toBe(100);
     });
 
-    it('should handle price progression over multiple periods', () => {
-      let snickersPrice = 5.00;
-      const periodsInDay = 3;
-      const priceIncrease = 10;
-
-      // Simulate 3 periods of increases
-      for (let period = 1; period <= periodsInDay; period++) {
-        snickersPrice += priceIncrease;
-      }
-
-      expect(snickersPrice).toBe(35.00); // 5 + 10 + 10 + 10
-    });
-
-    it('should reset prices daily (new day logic)', () => {
-      const basePrice = 5.00;
-      const currentDay = 2;
-      const lastDay = 1;
-
-      // When new day starts, prices should reset to base
-      const isNewDay = currentDay !== lastDay;
-      expect(isNewDay).toBe(true);
-
-      // On new day, price should be base price (no increases from previous day)
-      const resetPrice = basePrice; // Reset logic
-      expect(resetPrice).toBe(5.00);
+    it('should scale with level', () => {
+      const candyQuantity = 10;
+      // Level 1: $10, Level 2: $20, Level 3: $30
+      expect(candyQuantity * 10).toBe(100);
+      expect(candyQuantity * 20).toBe(200);
+      expect(candyQuantity * 30).toBe(300);
     });
   });
 
@@ -271,12 +238,12 @@ describe('Specific Joker Implementations', () => {
     it('should have all implemented jokers defined in JOKER_IDS', () => {
       expect(JOKER_IDS.MARKET_MANIPULATION).toBeDefined();
       expect(JOKER_IDS.THE_BIG_SHORT).toBeDefined();
-      expect(JOKER_IDS.MARKET_CRASH).toBeDefined();
-      expect(JOKER_IDS.PROPACANDIES).toBeDefined();
-      expect(JOKER_IDS.BULK_SALE).toBeDefined();
+      expect(JOKER_IDS.BEAR_MARKET).toBeDefined();
+      expect(JOKER_IDS.MICRO_CHIP).toBeDefined();
+      expect(JOKER_IDS.COCOA_FUTURES).toBeDefined();
       expect(JOKER_IDS.HOME_MADE).toBeDefined();
       expect(JOKER_IDS.THE_GOOD_OLD_DAYS).toBeDefined();
-      expect(JOKER_IDS.TROJAN_HORSE).toBeDefined();
+      expect(JOKER_IDS.SOUR_LOGIC).toBeDefined();
     });
 
     it('should have unique IDs for all jokers', () => {

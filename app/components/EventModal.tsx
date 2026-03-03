@@ -1,7 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
   Image,
   ImageBackground,
   StyleSheet,
@@ -14,7 +13,9 @@ import ReAnimated, {
   Easing,
   runOnJS,
   useAnimatedProps,
+  useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
@@ -119,9 +120,9 @@ const AnimatedMoneyCounter = ({
 const EventModal = React.memo(function EventModal() {
   const { currentEvent, dismissEvent, getTheme } = useEventHandler();
   const { balance } = useWallet();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useSharedValue(0);
+  const scaleAnim = useSharedValue(0.8);
+  const shakeAnim = useSharedValue(0);
   const [canDismiss, setCanDismiss] = useState(true);
   const [showMoneyLoss, setShowMoneyLoss] = useState(false);
   const [showMoneyGain, setShowMoneyGain] = useState(false);
@@ -135,7 +136,7 @@ const EventModal = React.memo(function EventModal() {
   useEffect(() => {
     if (currentEvent) {
       // Reset shake animation
-      shakeAnim.setValue(0);
+      shakeAnim.value = 0;
 
       // Check if this is a money-stealing event (bully or similar)
       // Note: STASH_LOCKED is NOT a money-stealing event, it confiscates inventory/candy
@@ -190,8 +191,8 @@ const EventModal = React.memo(function EventModal() {
         }, 300);
 
         // For BAD events: Immediate appearance with shake
-        fadeAnim.setValue(1);
-        scaleAnim.setValue(1);
+        fadeAnim.value = 1;
+        scaleAnim.value = 1;
 
         // If it's a money-stealing event, show money loss and delay dismissal
         if (isMoneyStealingEvent && startAmount > 0) {
@@ -223,68 +224,22 @@ const EventModal = React.memo(function EventModal() {
           }, 1000);
         }
 
-        // Shake animation for 0.5 seconds
-        Animated.sequence([
-          Animated.timing(shakeAnim, {
-            toValue: 10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: -10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: -10,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 5,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: -5,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 5,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: -5,
-            duration: 50,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 0,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-        ]).start();
+        // Shake animation for 0.5 seconds (runs on UI thread via Reanimated)
+        shakeAnim.value = withSequence(
+          withTiming(10, { duration: 50 }),
+          withTiming(-10, { duration: 50 }),
+          withTiming(10, { duration: 50 }),
+          withTiming(-10, { duration: 50 }),
+          withTiming(5, { duration: 50 }),
+          withTiming(-5, { duration: 50 }),
+          withTiming(5, { duration: 50 }),
+          withTiming(-5, { duration: 50 }),
+          withTiming(0, { duration: 100 })
+        );
       } else {
         // For GOOD/NEUTRAL events: Smooth fade in and scale up
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]).start();
+        fadeAnim.value = withTiming(1, { duration: 800 });
+        scaleAnim.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) });
 
         // If it's a money-gaining event, start count-up animation and play positive sound
         if (isMoneyGainingEvent) {
@@ -330,7 +285,21 @@ const EventModal = React.memo(function EventModal() {
       animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
       animationTimeouts.current = [];
     };
-  }, [currentEvent, fadeAnim, scaleAnim, shakeAnim]);
+  }, [currentEvent]);
+
+  const handleDismissCleanup = useCallback(() => {
+    // Reset all animation state
+    setShowMoneyLoss(false);
+    setShowMoneyGain(false);
+    setStartAmount(0);
+    setFinalAmount(0);
+    moneyValue.value = 0;
+    // Clear any running animation timeouts
+    animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
+    animationTimeouts.current = [];
+    // Callback will be executed in dismissEvent
+    dismissEvent();
+  }, [dismissEvent]);
 
   const handleDismiss = useCallback(() => {
     // Only allow dismissal if canDismiss is true
@@ -339,31 +308,24 @@ const EventModal = React.memo(function EventModal() {
     }
 
     // Fade out and scale down before dismissing
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.8,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // Reset all animation state
-      setShowMoneyLoss(false);
-      setShowMoneyGain(false);
-      setStartAmount(0);
-      setFinalAmount(0);
-      moneyValue.value = 0;
-      // Clear any running animation timeouts
-      animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
-      animationTimeouts.current = [];
-      // Callback will be executed in dismissEvent
-      dismissEvent();
+    fadeAnim.value = withTiming(0, { duration: 300 }, (finished) => {
+      if (finished) {
+        runOnJS(handleDismissCleanup)();
+      }
     });
-  }, [canDismiss, fadeAnim, scaleAnim, dismissEvent]);
+    scaleAnim.value = withTiming(0.8, { duration: 300 });
+  }, [canDismiss, handleDismissCleanup]);
+
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeAnim.value,
+  }));
+
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scaleAnim.value },
+      { translateX: shakeAnim.value },
+    ],
+  }));
 
   if (!currentEvent) {
     return null;
@@ -373,8 +335,8 @@ const EventModal = React.memo(function EventModal() {
 
   // Use absolute positioning for proper visibility
   return (
-    <Animated.View
-      style={[styles.modalOverlay, { opacity: fadeAnim }]}
+    <ReAnimated.View
+      style={[styles.modalOverlay, overlayAnimatedStyle]}
       pointerEvents="auto"
     >
       <TouchableOpacity
@@ -383,12 +345,10 @@ const EventModal = React.memo(function EventModal() {
         activeOpacity={1}
       />
 
-      <Animated.View
+      <ReAnimated.View
         style={[
           styles.centeredContainer,
-          {
-            transform: [{ scale: scaleAnim }, { translateX: shakeAnim }],
-          },
+          containerAnimatedStyle,
         ]}
       >
         {currentEvent.backgroundImage ? (
@@ -790,8 +750,8 @@ const EventModal = React.memo(function EventModal() {
             </View>
           </PixelBorder>
         )}
-      </Animated.View>
-    </Animated.View>
+      </ReAnimated.View>
+    </ReAnimated.View>
   );
 });
 

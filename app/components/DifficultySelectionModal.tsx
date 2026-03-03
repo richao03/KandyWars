@@ -228,6 +228,7 @@ export default function DifficultySelectionModal({
       animationType="spring"
       backdropOpacity={0.7}
       modalStyle={styles.modalContainer}
+      preMount
     >
       <PixelBorder borderColor={'#d4a574'} borderWidth={3} innerPadding={0}>
         <View style={styles.modalContent}>

@@ -3,6 +3,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addJoker,
   removeJoker,
+  upgradeJoker,
   lockJoker,
   unlockJoker,
   setJokers,
@@ -15,10 +16,16 @@ import {
   markJokerUsedToday,
   resetDailyJokerUsage,
   selectUsedTodayJokerIds,
+  selectJokers,
+  selectJokersOwned,
+  selectAllJokers,
+  selectLockedJokerIds,
+  selectJokerActiveEffects,
   recomputeJokerEffects,
 } from '../store/slices/jokerSlice';
 import { trackJokerObtained } from '../store/slices/localAnalyticsSlice';
 import { JOKER_IDS } from '../constants/jokerIds';
+import { selectDay } from '../store/slices/gameSlice';
 
 interface ActiveJokerEffect {
   jokerId: number;
@@ -28,12 +35,17 @@ interface ActiveJokerEffect {
 
 export const useJokers = () => {
   const dispatch = useAppDispatch();
-  const jokerState = useAppSelector(state => state.joker);
-  const activeEffects = useAppSelector(state => state.joker.activeEffects);
+  // Subscribe to individual fields instead of entire joker slice to reduce re-renders
+  const jokers = useAppSelector(selectJokers);
+  const jokersOwned = useAppSelector(selectJokersOwned);
+  const allJokers = useAppSelector(selectAllJokers);
+  const lockedJokerIds = useAppSelector(selectLockedJokerIds);
+  const activeEffects = useAppSelector(selectJokerActiveEffects);
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
   const usedTodayJokerIds = useAppSelector(selectUsedTodayJokerIds);
   const periodCount = useAppSelector(state => state.game.periodCount);
+  const day = useAppSelector(selectDay);
   const [onFirstJokerCallbacks] = useState<(() => void)[]>([]);
 
   const addJokerAction = useCallback((joker: any, source?: 'minigame' | 'purchase' | 'event', minigameType?: string) => {
@@ -57,10 +69,11 @@ export const useJokers = () => {
       // Immediately trigger recomputation so UI updates right away
       dispatch(recomputeJokerEffects({
         baseInventoryLimit: baseInventory,
-        periodCount
+        periodCount,
+        day
       }));
 
-      console.log(`🔧 Vacuum Sealer: Current=${currentTotal}, Target=${targetTotal}, Setting bonus=${bonus} (base ${baseInventory} + bonus ${bonus} + hallPass ${hallPassModifiers.inventoryBonusSlots} = ${targetTotal})`);
+      if (__DEV__) console.log(`🔧 Vacuum Sealer: Current=${currentTotal}, Target=${targetTotal}, Setting bonus=${bonus} (base ${baseInventory} + bonus ${bonus} + hallPass ${hallPassModifiers.inventoryBonusSlots} = ${targetTotal})`);
     }
 
     // Add the joker to the list
@@ -68,7 +81,7 @@ export const useJokers = () => {
 
     // Track joker obtained locally (will be synced to Firebase at game end)
     if (source === 'minigame' && joker.name) {
-      console.log('📊 Local: Tracking joker obtained -', joker.name);
+      if (__DEV__) console.log('📊 Local: Tracking joker obtained -', joker.name);
       dispatch(trackJokerObtained(joker.name));
     }
   }, [dispatch, computedInventoryLimit, hallPassModifiers.inventoryBonusSlots, periodCount]);
@@ -78,14 +91,14 @@ export const useJokers = () => {
   }, [dispatch]);
 
   const hasJoker = useCallback((jokerId: number): boolean => {
-    return jokerState.jokers.some(j => j.id === jokerId.toString());
-  }, [jokerState.jokers]);
+    return jokers.some(j => j.id === jokerId.toString());
+  }, [jokers]);
 
   const getJokersBySubject = useCallback((subject: string) => {
-    return jokerState.jokers.filter(joker =>
+    return jokers.filter(joker =>
       joker.tier === subject || joker.name.toLowerCase().includes(subject.toLowerCase())
     );
-  }, [jokerState.jokers]);
+  }, [jokers]);
 
   const activateJoker = useCallback(async (
     jokerId: number,
@@ -129,21 +142,37 @@ export const useJokers = () => {
   }, [dispatch]);
 
   const markJokerUsedTodayAction = useCallback((jokerId: string) => {
-    console.log('🔧 useJokers: markJokerUsedToday called with ID:', jokerId, 'Type:', typeof jokerId);
-    console.log('🔧 useJokers: Current usedTodayJokerIds before dispatch:', usedTodayJokerIds);
+    if (__DEV__) {
+      console.log('🔧 useJokers: markJokerUsedToday called with ID:', jokerId, 'Type:', typeof jokerId);
+      console.log('🔧 useJokers: Current usedTodayJokerIds before dispatch:', usedTodayJokerIds);
+    }
     dispatch(markJokerUsedToday(jokerId));
-    console.log('🔧 useJokers: markJokerUsedToday dispatch completed');
+    if (__DEV__) console.log('🔧 useJokers: markJokerUsedToday dispatch completed');
   }, [dispatch, usedTodayJokerIds]);
 
   const resetDailyJokerUsageAction = useCallback((day: number) => {
     dispatch(resetDailyJokerUsage(day));
   }, [dispatch]);
 
+  const upgradeJokerAction = useCallback((jokerId: string) => {
+    dispatch(upgradeJoker(jokerId));
+    dispatch(recomputeJokerEffects({
+      baseInventoryLimit: 30,
+      periodCount,
+      day,
+    }));
+  }, [dispatch, periodCount, day]);
+
+  const getOwnedJokerLevel = useCallback((jokerId: string | number): number => {
+    const owned = jokersOwned.find(j => j.id.toString() === jokerId.toString());
+    return owned ? (owned as any).level ?? 1 : 0;
+  }, [jokersOwned]);
+
   return {
-    jokers: jokerState.jokers,
-    jokersOwned: jokerState.jokersOwned,
-    allJokers: jokerState.allJokers,
-    lockedJokerIds: jokerState.lockedJokerIds,
+    jokers,
+    jokersOwned,
+    allJokers,
+    lockedJokerIds,
     usedTodayJokerIds,
     activeEffects,
     isLoaded: true, // Always loaded in Redux
@@ -161,5 +190,7 @@ export const useJokers = () => {
     resetJokers: resetJokersAction,
     markJokerUsedToday: markJokerUsedTodayAction,
     resetDailyJokerUsage: resetDailyJokerUsageAction,
+    upgradeJoker: upgradeJokerAction,
+    getOwnedJokerLevel,
   };
 };

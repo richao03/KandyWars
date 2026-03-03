@@ -40,12 +40,8 @@ export const useHallPass = () => {
 
   // Initialize hall passes on mount to refresh definitions from static data
   useEffect(() => {
-    // Only initialize if not already loaded to prevent duplicate calls
     if (!hallPassState.isLoaded) {
-      console.log('🎓 useHallPass: Dispatching initializeHallPasses');
       dispatch(initializeHallPasses());
-    } else {
-      console.log('🎓 useHallPass: Already initialized, skipping');
     }
   }, [dispatch, hallPassState.isLoaded]);
 
@@ -88,36 +84,20 @@ export const useHallPass = () => {
   );
 
   const getSalePriceBonus = useCallback((): number => {
-    const bonus = getEffectValue('sale_price_bonus');
-    console.log('🎖️ getSalePriceBonus called, returning:', bonus);
-    console.log('🎖️ Selected passes:', selectedPassIds);
-    console.log('🎖️ Selected effects:', selectedEffects);
-    return bonus;
-  }, [getEffectValue, selectedPassIds, selectedEffects]);
+    return getEffectValue('sale_price_bonus');
+  }, [getEffectValue]);
 
   const getInventoryBonus = useCallback((): number => {
-    const bonus = getEffectValue('inventory_bonus');
-    console.log('🎖️ getInventoryBonus called, returning:', bonus);
-    console.log('🎖️ Selected passes:', selectedPassIds);
-    console.log('🎖️ Selected effects:', selectedEffects);
-    return bonus;
-  }, [getEffectValue, selectedPassIds, selectedEffects]);
+    return getEffectValue('inventory_bonus');
+  }, [getEffectValue]);
 
   const getAllowanceBonus = useCallback((): number => {
-    const bonus = getEffectValue('allowance_bonus');
-    console.log('🎖️ getAllowanceBonus called, returning:', bonus);
-    console.log('🎖️ Selected passes:', selectedPassIds);
-    console.log('🎖️ Selected effects:', selectedEffects);
-    return bonus;
-  }, [getEffectValue, selectedPassIds, selectedEffects]);
+    return getEffectValue('allowance_bonus');
+  }, [getEffectValue]);
 
   const getJokerBonus = useCallback((): number => {
-    const bonus = getEffectValue('joker_bonus');
-    console.log('🎖️ getJokerBonus called, returning:', bonus);
-    console.log('🎖️ Selected passes:', selectedPassIds);
-    console.log('🎖️ Selected effects:', selectedEffects);
-    return bonus;
-  }, [getEffectValue, selectedPassIds, selectedEffects]);
+    return getEffectValue('joker_bonus');
+  }, [getEffectValue]);
 
   const hasSpecialEffect = useCallback(
     (description: string): boolean => {
@@ -185,28 +165,15 @@ export const useHallPass = () => {
         hasPlayedAllMinigames: boolean;
       }
     ) => {
-      console.log('🎓 checkUnlockRequirements called with:', {
-        gameStats,
-        minigameTrackingData,
-      });
-      console.log('🎓 Total passes to check:', allPasses.length);
-
       const newUnlocks: string[] = [];
 
       // Check each pass requirement
       allPasses.forEach((pass) => {
-        console.log(
-          `🎓 Checking pass: ${pass.id}, isUnlocked: ${pass.isUnlocked}`
-        );
         if (pass.isUnlocked) return; // Already unlocked
 
         switch (pass.id) {
           case 'no_longer_freshman':
-            console.log(
-              `🎓 No Longer Freshman check: completions=${gameStats.completions}, required=1`
-            );
             if (gameStats.completions >= 1) {
-              console.log('🎓 No Longer Freshman UNLOCKED!');
               newUnlocks.push(pass.id);
             }
             break;
@@ -268,9 +235,6 @@ export const useHallPass = () => {
                   ? (gameStats.earlyPeriodProfit / totalProfit) * 100
                   : 0;
               if (earlyPercent >= 50 && gameStats.completions > 0) {
-                console.log(
-                  `⏱️ Time Crunch unlocked! Early profit: ${earlyPercent.toFixed(1)}% (${gameStats.earlyPeriodProfit}/${totalProfit})`
-                );
                 newUnlocks.push(pass.id);
               }
             }
@@ -288,9 +252,6 @@ export const useHallPass = () => {
                   ? (gameStats.latePeriodProfit / totalProfit) * 100
                   : 0;
               if (latePercent >= 50 && gameStats.completions > 0) {
-                console.log(
-                  `📝 Final Exam unlocked! Late profit: ${latePercent.toFixed(1)}% (${gameStats.latePeriodProfit}/${totalProfit})`
-                );
                 newUnlocks.push(pass.id);
               }
             }
@@ -302,9 +263,6 @@ export const useHallPass = () => {
               gameStats.transactionCount < 20 &&
               gameStats.completions > 0
             ) {
-              console.log(
-                `🏃 Speedrun Champion unlocked! Only ${gameStats.transactionCount} transactions`
-              );
               newUnlocks.push(pass.id);
             }
             break;
@@ -316,9 +274,6 @@ export const useHallPass = () => {
               gameStats.stashedAmount >= 50000 &&
               gameStats.completions > 0
             ) {
-              console.log(
-                `💼 Inheritance unlocked! Piggy bank: $${gameStats.stashedAmount}`
-              );
               newUnlocks.push(pass.id);
             }
             break;
@@ -326,12 +281,9 @@ export const useHallPass = () => {
       });
 
       // Unlock new passes
-      console.log('🎓 About to dispatch unlock actions for:', newUnlocks);
       newUnlocks.forEach((passId) => {
-        console.log(`🎓 Dispatching unlockHallPass for: ${passId}`);
         dispatch(unlockHallPass({ passId }));
       });
-      console.log('🎓 All unlock dispatches completed');
 
       return newUnlocks;
     },

@@ -194,7 +194,7 @@ const getDetailedDescription = (itemId: MerchantItemType, item: any) => {
     case 'fake_report_card':
       return 'Doubles your daily allowance.\n\nLvl 1: $10→$20, Lvl 2: $10→$40, Lvl 3: $10→$80';
     case 'metal_detector':
-      return 'Increases money found from random events.\n\n Each level add 10x to the amount found.';
+      return 'Increases money found from random events.\n\nLvl 1: 2x, Lvl 2: 4x, Lvl 3: 8x';
     case 'hollowed_textbook':
       return 'Hide candy in this modified textbook.\n\n Each level adds +10 to your inventory capacity.';
     case 'street_cred':

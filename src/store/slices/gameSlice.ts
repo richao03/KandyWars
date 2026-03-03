@@ -279,3 +279,15 @@ export const selectPeriod = (state: any) => {
 
 export const selectGameResetSignal = (state: any) =>
   state.game?.gameResetSignal;
+
+// Named field selectors for useGame hook optimization
+export const selectPeriodCount = (state: any) => state.game?.periodCount ?? 0;
+export const selectCurrentLocation = (state: any) => state.game?.currentLocation ?? 'home room';
+export const selectLastActiveView = (state: any) => state.game?.lastActiveView ?? 'market';
+export const selectHasStudiedTonight = (state: any) => state.game?.hasStudiedTonight ?? false;
+export const selectHasPlayedLunchMinigame = (state: any) => state.game?.hasPlayedLunchMinigame ?? false;
+export const selectMinigameContext = (state: any) => state.game?.minigameContext ?? null;
+export const selectPricesUpdating = (state: any) => state.game?.pricesUpdating ?? false;
+export const selectIsInitialized = (state: any) => state.game?.isInitialized ?? false;
+export const selectLocationHistory = (state: any) => state.game?.locationHistory ?? [];
+export const selectIsAfterSchool = (state: any) => state.game?.isAfterSchool ?? false;

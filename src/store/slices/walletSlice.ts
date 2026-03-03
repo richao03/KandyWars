@@ -215,3 +215,12 @@ export const {
 } = walletSlice.actions;
 
 export default walletSlice.reducer;
+
+// Named field selectors for useWallet hook optimization
+export const selectBalance = (state: { wallet: WalletState }) => state.wallet.balance;
+export const selectStashedAmount = (state: { wallet: WalletState }) => state.wallet.stashedAmount;
+export const selectAdoptionFee = (state: { wallet: WalletState }) => state.wallet.adoptionFee;
+export const selectDifficultyLevel = (state: { wallet: WalletState }) => state.wallet.difficultyLevel;
+export const selectPlayerName = (state: { wallet: WalletState }) => state.wallet.playerName;
+export const selectPlayerId = (state: { wallet: WalletState }) => state.wallet.playerId;
+export const selectIsFirstTimeDifficultySelection = (state: { wallet: WalletState }) => state.wallet.isFirstTimeDifficultySelection;

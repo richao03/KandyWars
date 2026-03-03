@@ -74,6 +74,14 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const completedLevelRef = useRef(0);
   const jokerRewardTierRef = useRef(0);
 
+  // Auto-sync state → refs for callback access (single source of truth)
+  numbersSequenceRef.current = numbersSequence;
+  matchedIndicesRef.current = matchedIndices;
+  matchesCompletedRef.current = matchesCompleted;
+  completedLevelRef.current = completedLevel;
+  jokerRewardTierRef.current = jokerRewardTier;
+  gameActiveRef.current = gameActive;
+
   // Constants
   const NUMBER_WIDTH = 60;
   const NUMBER_SPACING = 10;
@@ -122,8 +130,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     const sequence = generateRandomNumbers(config.requiredMatches);
     setNumbersSequence(sequence);
     setMatchedIndices([]);
-    numbersSequenceRef.current = sequence;
-    matchedIndicesRef.current = [];
 
     // Calculate starting position: move all numbers off-screen to the left
     // Each number takes TOTAL_NUMBER_WIDTH pixels, so total width is count * TOTAL_NUMBER_WIDTH
@@ -236,7 +242,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
       // Store the reward tier for joker selection
       setJokerRewardTier(levelsCompleted);
-      jokerRewardTierRef.current = levelsCompleted;
 
       showModal(
         'Game Over!',
@@ -256,7 +261,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         () => {
           // Restart level
           setMatchesCompleted(0);
-          matchesCompletedRef.current = 0;
           initializeNumbers();
           setGameActive(true);
           startTimer();
@@ -286,11 +290,9 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const newMatchedIndices = [...matchedIndices, rightmost.index];
       setMatchedIndices(newMatchedIndices);
-      matchedIndicesRef.current = newMatchedIndices; // Update ref
 
       const newMatchesCompleted = matchesCompleted + 1;
       setMatchesCompleted(newMatchesCompleted);
-      matchesCompletedRef.current = newMatchesCompleted;
 
       // Check if all numbers matched
       const config = getLevelConfig(level);
@@ -303,9 +305,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         // Mark this level as completed
         console.log(`🎯 MathGame: Setting completedLevel to ${level}`);
         setCompletedLevel(level);
-        completedLevelRef.current = level; // Set ref immediately for timing-sensitive checks
-        setJokerRewardTier(level); // Also set reward tier immediately
-        jokerRewardTierRef.current = level; // Set ref for immediate access
+        setJokerRewardTier(level);
 
         SoundEffects.playCongratsSound();
         showModal(
@@ -355,7 +355,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       // Mark this level as completed
       setCompletedLevel(level);
       setJokerRewardTier(level);
-      jokerRewardTierRef.current = level;
 
       showModal('Math Master!', 'You completed all levels!', '🏆', () => {
         setGameState('jokerSelection');
@@ -368,7 +367,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     const newLevel = level + 1;
     setLevel(newLevel);
     setMatchesCompleted(0);
-    matchesCompletedRef.current = 0;
     setTimeLeft(60);
     initializeNumbers(newLevel);
     setGameActive(true);
@@ -418,7 +416,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
       // Store the reward tier for joker selection
       setJokerRewardTier(levelsCompleted);
-      jokerRewardTierRef.current = levelsCompleted;
 
       showModal(
         "Time's Up!",
@@ -447,7 +444,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     setScore(0);
     setLevel(1);
     setMatchesCompleted(0);
-    matchesCompletedRef.current = 0;
     setTimeLeft(60);
     initializeNumbers();
     setGameActive(true);
@@ -482,9 +478,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     };
   }, []);
 
-  // Keep gameActiveRef in sync
+  // Safety net: stop animation when game becomes inactive
   useEffect(() => {
-    gameActiveRef.current = gameActive;
     if (!gameActive) {
       stopScrollAnimation();
     }

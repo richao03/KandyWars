@@ -48,26 +48,6 @@ export default function HallPassModal({
   // Sync local state with Redux when modal opens
   React.useEffect(() => {
     if (visible) {
-      console.log('🎓 HALL PASS MODAL: Opened');
-      console.log('🎓 HALL PASS MODAL: Total passes:', allPasses.length);
-      console.log(
-        '🎓 HALL PASS MODAL: All pass IDs:',
-        allPasses.map((p) => p.id)
-      );
-      console.log(
-        '🎓 HALL PASS MODAL: Unlocked passes:',
-        unlockedPasses.length
-      );
-      console.log(
-        '🎓 HALL PASS MODAL: Unlocked pass IDs:',
-        unlockedPasses.map((p) => p.id)
-      );
-      console.log(
-        '🎓 HALL PASS MODAL: Currently selected pass IDs from Redux:',
-        selectedPassIds
-      );
-      console.log('🎓 HALL PASS MODAL: isSelectionMode:', isSelectionMode);
-
       // Sync local selection state with Redux
       setLocalSelectedIds(selectedPassIds || []);
     }
@@ -138,9 +118,6 @@ export default function HallPassModal({
     e?.stopPropagation?.();
 
     if (isSelectionMode) {
-      console.log('🎖️ MODAL: Pass selected:', passId);
-      console.log('🎖️ MODAL: Current localSelectedIds:', localSelectedIds);
-
       // Toggle selection and immediately call onSelectPass to update Redux
       if (onSelectPass) {
         onSelectPass(passId); // This toggles in Redux
@@ -148,19 +125,14 @@ export default function HallPassModal({
 
       // Update local state for UI
       if (localSelectedIds.includes(passId)) {
-        const newIds = localSelectedIds.filter((id) => id !== passId);
-        console.log('🎖️ MODAL: Removing pass, new selection:', newIds);
-        setLocalSelectedIds(newIds);
+        setLocalSelectedIds(localSelectedIds.filter((id) => id !== passId));
       } else {
-        const newIds = [...localSelectedIds, passId];
-        console.log('🎖️ MODAL: Adding pass, new selection:', newIds);
-        setLocalSelectedIds(newIds);
+        setLocalSelectedIds([...localSelectedIds, passId]);
       }
     }
   };
 
   const handleConfirm = () => {
-    console.log('🎖️ MODAL: Pack Hall Passes clicked');
     if (onConfirm) {
       // New game flow - call onConfirm to proceed to difficulty selection
       onConfirm();

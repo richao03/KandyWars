@@ -23,35 +23,37 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(effect?.duration).toBe('one-time');
     });
 
-    it('Time Equation (ID: 2) - Reverse 1 period', () => {
+    it('Median Formula (ID: 2) - 2x multiplier on Medium candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 2);
-      expect(joker?.name).toBe('Time Equation');
-      expect(joker?.effects[0].target).toBe('period_count');
-      expect(joker?.effects[0].operation).toBe('add');
-      expect(joker?.effects[0].amount).toBe(-1);
+      expect(joker?.name).toBe('Median Formula');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('size_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candySize).toBe('medium');
     });
 
-    it('Geometric Expansion (ID: 3) - Inventory +15', () => {
+    it('Geometric Expansion (ID: 3) - Inventory +3 per day elapsed', () => {
       const store = createStoreWithEffects({
         jokers: [createMockJoker(3, 'Geometric Expansion')],
         period: 0,
       });
 
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 3);
-      expect(joker?.effects[0].target).toBe('inventory_limit');
+      expect(joker?.effects[0].target).toBe('day_scaled_inventory');
       expect(joker?.effects[0].operation).toBe('add');
-      expect(joker?.effects[0].amount).toBe(15);
+      expect(joker?.effects[0].amount).toBe(3);
 
       const jokerService = JokerService.getInstance();
       const baseInventory = 20;
       const result = jokerService.applyJokerEffects(
         baseInventory,
-        'inventory_limit',
+        'day_scaled_inventory',
         store.getState().joker.jokers,
         0
       );
 
-      expect(result).toBe(35); // 20 + 15
+      expect(result).toBe(23); // 20 + 3
     });
 
     it('Ace the Test (ID: 31) - 2x daily allowance', () => {
@@ -62,39 +64,19 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(2);
     });
 
-    it('Even Stevens (ID: 29) - +50% if inventory is even', () => {
-      const store = createStoreWithEffects({
-        jokers: [createMockJoker(29, 'Even Stevens')],
-        period: 0,
-      });
-
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 29);
-      expect(joker?.name).toBe('Even Stevens');
-      expect(joker?.effects[0].target).toBe('sell_multiplier');
-      expect(joker?.effects[0].amount).toBe(1.5);
-
-      // Should apply when inventory is even
-      const jokerService = JokerService.getInstance();
-      const basePrice = 100;
-      const evenInventory = 20;
-
-      const result = jokerService.applyJokerEffects(
-        basePrice,
-        'candy_price',
-        store.getState().joker.jokers,
-        0,
-        evenInventory
-      );
-
-      // With even inventory, sell multiplier applies
-      // This tests conditional logic
+    it('Inductive Reasoning (ID: 43) - Inventory +5 every new day', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 43);
+      expect(joker?.name).toBe('Inductive Reasoning');
+      expect(joker?.effects[0].target).toBe('inventory_limit');
+      expect(joker?.effects[0].amount).toBe(5);
     });
 
-    it('Odd Todd (ID: 30) - +50% if inventory is odd', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 30);
-      expect(joker?.name).toBe('Odd Todd');
-      expect(joker?.effects[0].target).toBe('sell_multiplier');
-      expect(joker?.effects[0].amount).toBe(1.5);
+    it('Temporary Emperor (ID: 35) - Sell 3 of all candy', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 35);
+      expect(joker?.name).toBe('Temporary Emperor');
+      expect(joker?.type).toBe('one-time');
+      expect(joker?.effects[0].target).toBe('time_skip');
+      expect(joker?.effects[0].amount).toBe(3);
     });
   });
 
@@ -114,12 +96,14 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(2);
     });
 
-    it('Propacandies (ID: 8) - Drop price by 90% for 1 period', () => {
+    it('Micro Chip (ID: 8) - 2x multiplier on Small candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 8);
-      expect(joker?.name).toBe('Propacandies');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('candy_price');
-      expect(joker?.effects[0].amount).toBe(0.1); // 10% of original
+      expect(joker?.name).toBe('Micro Chip');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('size_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candySize).toBe('small');
     });
 
     it('Data Compression (ID: 9) - Inventory +13', () => {
@@ -128,27 +112,29 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(13);
     });
 
-    it('Glitch in the Matrix (ID: 10) - Copy a joker', () => {
+    it('Overclock (ID: 10) - +0.3% profit per candy in inventory', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 10);
-      expect(joker?.name).toBe('Glitch in the Matrix');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('joker_duplicate');
-      expect(joker?.effects[0].operation).toBe('activate');
+      expect(joker?.name).toBe('Overclock');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('inventory_count_bonus');
+      expect(joker?.effects[0].operation).toBe('add');
+      expect(joker?.effects[0].amount).toBe(0.003);
     });
 
-    it('Trojan Horse (ID: 11) - Skip level and get 5 of every candy', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 11);
-      expect(joker?.name).toBe('Trojan Horse');
-      expect(joker?.type).toBe('one-time');
+    it('Diamond Hand (ID: 50) - $10 per candy at start of each period', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 50);
+      expect(joker?.name).toBe('Diamond Hand');
+      expect(joker?.effects[0].target).toBe('period_start_inventory_bonus');
+      expect(joker?.effects[0].amount).toBe(10);
     });
   });
 
   describe('Home Economics Jokers', () => {
-    it('Vacuum Sealer (ID: 12) - 2x inventory limit', () => {
+    it('Vacuum Sealer (ID: 12) - 2x inventory with multiplier penalty', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 12);
       expect(joker?.name).toBe('Vacuum Sealer');
-      expect(joker?.requiresSnapshot).toBe(true);
-      expect(joker?.effects[0].target).toBe('inventory_limit');
+      expect(joker?.effects[0].target).toBe('inventory_double_with_penalty');
+      expect(joker?.effects[0].operation).toBe('enable');
     });
 
     it('Fridge Organizer (ID: 14) - Inventory +15', () => {
@@ -179,34 +165,46 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(10);
     });
 
-    it('Slow Cooker (ID: 18) - +10% profit per period held', () => {
+    it('Super Size Me (ID: 18) - 2x multiplier on Big candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 18);
-      expect(joker?.name).toBe('Slow Cooker');
-      expect(joker?.effects[0].target).toBe('sell_multiplier');
-      expect(joker?.effects[0].amount).toBe(1.10);
+      expect(joker?.name).toBe('Super Size Me');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('size_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candySize).toBe('big');
     });
   });
 
   describe('Art Jokers', () => {
-    it('Treasure Chest (ID: 66) - Inventory +15', () => {
+    it('Treasure Chest (ID: 66) - Inventory +8, +$20 per empty slot at end of day', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 66);
       expect(joker?.name).toBe('Treasure Chest');
-      expect(joker?.effects[0].amount).toBe(15);
+      expect(joker?.effects[0].target).toBe('inventory_limit');
+      expect(joker?.effects[0].operation).toBe('add');
+      expect(joker?.effects[0].amount).toBe(8);
+      expect(joker?.effects[1].target).toBe('empty_slot_daily_bonus');
+      expect(joker?.effects[1].operation).toBe('add');
+      expect(joker?.effects[1].amount).toBe(20);
     });
 
-    it('Temporary Emperor (ID: 35) - Skip 1 period, gain selling 3 of all candy', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 35);
-      expect(joker?.name).toBe('Temporary Emperor');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('time_skip');
-      expect(joker?.effects[0].amount).toBe(3);
+    it('Odd Todd (ID: 30) - 2x ALL if inventory limit is odd', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 30);
+      expect(joker?.name).toBe('Odd Todd');
+      expect(joker?.effects[0].target).toBe('conditional_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.inventoryParity).toBe('odd');
     });
 
-    it('Roman Coin (ID: 37) - Instantly gain $2000', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 37);
-      expect(joker?.name).toBe('Roman Coin');
-      expect(joker?.effects[0].target).toBe('money');
-      expect(joker?.effects[0].amount).toBe(2000);
+    it('Cocoa Futures (ID: 23) - 2x multiplier on Chocolate candy', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 23);
+      expect(joker?.name).toBe('Cocoa Futures');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('type_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candyType).toBe('chocolate');
     });
 
     it('Medieval Shield (ID: 67) - Protect against money loss', () => {
@@ -216,112 +214,33 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].operation).toBe('enable');
     });
 
-    it('Candy Vault (ID: 74) - Protect stash from confiscation', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 74);
-      expect(joker?.name).toBe('Candy Vault');
-      expect(joker?.effects[0].target).toBe('stash_protection');
-      expect(joker?.effects[0].operation).toBe('enable');
-    });
-  });
-
-  describe('Gym Jokers', () => {
-    it('Coaching (ID: 13) - +$300 to daily allowance', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 13);
-      expect(joker?.name).toBe('Coaching');
-      expect(joker?.effects[0].target).toBe('allowance_add');
-      expect(joker?.effects[0].amount).toBe(300);
+    it('Art Auction (ID: 52) - +5% profit per day elapsed', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 52);
+      expect(joker?.name).toBe('Art Auction');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('day_scaling_bonus');
+      expect(joker?.effects[0].operation).toBe('add');
+      expect(joker?.effects[0].amount).toBe(0.05);
     });
 
-    it('Bulk Up (ID: 54) - Inventory +15', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 54);
-      expect(joker?.name).toBe('Bulk Up');
-      expect(joker?.effects[0].amount).toBe(15);
-    });
-
-    it('Embrace the Grind (ID: 55) - $500 for ending period with 0 inventory', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 55);
-      expect(joker?.name).toBe('Embrace the Grind');
-      expect(joker?.effects[0].target).toBe('empty_inventory_bonus');
-      expect(joker?.effects[0].amount).toBe(500);
-    });
-
-    it('The Bounceback (ID: 41) - $333 every period with no sale', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 41);
-      expect(joker?.name).toBe('The Bounceback');
-      expect(joker?.effects[0].target).toBe('drought_relief_bonus');
-      expect(joker?.effects[0].amount).toBe(333);
-      expect(joker?.effects[0].duration).toBe('persistent');
-    });
-
-    it('Bet You I\'m Faster (ID: 25) - Fill inventory with chosen candy', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 25);
-      expect(joker?.name).toBe("Bet You I'm Faster");
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('fill_inventory_choice');
-    });
-
-    it('Tachyonic Sprint (ID: 26) - Travel to any period of today', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 26);
-      expect(joker?.name).toBe('Tachyonic Sprint');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('time_travel_to_period');
-    });
-  });
-
-  describe('Logic Jokers', () => {
-    it('Master Negotiator (ID: 27) - Convert candy types', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 27);
-      expect(joker?.name).toBe('Master Negotiator');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('candy_conversion');
-      expect(joker?.effects[0].operation).toBe('convert');
-    });
-
-    it('Inductive Reasoning (ID: 43) - Inventory +5 every new day', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 43);
-      expect(joker?.name).toBe('Inductive Reasoning');
-      expect(joker?.effects[0].target).toBe('inventory_limit');
-      expect(joker?.effects[0].amount).toBe(5);
-    });
-
-    it('Making Cents (ID: 45) - $5000 if cash ends in .00', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 45);
-      expect(joker?.name).toBe('Making Cents');
-      expect(joker?.effects[0].target).toBe('perfect_balance_bonus');
-      expect(joker?.effects[0].amount).toBe(5000);
-    });
-
-    it('Pursuasion (ID: 48) - 2x profit for next sale', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 48);
-      expect(joker?.name).toBe('Pursuasion');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('sell_multiplier');
-      expect(joker?.effects[0].amount).toBe(2);
-    });
-
-    it('Something from Nothing (ID: 46) - +1 of all candy every period', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 46);
-      expect(joker?.name).toBe('Something from Nothing');
-      expect(joker?.effects[0].target).toBe('candy_generation');
-      expect(joker?.effects[0].operation).toBe('generate');
-      expect(joker?.effects[0].amount).toBe(1);
-    });
-
-    it('Therefore... (ID: 28) - +$200 to daily allowance', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 28);
-      expect(joker?.name).toBe('Therefore...');
-      expect(joker?.effects[0].target).toBe('allowance_add');
-      expect(joker?.effects[0].amount).toBe(200);
+    it('The Good Old Days (ID: 24) - Deli candy costs half price', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 24);
+      expect(joker?.name).toBe('The Good Old Days');
+      expect(joker?.effects[0].target).toBe('deli_price_discount');
+      expect(joker?.effects[0].amount).toBe(0.5);
+      expect(joker?.effects[0].conditions?.location).toBe('deli');
     });
   });
 
   describe('Economy Jokers', () => {
-    it('Market Crash (ID: 19) - All prices drop 50% for 1 period', () => {
+    it('Bear Market (ID: 19) - 2x multiplier on Gummy candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 19);
-      expect(joker?.name).toBe('Market Crash');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('candy_price');
-      expect(joker?.effects[0].amount).toBe(0.5);
+      expect(joker?.name).toBe('Bear Market');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('type_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candyType).toBe('gummy');
     });
 
     it('Market Manipulation (ID: 20) - Set candy to highest price', () => {
@@ -347,57 +266,147 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(1.1);
     });
 
-    it('Bulk Sale (ID: 23) - Buy >50% inventory at -20% price', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 23);
-      expect(joker?.name).toBe('Bulk Sale');
-      expect(joker?.effects[0].target).toBe('bulk_sale_bonus');
-      expect(joker?.effects[0].amount).toBe(1.2);
+    it('The Bounceback (ID: 41) - $500 every period with no sale', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 41);
+      expect(joker?.name).toBe('The Bounceback');
+      expect(joker?.effects[0].target).toBe('drought_relief_bonus');
+      expect(joker?.effects[0].amount).toBe(500);
+      expect(joker?.effects[0].duration).toBe('persistent');
     });
 
-    it('The Good Old Days (ID: 24) - Deli candy costs half price', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 24);
-      expect(joker?.name).toBe('The Good Old Days');
-      expect(joker?.effects[0].target).toBe('deli_price_discount');
-      expect(joker?.effects[0].amount).toBe(0.5);
-      expect(joker?.effects[0].conditions?.location).toBe('deli');
+    it('Roman Coin (ID: 37) - Instantly gain $2000', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 37);
+      expect(joker?.name).toBe('Roman Coin');
+      expect(joker?.effects[0].target).toBe('money');
+      expect(joker?.effects[0].amount).toBe(2000);
+    });
+  });
+
+  describe('Gym Jokers', () => {
+    it('Farmers Carry (ID: 11) - +$2000/period if inv >= 75', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 11);
+      expect(joker?.name).toBe('Farmers Carry');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('farmers_carry_bonus');
+      expect(joker?.effects[0].amount).toBe(2000);
     });
 
-    it('Diamond Hand (ID: 50) - $10 per candy at start of each period', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 50);
-      expect(joker?.name).toBe('Diamond Hand');
-      expect(joker?.effects[0].target).toBe('period_start_inventory_bonus');
+    it('Coaching (ID: 13) - +$300 to daily allowance', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 13);
+      expect(joker?.name).toBe('Coaching');
+      expect(joker?.effects[0].target).toBe('allowance_add');
+      expect(joker?.effects[0].amount).toBe(300);
+    });
+
+    it('Bet You I\'m Faster (ID: 25) - Fill inventory with chosen candy', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 25);
+      expect(joker?.name).toBe("Bet You I'm Faster");
+      expect(joker?.type).toBe('one-time');
+      expect(joker?.effects[0].target).toBe('fill_inventory_choice');
+    });
+
+    it('Bulk Up (ID: 54) - Inventory +15', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 54);
+      expect(joker?.name).toBe('Bulk Up');
+      expect(joker?.effects[0].amount).toBe(15);
+    });
+
+    it('Perfect Change (ID: 45) - 10x ALL if cash ends in .00', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 45);
+      expect(joker?.name).toBe('Perfect Change');
+      expect(joker?.effects[0].target).toBe('conditional_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(10);
+      expect(joker?.effects[0].conditions?.cashEndsWith).toBe('.00');
+    });
+
+    it('Hard Knocks (ID: 26) - 2x multiplier on Hard Candy', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 26);
+      expect(joker?.name).toBe('Hard Knocks');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('type_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candyType).toBe('hard_candy');
+    });
+  });
+
+  describe('Logic Jokers', () => {
+    it('Master Negotiator (ID: 27) - Convert candy types', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 27);
+      expect(joker?.name).toBe('Master Negotiator');
+      expect(joker?.type).toBe('one-time');
+      expect(joker?.effects[0].target).toBe('candy_conversion');
+      expect(joker?.effects[0].operation).toBe('convert');
+    });
+
+    it('Therefore... (ID: 28) - +$200 to daily allowance', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 28);
+      expect(joker?.name).toBe('Therefore...');
+      expect(joker?.effects[0].target).toBe('allowance_add');
+      expect(joker?.effects[0].amount).toBe(200);
+    });
+
+    it('Even Stevens (ID: 29) - 2x ALL if inventory limit is even', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 29);
+      expect(joker?.name).toBe('Even Stevens');
+      expect(joker?.effects[0].target).toBe('conditional_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.inventoryParity).toBe('even');
+    });
+
+    it('Embrace the Grind (ID: 55) - $500 for ending period with 0 inventory', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 55);
+      expect(joker?.name).toBe('Embrace the Grind');
+      expect(joker?.effects[0].target).toBe('empty_inventory_bonus');
+      expect(joker?.effects[0].amount).toBe(500);
+    });
+
+    it('Pursuasion (ID: 48) - 2x next sale', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 48);
+      expect(joker?.name).toBe('Pursuasion');
+      expect(joker?.type).toBe('one-time');
+      expect(joker?.effects[0].target).toBe('next_sale_multiplier');
+      expect(joker?.effects[0].amount).toBe(2);
+    });
+
+    it('Sour Logic (ID: 46) - 2x multiplier on Sour candy', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 46);
+      expect(joker?.name).toBe('Sour Logic');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('type_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candyType).toBe('sour');
     });
   });
 
   describe('Recess Jokers', () => {
-    it('Jump Rope Rhythm (ID: 32) - Every 3rd sale +66%', () => {
+    it('Double Dutch (ID: 32) - 2x multiplier on Chewy candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 32);
-      expect(joker?.name).toBe('Jump Rope Rhythm');
-      expect(joker?.effects[0].target).toBe('every_third_sale_bonus');
-      expect(joker?.effects[0].amount).toBe(1.66);
+      expect(joker?.name).toBe('Double Dutch');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('type_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candyType).toBe('chewy');
     });
 
-    it('Feed the Beast (ID: 33) - 10% deposit bonus', () => {
+    it('Feed the Beast (ID: 33) - +$300 per period when inventory >= 50% full', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 33);
       expect(joker?.name).toBe('Feed the Beast');
-      expect(joker?.effects[0].target).toBe('deposit_bonus');
-      expect(joker?.effects[0].amount).toBe(1.1);
+      expect(joker?.effects[0].target).toBe('inventory_fullness_bonus');
+      expect(joker?.effects[0].operation).toBe('add');
+      expect(joker?.effects[0].amount).toBe(300);
     });
 
-    it('Hopscotch Bonus (ID: 34) - Every even period +25%', () => {
-      const store = createStoreWithEffects({
-        jokers: [createMockJoker(34, 'Hopscotch Bonus')],
-        period: 1, // Period 2 (even)
-      });
-
+    it('Hopscotch Bonus (ID: 34) - +5% profit per unique location visited today', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 34);
       expect(joker?.name).toBe('Hopscotch Bonus');
-      expect(joker?.effects[0].target).toBe('even_period_sale_bonus');
-      expect(joker?.effects[0].amount).toBe(1.25);
-
-      const periodMocker = new PeriodMocker(store);
-      expect(periodMocker.isEvenPeriod()).toBe(true);
+      expect(joker?.effects[0].target).toBe('location_diversity_bonus');
+      expect(joker?.effects[0].operation).toBe('add');
+      expect(joker?.effects[0].amount).toBe(0.05);
     });
 
     it('Hide and Seek (ID: 51) - Triple found money', () => {
@@ -414,28 +423,22 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(1.1);
     });
 
-    it('Lost and Found (ID: 52) - Trigger max find money event', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 52);
-      expect(joker?.name).toBe('Lost and Found');
-      expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('trigger_find_money_event');
+    it('Secret Hideout (ID: 74) - Protect stash from confiscation', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 74);
+      expect(joker?.name).toBe('Secret Hideout');
+      expect(joker?.effects[0].target).toBe('stash_protection');
+      expect(joker?.effects[0].operation).toBe('enable');
     });
   });
 
   describe('Geography Jokers', () => {
-    it('Sunset Surge (ID: 38) - +33% afternoon sales', () => {
-      const store = createStoreWithEffects({
-        jokers: [createMockJoker(38, 'Sunset Surge')],
-        period: 4, // Afternoon period
-      });
-
+    it('Golden Hour (ID: 38) - +50% profit during last 2 periods of day', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 38);
-      expect(joker?.name).toBe('Sunset Surge');
-      expect(joker?.effects[0].target).toBe('afternoon_sale_bonus');
-      expect(joker?.effects[0].amount).toBe(1.33);
-
-      const periodMocker = new PeriodMocker(store);
-      expect(periodMocker.isAfternoon()).toBe(true);
+      expect(joker?.name).toBe('Golden Hour');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('late_period_bonus');
+      expect(joker?.effects[0].operation).toBe('add');
+      expect(joker?.effects[0].amount).toBe(0.50);
     });
 
     it('Trade Routes (ID: 39) - +1 inventory every period', () => {
@@ -451,32 +454,30 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.type).toBe('one-time');
     });
 
-    it('Map Maker (ID: 53) - See good event locations', () => {
+    it('Mysterious Artifact (ID: 53) - 8% daily stash interest', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 53);
-      expect(joker?.name).toBe('Map Maker');
-      expect(joker?.effects[0].target).toBe('location_highlights');
-      expect(joker?.effects[0].operation).toBe('enable');
+      expect(joker?.name).toBe('Mysterious Artifact');
+      expect(joker?.effects[0].target).toBe('stash_interest');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(1.08);
     });
 
-    it('Time Zone Arbitrage (ID: 42) - Morning purchases -25%', () => {
-      const store = createStoreWithEffects({
-        jokers: [createMockJoker(42, 'Time Zone Arbitrage')],
-        period: 0, // Morning period
-      });
-
+    it('Tropical Import (ID: 42) - 2x multiplier on Fruity candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 42);
-      expect(joker?.name).toBe('Time Zone Arbitrage');
-      expect(joker?.effects[0].target).toBe('morning_purchase_discount');
-      expect(joker?.effects[0].amount).toBe(0.75);
-
-      const periodMocker = new PeriodMocker(store);
-      expect(periodMocker.isMorning()).toBe(true);
+      expect(joker?.name).toBe('Tropical Import');
+      expect(joker?.type).toBe('persistent');
+      expect(joker?.effects[0].target).toBe('type_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].conditions?.candyType).toBe('fruity');
     });
 
-    it('Atlas Bonus (ID: 43 duplicate) - Instantly gain $2500', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 43 && j.subject === 'Geography');
-      // Note: There might be ID collision with Inductive Reasoning
-      // This needs to be checked in the actual jokerEffectEngine
+    it('Atlas Bonus (ID: 44) - Instantly gain $2500', () => {
+      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 44);
+      expect(joker?.name).toBe('Atlas Bonus');
+      expect(joker?.type).toBe('one-time');
+      expect(joker?.effects[0].target).toBe('money');
+      expect(joker?.effects[0].amount).toBe(2500);
     });
   });
 
@@ -534,11 +535,11 @@ describe('All Jokers - Comprehensive Tests', () => {
       // Test on period 0
       let result = jokerService.applyJokerEffects(
         20,
-        'inventory_limit',
+        'day_scaled_inventory',
         store.getState().joker.jokers,
         0
       );
-      expect(result).toBe(35);
+      expect(result).toBe(23);
 
       // Advance to period 5
       periodMocker.setPeriod(5);
@@ -546,11 +547,11 @@ describe('All Jokers - Comprehensive Tests', () => {
       // Should still apply
       result = jokerService.applyJokerEffects(
         20,
-        'inventory_limit',
+        'day_scaled_inventory',
         store.getState().joker.jokers,
         5
       );
-      expect(result).toBe(35);
+      expect(result).toBe(23);
     });
 
     it('should handle conditional jokers (Even Stevens vs Odd Todd)', () => {
@@ -564,8 +565,8 @@ describe('All Jokers - Comprehensive Tests', () => {
         period: 0,
       });
 
-      // Even Stevens should activate with even inventory
-      // Odd Todd should activate with odd inventory
+      // Even Stevens should activate with even inventory limit
+      // Odd Todd should activate with odd inventory limit
       // This is tested via conditional logic in JokerService
     });
   });
@@ -595,6 +596,7 @@ describe('All Jokers - Comprehensive Tests', () => {
         'inventory_limit',
         'candy_price',
         'sell_multiplier',
+        'sell_flat_bonus',
         'period_count',
         'money',
         'hint_chance',
@@ -612,31 +614,31 @@ describe('All Jokers - Comprehensive Tests', () => {
         'compound_interest_bonus',
         'market_manipulation',
         'big_short',
-        'escalating_price_increase',
         'morning_inventory_bonus',
         'period_start_inventory_bonus',
         'deposit_bonus',
-        'bulk_purchase_discount',
         'deli_price_discount',
         'fill_inventory_choice',
-        'time_travel_to_period',
         'found_money_multiplier',
         'allowance_multiplier',
         'allowance_add',
-        'every_third_sale_bonus',
         'next_sale_multiplier',
-        'even_period_sale_bonus',
         'consecutive_sale_bonus',
-        'trigger_find_money_event',
-        'bulk_sale_bonus',
-        'afternoon_sale_bonus',
-        'morning_purchase_discount',
         'perfect_balance_bonus',
-        'location_highlights',
         'randomize_prices',
-        'price_prediction',
-        'skip_level_and_gain_candy',
-        'shuffle_prices',
+        'stash_interest',
+        'farmers_carry_bonus',
+        'type_multiplier',
+        'size_multiplier',
+        'conditional_multiplier',
+        'inventory_double_with_penalty',
+        'day_scaled_inventory',
+        'inventory_count_bonus',
+        'inventory_fullness_bonus',
+        'location_diversity_bonus',
+        'late_period_bonus',
+        'day_scaling_bonus',
+        'empty_slot_daily_bonus',
       ];
 
       STANDARDIZED_JOKERS.forEach((joker) => {
@@ -646,10 +648,8 @@ describe('All Jokers - Comprehensive Tests', () => {
       });
     });
 
-    it('should count total jokers', () => {
-      const totalJokers = STANDARDIZED_JOKERS.length;
-      console.log(`Total jokers: ${totalJokers}`);
-      expect(totalJokers).toBeGreaterThan(40); // At least 40 jokers
+    it('should have exactly 54 jokers', () => {
+      expect(STANDARDIZED_JOKERS.length).toBe(54);
     });
   });
 });

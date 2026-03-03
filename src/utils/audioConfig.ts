@@ -14,8 +14,6 @@ export async function initializeAudioMode() {
     return;
   }
 
-  console.log('🎵 [AudioConfig] Initializing global audio mode...');
-
   try {
     await setAudioModeAsync({
       playsInSilentMode: false, // Respect device silent mode
@@ -25,7 +23,6 @@ export async function initializeAudioMode() {
     });
 
     isAudioConfigured = true;
-    console.log('🎵 [AudioConfig] ✅ Global audio mode initialized for audio mixing');
   } catch (error) {
     console.error('🎵 [AudioConfig] ❌ Failed to initialize audio mode:', error);
   }

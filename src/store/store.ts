@@ -46,7 +46,7 @@ const rootReducer = combineReducers({
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 4, // Increment version to trigger migration
+  version: 5, // Increment version to trigger migration
   storage: AsyncStorage,
   whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
@@ -84,6 +84,34 @@ const persistConfig = {
       console.log('🔄 Migrating to version 4: Updating hall pass rarities and order');
       if (state.hallPass) {
         state.hallPass.isLoaded = false; // Force re-initialization to load updated rarities
+      }
+    }
+
+    // Migration to version 5: Money-making system revamp
+    // - 15 candies (was 7), new types/sizes, new joker effects
+    // - Clear inventory (old candies don't exist anymore)
+    // - Reset seed data for new candy count
+    // - Add joker level field
+    // - Preserve money/wallet
+    if (state && state._persist?.version < 5) {
+      console.log('🔄 Migrating to version 5: Money-making system revamp (15 candies, joker levels)');
+      if (state.inventory) {
+        state.inventory.items = []; // Clear old candy inventory
+        state.inventory.totalQuantity = 0;
+      }
+      if (state.seed) {
+        state.seed.gameData = null; // Force regeneration with 15 candies
+        state.seed.currentSeed = null;
+      }
+      if (state.joker?.ownedJokers) {
+        // Add level field to existing jokers
+        state.joker.ownedJokers = state.joker.ownedJokers.map((j: any) => ({
+          ...j,
+          level: j.level ?? 1,
+        }));
+      }
+      if (state.hallPass) {
+        state.hallPass.isLoaded = false;
       }
     }
 

@@ -5,7 +5,8 @@ import { initializeAudioMode } from './audioConfig';
  * Centralized Music Controller
  *
  * Single source of truth for all background music in the app.
- * Prevents music overlap and handles rapid screen transitions gracefully.
+ * Uses a single persistent AudioPlayer with replace() to swap tracks,
+ * avoiding the expo-audio bug where ~40 create/destroy cycles causes silence.
  */
 
 type MusicTrack =
@@ -22,19 +23,10 @@ type MusicTrack =
   | 'cricket'
   | 'none';
 
-interface MusicState {
-  currentTrack: MusicTrack;
-  targetTrack: MusicTrack;
-  player: AudioPlayer | null;
-  isTransitioning: boolean;
-}
-
-const state: MusicState = {
-  currentTrack: 'none',
-  targetTrack: 'none',
-  player: null,
-  isTransitioning: false,
-};
+let player: AudioPlayer | null = null;
+let currentTrack: MusicTrack = 'none';
+let targetTrack: MusicTrack = 'none';
+let isTransitioning = false;
 
 const MUSIC_FILES: Record<Exclude<MusicTrack, 'none'>, any> = {
   menu: require('../../assets/music/menu.wav'),
@@ -50,7 +42,7 @@ const MUSIC_FILES: Record<Exclude<MusicTrack, 'none'>, any> = {
   cricket: require('../../assets/soundEffects/crickets1.mp3'),
 };
 
-const LOOPING_TRACKS: Set<MusicTrack> = new Set([
+const LOOPING_TRACKS = new Set<MusicTrack>([
   'menu',
   'day1',
   'day2',
@@ -62,128 +54,61 @@ const LOOPING_TRACKS: Set<MusicTrack> = new Set([
 ]);
 
 /**
- * Immediately stop and cleanup current player
+ * Get or create the singleton player. Uses replace() to swap sources
+ * instead of creating a new player each time.
  */
-function stopCurrentPlayer() {
-  if (state.player) {
-    try {
-      state.player.pause();
-      state.player.remove();
-    } catch (error) {
-      console.warn('🎵 Error stopping player:', error);
-    }
-    state.player = null;
-  }
-  state.currentTrack = 'none';
-}
-
-/**
- * Play a specific track
- */
-async function playTrack(track: Exclude<MusicTrack, 'none'>) {
-  try {
-    // Ensure audio mode is initialized first (critical for physical devices)
-    await initializeAudioMode();
-
-    const player = createAudioPlayer(MUSIC_FILES[track]);
-    player.loop = LOOPING_TRACKS.has(track);
+function ensurePlayer(source: any): AudioPlayer {
+  if (!player) {
+    player = createAudioPlayer(source);
     player.volume = 0.5;
-    player.play();
-
-    state.player = player;
-    state.currentTrack = track;
-
-    if (__DEV__) console.log(`🎵 Playing: ${track} (loop: ${player.loop})`);
-  } catch (error) {
-    console.error(`🎵 Error playing ${track}:`, error);
-    state.currentTrack = 'none';
+  } else {
+    player.replace(source);
   }
+  return player;
 }
 
 /**
- * Transition to a new track with timeout protection
+ * Transition to a new track
  */
 async function transitionTo(newTrack: MusicTrack) {
-  // Prevent overlapping transitions
-  if (state.isTransitioning) {
-    if (__DEV__)
-      console.log(
-        `🎵 [MusicController] Transition in progress, queuing: ${newTrack}`
-      );
-    state.targetTrack = newTrack;
+  if (isTransitioning) {
+    targetTrack = newTrack;
     return;
   }
 
-  state.isTransitioning = true;
-  state.targetTrack = newTrack;
-
-  if (__DEV__)
-    console.log(
-      `🎵 [MusicController] Transitioning from ${state.currentTrack} to ${newTrack}`
-    );
+  isTransitioning = true;
+  targetTrack = newTrack;
 
   try {
-    // Create a timeout promise (5 seconds max)
-    const timeoutPromise = new Promise<void>((_, reject) => {
-      setTimeout(
-        () =>
-          reject(
-            new Error(`Transition timeout: ${state.currentTrack} → ${newTrack}`)
-          ),
-        5000
-      );
-    });
-
-    // Create the actual transition promise
-    const transitionPromise = async () => {
-      // If requested track is already playing, do nothing
-      if (state.currentTrack === newTrack) {
-        if (__DEV__)
-          console.log(`🎵 [MusicController] Already playing: ${newTrack}`);
-        return;
-      }
-
-      // Stop current track
-      if (__DEV__)
-        console.log(
-          `🎵 [MusicController] Stopping current track: ${state.currentTrack}`
-        );
-      stopCurrentPlayer();
-
-      // Play new track if not 'none'
-      if (newTrack !== 'none') {
-        if (__DEV__)
-          console.log(`🎵 [MusicController] Starting new track: ${newTrack}`);
-        await playTrack(newTrack);
-      } else {
-        if (__DEV__) console.log('🎵 [MusicController] Silence');
-      }
-    };
-
-    // Race between transition and timeout
-    await Promise.race([transitionPromise(), timeoutPromise]);
-
-    // Check if target changed during transition
-    if (state.targetTrack !== newTrack) {
-      if (__DEV__)
-        console.log(
-          `🎵 [MusicController] Target changed to: ${state.targetTrack}, transitioning...`
-        );
-      const nextTarget = state.targetTrack;
-      state.isTransitioning = false;
-      await transitionTo(nextTarget);
+    if (currentTrack === newTrack) {
       return;
     }
 
-    if (__DEV__)
-      console.log(`🎵 [MusicController] ✅ Transition complete: ${newTrack}`);
+    if (newTrack === 'none') {
+      if (player) {
+        player.pause();
+      }
+      currentTrack = 'none';
+    } else {
+      await initializeAudioMode();
+      const p = ensurePlayer(MUSIC_FILES[newTrack]);
+      p.loop = LOOPING_TRACKS.has(newTrack);
+      p.play();
+      currentTrack = newTrack;
+    }
+
+    // Check if target changed during transition
+    if (targetTrack !== newTrack) {
+      const nextTarget = targetTrack;
+      isTransitioning = false;
+      await transitionTo(nextTarget);
+      return;
+    }
   } catch (error) {
-    console.error('🎵 [MusicController] ❌ Transition failed:', error);
-    // On error, force cleanup
-    state.currentTrack = 'none';
-    state.player = null;
+    console.error('🎵 [MusicController] Transition failed:', error);
+    currentTrack = 'none';
   } finally {
-    state.isTransitioning = false;
+    isTransitioning = false;
   }
 }
 
@@ -206,58 +131,40 @@ export const MusicController = {
   },
 
   /**
-   * Emergency stop - immediately kill all music without fade
+   * Emergency stop - immediately kill all music
    * Use this when switching views rapidly or on critical errors
    */
   killAll() {
-    if (__DEV__)
-      console.log('🎵 [MusicController] 🚨 EMERGENCY STOP - Killing all music');
-
-    if (state.player) {
+    if (player) {
       try {
-        state.player.pause();
-        state.player.remove();
+        player.pause();
       } catch (error) {
-        console.warn(
-          '🎵 [MusicController] Error during emergency stop:',
-          error
-        );
+        // Ignore errors during emergency stop
       }
-      state.player = null;
     }
-
-    state.currentTrack = 'none';
-    state.targetTrack = 'none';
-    state.isTransitioning = false;
-
-    if (__DEV__) console.log('🎵 [MusicController] ✅ Emergency stop complete');
+    currentTrack = 'none';
+    targetTrack = 'none';
+    isTransitioning = false;
   },
 
   /**
    * Get current track
    */
   getCurrentTrack(): MusicTrack {
-    return state.currentTrack;
+    return currentTrack;
   },
 
   /**
    * Check if a specific track is playing
    */
   isPlaying(track: MusicTrack): boolean {
-    return state.currentTrack === track;
+    return currentTrack === track;
   },
 
   /**
    * Check if any music is playing
    */
   isAnyPlaying(): boolean {
-    return state.currentTrack !== 'none';
-  },
-
-  /**
-   * Get current state (for debugging)
-   */
-  getState(): Readonly<MusicState> {
-    return { ...state };
+    return currentTrack !== 'none';
   },
 };

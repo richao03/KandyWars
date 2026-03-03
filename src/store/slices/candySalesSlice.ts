@@ -15,7 +15,7 @@ interface CandySalesState {
   sales: SaleRecord[];
   totalRevenue: number;
   totalCandiesSold: number;
-  hasEarlySaleToday: boolean; // Tracks if any sale was made before period 6 today (Vacuum Sealer penalty)
+  hasEarlySaleToday: boolean; // Tracks if any sale was made before period 6 today
   earlyPeriodProfit: number; // Total profit from periods 1-4 (for Time Crunch unlock)
   latePeriodProfit: number; // Total profit from periods 7-8 (for Final Exam unlock)
   transactionCount: number; // Total number of sales transactions (for Speedrun Champion unlock)
@@ -48,16 +48,16 @@ const candySalesSlice = createSlice({
 
       // Track period-based profits for hall pass unlocks
       const profit = action.payload.total;
-      console.log(`💰 Sale tracking: Period ${action.payload.period}, periodInDay: ${periodInDay}, profit: $${profit.toFixed(2)}`);
+      if (__DEV__) console.log(`💰 Sale tracking: Period ${action.payload.period}, periodInDay: ${periodInDay}, profit: $${profit.toFixed(2)}`);
       if (periodInDay >= 1 && periodInDay <= 4) {
         state.earlyPeriodProfit += profit;
-        console.log(`💰 ✅ Early period profit: +$${profit.toFixed(2)} (total: $${state.earlyPeriodProfit.toFixed(2)})`);
+        if (__DEV__) console.log(`💰 ✅ Early period profit: +$${profit.toFixed(2)} (total: $${state.earlyPeriodProfit.toFixed(2)})`);
       } else if (periodInDay >= 7 && periodInDay <= periodsPerDay) {
         // For 6-period days, periods 7-8 don't exist, so this only applies to 8-period days
         state.latePeriodProfit += profit;
-        console.log(`💰 ✅ Late period profit: +$${profit.toFixed(2)} (total: $${state.latePeriodProfit.toFixed(2)})`);
+        if (__DEV__) console.log(`💰 ✅ Late period profit: +$${profit.toFixed(2)} (total: $${state.latePeriodProfit.toFixed(2)})`);
       } else {
-        console.log(`💰 ⚠️ Mid-period sale (${periodInDay}) - not counted for Time Crunch or Final Exam`);
+        if (__DEV__) console.log(`💰 ⚠️ Mid-period sale (${periodInDay}) - not counted for Time Crunch or Final Exam`);
       }
 
       // Track if this is an early sale for Vacuum Sealer penalty
@@ -65,7 +65,7 @@ const candySalesSlice = createSlice({
       const earlyThreshold = Math.ceil(periodsPerDay / 2);
       if (periodInDay < earlyThreshold) {
         state.hasEarlySaleToday = true;
-        console.log(`🚫 Vacuum Sealer: Early sale detected at period ${periodInDay}/${periodsPerDay} (threshold: ${earlyThreshold}) - penalty will apply to ALL profits`);
+        if (__DEV__) console.log(`🚫 Vacuum Sealer: Early sale detected at period ${periodInDay}/${periodsPerDay} (threshold: ${earlyThreshold}) - penalty will apply to ALL profits`);
       }
 
       // Keep only sales from the last 10 periods to prevent unbounded growth
@@ -87,12 +87,12 @@ const candySalesSlice = createSlice({
     },
     resetEarlySaleFlag: (state) => {
       state.hasEarlySaleToday = false;
-      console.log('🔄 Vacuum Sealer: Early sale flag reset for new day');
+      if (__DEV__) console.log('🔄 Vacuum Sealer: Early sale flag reset for new day');
     },
     resetDailyStats: (state) => {
       // Reset daily flags when starting a new day (called from market.tsx period advancement)
       state.hasEarlySaleToday = false;
-      console.log('🔄 New day: Early sale flag reset');
+      if (__DEV__) console.log('🔄 New day: Early sale flag reset');
     },
     resetCandySales: () => initialState,
   },

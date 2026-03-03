@@ -75,7 +75,7 @@ export class MerchantUtils {
 
   /**
    * Apply Metal Detector multiplier to found money
-   * Level 1: 10x, Level 2: 100x, Level 3: 1000x
+   * Level 1: 2x, Level 2: 4x, Level 3: 8x
    */
   static applyFoundMoneyMultiplier(
     baseAmount: number,
@@ -87,7 +87,7 @@ export class MerchantUtils {
 
     if (!metalDetector || !metalDetector.level) return baseAmount;
 
-    const multipliers = [10, 100, 1000];
+    const multipliers = [2, 4, 8];
     const multiplier = multipliers[metalDetector.level - 1] || 1;
     const finalAmount = applyMultiplier(baseAmount, multiplier);
 
@@ -194,7 +194,7 @@ export class MerchantUtils {
           break;
         case 'metal_detector':
           if (effect.level) {
-            const multipliers = ['10x', '100x', '1000x'];
+            const multipliers = ['2x', '4x', '8x'];
             summary.push(
               `Metal Detector Lvl ${effect.level} (${multipliers[effect.level - 1]} found money)`
             );

@@ -3,10 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import { useHallPass } from '../../src/hooks/useHallPass';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useAppSelector } from '../../src/store/hooks';
-import { getJokersBySubject } from '../../src/utils/jokerEffectEngine';
+import { getJokersBySubject, STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
@@ -22,7 +21,7 @@ interface Joker {
     target: string;
     operation: string;
     amount: number;
-    duration: string;
+    duration?: string | number;
   }>;
 }
 
@@ -54,23 +53,33 @@ export default function JokerSelection({
   completionLevel = 3,
 }: JokerSelectionProps) {
   const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
+  const [chosenJokerIds, setChosenJokerIds] = useState<number[]>([]);
   const [rerollsUsed, setRerollsUsed] = useState(0);
   const {
     addJoker,
-    getJokersBySubject: getUserJokersBySubject,
     jokers: ownedJokers,
+    upgradeJoker: upgradeJokerAction,
+    getOwnedJokerLevel,
   } = useJokers();
-  const { getJokerBonus } = useHallPass();
   // Get pre-computed hall pass modifiers from Redux
   const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
 
-  // Get user's jokers for this subject (for reference, not used for selection anymore)
-  // const userJokers = getUserJokersBySubject(subject); // Removed to fix linting warning
-  // Filter out jokers the player already owns to prevent duplicates
-  const ownedJokerIds = ownedJokers.map((joker) => joker.id);
-  const availableJokers = jokers.filter(
-    (joker) => !ownedJokerIds.includes(joker.id)
-  );
+  // Check if a joker can appear in the selection pool
+  const canAppearInPool = (joker: Joker): boolean => {
+    const ownedLevel = getOwnedJokerLevel(joker.id);
+    if (ownedLevel === 0) return true; // Not owned — available
+    const standardized = STANDARDIZED_JOKERS.find(sj => sj.id === joker.id);
+    const maxLevel = standardized?.maxLevel ?? 1;
+    if (maxLevel <= 1) return false; // Non-upgradeable — excluded
+    if (ownedLevel >= maxLevel) return false; // Already maxed — excluded
+    return true; // Owned + upgradeable + not maxed — available as upgrade
+  };
+
+  const isUpgradeJoker = (joker: Joker): boolean => {
+    return getOwnedJokerLevel(joker.id) > 0;
+  };
+
+  const availableJokers = jokers.filter(canAppearInPool);
 
   // Play victory music when component mounts
   useEffect(() => {
@@ -118,12 +127,12 @@ export default function JokerSelection({
   };
 
   const rerollJokers = () => {
-    // For reroll, get fresh random jokers from the full pool for this subject, excluding owned ones AND currently selected ones
+    // For reroll, get fresh random jokers from the full pool for this subject, using same upgrade-aware filtering
     const allSubjectJokers = getJokersBySubject(subject);
     const currentSelectedIds = selectedJokers.map((j) => j.id);
     const availableSubjectJokers = allSubjectJokers.filter(
       (joker) =>
-        !ownedJokerIds.includes(joker.id) &&
+        canAppearInPool(joker) &&
         !currentSelectedIds.includes(joker.id)
     );
     const shuffled = [...availableSubjectJokers].sort(
@@ -139,51 +148,89 @@ export default function JokerSelection({
     const rerollJokerCount = Math.max(1, originalCount - 1); // At least 1 joker on reroll
 
     setSelectedJokers(shuffled.slice(0, rerollJokerCount));
+    setChosenJokerIds([]);
     setRerollsUsed((prev) => prev + 1);
   };
 
-  const handleJokerChoice = (jokerId: number) => {
-    // Look for the joker in the current selectedJokers or fall back to available jokers
-    let selectedJoker = selectedJokers.find((j) => j.id === jokerId);
-    if (!selectedJoker) {
-      selectedJoker = availableJokers.find((j) => j.id === jokerId);
+  const maxPicks = 2;
+
+  const addJokerToInventory = (joker: Joker) => {
+    if (isUpgradeJoker(joker)) {
+      // Joker already owned — upgrade it instead of adding a duplicate
+      upgradeJokerAction(joker.id.toString());
+      return;
     }
-    // If still not found (for rerolled jokers), look in the available subject pool (excluding owned)
-    if (!selectedJoker) {
+
+    const isOneTime =
+      joker.effects?.every((e: any) => e.duration === 'one-time') ?? false;
+    const jokerType = isOneTime ? 'one-time' : 'persistent';
+
+    const jokerToAdd: JokerType = {
+      id: joker.id,
+      name: joker.name,
+      description: joker.description,
+      subject: subject || joker.subject,
+      theme: theme,
+      type: jokerType,
+      effect: joker.effect || joker.effects?.[0]?.target || '',
+      effects: joker.effects,
+      level: 1,
+    };
+
+    addJoker(jokerToAdd, 'minigame', subject);
+  };
+
+  const findJoker = (jokerId: number): Joker | undefined => {
+    let joker = selectedJokers.find((j) => j.id === jokerId);
+    if (!joker) joker = availableJokers.find((j) => j.id === jokerId);
+    if (!joker) {
       const allSubjectJokers = getJokersBySubject(subject);
-      const availableSubjectJokers = allSubjectJokers.filter(
-        (joker) => !ownedJokerIds.includes(joker.id)
+      joker = allSubjectJokers.find(
+        (j) => canAppearInPool(j) && j.id === jokerId
       );
-      selectedJoker = availableSubjectJokers.find((j) => j.id === jokerId);
+    }
+    return joker;
+  };
+
+  const handleJokerChoice = (jokerId: number) => {
+    // Toggle selection
+    if (chosenJokerIds.includes(jokerId)) {
+      setChosenJokerIds((prev) => prev.filter((id) => id !== jokerId));
+      return;
     }
 
-    if (selectedJoker) {
-      // Determine type from the joker's effects duration
-      // If all effects are one-time, it's a one-time joker, otherwise persistent
-      const isOneTime =
-        selectedJoker.effects?.every((e: any) => e.duration === 'one-time') ??
-        false;
-      const jokerType = isOneTime ? 'one-time' : 'persistent';
+    const newChosen = [...chosenJokerIds, jokerId];
+    setChosenJokerIds(newChosen);
 
-      // Add joker to inventory with full structure
-      const jokerToAdd: JokerType = {
-        id: selectedJoker.id,
-        name: selectedJoker.name,
-        description: selectedJoker.description,
-        subject: subject || selectedJoker.subject,
-        theme: theme,
-        type: jokerType, // Keep for backwards compatibility with jokers page
-        effect:
-          selectedJoker.effect || selectedJoker.effects?.[0]?.target || '',
-        effects: selectedJoker.effects, // Include the full effects array!
-      };
+    // If only 1 card shown, auto-confirm immediately
+    if (selectedJokers.length <= 1) {
+      const joker = findJoker(jokerId);
+      if (joker) {
+        addJokerToInventory(joker);
+        SoundEffects.playAchievementSound();
+      }
+      onComplete();
+      return;
+    }
 
-      // Add joker with source and minigame type for analytics
-      addJoker(jokerToAdd, 'minigame', subject);
-
-      // Play achievement sound
+    // Auto-confirm when 2 picks reached (or all available cards picked)
+    const pickLimit = Math.min(maxPicks, selectedJokers.length);
+    if (newChosen.length >= pickLimit) {
+      newChosen.forEach((id) => {
+        const joker = findJoker(id);
+        if (joker) addJokerToInventory(joker);
+      });
       SoundEffects.playAchievementSound();
+      onComplete();
     }
+  };
+
+  const handleConfirmChoices = () => {
+    chosenJokerIds.forEach((id) => {
+      const joker = findJoker(id);
+      if (joker) addJokerToInventory(joker);
+    });
+    if (chosenJokerIds.length > 0) SoundEffects.playAchievementSound();
     onComplete();
   };
 
@@ -430,13 +477,15 @@ export default function JokerSelection({
     <View style={[styles.container, themeStyles.container]}>
       <View style={styles.jokerContainer}>
         <Text style={[styles.jokerTitle, themeStyles.title]}>
-          Choose Your {subject} Joker!
+          Choose Your {subject} Jokers!
         </Text>
         <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
           {getRewardDescription()} {'\n'}
           {availableJokers.length === 0
             ? 'You already have all available jokers for this subject!'
-            : 'Select one powerful ability:'}
+            : selectedJokers.length === 0
+              ? 'Tap to reveal your cards!'
+              : `Select ${Math.min(maxPicks, selectedJokers.length)} card${Math.min(maxPicks, selectedJokers.length) === 1 ? '' : 's'}:`}
         </Text>
 
         {selectedJokers.length === 0 && availableJokers.length > 0 && (
@@ -478,6 +527,17 @@ export default function JokerSelection({
             false;
           const jokerType = isOneTime ? 'instant' : 'aura';
           const typeEmoji = isOneTime ? '⚡' : '🔮';
+          const isChosen = chosenJokerIds.includes(joker.id);
+          const isUpgrade = isUpgradeJoker(joker);
+          const currentLevel = isUpgrade ? getOwnedJokerLevel(joker.id) : 0;
+          const nextLevel = currentLevel + 1;
+
+          // Determine border color: upgrade = green, chosen = gold, else theme
+          const borderColor = isChosen
+            ? '#fbbf24'
+            : isUpgrade
+              ? '#10b981'
+              : (themeStyles.jokerCard?.borderColor || '#8fbc8f');
 
           return (
             <PressableButton
@@ -489,11 +549,12 @@ export default function JokerSelection({
                 backgroundColor: 'transparent',
                 marginBottom: 12,
                 width: '100%',
+                opacity: chosenJokerIds.length >= Math.min(maxPicks, selectedJokers.length) && !isChosen ? 0.5 : 1,
               }}
             >
               <PixelBorder
-                borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
-                borderWidth={3}
+                borderColor={borderColor}
+                borderWidth={isChosen ? 4 : 3}
                 backgroundColor={
                   themeStyles.jokerCard?.backgroundColor || '#1a2f23'
                 }
@@ -501,8 +562,15 @@ export default function JokerSelection({
               >
                 <View style={styles.jokerHeader}>
                   <Text style={[styles.jokerName, themeStyles.jokerName]}>
-                    {joker.name}
+                    {isChosen ? '* ' : ''}{joker.name}
                   </Text>
+                  {isUpgrade && (
+                    <View style={styles.upgradeBadge}>
+                      <Text style={styles.upgradeBadgeText}>
+                        LV{currentLevel} → LV{nextLevel}
+                      </Text>
+                    </View>
+                  )}
                   <View
                     style={[
                       styles.typeIndicator,
@@ -532,10 +600,21 @@ export default function JokerSelection({
                 >
                   {joker.description}
                 </Text>
+                {isUpgrade && (
+                  <Text style={[styles.upgradeHint, themeStyles.jokerDescription]}>
+                    Selecting upgrades to Level {nextLevel}!
+                  </Text>
+                )}
               </PixelBorder>
             </PressableButton>
           );
         })}
+
+        {chosenJokerIds.length > 0 && chosenJokerIds.length < Math.min(maxPicks, selectedJokers.length) && (
+          <Text style={[styles.pickCounter, themeStyles.subtitle]}>
+            {chosenJokerIds.length} / {Math.min(maxPicks, selectedJokers.length)} selected
+          </Text>
+        )}
 
         {selectedJokers.length > 0 && canReroll() && (
           <PressableButton
@@ -586,7 +665,7 @@ export default function JokerSelection({
         )}
 
         <PressableButton
-          onPress={onComplete}
+          onPress={chosenJokerIds.length > 0 ? handleConfirmChoices : onComplete}
           shadowOpacity={0}
           elevation={0}
           style={{
@@ -612,7 +691,9 @@ export default function JokerSelection({
               <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
                 {availableJokers.length === 0
                   ? 'Continue'
-                  : 'Skip Joker Selection'}
+                  : chosenJokerIds.length > 0
+                    ? `Confirm ${chosenJokerIds.length} Card${chosenJokerIds.length > 1 ? 's' : ''}`
+                    : 'Skip Joker Selection'}
               </Text>
             </View>
           </PixelBorder>
@@ -759,6 +840,34 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
+  },
+  pickCounter: {
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  upgradeBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginHorizontal: 6,
+  },
+  upgradeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  upgradeHint: {
+    fontSize: 11,
+    fontFamily: 'PixeloidMono',
+    fontStyle: 'italic',
+    marginTop: 6,
+    opacity: 0.8,
   },
 
   // Math Theme (Chalkboard)

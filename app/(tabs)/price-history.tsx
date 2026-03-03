@@ -1,7 +1,7 @@
 // app/(tabs)/price-history.tsx
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useSeed } from '../../src/hooks/useSeed';
@@ -20,22 +20,6 @@ export default function PriceHistory() {
     [gameData.candyPrices]
   );
 
-  // Memoize the chart components to prevent re-creating them on every render
-  const chartComponents = useMemo(() => {
-    if (!isTabFocused || candyNames.length === 0) {
-      return null;
-    }
-
-    return candyNames.map((candyName) => (
-      <MemoizedCandyPriceChart
-        key={candyName}
-        candyName={candyName}
-        prices={gameData.candyPrices[candyName] || []}
-        currentPeriod={periodCount}
-      />
-    ));
-  }, [isTabFocused, candyNames, gameData.candyPrices, periodCount]);
-
   // Only render charts when this tab is focused
   useFocusEffect(
     useCallback(() => {
@@ -44,38 +28,59 @@ export default function PriceHistory() {
     }, [])
   );
 
+  const renderChart = useCallback(({ item: candyName }: { item: string }) => (
+    <MemoizedCandyPriceChart
+      candyName={candyName}
+      prices={gameData.candyPrices[candyName] || []}
+      currentPeriod={periodCount}
+    />
+  ), [gameData.candyPrices, periodCount]);
+
+  const keyExtractor = useCallback((item: string) => item, []);
+
+  if (!isTabFocused) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading charts...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (candyNames.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.noDataContainer}>
+          <View style={styles.noDataTitleRow}>
+            <Image
+              source={require('../../assets/images/emojis/chart.png')}
+              style={styles.noDataTitleIcon}
+            />
+            <Text style={styles.noDataTitle}>No Price Data Yet</Text>
+          </View>
+          <Text style={styles.noDataText}>
+            Visit the market to start tracking candy prices across periods!
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <ScrollView
+      <FlatList
+        data={candyNames}
+        renderItem={renderChart}
+        keyExtractor={keyExtractor}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={2}
-        initialNumToRender={2}
-        windowSize={3}
-      >
-        {!isTabFocused ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading charts...</Text>
-          </View>
-        ) : candyNames.length > 0 ? (
-          chartComponents
-        ) : (
-          <View style={styles.noDataContainer}>
-            <View style={styles.noDataTitleRow}>
-              <Image
-                source={require('../../assets/images/emojis/chart.png')}
-                style={styles.noDataTitleIcon}
-              />
-              <Text style={styles.noDataTitle}>No Price Data Yet</Text>
-            </View>
-            <Text style={styles.noDataText}>
-              Visit the market to start tracking candy prices across periods!
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+        maxToRenderPerBatch={3}
+        initialNumToRender={3}
+        windowSize={5}
+      />
     </View>
   );
 }

@@ -41,7 +41,8 @@
       "Bash(npx expo run:ios:*)",
       "Bash(xcrun simctl list:*)",
       "WebFetch(domain:docs.expo.dev)",
-      "WebFetch(domain:stackoverflow.com)"
+      "WebFetch(domain:stackoverflow.com)",
+      "Bash(npx jest priceGeneration --no-coverage 2>&1)"
     ],
     "deny": [],
     "ask": []

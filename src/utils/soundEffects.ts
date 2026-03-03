@@ -65,12 +65,9 @@ let birdPlayerIndex = 0;
 async function initializeAudioPlayers() {
   if (audioInitialized) return;
 
-  console.log('🔊 [SoundEffects] Initializing audio player pools (one-time setup)...');
-
   try {
     // Ensure audio mode is initialized first (critical for physical devices)
     await initializeAudioMode();
-    console.log('🔊 [SoundEffects] Audio mode ready, creating player pools...');
 
     // Create one player per pop sound file (10 total)
     // This allows up to 10 simultaneous pops (all 10 different sounds playing at once)
@@ -79,7 +76,6 @@ async function initializeAudioPlayers() {
       player.volume = 1.0; // Boosted from 0.6 for better audibility on physical devices
       popPlayerPool.push(player);
     });
-    console.log(`🔊 [SoundEffects] Created pop sound pool (${POP_SOUNDS.length} unique players)`);
 
     // Create pool of 2 instances for each other sound
     const SOUND_POOL_SIZE = 2;
@@ -89,52 +85,44 @@ async function initializeAudioPlayers() {
       posPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       positivePlayerPool.push(posPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created positive sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const coinPlayer = createAudioPlayer(COIN_SOUND);
       coinPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       coinPlayerPool.push(coinPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created coin sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const negPlayer = createAudioPlayer(NEGATIVE_SOUND);
       negPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       negativePlayerPool.push(negPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created negative sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const wrongPlayer = createAudioPlayer(WRONG_ANSWER_SOUND);
       wrongPlayer.volume = 1.0; // Reduced from 2.0 to prevent distortion
       wrongAnswerPlayerPool.push(wrongPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created wrong answer sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const achPlayer = createAudioPlayer(ACHIEVEMENT_SOUND);
       achPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       achievementPlayerPool.push(achPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created achievement sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const congPlayer = createAudioPlayer(CONGRATS_SOUND);
       congPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       congratsPlayerPool.push(congPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created congrats sound pool (${SOUND_POOL_SIZE} players)`);
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const birdPlayer = createAudioPlayer(BIRD_SOUND);
       birdPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
       birdPlayerPool.push(birdPlayer);
     }
-    console.log(`🔊 [SoundEffects] Created bird sound pool (${SOUND_POOL_SIZE} players)`);
 
     audioInitialized = true;
-    console.log('🔊 [SoundEffects] ✅ Audio player pools initialized successfully!');
   } catch (error) {
     console.error('🔊 [SoundEffects] ❌ ERROR initializing audio players:', error);
   }
@@ -146,11 +134,8 @@ async function initializeAudioPlayers() {
  */
 async function cleanupAudioPlayers() {
   if (!audioInitialized) {
-    console.log('🔊 [SoundEffects] Audio not initialized, nothing to cleanup');
     return;
   }
-
-  console.log('🔊 [SoundEffects] 🧹 Cleaning up audio player pools...');
 
   try {
     // Cleanup pop players
@@ -207,8 +192,6 @@ async function cleanupAudioPlayers() {
 
     // Reset initialization flag
     audioInitialized = false;
-
-    console.log('🔊 [SoundEffects] ✅ Audio player pools cleaned up successfully!');
   } catch (error) {
     console.error('🔊 [SoundEffects] ❌ ERROR cleaning up audio players:', error);
   }

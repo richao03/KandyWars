@@ -1,16 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSeed } from './useSeed';
 import { useGame } from './useGame';
-
-const baseCandies = [
-  { name: 'Snickers', baseMin: 1, baseMax: 15 },
-  { name: 'M&Ms', baseMin: 0.5, baseMax: 10 },
-  { name: 'Skittles', baseMin: 0.75, baseMax: 12 },
-  { name: 'Warheads', baseMin: 0.25, baseMax: 5 },
-  { name: 'Sour Patch Kids', baseMin: 0.5, baseMax: 8 },
-  { name: 'Bubble Gum', baseMin: 0.1, baseMax: 7 },
-  { name: 'Jaw Breaker', baseMin: 3, baseMax: 50 },
-];
+import { CANDY_REGISTRY } from '../constants/candyRegistry';
 
 /**
  * Singleton hook that updates candy prices in Redux when period/location changes.
@@ -30,17 +21,15 @@ export const usePriceUpdater = () => {
       lastProcessedRef.current.period === periodCount &&
       lastProcessedRef.current.location === currentLocation
     ) {
-      console.log('💰 Price updater: Already processed period', periodCount, 'at', currentLocation);
       return;
     }
 
-    console.log('💰 Price updater: Processing prices for period', periodCount, 'at', currentLocation);
     lastProcessedRef.current = { period: periodCount, location: currentLocation };
 
     // Collect all price updates
     const priceUpdates: Array<{ candyId: string; price: number; period: number }> = [];
 
-    baseCandies.forEach((candy) => {
+    CANDY_REGISTRY.forEach((candy) => {
       if (gameData.candyPrices[candy.name]?.[periodCount]) {
         // Calculate the same price as in the candies state update
         const seed = candy.name.charCodeAt(0) + periodCount;
@@ -86,7 +75,6 @@ export const usePriceUpdater = () => {
 
     // Dispatch all price updates at once
     if (priceUpdates.length > 0) {
-      console.log('💰 Price updater: Batching', priceUpdates.length, 'price updates');
       batchModifyCandyPrices(priceUpdates);
     }
   }, [periodCount, currentLocation, gameData.periodEvents, gameData.candyPrices, batchModifyCandyPrices]);

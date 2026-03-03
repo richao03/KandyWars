@@ -165,26 +165,25 @@ describe('New Joker Integration Tests', () => {
     it('should validate joker activation flow', () => {
       // Jokers that require confirmation
       const confirmationJokers = [
-        JOKER_IDS.MARKET_CRASH,
-        JOKER_IDS.TROJAN_HORSE,
+        JOKER_IDS.CONTINENTAL_DRIFT,
+        JOKER_IDS.TEMPORARY_EMPEROR,
       ];
 
       // Jokers that require candy selection
       const candySelectorJokers = [
         JOKER_IDS.MARKET_MANIPULATION,
         JOKER_IDS.THE_BIG_SHORT,
-        JOKER_IDS.PROPACANDIES,
       ];
 
       // Jokers that are automatic/persistent
       const automaticJokers = [
-        JOKER_IDS.BULK_SALE,
+        JOKER_IDS.COCOA_FUTURES,
         JOKER_IDS.HOME_MADE,
         JOKER_IDS.THE_GOOD_OLD_DAYS,
       ];
 
       expect(confirmationJokers).toHaveLength(2);
-      expect(candySelectorJokers).toHaveLength(3);
+      expect(candySelectorJokers).toHaveLength(2);
       expect(automaticJokers).toHaveLength(3);
 
       // Total should match implemented jokers

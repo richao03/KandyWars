@@ -8,11 +8,7 @@ import {
   selectComputedStudyTimeMultiplier,
   selectComputedEffects
 } from '../store/slices/jokerSlice';
-
-// Global state to prevent multiple simultaneous recomputations across all hook instances
-let globalRecomputeInProgress = false;
-let globalRecomputeTimer: NodeJS.Timeout | null = null;
-let lastRecomputeKey = '';
+import { selectDay } from '../store/slices/gameSlice';
 
 /**
  * Hook that automatically recomputes joker effects when relevant state changes.
@@ -21,6 +17,10 @@ let lastRecomputeKey = '';
 export const useComputedJokerEffects = () => {
   const dispatch = useAppDispatch();
   const migrationDone = useRef(false);
+  // Use refs instead of module-level globals for proper cleanup and hot-reload safety
+  const recomputeInProgress = useRef(false);
+  const recomputeTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastRecomputeKey = useRef('');
 
   // Watch for changes that should trigger effect recomputation
   const jokers = useAppSelector(state => state.joker.jokers);
@@ -28,12 +28,13 @@ export const useComputedJokerEffects = () => {
   const computedEffects = useAppSelector(state => state.joker.computedEffects);
   const periodCount = useAppSelector(state => state.game.periodCount);
   const baseInventoryLimit = useAppSelector(state => state.inventory.maxInventory);
+  const day = useAppSelector(selectDay);
 
   // Migrate state if needed on first render (run only once)
   useEffect(() => {
     try {
       if (!computedEffects && !migrationDone.current) {
-        console.log('🔧 Migrating joker state to include computedEffects');
+        if (__DEV__) console.log('🔧 Migrating joker state to include computedEffects');
         migrationDone.current = true;
         dispatch(migrateJokerState());
       }
@@ -53,61 +54,63 @@ export const useComputedJokerEffects = () => {
   useEffect(() => {
     if (!computedEffects) return;
 
-    // Create a unique key for this state combination
-    const stateKey = `${jokers.length}-${activeEffects.length}-${periodCount}-${baseInventoryLimit}`;
+    // Create a unique key for this state combination (level hash detects upgrades)
+    const levelHash = jokers.reduce((acc: number, j: any) => acc + (j.level ?? 1), 0);
+    const stateKey = `${jokers.length}-${levelHash}-${activeEffects.length}-${periodCount}-${baseInventoryLimit}-${day}`;
 
     // Skip if we already processed this exact state
-    if (stateKey === lastRecomputeKey) {
+    if (stateKey === lastRecomputeKey.current) {
       return;
     }
 
     // Skip if a recompute is already in progress
-    if (globalRecomputeInProgress) {
+    if (recomputeInProgress.current) {
       return;
     }
 
     // Clear any pending timer and schedule a new recompute
-    if (globalRecomputeTimer) {
-      clearTimeout(globalRecomputeTimer);
+    if (recomputeTimer.current) {
+      clearTimeout(recomputeTimer.current);
     }
 
     // Debounce: wait 150ms for state to settle before recomputing
-    globalRecomputeTimer = setTimeout(() => {
+    recomputeTimer.current = setTimeout(() => {
       try {
         // Double-check we're not already computing
-        if (globalRecomputeInProgress) return;
+        if (recomputeInProgress.current) return;
 
-        globalRecomputeInProgress = true;
-        lastRecomputeKey = stateKey;
+        recomputeInProgress.current = true;
+        lastRecomputeKey.current = stateKey;
 
         if (__DEV__) {
           console.log('🔄 Recomputing joker effects due to state change');
         }
         dispatch(recomputeJokerEffects({
           baseInventoryLimit,
-          periodCount
+          periodCount,
+          day
         }));
 
         // Reset after a short delay
         setTimeout(() => {
-          globalRecomputeInProgress = false;
-          globalRecomputeTimer = null;
+          recomputeInProgress.current = false;
+          recomputeTimer.current = null;
         }, 100);
       } catch (error) {
         console.error('❌ Error in joker recomputation:', error);
-        globalRecomputeInProgress = false;
-        globalRecomputeTimer = null;
+        recomputeInProgress.current = false;
+        recomputeTimer.current = null;
       }
     }, 150);
 
     // Cleanup function
     return () => {
-      if (globalRecomputeTimer) {
-        clearTimeout(globalRecomputeTimer);
-        globalRecomputeTimer = null;
+      if (recomputeTimer.current) {
+        clearTimeout(recomputeTimer.current);
+        recomputeTimer.current = null;
       }
     };
-  }, [dispatch, jokers.length, activeEffects.length, periodCount, baseInventoryLimit, computedEffects]);
+  }, [dispatch, jokers, activeEffects.length, periodCount, baseInventoryLimit, computedEffects, day]);
 
   // Return selectors for easy access to computed effects
   return {

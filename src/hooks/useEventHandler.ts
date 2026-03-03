@@ -8,6 +8,10 @@ import {
   resetEventHandler,
   setCurrentEvent,
   setIsProcessing,
+  selectCurrentEvent,
+  selectEventHistory,
+  selectIsEventProcessing,
+  selectProcessedEventIds,
 } from '../store/slices/eventHandlerSlice';
 import { recordConfiscation } from '../store/slices/dailyStatsSlice';
 import { selectActiveEffects, consumeEffect } from '../store/slices/merchantSlice';
@@ -19,7 +23,11 @@ import { MerchantUtils } from '../utils/merchantUtils';
 
 export const useEventHandler = () => {
   const dispatch = useAppDispatch();
-  const eventHandlerState = useAppSelector((state) => state.eventHandler);
+  // Subscribe to individual fields instead of entire eventHandler slice
+  const currentEvent = useAppSelector(selectCurrentEvent);
+  const eventHistory = useAppSelector(selectEventHistory);
+  const isProcessing = useAppSelector(selectIsEventProcessing);
+  const processedEventIds = useAppSelector(selectProcessedEventIds);
   const wallet = useWallet();
   const { clearInventory, inventory, removeFromInventory } = useInventory();
   const { jokers } = useJokers();
@@ -31,7 +39,7 @@ export const useEventHandler = () => {
       // Safety guard: Only handle major events (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED)
       // Minor events (PRICE_SPIKE, PRICE_DROP) should be handled in market.tsx via flavor text only
       if (eventData.effect === 'PRICE_SPIKE' || eventData.effect === 'PRICE_DROP') {
-        console.warn('⚠️ EVENT: Minor event should not reach handleEvent, use flavor text instead');
+        if (__DEV__) console.warn('⚠️ EVENT: Minor event should not reach handleEvent, use flavor text instead');
         return;
       }
 
@@ -39,24 +47,26 @@ export const useEventHandler = () => {
       const eventId = `${eventData.period}_${eventData.effect}_${eventData.title}`;
 
       // Check if this exact event has already been processed
-      if (eventHandlerState.processedEventIds?.includes(eventId)) {
-        console.log('⏭️ EVENT: Already processed event', eventId, '- skipping duplicate');
+      if (processedEventIds?.includes(eventId)) {
+        if (__DEV__) console.log('⏭️ EVENT: Already processed event', eventId, '- skipping duplicate');
         return;
       }
 
-      console.log('🎯 EVENT: Processing event:', eventId);
-      console.log('🎯 EVENT: Processed IDs so far:', eventHandlerState.processedEventIds);
-      console.log(
-        '🎯 EVENT: Received backgroundImage ID:',
-        eventData.backgroundImage
-      );
+      if (__DEV__) {
+        console.log('🎯 EVENT: Processing event:', eventId);
+        console.log('🎯 EVENT: Processed IDs so far:', processedEventIds);
+        console.log(
+          '🎯 EVENT: Received backgroundImage ID:',
+          eventData.backgroundImage
+        );
+      }
 
       // Check for protection jokers
       const hasMedievalShield = jokers.some(
         (j) => j.id.toString() === JOKER_IDS.MEDIEVAL_SHIELD.toString()
       );
       const hasCandyVault = jokers.some(
-        (j) => j.id.toString() === JOKER_IDS.CANDY_VAULT.toString()
+        (j) => j.id.toString() === JOKER_IDS.SECRET_HIDEOUT.toString()
       );
       const hasHideAndSeek = jokers.some(
         (j) => j.id.toString() === JOKER_IDS.HIDE_AND_SEEK.toString()
@@ -69,7 +79,7 @@ export const useEventHandler = () => {
       if (eventData.effect === 'LOSE_MONEY') {
         // Check for Medieval Shield protection (joker) - PRIORITY 1
         if (hasMedievalShield) {
-          console.log('🛡️ Medieval Shield: Protected from money loss!');
+          if (__DEV__) console.log('🛡️ Medieval Shield: Protected from money loss!');
           // Add protection flag to event data
           processedEventData.protectedByMedievalShield = true;
           // Remove Medieval Shield from inventory (one-time use)
@@ -77,7 +87,7 @@ export const useEventHandler = () => {
         }
         // Check for 6th Grade Bodyguard protection (merchant item) - PRIORITY 2
         else if (MerchantUtils.hasBodyguard(merchantEffects)) {
-          console.log('💪 6th Grade Bodyguard: Protected from bully!');
+          if (__DEV__) console.log('💪 6th Grade Bodyguard: Protected from bully!');
           processedEventData.protectedByBodyguard = true;
           // Consume one bodyguard
           dispatch(consumeEffect({ itemId: 'sixth_grade_bodyguard' }));
@@ -93,13 +103,15 @@ export const useEventHandler = () => {
           // Check if player has less than $1
           if (currentBalance < 1) {
             processedEventData.bullyHasMercy = true;
-            console.log('💸 EVENT: Bully has mercy - player has less than $1');
+            if (__DEV__) console.log('💸 EVENT: Bully has mercy - player has less than $1');
           } else {
-            console.log(
-              '💸 EVENT: Bully stealing $' + actualSteal.toFixed(2),
-              'from balance of $' + currentBalance.toFixed(2),
-              '(amount calculated: $' + amountToSteal.toFixed(2) + ')'
-            );
+            if (__DEV__) {
+              console.log(
+                '💸 EVENT: Bully stealing $' + actualSteal.toFixed(2),
+                'from balance of $' + currentBalance.toFixed(2),
+                '(amount calculated: $' + amountToSteal.toFixed(2) + ')'
+              );
+            }
             // Store the original balance and amount stolen for countdown animation
             processedEventData.originalBalance = currentBalance;
             processedEventData.amountStolen = actualSteal;
@@ -107,13 +119,14 @@ export const useEventHandler = () => {
           }
         }
       } else if (eventData.effect === 'FOUND_MONEY') {
-        // Found money event
-        let amountFound = eventData.dollarAmount || Math.floor(Math.random() * (500 - 100 + 1)) + 100;
-        console.log('💰 EVENT: Found $', amountFound);
+        // Found money event — 25% of current wallet balance (min $100)
+        const currentBalance = wallet.balance;
+        let amountFound = Math.max(Math.floor(currentBalance * 0.25), 100);
+        if (__DEV__) console.log('💰 EVENT: Found $', amountFound, `(25% of $${currentBalance})`);
 
-        // Apply Hide and Seek joker multiplier
+        // Apply Hide and Seek joker multiplier (2x)
         if (hasHideAndSeek) {
-          amountFound = amountFound * 3;
+          amountFound = amountFound * 2;
         }
 
         // Apply Metal Detector merchant multiplier
@@ -123,17 +136,17 @@ export const useEventHandler = () => {
         processedEventData.dollarAmount = amountFound;
         wallet.add(amountFound);
       } else if (eventData.effect === 'STASH_LOCKED') {
-        // Check for Candy Vault protection (joker) - PRIORITY 1
+        // Check for Secret Hideout protection (joker) - PRIORITY 1
         if (hasCandyVault) {
-          console.log('🔒 Candy Vault: Protected from confiscation!');
+          if (__DEV__) console.log('🔒 Secret Hideout: Protected from confiscation!');
           // Add protection flag to event data
           processedEventData.protectedByCandyVault = true;
           // Remove Candy Vault from inventory (one-time use)
-          dispatch(removeJoker(JOKER_IDS.CANDY_VAULT.toString()));
+          dispatch(removeJoker(JOKER_IDS.SECRET_HIDEOUT.toString()));
         }
         // Check for Hall Monitor Bribe protection (merchant item) - PRIORITY 2
         else if (MerchantUtils.hasHallMonitorBribe(merchantEffects)) {
-          console.log('🤝 Hall Monitor Bribe: Protected from confiscation!');
+          if (__DEV__) console.log('🤝 Hall Monitor Bribe: Protected from confiscation!');
           processedEventData.protectedByHallMonitorBribe = true;
           // Consume one bribe
           dispatch(consumeEffect({ itemId: 'hall_monitor_bribe' }));
@@ -143,7 +156,7 @@ export const useEventHandler = () => {
 
           if (hasTeachersPet) {
             // Teacher's Pet: Only confiscate 25% of inventory
-            console.log("📚 EVENT: Teacher's Pet active - confiscating 25% of inventory");
+            if (__DEV__) console.log("📚 EVENT: Teacher's Pet active - confiscating 25% of inventory");
             let totalConfiscated = 0;
             inventory.forEach(item => {
               const confiscateAmount = Math.floor((item.quantity || 1) * 0.25);
@@ -152,12 +165,12 @@ export const useEventHandler = () => {
                 removeFromInventory(item.id, confiscateAmount);
               }
             });
-            console.log('📚 EVENT: Confiscated', totalConfiscated, 'candies (25%)');
+            if (__DEV__) console.log('📚 EVENT: Confiscated', totalConfiscated, 'candies (25%)');
             processedEventData.reducedByTeachersPet = true;
             processedEventData.confiscatedAmount = totalConfiscated;
           } else {
             // Teacher confiscates all candy inventory
-            console.log('📚 EVENT: Teacher confiscating all candy inventory');
+            if (__DEV__) console.log('📚 EVENT: Teacher confiscating all candy inventory');
             clearInventory();
           }
 
@@ -166,12 +179,14 @@ export const useEventHandler = () => {
         }
       }
 
-      console.log(
-        '🔄 EVENT: About to store in Redux - backgroundImage ID:',
-        processedEventData.backgroundImage
-      );
+      if (__DEV__) {
+        console.log(
+          '🔄 EVENT: About to store in Redux - backgroundImage ID:',
+          processedEventData.backgroundImage
+        );
+      }
       dispatch(setCurrentEvent(processedEventData));
-      console.log('🔄 EVENT: Stored in Redux successfully');
+      if (__DEV__) console.log('🔄 EVENT: Stored in Redux successfully');
     },
     [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds, merchantEffects]
   );
@@ -181,7 +196,7 @@ export const useEventHandler = () => {
   }, [dispatch]);
 
   const dismissEvent = useCallback(() => {
-    console.log('🎯 EVENT: Dismissing event modal');
+    if (__DEV__) console.log('🎯 EVENT: Dismissing event modal');
     dispatch(clearCurrentEvent());
   }, [dispatch]);
 
@@ -240,13 +255,13 @@ export const useEventHandler = () => {
   }, [dispatch]);
 
   const hasActiveEvent = useCallback(() => {
-    return eventHandlerState.currentEvent !== null;
-  }, [eventHandlerState.currentEvent]);
+    return currentEvent !== null;
+  }, [currentEvent]);
 
   return {
-    currentEvent: eventHandlerState.currentEvent,
-    eventHistory: eventHandlerState.eventHistory,
-    isProcessing: eventHandlerState.isProcessing,
+    currentEvent,
+    eventHistory,
+    isProcessing,
     hasActiveEvent,
     handleEvent,
     clearEvent,

@@ -82,3 +82,9 @@ export const {
 } = eventHandlerSlice.actions;
 
 export default eventHandlerSlice.reducer;
+
+// Named field selectors for useEventHandler hook optimization
+export const selectCurrentEvent = (state: { eventHandler: EventHandlerState }) => state.eventHandler.currentEvent;
+export const selectEventHistory = (state: { eventHandler: EventHandlerState }) => state.eventHandler.eventHistory;
+export const selectIsEventProcessing = (state: { eventHandler: EventHandlerState }) => state.eventHandler.isProcessing;
+export const selectProcessedEventIds = (state: { eventHandler: EventHandlerState }) => state.eventHandler.processedEventIds;
