@@ -5,12 +5,13 @@ import { markFarmersCarryBonusApplied } from '../store/slices/gameSlice';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
+import { getJokerEffectsAtLevel } from '../utils/jokerEffectEngine';
 
 /**
  * Farmers Carry Hook
  *
- * Applies a bonus of $2000 per period at the start of each new period
- * if the player has the Farmers Carry joker and 75+ inventory capacity.
+ * Applies a bonus of inventory count × $5/$25/$100 per period
+ * at the start of each new period if the player has the Farmers Carry joker.
  *
  * Bonuses are tracked in Redux to ensure persistence across app reloads.
  */
@@ -21,7 +22,7 @@ export const useFarmersCarry = () => {
     (state) => state.game.markFarmersCarryBonusApplied ?? []
   );
 
-  const { getInventoryLimit } = useInventory();
+  const { getTotalInventoryCount } = useInventory();
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
 
@@ -33,19 +34,25 @@ export const useFarmersCarry = () => {
     }
 
     // Check if player has Farmers Carry joker
-    const FarmersCarryJoker = findJokerById(jokers, JOKER_IDS.FARMERS_CARRY);
-    if (!FarmersCarryJoker) {
+    const farmersCarryJoker = findJokerById(jokers, JOKER_IDS.FARMERS_CARRY);
+    if (!farmersCarryJoker) {
       return;
     }
 
-    // Check if inventory limit is >= 75
-    const inventoryLimit = getInventoryLimit();
-    if (inventoryLimit < 75) {
+    // Get inventory count
+    const inventoryCount = getTotalInventoryCount();
+    if (inventoryCount <= 0) {
       return;
     }
 
-    // Apply flat bonus of $2000
-    const bonusAmount = 2000;
+    // Get per-candy rate from joker level ($5/$25/$100)
+    const level = (farmersCarryJoker as any).level ?? 1;
+    const effects = getJokerEffectsAtLevel(JOKER_IDS.FARMERS_CARRY, level);
+    const bonusEffect = effects.find(e => e.target === 'farmers_carry_bonus');
+    const perCandyRate = bonusEffect?.amount ?? 5;
+
+    // Apply bonus: inventory count × rate
+    const bonusAmount = inventoryCount * perCandyRate;
     addMoney(bonusAmount);
 
     // Mark this period as having received the bonus
@@ -53,14 +60,14 @@ export const useFarmersCarry = () => {
 
     if (__DEV__) {
       console.log(
-        `🏭 Farmers Carry: +$${bonusAmount} at period ${periodCount} (75+ inventory limit)!`
+        `🏭 Farmers Carry: +$${bonusAmount} (${inventoryCount} candy × $${perCandyRate}) at period ${periodCount}!`
       );
     }
   }, [
     periodCount,
     bonusesApplied,
     jokers,
-    getInventoryLimit,
+    getTotalInventoryCount,
     addMoney,
     dispatch,
   ]);

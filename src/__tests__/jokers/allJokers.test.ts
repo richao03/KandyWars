@@ -33,28 +33,7 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].conditions?.candySize).toBe('medium');
     });
 
-    it('Geometric Expansion (ID: 3) - Inventory +3 per day elapsed', () => {
-      const store = createStoreWithEffects({
-        jokers: [createMockJoker(3, 'Geometric Expansion')],
-        period: 0,
-      });
-
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 3);
-      expect(joker?.effects[0].target).toBe('day_scaled_inventory');
-      expect(joker?.effects[0].operation).toBe('add');
-      expect(joker?.effects[0].amount).toBe(3);
-
-      const jokerService = JokerService.getInstance();
-      const baseInventory = 20;
-      const result = jokerService.applyJokerEffects(
-        baseInventory,
-        'day_scaled_inventory',
-        store.getState().joker.jokers,
-        0
-      );
-
-      expect(result).toBe(23); // 20 + 3
-    });
+    // Geometric Expansion (ID: 3) - REMOVED
 
     it('Ace the Test (ID: 31) - 2x daily allowance', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 31);
@@ -137,11 +116,7 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].operation).toBe('enable');
     });
 
-    it('Fridge Organizer (ID: 14) - Inventory +15', () => {
-      const joker = STANDARDIZED_JOKERS.find((j) => j.id === 14);
-      expect(joker?.name).toBe('Fridge Organizer');
-      expect(joker?.effects[0].amount).toBe(15);
-    });
+    // Fridge Organizer (ID: 14) - REMOVED
 
     it('Perfect Bake (ID: 15) - $1000 for ending day with 0 candy', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 15);
@@ -436,9 +411,9 @@ describe('All Jokers - Comprehensive Tests', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 38);
       expect(joker?.name).toBe('Golden Hour');
       expect(joker?.type).toBe('persistent');
-      expect(joker?.effects[0].target).toBe('late_period_bonus');
-      expect(joker?.effects[0].operation).toBe('add');
-      expect(joker?.effects[0].amount).toBe(0.50);
+      expect(joker?.effects[0].target).toBe('conditional_multiplier');
+      expect(joker?.effects[0].operation).toBe('multiply');
+      expect(joker?.effects[0].amount).toBe(1.5);
     });
 
     it('Trade Routes (ID: 39) - +1 inventory every period', () => {
@@ -523,36 +498,7 @@ describe('All Jokers - Comprehensive Tests', () => {
       }
     });
 
-    it('should handle persistent jokers across periods', () => {
-      const store = createStoreWithEffects({
-        jokers: [createMockJoker(3, 'Geometric Expansion', 'persistent')],
-        period: 0,
-      });
-
-      const periodMocker = new PeriodMocker(store);
-      const jokerService = JokerService.getInstance();
-
-      // Test on period 0
-      let result = jokerService.applyJokerEffects(
-        20,
-        'day_scaled_inventory',
-        store.getState().joker.jokers,
-        0
-      );
-      expect(result).toBe(23);
-
-      // Advance to period 5
-      periodMocker.setPeriod(5);
-
-      // Should still apply
-      result = jokerService.applyJokerEffects(
-        20,
-        'day_scaled_inventory',
-        store.getState().joker.jokers,
-        5
-      );
-      expect(result).toBe(23);
-    });
+    // Geometric Expansion persistent test - REMOVED (joker deleted)
 
     it('should handle conditional jokers (Even Stevens vs Odd Todd)', () => {
       const evenStore = createStoreWithEffects({
@@ -623,7 +569,6 @@ describe('All Jokers - Comprehensive Tests', () => {
         'allowance_multiplier',
         'allowance_add',
         'next_sale_multiplier',
-        'consecutive_sale_bonus',
         'perfect_balance_bonus',
         'randomize_prices',
         'stash_interest',
@@ -632,12 +577,6 @@ describe('All Jokers - Comprehensive Tests', () => {
         'size_multiplier',
         'conditional_multiplier',
         'inventory_double_with_penalty',
-        'day_scaled_inventory',
-        'inventory_count_bonus',
-        'inventory_fullness_bonus',
-        'location_diversity_bonus',
-        'late_period_bonus',
-        'day_scaling_bonus',
         'empty_slot_daily_bonus',
       ];
 
@@ -648,8 +587,8 @@ describe('All Jokers - Comprehensive Tests', () => {
       });
     });
 
-    it('should have exactly 54 jokers', () => {
-      expect(STANDARDIZED_JOKERS.length).toBe(54);
+    it('should have exactly 40 jokers', () => {
+      expect(STANDARDIZED_JOKERS.length).toBe(40);
     });
   });
 });

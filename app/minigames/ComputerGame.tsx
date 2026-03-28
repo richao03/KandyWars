@@ -5,7 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { COMPUTER_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
@@ -426,7 +426,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   const handleJokerChoice = (jokerId: number) => {
     console.log(
-      `Selected computer joker: ${COMPUTER_JOKERS.find((j) => j.id === jokerId)?.name}`
+      `Selected computer joker: ${STANDARDIZED_JOKERS.find((j) => j.id === jokerId)?.name}`
     );
     onComplete();
   };
@@ -464,9 +464,9 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={COMPUTER_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="computer"
-        subject="Computer"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -478,25 +478,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#00d4ff"
-              borderWidth={2}
-              backgroundColor="#16213e"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
-
           <Text style={styles.instructionsTitle}>Computer Study Session!</Text>
 
           <PixelBorder
@@ -548,10 +529,9 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
+              setShowAvailableJokers(true);
             }}
-            shadowColor="rgba(185,28,28,1)"
+            shadowColor="#00d4ff"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -559,9 +539,29 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#00d4ff"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#16213e"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -573,8 +573,8 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           <AvailableJokersModal
             visible={showAvailableJokers}
             onClose={() => setShowAvailableJokers(false)}
-            jokers={COMPUTER_JOKERS}
-            subject="Computer"
+            jokers={STANDARDIZED_JOKERS}
+            subject="All"
             themeColors={{
               borderColor: '#00d4ff',
               backgroundColor: '#0a0e1a',

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useJokers } from '../../src/hooks/useJokers';
 import FastModal from './FastModal';
 import JokerCard from './JokerCard';
@@ -37,12 +37,23 @@ export default function AvailableJokersModal({
   const ownedCount = jokers.length - availableJokers.length;
   const totalCount = jokers.length;
 
+  // Defer heavy joker card rendering so modal appears instantly with a spinner
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (visible) {
+      setReady(false);
+      const id = requestAnimationFrame(() => setReady(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [visible]);
+
   return (
     <FastModal
       visible={visible}
       onClose={onClose}
-      animationType="spring"
-      backdropOpacity={0.8}
+      animationType="fade"
+      backdropOpacity={0.32}
+      preMount
       modalStyle={styles.modal}
     >
       <PixelBorder
@@ -63,7 +74,14 @@ export default function AvailableJokersModal({
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
           >
-            {availableJokers.length > 0 ? (
+            {!ready ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={themeColors.textColor} />
+                <Text style={[styles.loadingText, { color: themeColors.textColor }]}>
+                  Loading jokers...
+                </Text>
+              </View>
+            ) : availableJokers.length > 0 ? (
               <View style={styles.jokersGrid}>
                 {availableJokers.map((joker) => (
                   <View key={joker.id} style={styles.jokerCardWrapper}>
@@ -172,6 +190,18 @@ const styles = StyleSheet.create({
     width: 160,
     height: 180,
     marginBottom: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    marginTop: 12,
+    opacity: 0.7,
   },
   emptyContainer: {
     marginTop: 40,

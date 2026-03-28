@@ -40,21 +40,24 @@ candyWarz/
 │   │   ├── FastModal.tsx         # Lightweight modal wrapper
 │   │   ├── StatusIndicators.tsx  # HUD elements
 │   │   ├── SugarWarsTitleScreen.tsx
+│   │   ├── TutorialOverlay.tsx   # Tutorial step overlay with cutouts
+│   │   ├── TutorialProvider.tsx  # Tutorial context (layout measurements)
+│   │   ├── AvailableJokersModal.tsx # Joker preview in minigame instructions
 │   │   └── SparkEffect.tsx       # Visual effects
 │   └── minigames/                # 9 minigame screens
 │       ├── MathGame.tsx
 │       ├── ComputerGame.tsx
-│       ├── HistoryGame.tsx
 │       ├── LogicGame.tsx
 │       ├── ArtGame.tsx
 │       ├── EconomyGame.tsx
 │       ├── GeographyGame.tsx
 │       ├── HomeEcGame.tsx
-│       └── GymGame.tsx
+│       ├── NimGame.tsx           # Gym minigame (Misère Nim)
+│       └── RecessGame.tsx
 ├── src/                          # Business logic
 │   ├── constants/
 │   │   ├── candyRegistry.ts      # 15 candy definitions (single source of truth)
-│   │   └── jokerIds.ts           # All 54 joker ID constants
+│   │   └── jokerIds.ts           # All 47 joker ID constants
 │   ├── hooks/                    # React hooks (bridge Redux ↔ UI)
 │   │   ├── useGame.ts            # Period/day/location state
 │   │   ├── useWallet.ts          # Balance, stash, difficulty
@@ -64,11 +67,7 @@ candyWarz/
 │   │   ├── useHallPass.ts        # Hall pass selection/effects
 │   │   ├── usePriceUpdater.ts    # Price generation per period
 │   │   ├── useComputedJokerEffects.ts
-│   │   ├── useFeedTheBeast.ts    # Feed the Beast joker (periodic income at 50%+ inv)
-│   │   ├── useDiamondHand.ts     # Diamond Hand joker (per-candy periodic income)
-│   │   ├── useFarmersCarry.ts    # Farmers Carry joker (income at inv >= 75)
-│   │   ├── useDroughtRelief.ts   # The Bounceback joker (income on no-sale periods)
-│   │   ├── useEmptyInventoryBonus.ts # Perfect Bake / Embrace the Grind bonuses
+│   │   ├── useFarmersCarry.ts    # Farmers Carry joker (inventory count × $ per period)
 │   │   ├── useHomeMadeBonus.ts   # Home Made joker (daily inventory bonus)
 │   │   ├── useCandySales.ts      # Sale tracking and stats
 │   │   ├── useDailyStats.ts      # Per-day statistics
@@ -126,7 +125,7 @@ candyWarz/
 
 | Slice | Key State | Purpose |
 |-------|-----------|---------|
-| `gameSlice` | periodCount, day, period, currentLocation, isAfterSchool, minigameContext | Game progression |
+| `gameSlice` | periodCount, day, period, currentLocation, isAfterSchool, minigameContext, selectedMinigame | Game progression |
 | `walletSlice` | balance, stashedAmount, adoptionFee, difficultyLevel, playerName | Money & identity |
 | `jokerSlice` | jokers[], activeEffects[] | Owned jokers |
 | `inventorySlice` | candyInventory[], inventoryLimit | Candy inventory |
@@ -176,6 +175,7 @@ candyWarz/
 /(tabs)/market → /minigames/* (lunch minigames)
 /(tabs)/after-school → /minigames/* (study)
 /(tabs)/market → /game-end (after day 5)
+/(tabs)/settings → /debug-minigames (DEV only)
 ```
 
 Tab navigator has 4 visible tabs (Home, Jokers, History, Settings) and 2 hidden (Market, After-School). Initial route is `market`.

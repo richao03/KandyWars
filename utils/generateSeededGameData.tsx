@@ -54,7 +54,7 @@ export type SpecialEventEffect = {
 };
 
 // Build candy base prices from the registry
-// Price tiers by size: Small ($1-$10), Medium ($500-$1,000), Big ($1,000-$2,000)
+// 5 price tiers: Penny ($1-10), Budget ($10-200), Mid ($200-1k), Premium ($1k-5k), Elite ($5k-10k)
 const candyBasePrices: Record<string, [number, number, number]> = {};
 CANDY_REGISTRY.forEach((candy) => {
   // [minPrice, maxPrice, floorPrice]
@@ -183,7 +183,8 @@ const foundMoneySubtitles = [
 export function generateSeededGameData(
   seed: string,
   totalPeriods = 40,
-  difficultyLevel?: number
+  difficultyLevel?: number,
+  tutorialMode = false
 ) {
   const rng = seedrandom(seed);
 
@@ -221,23 +222,37 @@ export function generateSeededGameData(
   const candyPrices: CandyPriceTable = {};
   const numDays = Math.floor(totalPeriods / 8);
 
+  // Pre-assign volatility: 1 low-vol + 1 high-vol per size, rest random
+  // Use a separate RNG so volatility assignment doesn't shift the main seed sequence
+  const volRng = seedrandom(seed + '-volatility');
+  const volatilityOverrides: Record<string, number> = {};
+  const LOW_VOL = 0.3;
+  const HIGH_VOL = 1.8;
+  (['small', 'medium', 'big'] as const).forEach((size) => {
+    const sizeGroup = CANDY_REGISTRY.filter((c) => c.size === size).map((c) => c.name);
+    // Shuffle the group with separate RNG
+    for (let i = sizeGroup.length - 1; i > 0; i--) {
+      const j = Math.floor(volRng() * (i + 1));
+      [sizeGroup[i], sizeGroup[j]] = [sizeGroup[j], sizeGroup[i]];
+    }
+    volatilityOverrides[sizeGroup[0]] = LOW_VOL;
+    volatilityOverrides[sizeGroup[1]] = HIGH_VOL;
+  });
+
   Object.entries(basePrices).forEach(
     ([candy, [min, max, _unusedFloorPrice]]) => {
-      const maxSpikePrice = max * 14;
-      const floorPrice = Math.max(maxSpikePrice * 0.03, 0.01);
+      // Per-candy volatility: how much price swings each period (0.3 = stable, 1.5 = wild)
+      const volatility = volatilityOverrides[candy] ?? (0.3 + rng() * 1.2);
 
-      // Feature 1: Per-candy volatility (0.3 = stable, 2.0 = wild)
-      const volatility = 0.3 + rng() * 1.7;
+      // Per-candy "home zone" — a unique resting point within [min, max] range
+      // This is what makes same-tier candies trade at different levels
+      const homeRatio = 0.2 + rng() * 0.6; // 20%–80% of the range
+      const homePrice = min + (max - min) * homeRatio;
 
-      // Feature 4: Per-candy personality band (unique center + width within tier)
-      const bandCenter = floorPrice + rng() * (maxSpikePrice - floorPrice);
-      const bandWidth = (maxSpikePrice - floorPrice) * (0.15 + rng() * 0.25);
+      // Start near home price, scaled for day 1
+      let price = homePrice * 0.5; // dayScale starts at 0.5
 
-      // Starting price near band center, clamped to early-game range
-      let price = bandCenter + (rng() - 0.5) * bandWidth;
-      price = Math.max(floorPrice, Math.min(maxSpikePrice * 0.6, price));
-
-      // Feature 5: Trend cluster state (runs of 2–5 periods)
+      // Trend runs: price tends up or down for 2–5 periods before reversing
       let trendDirection = rng() < 0.5 ? 1 : -1;
       let runLength = 2 + Math.floor(rng() * 4);
       let runCounter = 0;
@@ -247,12 +262,14 @@ export function generateSeededGameData(
       for (let i = 0; i < totalPeriods; i++) {
         const day = Math.floor(i / 8);
 
-        // Feature 3: Day scaling — compress early, expand late
+        // Day scaling — prices expand as game progresses
         const dayProgress = numDays > 1 ? day / (numDays - 1) : 1;
-        const dayScale = 0.5 + dayProgress * 0.5;  // 0.5 on Day 1 → 1.0 on Day 5
-        const periodCeiling = maxSpikePrice * dayScale;
+        const dayScale = 0.5 + dayProgress * 0.5; // 0.5 on Day 1 → 1.0 on Day 5
+        const periodMin = min * dayScale;
+        const periodMax = max * dayScale;
+        const periodHome = homePrice * dayScale;
 
-        // Feature 5: Reverse trend when run ends
+        // Reverse trend when run ends
         runCounter++;
         if (runCounter >= runLength) {
           trendDirection *= -1;
@@ -260,21 +277,20 @@ export function generateSeededGameData(
           runCounter = 0;
         }
 
-        // Feature 2: Random walk — trend bias + random noise
-        const maxDelta = volatility * 0.15;
-        const trendBias = trendDirection * 0.05 * volatility;
-        const noise = (rng() - 0.5) * maxDelta * 2;
+        // Random walk as % change
+        const trendBias = trendDirection * 0.04 * volatility;
+        const noise = (rng() - 0.5) * 0.20 * volatility;
 
-        // Mean reversion toward band center (prevents permanent drift to extremes)
-        const reversion = (bandCenter * dayScale - price) / (bandCenter * dayScale) * 0.08;
+        // Mean reversion toward home price (gentle pull, prevents cap-hugging)
+        const reversion = (periodHome - price) / periodHome * 0.10;
 
-        // Occasional shock (10% chance of extra-large move)
-        const shock = rng() < 0.10 ? (rng() - 0.5) * maxDelta * 2 : 0;
+        // Occasional shock (10% chance of bigger move)
+        const shock = rng() < 0.10 ? (rng() - 0.5) * 0.30 * volatility : 0;
 
         price = price * (1 + trendBias + noise + reversion + shock);
 
-        // Clamp to valid range
-        price = Math.max(floorPrice, Math.min(periodCeiling, price));
+        // Clamp within day-scaled [min, max]
+        price = Math.max(periodMin, Math.min(periodMax, price));
 
         prices.push(parseFloat(price.toFixed(2)));
       }
@@ -545,9 +561,9 @@ export function generateSeededGameData(
       const basePrice = candyPrices[event.candy][period];
       let finalPrice = basePrice * event.multiplier;
 
-      // Apply caps
+      // Apply caps — spike can't exceed 5x base, drop can't go below 1 cent
       if (event.effect === 'PRICE_SPIKE') {
-        finalPrice = Math.min(finalPrice, 100);
+        finalPrice = Math.min(finalPrice, basePrice * 5);
       } else if (event.effect === 'PRICE_DROP') {
         finalPrice = Math.max(finalPrice, 0.01);
       }
@@ -557,6 +573,12 @@ export function generateSeededGameData(
       );
     }
   });
+
+  // Tutorial mode: override Gummy Bears prices for first 2 periods
+  if (tutorialMode && candyPrices['Gummy Bears']) {
+    candyPrices['Gummy Bears'][0] = 2;  // Period 1: cheap buy
+    candyPrices['Gummy Bears'][1] = 8;  // Period 2: profitable sell
+  }
 
   return {
     candyPrices,

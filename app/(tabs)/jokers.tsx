@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, SectionList, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Dimensions, FlatList, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
@@ -7,6 +8,7 @@ import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
+import { useTutorial } from '../../src/hooks/useTutorial';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import {
   setHasDuplicatedVacuumSealer,
@@ -32,6 +34,8 @@ function JokersPage() {
   const inventoryContext = useInventory();
   const seedContext = useSeed();
   const { triggerEvent } = useEventHandler();
+  const isFocused = useIsFocused();
+  const { currentStep: tutorialStep, isActive: tutorialActive, advance: advanceTutorial, skip: skipTutorial, registerTarget } = useTutorial();
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
@@ -105,11 +109,20 @@ function JokersPage() {
     }
   };
 
-  // State for Master Negotiator candy conversion
+  // State for candy conversion (unused, kept for type compat)
   const [selectedSourceCandy, setSelectedSourceCandy] = useState<string | null>(
     null
   );
   const [isModalTransitioning, setIsModalTransitioning] = useState(false);
+
+  // Tutorial: advance step 9→10 when jokers page is focused
+  useEffect(() => {
+    if (isFocused && tutorialStep === 9) {
+      const timer = setTimeout(() => advanceTutorial(), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isFocused, tutorialStep, advanceTutorial]);
+
 
   // Debug log for modal state changes
   useEffect(() => {
@@ -359,53 +372,6 @@ function JokersPage() {
         `Filled inventory with ${quantityToAdd} ${selectedCandy}!`,
         '🏃‍♂️'
       );
-    } else if (joker.id === JOKER_IDS.MASTER_NEGOTIATOR) {
-      // Two-step candy conversion
-      if (!selectedSourceCandy) {
-        // Step 1: Select source candy
-        setSelectedSourceCandy(selectedCandy);
-        return; // Keep modal open for step 2
-      } else {
-        // Mark as used FIRST to prevent double-use (only on step 2 when action completes)
-        markJokerUsedToday(joker.id.toString());
-
-        // Step 2: Select target candy and perform conversion
-        const targetCandy = selectedCandy;
-
-        if (selectedSourceCandy === targetCandy) {
-          handleShowConfirmation(
-            'Same Candy Selected',
-            'Please select a different candy type to convert to.',
-            '⚠️'
-          );
-          return;
-        }
-
-        // Get the quantity and price of source candy
-        const sourceCandyItem = inventoryContext.inventory.find(
-          (item) => item.name === selectedSourceCandy
-        );
-        const quantity = sourceCandyItem?.quantity || 1;
-        const originalPrice = sourceCandyItem?.price || 0;
-
-        // Remove source candy and add target candy with same quantity and price
-        inventoryContext.removeFromInventory(selectedSourceCandy, quantity);
-        inventoryContext.addToInventory(
-          targetCandy,
-          quantity,
-          originalPrice,
-          periodCount
-        );
-
-        handleShowConfirmation(
-          'Master Negotiator Activated!',
-          `Converted ${quantity} ${selectedSourceCandy} to ${targetCandy}!`,
-          '🤝'
-        );
-
-        // Reset source candy selection
-        setSelectedSourceCandy(null);
-      }
     }
 
     setCandySelectorModal({ visible: false, joker: null });
@@ -542,10 +508,13 @@ function JokersPage() {
 
         <View style={styles.tabContainer}>
           <PressableButton
-            onPress={() => setActiveTab('inventory')}
+            onPress={() => {
+              setActiveTab('inventory');
+              if (tutorialStep === 10) advanceTutorial();
+            }}
             shadowOpacity={0}
             elevation={0}
-            style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'inventory' && styles.activeTab, tutorialStep === 10 && styles.tutorialHighlight, tutorialStep === 10 && { zIndex: 10001, elevation: 10001 }]}
           >
             <TextWithEmojis
               imageSize={20}
@@ -554,15 +523,18 @@ function JokersPage() {
                 activeTab == 'inventory' && styles.activeTabText,
               ]}
             >
-              {`🎒 Owned (${jokers.length})`}
+              {`🎒 Owned (${jokers.length}) | Aura: ${jokerContext.persistentJokerCount}/${jokerContext.maxPersistentSlots}`}
             </TextWithEmojis>
           </PressableButton>
 
           <PressableButton
-            onPress={() => setActiveTab('see-all')}
+            onPress={() => {
+              setActiveTab('see-all');
+              if (tutorialStep === 11) advanceTutorial();
+            }}
             shadowOpacity={0}
             elevation={0}
-            style={[styles.tab, activeTab !== 'inventory' && styles.activeTab]}
+            style={[styles.tab, activeTab !== 'inventory' && styles.activeTab, tutorialStep === 11 && styles.tutorialHighlight, tutorialStep === 11 && { zIndex: 10001, elevation: 10001 }]}
           >
             <Text
               style={[
@@ -642,10 +614,7 @@ function JokersPage() {
                   : candySelectorModal.joker?.id ===
                       JOKER_IDS.BET_YOU_IM_FASTER
                     ? '⚡'
-                    : candySelectorModal.joker?.id ===
-                        JOKER_IDS.MASTER_NEGOTIATOR
-                      ? '🤝'
-                      : '🍭'}
+                    : '🍭'}
             </TextWithEmojis>
           </View>
           <TextWithEmojis style={styles.modalTitle} imageSize={24}>
@@ -655,29 +624,10 @@ function JokersPage() {
                 ? 'Choose Candy to Short'
                 : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
                   ? 'Choose Candy to Fill Inventory'
-                  : candySelectorModal.joker?.id ===
-                      JOKER_IDS.MASTER_NEGOTIATOR
-                    ? selectedSourceCandy
-                      ? `Choose Candy to Convert ${selectedSourceCandy} Into`
-                      : 'Choose Candy to Convert From'
-                    : 'Choose Candy Type'}
+                  : 'Choose Candy Type'}
           </TextWithEmojis>
 
-          {CANDY_TYPES.filter((candyType) => {
-            // For Master Negotiator, only show candies in inventory for source selection
-            if (
-              candySelectorModal.joker?.id === JOKER_IDS.MASTER_NEGOTIATOR &&
-              !selectedSourceCandy
-            ) {
-              return (
-                inventoryContext?.inventory.some(
-                  (item) => item.name === candyType
-                ) || false
-              );
-            }
-            // For target selection (after source is selected), show all candies
-            return true;
-          }).map((candyType) => (
+          {CANDY_TYPES.map((candyType) => (
             <PressableButton
               key={candyType}
               onPress={() => handleCandySelection(candyType)}
@@ -726,6 +676,25 @@ function JokersPage() {
           </PressableButton>
         </>
       </FastModal>
+
+      {/* Tutorial overlay for steps 10-11 */}
+      {(tutorialStep === 10 || tutorialStep === 11) && (
+        <View style={tutorialStyles.overlay} pointerEvents="box-none">
+          <View style={tutorialStyles.dim} pointerEvents="none" />
+          <View style={tutorialStyles.tooltip}>
+            <Text style={tutorialStyles.tooltipText}>
+              {tutorialStep === 10
+                ? 'You can find all the Jokers you own here.'
+                : 'Click here to see what subjects offer which Jokers. Good luck!'}
+            </Text>
+            <View style={tutorialStyles.buttonRow}>
+              <PressableButton onPress={skipTutorial}>
+                <Text style={tutorialStyles.skipText}>Skip Tutorial</Text>
+              </PressableButton>
+            </View>
+          </View>
+        </View>
+      )}
 
     </View>
   );
@@ -971,6 +940,60 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'PixeloidMono',
+  },
+  tutorialHighlight: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+});
+
+const tutorialStyles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  dim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  tooltip: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10000,
+    zIndex: 10000,
+  },
+  tooltipText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
+  skipText: {
+    color: '#888',
+    fontSize: 13,
     fontFamily: 'PixeloidMono',
   },
 });

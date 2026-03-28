@@ -16,7 +16,7 @@ import Animated, {
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { HOME_EC_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
@@ -511,9 +511,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={HOME_EC_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="homeec"
-        subject="Home Economics"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -525,25 +525,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     return (
       <View style={styles.instructionsContainer}>
         <Text style={styles.instructionsTitle}>Candy Kitchen Study!</Text>
-
-        <TouchableOpacity
-          style={styles.jokerIconButton}
-          onPress={() => {
-            SoundEffects.playRandomPop();
-            setShowAvailableJokers(true);
-          }}
-        >
-          <PixelBorder
-            borderColor="#6c757d"
-            borderWidth={2}
-            backgroundColor="#1c1f26"
-            innerPadding={8}
-          >
-            <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-              🃏
-            </TextWithEmojis>
-          </PixelBorder>
-        </TouchableOpacity>
 
         <PixelBorder
           borderColor="#6c757d"
@@ -617,8 +598,11 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         </PressableButton>
 
         <PressableButton
-          onPress={handleForfeit}
-          shadowColor="rgba(185,28,28,1)"
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            setShowAvailableJokers(true);
+          }}
+          shadowColor="#495057"
           shadowOffset={{ width: 0, height: 4 }}
           shadowOpacity={0.5}
           shadowRadius={5}
@@ -626,9 +610,29 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           style={styles.backButton}
         >
           <PixelBorder
-            borderColor="rgba(185,28,28,1)"
+            borderColor="#6c757d"
             borderWidth={3}
-            backgroundColor="rgba(239,68,68,1)"
+            backgroundColor="#495057"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Available Jokers</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
+          }}
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginTop: 8, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
             innerPadding={0}
           >
             <View style={styles.backButtonInner}>
@@ -640,8 +644,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={HOME_EC_JOKERS}
-          subject="Home Economics"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#6c757d',
             backgroundColor: '#1c1f26',

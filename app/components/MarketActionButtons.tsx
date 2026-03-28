@@ -14,6 +14,7 @@ interface MarketActionButtonsProps {
   onNextPeriod: () => void;
   onEndDay: () => void;
   isNextPeriodEnabled?: boolean;
+  nextPeriodRef?: React.RefObject<View | null>;
 }
 
 const MarketActionButtons = React.memo(function MarketActionButtons({
@@ -25,6 +26,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
   onNextPeriod,
   onEndDay,
   isNextPeriodEnabled = true,
+  nextPeriodRef,
 }: MarketActionButtonsProps) {
   // Calculate lunch period dynamically (period 3 for 6-period days, period 4 for 8-period days)
   const lunchPeriod = Math.floor(periodsPerDay / 2);
@@ -102,6 +104,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
   // All other periods: Show both next period and end day buttons
   return (
     <View style={styles.buttonRow}>
+      <View ref={nextPeriodRef} collapsable={false} style={styles.bigButton}>
       <PressableButton
         onPress={onNextPeriod}
         shadowColor={isGoToLunch ? 'rgba(59,130,246,1)' : 'rgba(123,169,101,1)'}
@@ -109,7 +112,6 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
         shadowOpacity={0.5}
         shadowRadius={5}
         elevation={8}
-        style={styles.bigButton}
         disabled={!isNextPeriodEnabled}
       >
         <PixelBorder
@@ -147,6 +149,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
           </View>
         </PixelBorder>
       </PressableButton>
+      </View>
 
       <PressableButton
         onPress={onEndDay}

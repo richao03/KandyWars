@@ -23,6 +23,7 @@ interface GameState {
   hasStudiedTonight: boolean;
   hasPlayedLunchMinigame: boolean;
   minigameContext: 'lunch' | 'after-school' | null;
+  selectedMinigame: string | null;
   lastActiveView: 'market' | 'after-school';
   trojanHorseCounter: number;
   isLoaded: boolean;
@@ -41,6 +42,7 @@ const initialState: GameState = {
   hasStudiedTonight: false,
   hasPlayedLunchMinigame: false,
   minigameContext: null,
+  selectedMinigame: null,
   lastActiveView: 'market',
   trojanHorseCounter: 0,
   isLoaded: false,
@@ -119,6 +121,7 @@ const gameSlice = createSlice({
       state.pricesUpdating = true;
       // Reset lunch minigame flag when moving to a new period
       state.hasPlayedLunchMinigame = false;
+      state.selectedMinigame = null;
       if (__DEV__) {
         console.log(
           '💾 Period incremented to:',
@@ -131,6 +134,7 @@ const gameSlice = createSlice({
       state.isAfterSchool = true;
       // Reset study flag when entering after-school to allow studying
       state.hasStudiedTonight = false;
+      state.selectedMinigame = null;
     },
     startNewDay: (state, action: PayloadAction<number | undefined>) => {
       const periodsPerDay = action.payload ?? 8; // Default to 8 if not provided
@@ -205,15 +209,20 @@ const gameSlice = createSlice({
     },
     markStudiedTonight: (state) => {
       state.hasStudiedTonight = true;
+      state.selectedMinigame = null;
     },
     markLunchMinigamePlayed: (state) => {
       state.hasPlayedLunchMinigame = true;
+      state.selectedMinigame = null;
     },
     setMinigameContext: (
       state,
       action: PayloadAction<'lunch' | 'after-school' | null>
     ) => {
       state.minigameContext = action.payload;
+    },
+    setSelectedMinigame: (state, action: PayloadAction<string | null>) => {
+      state.selectedMinigame = action.payload;
     },
     markFarmersCarryBonusApplied: (state, action: PayloadAction<number>) => {
       const period = action.payload;
@@ -256,6 +265,7 @@ export const {
   markStudiedTonight,
   markLunchMinigamePlayed,
   markFarmersCarryBonusApplied,
+  setSelectedMinigame,
 } = gameSlice.actions;
 
 export default gameSlice.reducer;
@@ -291,3 +301,4 @@ export const selectPricesUpdating = (state: any) => state.game?.pricesUpdating ?
 export const selectIsInitialized = (state: any) => state.game?.isInitialized ?? false;
 export const selectLocationHistory = (state: any) => state.game?.locationHistory ?? [];
 export const selectIsAfterSchool = (state: any) => state.game?.isAfterSchool ?? false;
+export const selectSelectedMinigame = (state: any) => state.game?.selectedMinigame ?? null;

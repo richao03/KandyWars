@@ -31,6 +31,7 @@ import {
   setStashedAmount,
 } from '../../src/store/slices/walletSlice';
 import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
+import { selectTutorialComplete, resetTutorial } from '../../src/store/slices/tutorialSlice';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import DifficultySelectionModal from './DifficultySelectionModal';
@@ -72,6 +73,7 @@ export default function SugarWarsTitleScreen({
   const cachedUserObject = useAppSelector(
     (state) => state.userObject.cachedUser
   );
+  const tutorialComplete = useAppSelector(selectTutorialComplete);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
   const [showDifficultyModal, setShowDifficultyModal] = useState(false);
@@ -230,7 +232,9 @@ export default function SugarWarsTitleScreen({
 
       // Generate game data using the seed with hall pass-adjusted periods
       // Pass difficulty level to enable price range shuffling for level > 3
-      const gameData = generateSeededGameData(newSeed, totalPeriods, level);
+      // Enable tutorial mode for difficulty 1 if tutorial hasn't been completed
+      const isTutorialMode = level === 1 && !tutorialComplete;
+      const gameData = generateSeededGameData(newSeed, totalPeriods, level, isTutorialMode);
       setGameData(gameData);
 
       // Reset all game state (this preserves selectedPassIds and clears hallPassModifiers)

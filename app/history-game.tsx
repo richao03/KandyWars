@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { useGame } from '../src/hooks/useGame';
-import GymGame from './minigames/GymGame';
+import NimGame from './minigames/NimGame';
 
 export default function HistoryGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
@@ -12,7 +12,7 @@ export default function HistoryGameScreen() {
   };
 
   const handleGameComplete = () => {
-    console.log('Gym game completed! Context:', minigameContext);
+    console.log('Nim game completed! Context:', minigameContext);
 
     // Mark study as completed based on context BEFORE navigating
     // This ensures the state is updated before Market re-renders
@@ -40,5 +40,5 @@ export default function HistoryGameScreen() {
     navigateBack();
   };
 
-  return <GymGame onComplete={handleGameComplete} onBack={handleBack} />;
+  return <NimGame onComplete={handleGameComplete} onBack={handleBack} />;
 }

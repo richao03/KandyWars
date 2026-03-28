@@ -89,6 +89,9 @@ interface GameHUDProps {
   onInventoryPress?: () => void;
   disableBalanceAnimation?: boolean;
   showLunchMinigames: boolean;
+  // Tutorial refs
+  walletRef?: React.RefObject<View | null>;
+  piggyBankRef?: React.RefObject<View | null>;
 }
 
 function GameHUD({
@@ -102,6 +105,8 @@ function GameHUD({
   onInventoryPress,
   showLunchMinigames,
   disableBalanceAnimation = false,
+  walletRef,
+  piggyBankRef,
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
@@ -387,6 +392,7 @@ function GameHUD({
         <Animated.View
           style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}
         >
+          <View ref={walletRef} collapsable={false}>
           <PixelBorder
             borderColor="#4a7c4a"
             borderWidth={3}
@@ -421,9 +427,11 @@ function GameHUD({
               )}
             </View>
           </PixelBorder>
+          </View>
         </Animated.View>
 
         <Animated.View style={[{ flex: 1 }, animatedPiggyBankStyle]}>
+          <View ref={piggyBankRef} collapsable={false}>
           <PixelBorder
             borderColor="#b85c8a"
             borderWidth={3}
@@ -458,6 +466,7 @@ function GameHUD({
               )}
             </View>
           </PixelBorder>
+          </View>
         </Animated.View>
 
         <View style={{ flex: 1 }}>

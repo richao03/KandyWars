@@ -87,6 +87,10 @@ export const useWallet = () => {
         }
       });
 
+      // Cap allowance multiplier at 8x to prevent exponential stacking
+      const MAX_ALLOWANCE_MULTIPLIER = 8;
+      allowanceMultiplier = Math.min(allowanceMultiplier, MAX_ALLOWANCE_MULTIPLIER);
+
       // Apply multipliers first, then additions
       finalAllowance = (baseAllowance * allowanceMultiplier) + allowanceAddition;
       if (__DEV__) console.log(`💰 Allowance calculation: base=${baseAllowance}, multiplier=${allowanceMultiplier}, addition=${allowanceAddition}, final=${finalAllowance}`);
@@ -231,23 +235,27 @@ export const useWallet = () => {
       return 0;
     }
 
-    const hasHighYieldAccount = jokers.some((j: any) => j.id === 53);
-    if (__DEV__) console.log(`💰 High Yield Account Debug: hasHighYieldAccount (ID 53): ${hasHighYieldAccount}`);
+    const highYieldJoker = jokers.find((j: any) => j.id === 53);
+    if (__DEV__) console.log(`💰 High Yield Account Debug: hasHighYieldAccount (ID 53): ${!!highYieldJoker}`);
 
-    if (!hasHighYieldAccount) {
+    if (!highYieldJoker) {
       if (__DEV__) console.log(`💰 High Yield Account: Joker not owned, skipping interest`);
       return 0;
     }
 
-    // Apply 8% compound interest
-    const interest = stashedAmount * 0.08;
+    // Apply compound interest based on joker level (8%/15%/25%)
+    const level = highYieldJoker.level ?? 1;
+    const rate = level <= 1 ? 0.08 : level === 2 ? 0.15 : 0.25;
+    const MAX_DAILY_INTEREST = 5000;
+    const rawInterest = stashedAmount * rate;
+    const interest = Math.min(rawInterest, MAX_DAILY_INTEREST);
     if (__DEV__) {
-      console.log(`💰 High Yield Account: Calculating interest: ${stashedAmount} * 0.08 = ${interest}`);
+      console.log(`💰 High Yield Account: Level ${level}, rate ${rate * 100}%, raw interest: $${rawInterest.toFixed(2)}, capped: $${interest.toFixed(2)} (max $${MAX_DAILY_INTEREST}/day)`);
       console.log(`💰 High Yield Account: Stashed before interest: $${stashedAmount}`);
     }
     dispatch(stashMoney({ amountPaid: 0, amountStashed: interest }));
     if (__DEV__) {
-      console.log(`💰 High Yield Account: ✅ Earned $${interest.toFixed(2)} interest (8% of $${stashedAmount})`);
+      console.log(`💰 High Yield Account: ✅ Earned $${interest.toFixed(2)} interest (${rate * 100}% of $${stashedAmount}, capped at $${MAX_DAILY_INTEREST})`);
       console.log(`💰 High Yield Account: Stashed after interest: $${stashedAmount + interest}`);
     }
     return interest;

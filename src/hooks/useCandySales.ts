@@ -97,6 +97,7 @@ export const useCandySales = () => {
     sales: candySalesState.sales,
     totalRevenue: candySalesState.totalRevenue,
     totalCandiesSold: candySalesState.totalCandiesSold,
+    hasEarlySaleToday: candySalesState.hasEarlySaleToday,
     consecutivePeriodSales,
     recordSale,
     updateSales,

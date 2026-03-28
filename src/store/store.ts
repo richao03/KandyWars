@@ -20,6 +20,7 @@ import minigameTrackingReducer from './slices/minigameTrackingSlice';
 import localAnalyticsReducer from './slices/localAnalyticsSlice';
 import userObjectReducer from './slices/userObjectSlice';
 import merchantReducer from './slices/merchantSlice';
+import tutorialReducer from './slices/tutorialSlice';
 
 // Combine reducers
 const rootReducer = combineReducers({
@@ -41,6 +42,7 @@ const rootReducer = combineReducers({
   localAnalytics: localAnalyticsReducer,
   userObject: userObjectReducer,
   merchant: merchantReducer,
+  tutorial: tutorialReducer,
 });
 
 // Persist configuration
@@ -48,7 +50,7 @@ const persistConfig = {
   key: 'root',
   version: 5, // Increment version to trigger migration
   storage: AsyncStorage,
-  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant'], // Only persist these slices
+  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
   // Performance optimizations
   timeout: 10000, // 10 second timeout for persistence operations

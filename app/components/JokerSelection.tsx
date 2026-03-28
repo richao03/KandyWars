@@ -1,32 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
-import { useAppSelector } from '../../src/store/hooks';
-import { getJokersBySubject, STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { STANDARDIZED_JOKERS, StandardizedJoker } from '../../src/utils/jokerEffectEngine';
+import { JOKER_IDS, hasJokerById } from '../../src/constants/jokerIds';
+import { addBalance } from '../../src/store/slices/walletSlice';
+import { selectBalance } from '../../src/store/slices/walletSlice';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 
-interface Joker {
-  id: number;
-  name: string;
-  description: string;
-  subject?: string;
-  type?: 'one-time' | 'persistent';
-  effect?: string;
-  effects?: Array<{
-    target: string;
-    operation: string;
-    amount: number;
-    duration?: string | number;
-  }>;
-}
+const UPGRADE_COSTS: Record<number, number> = {
+  1: 5000,   // L1 → L2
+  2: 30000,  // L2 → L3
+};
 
 interface JokerSelectionProps {
-  jokers: Joker[];
+  jokers: StandardizedJoker[];
   theme:
     | 'math'
     | 'computer'
@@ -40,8 +33,8 @@ interface JokerSelectionProps {
     | 'geography';
   subject: string;
   onComplete: () => void;
-  rewardTier?: 1 | 2 | 3; // 1 = 1 joker no reroll, 2 = 2 jokers + 1 reroll, 3 = 3 jokers + 2 rerolls
-  completionLevel?: 1 | 2 | 3; // Which level the player completed before failing/winning
+  rewardTier?: 1 | 2 | 3;
+  completionLevel?: 1 | 2 | 3;
 }
 
 export default function JokerSelection({
@@ -52,186 +45,121 @@ export default function JokerSelection({
   rewardTier = 3,
   completionLevel = 3,
 }: JokerSelectionProps) {
-  const [selectedJokers, setSelectedJokers] = useState<Joker[]>([]);
-  const [chosenJokerIds, setChosenJokerIds] = useState<number[]>([]);
-  const [rerollsUsed, setRerollsUsed] = useState(0);
+  const [grantedJokers, setGrantedJokers] = useState<StandardizedJoker[]>([]);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [hasGranted, setHasGranted] = useState(false);
+  const dispatch = useAppDispatch();
+  const balance = useAppSelector(selectBalance);
   const {
     addJoker,
+    sellJoker,
     jokers: ownedJokers,
+    jokersOwned,
+    persistentJokerCount,
+    maxPersistentSlots,
+    canAddPersistentJoker,
+    isJokerPersistent: isJokerPersistentCheck,
     upgradeJoker: upgradeJokerAction,
     getOwnedJokerLevel,
   } = useJokers();
-  // Get pre-computed hall pass modifiers from Redux
   const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
-
-  // Check if a joker can appear in the selection pool
-  const canAppearInPool = (joker: Joker): boolean => {
-    const ownedLevel = getOwnedJokerLevel(joker.id);
-    if (ownedLevel === 0) return true; // Not owned — available
-    const standardized = STANDARDIZED_JOKERS.find(sj => sj.id === joker.id);
-    const maxLevel = standardized?.maxLevel ?? 1;
-    if (maxLevel <= 1) return false; // Non-upgradeable — excluded
-    if (ownedLevel >= maxLevel) return false; // Already maxed — excluded
-    return true; // Owned + upgradeable + not maxed — available as upgrade
-  };
-
-  const isUpgradeJoker = (joker: Joker): boolean => {
-    return getOwnedJokerLevel(joker.id) > 0;
-  };
-
-  const availableJokers = jokers.filter(canAppearInPool);
 
   // Play victory music when component mounts
   useEffect(() => {
     MusicController.setTrack('victory');
   }, []);
 
-  const selectRandomJokers = () => {
-    console.log(
-      `🃏 JokerSelection: selectRandomJokers called with rewardTier=${rewardTier}`
-    );
+  // Auto-grant random jokers on mount
+  useEffect(() => {
+    if (hasGranted) return;
+    setHasGranted(true);
 
-    if (availableJokers.length === 0) {
-      console.log(
-        '🃏 JokerSelection: No available jokers (player owns all jokers for this subject)'
-      );
-      // If no jokers available, skip selection
-      onComplete();
+    // Filter to jokers the player doesn't already own
+    const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
+    const available = jokers.filter((j) => !ownedIds.has(j.id.toString()));
+
+    if (available.length === 0) {
+      setGrantedJokers([]);
       return;
     }
 
-    const shuffled = [...availableJokers].sort(() => Math.random() - 0.5);
-    const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
-    const jokerBonus = hallPassModifiers.jokerBonusCount; // Pre-computed hall pass bonus
-    const requestedJokerCount = baseJokerCount + jokerBonus;
-
-    console.log(
-      `🃏 JokerSelection: baseJokerCount=${baseJokerCount}, jokerBonus=${jokerBonus}, requestedJokerCount=${requestedJokerCount}, availableJokers.length=${availableJokers.length}`
-    );
-
-    if (jokerBonus > 0) {
-      console.log(
-        `🎖️ Hall Pass joker bonus: +${jokerBonus} jokers (showing ${requestedJokerCount} instead of ${baseJokerCount})`
-      );
-    }
-    // Limit to available jokers if we don't have enough
-    const jokerCount = Math.min(requestedJokerCount, availableJokers.length);
+    // Extra Credit joker gives +1 to selection count
+    const extraCreditBonus = hasJokerById(jokersOwned, JOKER_IDS.EXTRA_CREDIT) ? 1 : 0;
+    const jokerCount = Math.min(completionLevel + extraCreditBonus, available.length);
+    const shuffled = [...available].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, jokerCount);
 
-    console.log(
-      `🃏 JokerSelection: Selecting ${jokerCount} jokers from ${availableJokers.length} available. Selected:`,
-      selected.map((j) => j.name)
-    );
+    // Grant each joker immediately
+    for (const joker of selected) {
+      const isOneTime = joker.type === 'one-time';
+      const jokerToAdd: JokerType = {
+        id: joker.id,
+        name: joker.name,
+        description: joker.description,
+        subject: joker.subject,
+        theme: theme,
+        type: isOneTime ? 'one-time' : 'persistent',
+        effect: '',
+        effects: joker.effects,
+        level: 1,
+      };
 
-    setSelectedJokers(selected);
-  };
-
-  const rerollJokers = () => {
-    // For reroll, get fresh random jokers from the full pool for this subject, using same upgrade-aware filtering
-    const allSubjectJokers = getJokersBySubject(subject);
-    const currentSelectedIds = selectedJokers.map((j) => j.id);
-    const availableSubjectJokers = allSubjectJokers.filter(
-      (joker) =>
-        canAppearInPool(joker) &&
-        !currentSelectedIds.includes(joker.id)
-    );
-    const shuffled = [...availableSubjectJokers].sort(
-      () => Math.random() - 0.5
-    );
-
-    // Reroll gives 1 less joker than the original selection
-    // So if you have 2 jokers, reroll gives you 1 random joker
-    // If you have 3 jokers, reroll gives you 2 random jokers
-    const baseJokerCount = rewardTier; // 1, 2, or 3 jokers based on completion level
-    const jokerBonus = hallPassModifiers.jokerBonusCount; // Pre-computed hall pass bonus
-    const originalCount = baseJokerCount + jokerBonus;
-    const rerollJokerCount = Math.max(1, originalCount - 1); // At least 1 joker on reroll
-
-    setSelectedJokers(shuffled.slice(0, rerollJokerCount));
-    setChosenJokerIds([]);
-    setRerollsUsed((prev) => prev + 1);
-  };
-
-  const maxPicks = 2;
-
-  const addJokerToInventory = (joker: Joker) => {
-    if (isUpgradeJoker(joker)) {
-      // Joker already owned — upgrade it instead of adding a duplicate
-      upgradeJokerAction(joker.id.toString());
-      return;
-    }
-
-    const isOneTime =
-      joker.effects?.every((e: any) => e.duration === 'one-time') ?? false;
-    const jokerType = isOneTime ? 'one-time' : 'persistent';
-
-    const jokerToAdd: JokerType = {
-      id: joker.id,
-      name: joker.name,
-      description: joker.description,
-      subject: subject || joker.subject,
-      theme: theme,
-      type: jokerType,
-      effect: joker.effect || joker.effects?.[0]?.target || '',
-      effects: joker.effects,
-      level: 1,
-    };
-
-    addJoker(jokerToAdd, 'minigame', subject);
-  };
-
-  const findJoker = (jokerId: number): Joker | undefined => {
-    let joker = selectedJokers.find((j) => j.id === jokerId);
-    if (!joker) joker = availableJokers.find((j) => j.id === jokerId);
-    if (!joker) {
-      const allSubjectJokers = getJokersBySubject(subject);
-      joker = allSubjectJokers.find(
-        (j) => canAppearInPool(j) && j.id === jokerId
-      );
-    }
-    return joker;
-  };
-
-  const handleJokerChoice = (jokerId: number) => {
-    // Toggle selection
-    if (chosenJokerIds.includes(jokerId)) {
-      setChosenJokerIds((prev) => prev.filter((id) => id !== jokerId));
-      return;
-    }
-
-    const newChosen = [...chosenJokerIds, jokerId];
-    setChosenJokerIds(newChosen);
-
-    // If only 1 card shown, auto-confirm immediately
-    if (selectedJokers.length <= 1) {
-      const joker = findJoker(jokerId);
-      if (joker) {
-        addJokerToInventory(joker);
-        SoundEffects.playAchievementSound();
+      // If persistent and slots full, skip (don't block the flow)
+      if (!isOneTime && !canAddPersistentJoker()) {
+        continue;
       }
-      onComplete();
-      return;
+
+      addJoker(jokerToAdd, 'minigame', subject);
     }
 
-    // Auto-confirm when 2 picks reached (or all available cards picked)
-    const pickLimit = Math.min(maxPicks, selectedJokers.length);
-    if (newChosen.length >= pickLimit) {
-      newChosen.forEach((id) => {
-        const joker = findJoker(id);
-        if (joker) addJokerToInventory(joker);
-      });
-      SoundEffects.playAchievementSound();
-      onComplete();
-    }
-  };
+    setGrantedJokers(selected);
+    SoundEffects.playAchievementSound();
+  }, []);
 
-  const handleConfirmChoices = () => {
-    chosenJokerIds.forEach((id) => {
-      const joker = findJoker(id);
-      if (joker) addJokerToInventory(joker);
-    });
-    if (chosenJokerIds.length > 0) SoundEffects.playAchievementSound();
-    onComplete();
+  // Get upgradeable owned jokers (level < maxLevel)
+  const upgradeableJokers = useMemo(() => {
+    return jokersOwned
+      .map((owned) => {
+        const standardized = STANDARDIZED_JOKERS.find(
+          (sj) => sj.id.toString() === owned.id.toString()
+        );
+        if (!standardized) return null;
+        const currentLevel = (owned as any).level ?? 1;
+        const maxLevel = standardized.maxLevel ?? 1;
+        if (currentLevel >= maxLevel) return null;
+        const cost = UPGRADE_COSTS[currentLevel];
+        if (!cost) return null;
+        return {
+          id: owned.id,
+          name: owned.name || standardized.name,
+          description: standardized.description,
+          currentLevel,
+          maxLevel,
+          cost,
+          type: standardized.type,
+        };
+      })
+      .filter(Boolean) as Array<{
+        id: string | number;
+        name: string;
+        description: string;
+        currentLevel: number;
+        maxLevel: number;
+        cost: number;
+        type: string;
+      }>;
+  }, [jokersOwned]);
+
+  const handleUpgrade = (jokerId: string | number) => {
+    const joker = upgradeableJokers.find(
+      (j) => j.id.toString() === jokerId.toString()
+    );
+    if (!joker) return;
+    if (balance < joker.cost) return;
+
+    dispatch(addBalance(-joker.cost));
+    upgradeJokerAction(jokerId.toString());
+    SoundEffects.playAchievementSound();
   };
 
   const getThemeStyles = () => {
@@ -241,431 +169,394 @@ export default function JokerSelection({
           container: styles.mathContainer,
           title: styles.mathTitle,
           subtitle: styles.mathSubtitle,
-          generateButton: styles.mathGenerateButton,
-          generateButtonText: styles.mathGenerateButtonText,
           jokerCard: styles.mathJokerCard,
           jokerName: styles.mathJokerName,
           jokerDescription: styles.mathJokerDescription,
           skipButton: styles.mathSkipButton,
           skipButtonText: styles.mathSkipButtonText,
+          generateButton: styles.mathGenerateButton,
+          generateButtonText: styles.mathGenerateButtonText,
         };
       case 'computer':
         return {
           container: styles.computerContainer,
           title: styles.computerTitle,
           subtitle: styles.computerSubtitle,
-          generateButton: styles.computerGenerateButton,
-          generateButtonText: styles.computerGenerateButtonText,
           jokerCard: styles.computerJokerCard,
           jokerName: styles.computerJokerName,
           jokerDescription: styles.computerJokerDescription,
           skipButton: styles.computerSkipButton,
           skipButtonText: styles.computerSkipButtonText,
+          generateButton: styles.computerGenerateButton,
+          generateButtonText: styles.computerGenerateButtonText,
         };
       case 'homeec':
         return {
           container: styles.homeecContainer,
           title: styles.homeecTitle,
           subtitle: styles.homeecSubtitle,
-          generateButton: styles.homeecGenerateButton,
-          generateButtonText: styles.homeecGenerateButtonText,
           jokerCard: styles.homeecJokerCard,
           jokerName: styles.homeecJokerName,
           jokerDescription: styles.homeecJokerDescription,
           skipButton: styles.homeecSkipButton,
           skipButtonText: styles.homeecSkipButtonText,
+          generateButton: styles.homeecGenerateButton,
+          generateButtonText: styles.homeecGenerateButtonText,
         };
       case 'economy':
         return {
           container: styles.socialContainer,
           title: styles.socialTitle,
           subtitle: styles.socialSubtitle,
-          generateButton: styles.socialGenerateButton,
-          generateButtonText: styles.socialGenerateButtonText,
           jokerCard: styles.socialJokerCard,
           jokerName: styles.socialJokerName,
           jokerDescription: styles.socialJokerDescription,
           skipButton: styles.socialSkipButton,
           skipButtonText: styles.socialSkipButtonText,
+          generateButton: styles.socialGenerateButton,
+          generateButtonText: styles.socialGenerateButtonText,
         };
       case 'gym':
         return {
           container: styles.gymContainer,
           title: styles.gymTitle,
           subtitle: styles.gymSubtitle,
-          generateButton: styles.gymGenerateButton,
-          generateButtonText: styles.gymGenerateButtonText,
           jokerCard: styles.gymJokerCard,
           jokerName: styles.gymJokerName,
           jokerDescription: styles.gymJokerDescription,
           skipButton: styles.gymSkipButton,
           skipButtonText: styles.gymSkipButtonText,
+          generateButton: styles.gymGenerateButton,
+          generateButtonText: styles.gymGenerateButtonText,
         };
       case 'art':
         return {
           container: styles.artContainer,
           title: styles.artTitle,
           subtitle: styles.artSubtitle,
-          generateButton: styles.artGenerateButton,
-          generateButtonText: styles.artGenerateButtonText,
           jokerCard: styles.artJokerCard,
           jokerName: styles.artJokerName,
           jokerDescription: styles.artJokerDescription,
           skipButton: styles.artSkipButton,
           skipButtonText: styles.artSkipButtonText,
+          generateButton: styles.artGenerateButton,
+          generateButtonText: styles.artGenerateButtonText,
         };
       case 'logic':
         return {
           container: styles.logicContainer,
           title: styles.logicTitle,
           subtitle: styles.logicSubtitle,
-          generateButton: styles.logicGenerateButton,
-          generateButtonText: styles.logicGenerateButtonText,
           jokerCard: styles.logicJokerCard,
           jokerName: styles.logicJokerName,
           jokerDescription: styles.logicJokerDescription,
           skipButton: styles.logicSkipButton,
           skipButtonText: styles.logicSkipButtonText,
+          generateButton: styles.logicGenerateButton,
+          generateButtonText: styles.logicGenerateButtonText,
         };
       case 'recess':
         return {
           container: styles.recessContainer,
           title: styles.recessTitle,
           subtitle: styles.recessSubtitle,
-          generateButton: styles.recessGenerateButton,
-          generateButtonText: styles.recessGenerateButtonText,
           jokerCard: styles.recessJokerCard,
           jokerName: styles.recessJokerName,
           jokerDescription: styles.recessJokerDescription,
           skipButton: styles.recessSkipButton,
           skipButtonText: styles.recessSkipButtonText,
+          generateButton: styles.recessGenerateButton,
+          generateButtonText: styles.recessGenerateButtonText,
         };
       case 'geography':
         return {
           container: styles.geographyContainer,
           title: styles.geographyTitle,
           subtitle: styles.geographySubtitle,
-          generateButton: styles.geographyGenerateButton,
-          generateButtonText: styles.geographyGenerateButtonText,
           jokerCard: styles.geographyJokerCard,
           jokerName: styles.geographyJokerName,
           jokerDescription: styles.geographyJokerDescription,
           skipButton: styles.geographySkipButton,
           skipButtonText: styles.geographySkipButtonText,
+          generateButton: styles.geographyGenerateButton,
+          generateButtonText: styles.geographyGenerateButtonText,
         };
-      default: // candy
+      default:
         return {
           container: styles.candyContainer,
           title: styles.candyTitle,
           subtitle: styles.candySubtitle,
-          generateButton: styles.candyGenerateButton,
-          generateButtonText: styles.candyGenerateButtonText,
           jokerCard: styles.candyJokerCard,
           jokerName: styles.candyJokerName,
           jokerDescription: styles.candyJokerDescription,
           skipButton: styles.candySkipButton,
           skipButtonText: styles.candySkipButtonText,
+          generateButton: styles.candyGenerateButton,
+          generateButtonText: styles.candyGenerateButtonText,
         };
     }
   };
 
   const themeStyles = getThemeStyles();
 
-  const getButtonText = () => {
-    const count = rewardTier;
-    switch (theme) {
-      case 'math':
-        return (
-          <View style={styles.rewardTextRow}>
-            <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-              Show {count} Math Joker{count > 1 ? 's' : ''}
+  // Upgrade modal
+  if (showUpgradeModal) {
+    return (
+      <View style={[styles.container, themeStyles.container]}>
+        <ScrollView contentContainerStyle={styles.jokerContainer}>
+          <Text style={[styles.jokerTitle, themeStyles.title]}>
+            Level Up Jokers
+          </Text>
+          <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+            Balance: ${balance.toLocaleString()}
+          </Text>
+
+          {upgradeableJokers.length === 0 ? (
+            <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+              No jokers available to upgrade.
             </Text>
-          </View>
-        );
-      case 'computer':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Hack Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      case 'homeec':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Kitchen Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      case 'economy':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Economy Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      case 'gym':
-        return (
-          <TextWithEmojis style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Fitness Joker{count > 1 ? 's' : ''}
-          </TextWithEmojis>
-        );
-      case 'art':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Art Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      case 'logic':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Logic Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      case 'recess':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Recess Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      case 'geography':
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            Show {count} Geography Joker{count > 1 ? 's' : ''}
-          </Text>
-        );
-      default:
-        return (
-          <Text style={[styles.showButtonText, themeStyles.subtitle]}>
-            {' '}
-            Show {count} Candy Tool{count > 1 ? 's' : ''}
-          </Text>
-        );
-    }
-  };
+          ) : (
+            upgradeableJokers.map((joker) => {
+              const canAfford = balance >= joker.cost;
+              const isOneTime = joker.type === 'one-time';
+              const typeEmoji = isOneTime ? '⚡' : '🔮';
+              const jokerType = isOneTime ? 'instant' : 'aura';
 
-  // Helper functions for reroll logic
-  const getMaxRerolls = () => {
-    let baseRerolls = 0;
-    if (rewardTier === 2) baseRerolls = 1; // Level 2: 1 reroll allowed
-    if (rewardTier === 3) baseRerolls = 2; // Level 3: 2 rerolls allowed
-
-    // Add Forged Pass bonus
-    const rerollBonus = hallPassModifiers.rerollBonusCount || 0;
-    const totalRerolls = baseRerolls + rerollBonus;
-
-    return totalRerolls;
-  };
-
-  const canReroll = () => {
-    const maxRerolls = getMaxRerolls();
-    return rerollsUsed < maxRerolls && maxRerolls > 0;
-  };
-
-  const getRerollDescription = () => {
-    const remaining = getMaxRerolls() - rerollsUsed;
-    const jokerBonus = hallPassModifiers.jokerBonusCount;
-    const originalCount = rewardTier + jokerBonus;
-    const rerollCards = Math.max(1, originalCount - 1);
-    return `${remaining} reroll${remaining > 1 ? 's' : ''} left, ${rerollCards} card${rerollCards > 1 ? 's' : ''}`;
-  };
-
-  const getRewardDescription = () => {
-    if (completionLevel === 1) return 'You completed Level 1!';
-    if (completionLevel === 2) return 'You completed Level 2!';
-    if (completionLevel === 3) return 'You mastered all 3 levels!';
-    return 'Great job!';
-  };
-
-  return (
-    <View style={[styles.container, themeStyles.container]}>
-      <View style={styles.jokerContainer}>
-        <Text style={[styles.jokerTitle, themeStyles.title]}>
-          Choose Your {subject} Jokers!
-        </Text>
-        <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
-          {getRewardDescription()} {'\n'}
-          {availableJokers.length === 0
-            ? 'You already have all available jokers for this subject!'
-            : selectedJokers.length === 0
-              ? 'Tap to reveal your cards!'
-              : `Select ${Math.min(maxPicks, selectedJokers.length)} card${Math.min(maxPicks, selectedJokers.length) === 1 ? '' : 's'}:`}
-        </Text>
-
-        {selectedJokers.length === 0 && availableJokers.length > 0 && (
-          <PressableButton
-            onPress={selectRandomJokers}
-            shadowOpacity={0}
-            elevation={0}
-            style={{
-              alignItems: 'center',
-              backgroundColor: 'transparent',
-              marginBottom: 20,
-            }}
-          >
-            <PixelBorder
-              borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
-              borderWidth={3}
-              backgroundColor={
-                themeStyles.generateButton?.backgroundColor || '#1a2f23'
-              }
-              innerPadding={0}
-            >
-              <View
-                style={[
-                  styles.generateButtonText,
-                  themeStyles.generateButtonText,
-                  { padding: 16 },
-                ]}
-              >
-                {getButtonText()}
-              </View>
-            </PixelBorder>
-          </PressableButton>
-        )}
-
-        {selectedJokers.map((joker) => {
-          // Determine if this joker is instant or aura
-          const isOneTime =
-            joker.effects?.every((e: any) => e.duration === 'one-time') ??
-            false;
-          const jokerType = isOneTime ? 'instant' : 'aura';
-          const typeEmoji = isOneTime ? '⚡' : '🔮';
-          const isChosen = chosenJokerIds.includes(joker.id);
-          const isUpgrade = isUpgradeJoker(joker);
-          const currentLevel = isUpgrade ? getOwnedJokerLevel(joker.id) : 0;
-          const nextLevel = currentLevel + 1;
-
-          // Determine border color: upgrade = green, chosen = gold, else theme
-          const borderColor = isChosen
-            ? '#fbbf24'
-            : isUpgrade
-              ? '#10b981'
-              : (themeStyles.jokerCard?.borderColor || '#8fbc8f');
-
-          return (
-            <PressableButton
-              key={joker.id}
-              onPress={() => handleJokerChoice(joker.id)}
-              shadowOpacity={0}
-              elevation={0}
-              style={{
-                backgroundColor: 'transparent',
-                marginBottom: 12,
-                width: '100%',
-                opacity: chosenJokerIds.length >= Math.min(maxPicks, selectedJokers.length) && !isChosen ? 0.5 : 1,
-              }}
-            >
-              <PixelBorder
-                borderColor={borderColor}
-                borderWidth={isChosen ? 4 : 3}
-                backgroundColor={
-                  themeStyles.jokerCard?.backgroundColor || '#1a2f23'
-                }
-                innerPadding={16}
-              >
-                <View style={styles.jokerHeader}>
-                  <Text style={[styles.jokerName, themeStyles.jokerName]}>
-                    {isChosen ? '* ' : ''}{joker.name}
-                  </Text>
-                  {isUpgrade && (
-                    <View style={styles.upgradeBadge}>
-                      <Text style={styles.upgradeBadgeText}>
-                        LV{currentLevel} → LV{nextLevel}
-                      </Text>
-                    </View>
-                  )}
-                  <View
-                    style={[
-                      styles.typeIndicator,
-                      isOneTime
-                        ? styles.instantIndicator
-                        : styles.auraIndicator,
-                    ]}
+              return (
+                <PressableButton
+                  key={joker.id.toString()}
+                  onPress={() => canAfford && handleUpgrade(joker.id)}
+                  disabled={!canAfford}
+                  shadowOpacity={0}
+                  elevation={0}
+                  style={{
+                    backgroundColor: 'transparent',
+                    marginBottom: 12,
+                    width: '100%',
+                    opacity: canAfford ? 1 : 0.5,
+                  }}
+                >
+                  <PixelBorder
+                    borderColor={canAfford ? '#10b981' : '#666'}
+                    borderWidth={3}
+                    backgroundColor={
+                      themeStyles.jokerCard?.backgroundColor || '#1a2f23'
+                    }
+                    innerPadding={16}
                   >
-                    <TextWithEmojis style={styles.typeEmoji}>
-                      {typeEmoji}
-                    </TextWithEmojis>
+                    <View style={styles.jokerHeader}>
+                      <Text style={[styles.jokerName, themeStyles.jokerName, { flex: 1 }]}>
+                        {joker.name}
+                      </Text>
+                      <View style={styles.upgradeBadge}>
+                        <Text style={styles.upgradeBadgeText}>
+                          LV{joker.currentLevel} → LV{joker.currentLevel + 1}
+                        </Text>
+                      </View>
+                    </View>
                     <Text
                       style={[
-                        styles.typeText,
-                        isOneTime ? styles.instantText : styles.auraText,
+                        styles.jokerDescription,
+                        themeStyles.jokerDescription,
                       ]}
                     >
-                      {jokerType.toUpperCase()}
+                      {joker.description}
                     </Text>
-                  </View>
-                </View>
-                <Text
-                  style={[
-                    styles.jokerDescription,
-                    themeStyles.jokerDescription,
-                  ]}
-                >
-                  {joker.description}
-                </Text>
-                {isUpgrade && (
-                  <Text style={[styles.upgradeHint, themeStyles.jokerDescription]}>
-                    Selecting upgrades to Level {nextLevel}!
-                  </Text>
-                )}
-              </PixelBorder>
-            </PressableButton>
-          );
-        })}
+                    <View style={styles.upgradeRow}>
+                      <View
+                        style={[
+                          styles.typeIndicator,
+                          isOneTime ? styles.instantIndicator : styles.auraIndicator,
+                        ]}
+                      >
+                        <TextWithEmojis style={styles.typeEmoji}>
+                          {typeEmoji}
+                        </TextWithEmojis>
+                        <Text
+                          style={[
+                            styles.typeText,
+                            isOneTime ? styles.instantText : styles.auraText,
+                          ]}
+                        >
+                          {jokerType.toUpperCase()}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.upgradeCost,
+                          canAfford ? styles.canAfford : styles.cantAfford,
+                        ]}
+                      >
+                        ${joker.cost.toLocaleString()}
+                      </Text>
+                    </View>
+                  </PixelBorder>
+                </PressableButton>
+              );
+            })
+          )}
 
-        {chosenJokerIds.length > 0 && chosenJokerIds.length < Math.min(maxPicks, selectedJokers.length) && (
-          <Text style={[styles.pickCounter, themeStyles.subtitle]}>
-            {chosenJokerIds.length} / {Math.min(maxPicks, selectedJokers.length)} selected
-          </Text>
-        )}
-
-        {selectedJokers.length > 0 && canReroll() && (
           <PressableButton
-            onPress={rerollJokers}
+            onPress={() => setShowUpgradeModal(false)}
             shadowOpacity={0}
             elevation={0}
             style={{
               alignItems: 'center',
               backgroundColor: 'transparent',
-              marginBottom: 20,
+              marginTop: 12,
             }}
           >
             <PixelBorder
-              borderColor={themeStyles.generateButton?.borderColor || '#ffff99'}
+              borderColor={themeStyles.skipButton?.borderColor || '#daa520'}
               borderWidth={3}
               backgroundColor={
-                themeStyles.generateButton?.backgroundColor || '#1a2f23'
+                themeStyles.skipButton?.backgroundColor || '#8b4513'
               }
               innerPadding={0}
             >
-              <View
-                style={{
-                  padding: 16,
-                  marginLeft: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <TextWithEmojis
-                  style={[styles.rerollButtonIcon]}
-                  imageSize={36}
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <Text
+                  style={[styles.skipButtonText, themeStyles.skipButtonText]}
                 >
-                  🎲
-                </TextWithEmojis>
-                <TextWithEmojis
-                  style={[
-                    styles.rerollButtonText,
-                    themeStyles.generateButtonText,
-                  ]}
-                  imageSize={20}
-                >
-                  {`${getRerollDescription()}`}
-                </TextWithEmojis>
+                  Back
+                </Text>
               </View>
             </PixelBorder>
           </PressableButton>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Main reward screen
+  return (
+    <View style={[styles.container, themeStyles.container]}>
+      <ScrollView contentContainerStyle={styles.jokerContainer}>
+        <Text style={[styles.jokerTitle, themeStyles.title]}>
+          Rewards!
+        </Text>
+        <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+          {completionLevel === 1
+            ? 'You completed Level 1!'
+            : completionLevel === 2
+              ? 'You completed Level 2!'
+              : 'You mastered all 3 levels!'}
+        </Text>
+        <Text style={[styles.slotCounter, themeStyles.subtitle]}>
+          Aura Slots: {persistentJokerCount}/{maxPersistentSlots}
+        </Text>
+
+        {grantedJokers.length === 0 ? (
+          <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+            You already own all available jokers!
+          </Text>
+        ) : (
+          <>
+            <Text style={[styles.grantedLabel, themeStyles.subtitle]}>
+              +{grantedJokers.length} Joker{grantedJokers.length > 1 ? 's' : ''} Obtained:
+            </Text>
+            {grantedJokers.map((joker) => {
+              const isOneTime = joker.type === 'one-time';
+              const typeEmoji = isOneTime ? '⚡' : '🔮';
+              const jokerType = isOneTime ? 'instant' : 'aura';
+
+              return (
+                <View
+                  key={joker.id}
+                  style={{ marginBottom: 12, width: '100%' }}
+                >
+                  <PixelBorder
+                    borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
+                    borderWidth={3}
+                    backgroundColor={
+                      themeStyles.jokerCard?.backgroundColor || '#1a2f23'
+                    }
+                    innerPadding={16}
+                  >
+                    <View style={styles.jokerHeader}>
+                      <Text style={[styles.jokerName, themeStyles.jokerName, { flex: 1 }]}>
+                        {joker.name}
+                      </Text>
+                      <View
+                        style={[
+                          styles.typeIndicator,
+                          isOneTime
+                            ? styles.instantIndicator
+                            : styles.auraIndicator,
+                        ]}
+                      >
+                        <TextWithEmojis style={styles.typeEmoji}>
+                          {typeEmoji}
+                        </TextWithEmojis>
+                        <Text
+                          style={[
+                            styles.typeText,
+                            isOneTime ? styles.instantText : styles.auraText,
+                          ]}
+                        >
+                          {jokerType.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text
+                      style={[
+                        styles.jokerDescription,
+                        themeStyles.jokerDescription,
+                      ]}
+                    >
+                      {joker.description}
+                    </Text>
+                  </PixelBorder>
+                </View>
+              );
+            })}
+          </>
         )}
 
+        {/* Level Up Joker button */}
         <PressableButton
-          onPress={chosenJokerIds.length > 0 ? handleConfirmChoices : onComplete}
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            setShowUpgradeModal(true);
+          }}
+          shadowOpacity={0}
+          elevation={0}
+          style={{
+            alignItems: 'center',
+            backgroundColor: 'transparent',
+            marginTop: 8,
+            marginBottom: 12,
+          }}
+        >
+          <PixelBorder
+            borderColor="#10b981"
+            borderWidth={3}
+            backgroundColor={
+              themeStyles.generateButton?.backgroundColor || '#1a2f23'
+            }
+            innerPadding={0}
+          >
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text
+                style={[
+                  styles.showButtonText,
+                  themeStyles.generateButtonText,
+                ]}
+              >
+                Level Up Joker
+              </Text>
+              {upgradeableJokers.length > 0 && (
+                <Text style={[styles.upgradeCount, themeStyles.subtitle]}>
+                  {upgradeableJokers.length} upgradeable
+                </Text>
+              )}
+            </View>
+          </PixelBorder>
+        </PressableButton>
+
+        {/* Continue button */}
+        <PressableButton
+          onPress={onComplete}
           shadowOpacity={0}
           elevation={0}
           style={{
@@ -682,23 +573,16 @@ export default function JokerSelection({
             }
             innerPadding={0}
           >
-            <View
-              style={{
-                padding: 16,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
-                {availableJokers.length === 0
-                  ? 'Continue'
-                  : chosenJokerIds.length > 0
-                    ? `Confirm ${chosenJokerIds.length} Card${chosenJokerIds.length > 1 ? 's' : ''}`
-                    : 'Skip Joker Selection'}
+            <View style={{ padding: 16, alignItems: 'center' }}>
+              <Text
+                style={[styles.skipButtonText, themeStyles.skipButtonText]}
+              >
+                Continue
               </Text>
             </View>
           </PixelBorder>
         </PressableButton>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -708,7 +592,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   jokerContainer: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
     justifyContent: 'center',
   },
@@ -725,50 +609,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
+  slotCounter: {
+    fontSize: 12,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
+    opacity: 0.7,
+  },
+  grantedLabel: {
+    fontSize: 18,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   showButtonText: {
     fontSize: 18,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
-  },
-  generateButton: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 3,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  generateButtonText: {
-    fontSize: 18,
     fontWeight: '700',
+  },
+  upgradeCount: {
+    fontSize: 11,
     fontFamily: 'PixeloidMono',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rewardTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rewardIcon: {
-    width: 18,
-    height: 18,
-    resizeMode: 'contain',
-    marginRight: 6,
-  },
-  rewardText: {
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'PixeloidMono',
-  },
-  jokerCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 3,
-    marginBottom: 12,
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    textAlign: 'center',
+    marginTop: 4,
+    opacity: 0.8,
   },
   jokerHeader: {
     flexDirection: 'row',
@@ -780,7 +647,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontFamily: 'PixeloidMono',
-    flex: 1,
   },
   jokerDescription: {
     fontSize: 14,
@@ -816,38 +682,6 @@ const styles = StyleSheet.create({
   auraText: {
     color: '#0066cc',
   },
-  skipButton: {
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 2,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  skipButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'PixeloidMono',
-  },
-  rerollButton: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 3,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  rerollButtonText: {
-    marginLeft: 8,
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'PixeloidMono',
-  },
-  pickCounter: {
-    fontSize: 14,
-    fontFamily: 'PixeloidMono',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
   upgradeBadge: {
     backgroundColor: '#10b981',
     paddingHorizontal: 8,
@@ -862,12 +696,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.5,
   },
-  upgradeHint: {
-    fontSize: 11,
+  upgradeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  upgradeCost: {
+    fontSize: 14,
+    fontWeight: '700',
     fontFamily: 'PixeloidMono',
-    fontStyle: 'italic',
-    marginTop: 6,
-    opacity: 0.8,
+  },
+  canAfford: {
+    color: '#10b981',
+  },
+  cantAfford: {
+    color: '#ef4444',
+  },
+  skipButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'PixeloidMono',
   },
 
   // Math Theme (Chalkboard)
@@ -925,11 +774,6 @@ const styles = StyleSheet.create({
   computerGenerateButton: {
     backgroundColor: colors.blue.darkBg,
     borderColor: colors.blue.cyan,
-    shadowColor: colors.blue.cyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
   },
   computerGenerateButtonText: {
     color: colors.blue.cyan,
@@ -938,7 +782,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue.darkBg,
     borderColor: colors.blue.cyan,
     shadowColor: colors.blue.cyan,
-    shadowOpacity: 0.8,
   },
   computerJokerName: {
     color: colors.green.neon,

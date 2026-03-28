@@ -12,6 +12,7 @@ interface MarketListProps {
   hasPlayedLunchMinigame: boolean;
   onCandyPress: (index: number) => void;
   onLunchBack: () => void;
+  gummyBearsRef?: React.RefObject<View | null>;
 }
 
 const MarketList = React.memo(function MarketList({
@@ -23,10 +24,23 @@ const MarketList = React.memo(function MarketList({
   hasPlayedLunchMinigame,
   onCandyPress,
   onLunchBack,
+  gummyBearsRef,
 }: MarketListProps) {
   const renderItem = useCallback(
     ({ item, index }: { item: CandyForMarket; index: number }) => {
-      // Always render normally without zone wrapper
+      // Wrap Gummy Bears (index 0) with tutorial ref
+      if (index === 0 && gummyBearsRef) {
+        return (
+          <View ref={gummyBearsRef} collapsable={false}>
+            <CandyListItem
+              item={item}
+              index={index}
+              localPricesUpdating={localPricesUpdating}
+              onPress={onCandyPress}
+            />
+          </View>
+        );
+      }
       return (
         <CandyListItem
           item={item}
@@ -36,7 +50,7 @@ const MarketList = React.memo(function MarketList({
         />
       );
     },
-    [localPricesUpdating, onCandyPress]
+    [localPricesUpdating, onCandyPress, gummyBearsRef]
   );
 
   return (

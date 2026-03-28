@@ -96,17 +96,17 @@ const allJokers = [
 
 While reviewing, found these jokers that interact with events but not hints:
 
-### "Medieval Shield" (ID: 14)
+### "Medieval Shield" (ID: 67)
 - Protects from LOSE_MONEY events
-- Integrated in: `useEventHandler.ts` line 60
+- Integrated in: `useEventHandler.ts`
 
-### "Candy Vault" (ID: 23)
+### "Secret Hideout" (ID: 74)
 - Protects from STASH_LOCKED events
-- Integrated in: `useEventHandler.ts` line 101
+- Integrated in: `useEventHandler.ts`
 
-### "Hide and Seek" (ID: 33)
-- Multiplies FOUND_MONEY by 3x
-- Integrated in: `useEventHandler.ts` line 93
+### "Hide and Seek" (ID: 51)
+- Multiplies FOUND_MONEY by 2x
+- Integrated in: `useEventHandler.ts`
 
 **All protection/multiplier jokers**: ✅ COMPATIBLE with new event system
 

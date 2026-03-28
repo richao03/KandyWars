@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Dimensions,
   ImageBackground,
@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import colors from '../../src/constants/colors';
+import { GAME_TIPS } from '../../src/constants/gameTips';
 import { useTabBar } from '../../src/hooks/useTabBar';
 import PixelBorder from './PixelBorder';
 
@@ -22,6 +23,10 @@ export default function SchoolsOutModal({
   onComplete,
 }: SchoolsOutModalProps) {
   const { hideTabBar, showTabBar } = useTabBar();
+
+  const randomTip = useMemo(() => {
+    return GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
+  }, [visible]);
 
   useEffect(() => {
     if (visible) {
@@ -58,6 +63,7 @@ export default function SchoolsOutModal({
             <View style={styles.textBox}>
               <Text style={styles.text}>It's 3PM</Text>
               <Text style={styles.tapText}>Time to head home!</Text>
+              <Text style={styles.tipText}>TIP: {randomTip}</Text>
             </View>
           </PixelBorder>
         </View>
@@ -108,5 +114,13 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
+  },
+  tipText: {
+    fontSize: 10,
+    color: colors.white,
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginTop: 12,
+    opacity: 0.85,
   },
 });

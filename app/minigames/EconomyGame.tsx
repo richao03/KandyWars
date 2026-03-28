@@ -16,7 +16,7 @@ import colors from '../../src/constants/colors';
 import { useGame } from '../../src/hooks/useGame';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { ECONOMY_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
@@ -953,9 +953,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     const rewardLevel = Math.max(1, Math.min(3, completedLevel)) as 1 | 2 | 3;
     return (
       <JokerSelection
-        jokers={ECONOMY_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="economy"
-        subject="Economy"
+        subject="All"
         onComplete={onComplete}
         rewardTier={rewardLevel}
         completionLevel={rewardLevel}
@@ -969,24 +969,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Economics Study Session</Text>
 
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#42a5f5"
-              borderWidth={2}
-              backgroundColor="#1e3a8a"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={22}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
 
           <PixelBorder
             borderColor="#42a5f5"
@@ -1034,8 +1016,11 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           </PressableButton>
 
           <PressableButton
-            onPress={handleForfeit}
-            shadowColor="rgba(185,28,28,1)"
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
+            shadowColor="#1565c0"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -1043,9 +1028,29 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#1565c0"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#0d47a1"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -1058,8 +1063,8 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={ECONOMY_JOKERS}
-          subject="Economy"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#52c41a',
             backgroundColor: '#1a2332',

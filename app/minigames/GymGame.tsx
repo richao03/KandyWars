@@ -18,7 +18,7 @@ import Animated, { runOnJS } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { GYM_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
@@ -475,9 +475,9 @@ export default function GymGame({ onComplete }: GymGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={GYM_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="gym"
-        subject="Gym"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -490,25 +490,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Gym Class Stealth!</Text>
-
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#ef4444"
-              borderWidth={2}
-              backgroundColor="#1a2332"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
 
           <PixelBorder
             borderColor="#e74c3c"
@@ -574,10 +555,9 @@ export default function GymGame({ onComplete }: GymGameProps) {
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
+              setShowAvailableJokers(true);
             }}
-            shadowColor="rgba(185,28,28,1)"
+            shadowColor="#c0392b"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -585,9 +565,29 @@ export default function GymGame({ onComplete }: GymGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#e74c3c"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#8b1a1a"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -600,8 +600,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={GYM_JOKERS}
-          subject="Gym"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#ef4444',
             backgroundColor: '#1a2332',

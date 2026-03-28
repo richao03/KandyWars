@@ -18,10 +18,6 @@ import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
-import { useDiamondHand } from '../../src/hooks/useDiamondHand';
-import { useFeedTheBeast } from '../../src/hooks/useFeedTheBeast';
-import { useDroughtRelief } from '../../src/hooks/useDroughtRelief';
-import { useEmptyInventoryBonus } from '../../src/hooks/useEmptyInventoryBonus';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
@@ -52,6 +48,9 @@ import TransactionModalManager, {
 } from '../components/TransactionModalManager';
 import { Candy } from '../types';
 import { CANDY_REGISTRY } from '../../src/constants/candyRegistry';
+import { useTutorial } from '../../src/hooks/useTutorial';
+import { selectDifficultyLevel } from '../../src/store/slices/walletSlice';
+import TutorialOverlay from '../components/TutorialOverlay';
 
 // Lazy load modals that are shown less frequently
 const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
@@ -190,12 +189,78 @@ function Market(props) {
 
   const jokerService = useMemo(() => JokerService.getInstance(), []);
 
+  // Tutorial system
+  const { currentStep: tutorialStep, isActive: tutorialActive, advance: advanceTutorial, skip: skipTutorial, start: startTutorial, tutorialComplete, registerTarget } = useTutorial();
+  const difficultyLevel = useAppSelector(selectDifficultyLevel);
+
+  // Tutorial target refs
+  const walletRef = useRef<View>(null);
+  const piggyRef = useRef<View>(null);
+  const gummyBearsRef = useRef<View>(null);
+  const nextPeriodRef = useRef<View>(null);
+  const marketContainerRef = useRef<View>(null);
+  const containerOffsetRef = useRef({ x: 0, y: 0 });
+
+  // Start tutorial on mount for difficulty 1 first game
+  useEffect(() => {
+    if (difficultyLevel === 1 && !tutorialComplete && periodCount === 0 && !tutorialActive) {
+      startTutorial();
+    }
+  }, [difficultyLevel, tutorialComplete, periodCount, tutorialActive, startTutorial]);
+
+  // Measure the market container offset so we can convert window coords to local coords
+  const measureContainerOffset = useCallback((): Promise<{ x: number; y: number }> => {
+    return new Promise((resolve) => {
+      if (marketContainerRef.current) {
+        (marketContainerRef.current as View).measureInWindow((cx: number, cy: number) => {
+          containerOffsetRef.current = { x: cx, y: cy };
+          resolve({ x: cx, y: cy });
+        });
+      } else {
+        resolve(containerOffsetRef.current);
+      }
+    });
+  }, []);
+
+  // Measure tutorial targets when step changes
+  const measureTarget = useCallback((ref: React.RefObject<View | null>, stepId: number) => {
+    if (ref.current) {
+      measureContainerOffset().then((offset) => {
+        (ref.current as View).measureInWindow((x: number, y: number, width: number, height: number) => {
+          if (width > 0 && height > 0) {
+            // Convert from window coords to market container local coords
+            registerTarget(stepId, {
+              x: x - offset.x,
+              y: y - offset.y,
+              width,
+              height,
+            });
+          }
+        });
+      });
+    }
+  }, [registerTarget, measureContainerOffset]);
+
+  // Re-measure targets when tutorial step changes
+  // Steps 4, 7, 8 are inside TransactionModal — measured there
+  // Step 9 is Jokers tab — measured in (tabs)/_layout.tsx
+  useEffect(() => {
+    if (!tutorialActive) return;
+
+    // Small delay to ensure layout is complete
+    const timer = setTimeout(() => {
+      if (tutorialStep === 1) measureTarget(walletRef, 1);
+      if (tutorialStep === 2) measureTarget(piggyRef, 2);
+      if (tutorialStep === 3) measureTarget(gummyBearsRef, 3);
+      if (tutorialStep === 5) measureTarget(nextPeriodRef, 5);
+      if (tutorialStep === 6) measureTarget(gummyBearsRef, 6);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [tutorialStep, tutorialActive, measureTarget]);
+
   usePriceDoubling(); // This hook handles price restoration on period change
-  useEmptyInventoryBonus(); // This hook handles Embrace the Grind joker bonus
   useHomeMadeBonus(); // This hook handles Home Made joker bonus
-  const { recordSale } = useDiamondHand(); // This hook handles Diamond Hand joker bonus
-  useFeedTheBeast(); // This hook handles Feed the Beast joker bonus
-  const { recordSale: recordDroughtSale } = useDroughtRelief(); // This hook handles Drought Relief joker bonus
   // Farmers Carry hook now runs in GameEffectsManager (root layout) to ensure it's always mounted
 
   // Show location modal after event modal is dismissed
@@ -516,7 +581,13 @@ function Market(props) {
   const openModal = useCallback((index: number) => {
     // Open modal via ref - this does NOT cause parent re-render!
     transactionModalRef.current?.open(index);
-  }, []);
+
+    // Advance tutorial when user taps Gummy Bears (index 0 = first candy)
+    // Step 3 → 4 (buy modal), Step 6 → 7 (sell modal)
+    if ((tutorialStep === 3 || tutorialStep === 6) && index === 0) {
+      advanceTutorial();
+    }
+  }, [tutorialStep, advanceTutorial]);
 
   const closeModal = useCallback(() => {
     transactionModalRef.current?.close();
@@ -627,10 +698,6 @@ function Market(props) {
         const currentMerchantEffects = merchantEffectsRef.current;
         const currentHasEarlySaleToday = hasEarlySaleTodayRef.current;
         const currentPeriodsPerDay = periodsPerDayRef.current;
-
-        // Record sales for tracking systems
-        recordSale(); // Diamond Hand tracking
-        recordDroughtSale(); // Drought Relief tracking
 
         // === HANDLE ONE-TIME JOKERS (with side effects) ===
         let oneTimeMultiplier = 1;
@@ -797,10 +864,14 @@ function Market(props) {
       // Only stable dispatch callbacks remain as deps:
       addToInventory, spend, addSpent, resetSales, add, addProfit,
       addCandySold, recordDailyStatsSale, addSale, removeFromInventory,
-      closeModal, jokerService, clearActiveEffect, recordSale,
-      recordDroughtSale, dispatch, getInventoryLimit, consecutivePeriodSales,
+      closeModal, jokerService, clearActiveEffect,
+      dispatch, getInventoryLimit, consecutivePeriodSales,
     ]
   );
+
+  // Tutorial step ref for use in callbacks without recreating them
+  const tutorialStepRef = useRef(tutorialStep);
+  useEffect(() => { tutorialStepRef.current = tutorialStep; }, [tutorialStep]);
 
   const handleNextDay = useCallback(() => {
     if (__DEV__) console.log(
@@ -813,6 +884,13 @@ function Market(props) {
       'periodsPerDay:',
       periodsPerDay
     );
+
+    // Advance tutorial when user taps Next Period during step 5
+    // Let normal flow happen (location modal), overlay hides until location is picked
+    if (tutorialStepRef.current === 5) {
+      advanceTutorial(); // → step 6
+    }
+
     // Trigger success haptic feedback when advancing to next period
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -1191,6 +1269,10 @@ function Market(props) {
       onInventoryPress: handleInventoryPress,
       onNextPeriod: handleNextDay,
       onEndDay: handleEndDay,
+      walletRef,
+      piggyBankRef: piggyRef,
+      gummyBearsRef: gummyBearsRef,
+      nextPeriodRef,
     }),
     [
       candies,
@@ -1211,7 +1293,7 @@ function Market(props) {
   );
 
   return (
-    <View style={styles.container}>
+    <View ref={marketContainerRef} collapsable={false} style={styles.container}>
       <MarketContent {...marketProps} />
 
       <Suspense fallback={null}>
@@ -1354,6 +1436,10 @@ function Market(props) {
 
       {/* EventModal for special events */}
       <EventModal />
+
+      {/* Tutorial overlay - rendered last to be on top */}
+      {/* Steps 4,7,8 are inside TransactionModal; steps 9-11 are in tab layout */}
+      {tutorialActive && tutorialStep <= 8 && tutorialStep !== 4 && tutorialStep !== 7 && tutorialStep !== 8 && <TutorialOverlay />}
     </View>
   );
 }

@@ -20,6 +20,11 @@ interface MarketContentProps {
   onNextPeriod: () => void;
   onEndDay: () => void;
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
+  // Tutorial refs
+  walletRef?: React.RefObject<View | null>;
+  piggyBankRef?: React.RefObject<View | null>;
+  gummyBearsRef?: React.RefObject<View | null>;
+  nextPeriodRef?: React.RefObject<View | null>;
 }
 
 function MarketContent({
@@ -38,6 +43,10 @@ function MarketContent({
   onNextPeriod,
   onEndDay,
   flavorTextWrapper,
+  walletRef,
+  piggyBankRef,
+  gummyBearsRef,
+  nextPeriodRef,
 }: MarketContentProps) {
   return (
     <ImageBackground
@@ -50,6 +59,8 @@ function MarketContent({
           onInventoryPress={onInventoryPress}
           flavorTextWrapper={flavorTextWrapper}
           showLunchMinigames={showLunchMinigames}
+          walletRef={walletRef}
+          piggyBankRef={piggyBankRef}
         />
 
         <View style={styles.listContainer}>
@@ -62,6 +73,7 @@ function MarketContent({
             hasPlayedLunchMinigame={hasPlayedLunchMinigame}
             onCandyPress={onCandyPress}
             onLunchBack={onLunchBack}
+            gummyBearsRef={gummyBearsRef}
           />
         </View>
 
@@ -74,6 +86,7 @@ function MarketContent({
             showLunchMinigames={showLunchMinigames}
             onNextPeriod={onNextPeriod}
             onEndDay={onEndDay}
+            nextPeriodRef={nextPeriodRef}
           />
         </View>
       </View>

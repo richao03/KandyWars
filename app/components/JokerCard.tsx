@@ -248,20 +248,6 @@ function JokerCard({
     ) {
       // Show candy selector modal for Double Up
       onShowCandySelector?.(joker);
-    } else if (activationId === JOKER_IDS.MASTER_NEGOTIATOR) {
-      // Show candy selector modal for conversion
-      onShowCandySelector?.(joker);
-    } else if (activationId === JOKER_IDS.TEMPORARY_EMPEROR) {
-      // Show confirmation for time skip with auto profits
-      showConfirm(
-        'Temporary Emperor',
-        'Skip one period and automatically gain profits from selling 3 of every candy type at next period prices?',
-        '👑',
-        () => handleTemporaryEmperor(),
-        'Rule the Market!',
-        'Cancel',
-        () => {}
-      );
     } else if (activationId === JOKER_IDS.MARKET_MANIPULATION) {
       // Show candy selector modal for market manipulation
       onShowCandySelector?.(joker);
@@ -431,41 +417,6 @@ function JokerCard({
   const availableTargetCandies = CANDY_TYPES.filter(
     (candyType) => candyType !== selectedSourceCandy
   );
-
-  const handleTemporaryEmperor = async () => {
-    // Mark the joker as used today FIRST to prevent double-activation
-    // Use originalId for copies so all copies share the same "used" status
-    const activationId = (joker as any).originalId || joker.id;
-    markJokerUsedToday(activationId.toString());
-
-    const skippedPeriod = periodCount + 1;
-    const targetPeriod = periodCount + 2; // Skip one period, go to period after next
-    let totalProfit = 0;
-    const profitBreakdown = [];
-
-    // Calculate profit from selling 3 of each candy type at target period prices
-    for (const candyType of CANDY_TYPES) {
-      const targetPeriodPrice = gameData.candyPrices[candyType][targetPeriod];
-      if (targetPeriodPrice) {
-        const profit = targetPeriodPrice * 3;
-        totalProfit += profit;
-        profitBreakdown.push(`${candyType}: $${profit.toFixed(2)}`);
-      }
-    }
-
-    // Add money to wallet
-    addMoney(totalProfit);
-
-    // Skip a period by advancing twice (period 5 -> period 7, skipping period 6)
-    incrementPeriod('market'); // First advance: period 5 -> period 6
-    incrementPeriod('market'); // Second advance: period 6 -> period 7 (skip period 6)
-
-    showAlert(
-      "Emperor's Decree Executed!",
-      `Time has been advanced by 2 periods (skipped period ${skippedPeriod}).\n\nAuto-profit from selling 3 of each candy:\n${profitBreakdown.join('\n')}\n\nTotal gained: $${totalProfit.toFixed(2)}`,
-      '👑'
-    );
-  };
 
   const handleRomanCoin = async () => {
     if (__DEV__) {

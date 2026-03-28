@@ -12,6 +12,7 @@ import { useCandySales } from '../../src/hooks/useCandySales';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
+import { useWallet } from '../../src/hooks/useWallet';
 import { selectJokerActiveEffects } from '../../src/store/slices/jokerSlice';
 import {
   selectActiveEffects,
@@ -44,7 +45,8 @@ function StatusIndicators({
   const { jokers } = useJokers();
   const { period } = useGame();
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
-  const { consecutivePeriodSales, totalCandiesSold } = useCandySales();
+  const { consecutivePeriodSales, totalCandiesSold, hasEarlySaleToday } = useCandySales();
+  const { balance: currentCash } = useWallet();
 
   const [tooltip, setTooltip] = React.useState<{
     name: string;
@@ -169,15 +171,11 @@ function StatusIndicators({
       'Geometric Expansion': require('../../assets/images/emojis/backpack.png'),
       'Ace the Test': require('../../assets/images/emojis/book.png'),
       'Inductive Reasoning': require('../../assets/images/emojis/logic.png'),
-      'Temporary Emperor': require('../../assets/images/emojis/trophy.png'),
       'Tapped in': require('../../assets/images/emojis/tappedIn.png'),
       'Side Gig': require('../../assets/images/emojis/coin.png'),
       'Micro Chip': require('../../assets/images/emojis/computer.png'),
       'Data Compression': require('../../assets/images/emojis/gear.png'),
-      'Overclock': require('../../assets/images/emojis/lightning.png'),
-      'Diamond Hand': require('../../assets/images/emojis/diamondHand.png'),
       'Vacuum Sealer': require('../../assets/images/emojis/vacuumsealer.png'),
-      'Fridge Organizer': require('../../assets/images/emojis/cooking.png'),
       'Perfect Bake': require('../../assets/images/emojis/statusCupcake.png'),
       'Bake Sale': require('../../assets/images/emojis/cupcake.png'),
       'Home Made': require('../../assets/images/emojis/homemade.png'),
@@ -186,30 +184,21 @@ function StatusIndicators({
       'Odd Todd': require('../../assets/images/emojis/theater.png'),
       'Cocoa Futures': require('../../assets/images/emojis/chocolate.png'),
       'Medieval Shield': require('../../assets/images/emojis/shield.png'),
-      'Art Auction': require('../../assets/images/emojis/palette.png'),
       'The Good Old Days': require('../../assets/images/emojis/oldTv.png'),
       'Bear Market': require('../../assets/images/emojis/priceCrash.png'),
       'Market Manipulation': require('../../assets/images/emojis/priceSpike.png'),
       'The Big Short': require('../../assets/images/emojis/chart.png'),
       'Deposit Bonus': require('../../assets/images/emojis/piggyBank.png'),
-      'The Bounceback': require('../../assets/images/emojis/bounceback.png'),
       'Roman Coin': require('../../assets/images/emojis/coin.png'),
       'Farmers Carry': require('../../assets/images/emojis/farmersCarry.png'),
       'Coaching': require('../../assets/images/emojis/gym.png'),
       "Bet You I'm Faster": require('../../assets/images/emojis/recess.png'),
       'Bulk Up': require('../../assets/images/emojis/bulkSale.png'),
-      'Perfect Change': require('../../assets/images/emojis/cent.png'),
       'Hard Knocks': require('../../assets/images/emojis/diamondHand.png'),
-      'Master Negotiator': require('../../assets/images/emojis/money.png'),
-      'Therefore...': require('../../assets/images/emojis/logic.png'),
       'Even Stevens': require('../../assets/images/emojis/scale.png'),
-      'Embrace the Grind': require('../../assets/images/emojis/grinder.png'),
       'Sour Logic': require('../../assets/images/emojis/magic.png'),
       'Double Dutch': require('../../assets/images/emojis/jumpRope.png'),
-      'Feed the Beast': require('../../assets/images/emojis/beast.png'),
-      'Hopscotch Bonus': require('../../assets/images/emojis/hopscotch.png'),
       'Hide and Seek': require('../../assets/images/emojis/magnifyingGlass.png'),
-      'Swingset Momentum': require('../../assets/images/emojis/swingset.png'),
       'Secret Hideout': require('../../assets/images/emojis/lock.png'),
       'Golden Hour': require('../../assets/images/emojis/sunrise.png'),
       'Trade Routes': require('../../assets/images/emojis/treasureMap.png'),
@@ -219,6 +208,13 @@ function StatusIndicators({
       'Atlas Bonus': require('../../assets/images/emojis/mountain.png'),
       'Jump Rope Rhythm': require('../../assets/images/emojis/jumpRope.png'),
       'Pursuasion': require('../../assets/images/emojis/talkingHead.png'),
+      'Early Bird': require('../../assets/images/emojis/sunrise.png'),
+      'Bulk Discount': require('../../assets/images/emojis/bulkSale.png'),
+      'Underdog': require('../../assets/images/emojis/gym.png'),
+      'Penny Pincher': require('../../assets/images/emojis/coin.png'),
+      'Broke and Hungry': require('../../assets/images/emojis/priceCrash.png'),
+      'Extra Credit': require('../../assets/images/emojis/book.png'),
+      'Sixth Sense': require('../../assets/images/emojis/computer.png'),
     };
 
     // Conditional jokers — only show icon when their condition is currently met
@@ -233,6 +229,9 @@ function StatusIndicators({
       'Bulk Up': () => totalInventory / inventoryLimit > 0.5,
       'Jump Rope Rhythm': () => ((totalCandiesSold || 0) + 1) % 3 === 0,
       'Swingset Momentum': () => consecutivePeriodSales() > 1,
+      'Early Bird': () => !hasEarlySaleToday,
+      'Broke and Hungry': () => currentCash < 500,
+      'Underdog': () => currentCash < 15000,
     };
 
     const addedJokerNames = new Set<string>();
@@ -285,6 +284,8 @@ function StatusIndicators({
     metalDetectorLevel,
     hollowedTextbookLevel,
     doubleSidedCoinLevel,
+    currentCash,
+    hasEarlySaleToday,
   ]);
 
   // Filter icons based on type prop

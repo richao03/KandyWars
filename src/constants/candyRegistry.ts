@@ -10,28 +10,32 @@ export interface CandyDefinition {
 
 // All 15 candies — each has a unique pair of types (C(6,2) = 15)
 // Each type appears exactly 5 times across all candies
-// Price tiers by size: Small ($1–$10), Medium ($500–$1,000), Big ($1,000–$2,000)
+// 5 price tiers (3 candies each): Penny, Budget, Mid, Premium, Elite
 export const CANDY_REGISTRY: CandyDefinition[] = [
-  // Small candies ($1–$10)
-  { name: 'Gummy Bears',     size: 'small',  types: ['gummy', 'chewy'],      baseMin: 1,    baseMax: 10 },
-  { name: 'M&Ms',            size: 'small',  types: ['chocolate', 'hard_candy'], baseMin: 1, baseMax: 10 },
-  { name: 'Jolly Ranchers',  size: 'small',  types: ['hard_candy', 'fruity'], baseMin: 1,    baseMax: 10 },
-  { name: 'Warheads',        size: 'small',  types: ['sour', 'hard_candy'],   baseMin: 1,    baseMax: 10 },
-  { name: 'Nerd Rope',       size: 'small',  types: ['chewy', 'fruity'],      baseMin: 1,    baseMax: 10 },
+  // Tier 1 — Penny ($1–$10)
+  { name: 'Gummy Bears',     size: 'small',  types: ['gummy', 'chewy'],       baseMin: 1,    baseMax: 10 },
+  { name: 'Jolly Ranchers',  size: 'small',  types: ['hard_candy', 'fruity'], baseMin: 2,    baseMax: 8 },
+  { name: 'Warheads',        size: 'small',  types: ['sour', 'hard_candy'],   baseMin: 3,    baseMax: 10 },
 
-  // Medium candies ($500–$1,000)
-  { name: 'Swedish Fish',    size: 'medium', types: ['gummy', 'fruity'],      baseMin: 500,  baseMax: 1000 },
-  { name: 'Snickers',        size: 'medium', types: ['chocolate', 'chewy'],   baseMin: 500,  baseMax: 1000 },
-  { name: 'Caramel',         size: 'medium', types: ['hard_candy', 'chewy'],  baseMin: 500,  baseMax: 1000 },
-  { name: 'Sour Straws',     size: 'medium', types: ['sour', 'chewy'],        baseMin: 500,  baseMax: 1000 },
-  { name: 'Bubble Gum',      size: 'medium', types: ['gummy', 'sour'],        baseMin: 500,  baseMax: 1000 },
+  // Tier 2 — Budget ($10–$200)
+  { name: 'M&Ms',            size: 'small',  types: ['chocolate', 'hard_candy'], baseMin: 10,  baseMax: 200 },
+  { name: 'Nerd Rope',       size: 'small',  types: ['chewy', 'fruity'],      baseMin: 15,   baseMax: 150 },
+  { name: 'Bubble Gum',      size: 'medium', types: ['gummy', 'sour'],        baseMin: 20,   baseMax: 200 },
 
-  // Big candies ($1,000–$2,000)
-  { name: 'Tootsie Roll',    size: 'big',    types: ['gummy', 'chocolate'],   baseMin: 1000, baseMax: 2000 },
-  { name: 'Strawberry Bark', size: 'big',    types: ['chocolate', 'sour'],    baseMin: 1000, baseMax: 2000 },
-  { name: 'Jaw Breaker',     size: 'big',    types: ['hard_candy', 'gummy'],  baseMin: 1000, baseMax: 2000 },
-  { name: 'Sour Patch Kids', size: 'big',    types: ['sour', 'fruity'],       baseMin: 1000, baseMax: 2000 },
-  { name: 'Taffy',           size: 'big',    types: ['chocolate', 'fruity'],  baseMin: 1000, baseMax: 2000 },
+  // Tier 3 — Mid ($200–$1,000)
+  { name: 'Swedish Fish',    size: 'medium', types: ['gummy', 'fruity'],      baseMin: 200,  baseMax: 800 },
+  { name: 'Sour Straws',     size: 'medium', types: ['sour', 'chewy'],        baseMin: 250,  baseMax: 900 },
+  { name: 'Caramel',         size: 'medium', types: ['hard_candy', 'chewy'],  baseMin: 300,  baseMax: 1000 },
+
+  // Tier 4 — Premium ($1,000–$5,000)
+  { name: 'Snickers',        size: 'medium', types: ['chocolate', 'chewy'],   baseMin: 1000, baseMax: 4000 },
+  { name: 'Tootsie Roll',    size: 'big',    types: ['gummy', 'chocolate'],   baseMin: 1500, baseMax: 5000 },
+  { name: 'Jaw Breaker',     size: 'big',    types: ['hard_candy', 'gummy'],  baseMin: 1200, baseMax: 4500 },
+
+  // Tier 5 — Elite ($5,000–$10,000)
+  { name: 'Strawberry Bark', size: 'big',    types: ['chocolate', 'sour'],    baseMin: 5000, baseMax: 9000 },
+  { name: 'Sour Patch Kids', size: 'big',    types: ['sour', 'fruity'],       baseMin: 5500, baseMax: 10000 },
+  { name: 'Taffy',           size: 'big',    types: ['chocolate', 'fruity'],  baseMin: 6000, baseMax: 10000 },
 ];
 
 // All candy names as a constant array

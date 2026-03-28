@@ -17,7 +17,7 @@ import Animated, {
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { MATH_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import AvailableJokersModal from '../components/AvailableJokersModal';
@@ -505,9 +505,9 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={MATH_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="candy"
-        subject="Math"
+        subject="All"
         onComplete={onComplete}
         rewardTier={jokerRewardTier as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -521,26 +521,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Math Challenge!</Text>
-
-          {/* Joker icon button */}
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#f5f5dc"
-              borderWidth={2}
-              backgroundColor="#2d4a3e"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
 
           <PixelBorder
             borderColor="#f5f5dc"
@@ -589,9 +569,9 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
-              (onBack || (() => router.back()))();
+              setShowAvailableJokers(true);
             }}
-            shadowColor="rgba(185,28,28,1)"
+            shadowColor="#0d2818"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -599,9 +579,29 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#2d5a3e"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#0d2818"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -615,8 +615,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={MATH_JOKERS}
-          subject="Math"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#f5f5dc',
             backgroundColor: '#0d2818',

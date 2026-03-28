@@ -156,21 +156,21 @@ const walletSlice = createSlice({
         // Set adoption fee based on difficulty level
         const adoptionFees: Record<number, number> = {
           1: 5000, // Rock
-          2: 10000, // Peg the Pug
-          3: 20000, // Hamster
-          4: 25000, // Brussels Griffon
-          5: 35000, // Clownfish
-          6: 45000, // Evee Cat
-          7: 55000, // Chicken
-          8: 60000, // Byul Terrier
-          9: 75000, // Parrot
-          10: 100000, // Cane Corso
-          11: 250000, // Bearded Dragon
-          12: 450000, // Pitbull
-          13: 500000, // Horse
-          14: 600000, // Afghan Hound
-          15: 750000, // German Shepherd
-          16: 1000000, // Dragon
+          2: 12000, // Peg the Pug
+          3: 25000, // Hamster
+          4: 50000, // Brussels Griffon
+          5: 100000, // Clownfish
+          6: 175000, // Evee Cat
+          7: 300000, // Chicken
+          8: 500000, // Byul Terrier
+          9: 750000, // Parrot
+          10: 1000000, // Cane Corso
+          11: 1500000, // Bearded Dragon
+          12: 2500000, // Pitbull
+          13: 3500000, // Horse
+          14: 5000000, // Afghan Hound
+          15: 7500000, // German Shepherd
+          16: 10000000, // Dragon
         };
 
         state.adoptionFee = adoptionFees[action.payload.level] || 5000;

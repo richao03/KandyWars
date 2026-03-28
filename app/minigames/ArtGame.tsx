@@ -21,7 +21,7 @@ import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { ART_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
@@ -720,9 +720,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={ART_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="art"
-        subject="Art"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -734,24 +734,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#ff6b35"
-              borderWidth={2}
-              backgroundColor="#2d4a3e"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
 
           <Text style={styles.instructionsTitle}>Art Study Session!</Text>
 
@@ -806,8 +788,11 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           </PressableButton>
 
           <PressableButton
-            onPress={handleForfeit}
-            shadowColor="rgba(185,28,28,1)"
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
+            shadowColor="#d44c1f"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -815,9 +800,29 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#d44c1f"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#8b2500"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -829,8 +834,8 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           <AvailableJokersModal
             visible={showAvailableJokers}
             onClose={() => setShowAvailableJokers(false)}
-            jokers={ART_JOKERS}
-            subject="Art"
+            jokers={STANDARDIZED_JOKERS}
+            subject="All"
             themeColors={{
               borderColor: '#ff6b35',
               backgroundColor: '#1a2332',

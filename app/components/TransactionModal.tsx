@@ -9,6 +9,8 @@ import type { SaleInputs } from './TransactionModalManager';
 import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
 import { SoundEffects } from '../../src/utils/soundEffects';
+import { useAppSelector, useAppDispatch } from '../../src/store/hooks';
+import { selectTutorialStep, advanceTutorial } from '../../src/store/slices/tutorialSlice';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -76,6 +78,12 @@ function TransactionModal({
   const [mode, setMode] = useState<'Buy' | 'Sell'>('Buy');
   const [quantity, setQuantity] = useState(1);
   const [isClosing, setIsClosing] = useState(false);
+
+  // Tutorial
+  const tutorialStep = useAppSelector(selectTutorialStep);
+  const tutorialDispatch = useAppDispatch();
+  const isTutorialModal = tutorialStep === 4 || tutorialStep === 7 || tutorialStep === 8;
+  const dimOpacity = isTutorialModal ? 0.25 : 1;
 
   // Read from snapshotted saleInputs prop (captured when modal opens) — no Redux subscriptions
   const jokers = saleInputs?.jokers ?? [];
@@ -233,6 +241,11 @@ function TransactionModal({
       }
 
       onConfirm(quantity, mode.toLowerCase() as 'buy' | 'sell');
+
+      // Advance tutorial: step 4 (buy confirm) or step 8 (sell confirm)
+      if (tutorialStep === 4 || tutorialStep === 8) {
+        tutorialDispatch(advanceTutorial());
+      }
     }
   };
 
@@ -337,7 +350,11 @@ function TransactionModal({
         backgroundColor={colors.gold.beige}
         innerPadding={0}
       >
-        <View style={styles.container}>
+        <View style={[styles.container, isTutorialModal && { overflow: 'visible' }]}>
+          {/* Tutorial dim overlay */}
+          {isTutorialModal && (
+            <View style={styles.tutorialDimOverlay} pointerEvents="none" />
+          )}
           <PixelBorder
             borderColor="#e5e7eb"
             borderWidth={3}
@@ -431,8 +448,6 @@ function TransactionModal({
                     // Map emojis to custom images
                     const emojiImageMap: { [key: string]: any } = {
                       '🍲': require('../../assets/images/emojis/slowcooker.png'),
-                      '🏃': require('../../assets/images/emojis/hopscotch.png'),
-                      '⛹️': require('../../assets/images/emojis/swingset.png'),
                       '🪢': require('../../assets/images/emojis/jumpRope.png'),
                       '🌅': require('../../assets/images/emojis/sunrise.png'),
                       '📦': require('../../assets/images/emojis/bulkSale.png'),
@@ -575,7 +590,7 @@ function TransactionModal({
                 />
               )
             )}
-            <View style={styles.tabContainer}>
+            <View style={[styles.tabContainer, tutorialStep === 7 && { zIndex: 10, elevation: 10 }]}>
               <PixelBorder
                 borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
                 borderWidth={3}
@@ -590,14 +605,19 @@ function TransactionModal({
                 </TouchableOpacity>
               </PixelBorder>
               <PixelBorder
-                borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
-                borderWidth={3}
+                borderColor={tutorialStep === 7 ? '#FFD700' : (mode === 'Sell' ? '#cc7a00' : '#e5e7eb')}
+                borderWidth={tutorialStep === 7 ? 4 : 3}
                 backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
                 style={{ flex: 1 }}
               >
                 <TouchableOpacity
                   style={styles.tab}
-                  onPress={() => changeMode('Sell')}
+                  onPress={() => {
+                    changeMode('Sell');
+                    if (tutorialStep === 7) {
+                      tutorialDispatch(advanceTutorial());
+                    }
+                  }}
                 >
                   <Text style={styles.tabText}>Sell</Text>
                 </TouchableOpacity>
@@ -647,7 +667,18 @@ function TransactionModal({
             )}
           </View>
 
-          <View style={styles.buttonRow}>
+          {/* Tutorial hint banner */}
+          {(tutorialStep === 4 || tutorialStep === 7 || tutorialStep === 8) && (
+            <View style={[styles.tutorialHint, { zIndex: 10, elevation: 10 }]}>
+              <Text style={styles.tutorialHintText}>
+                {tutorialStep === 4 && 'Tap the Buy button to purchase Gummy Bears!'}
+                {tutorialStep === 7 && 'Switch to the Sell tab above!'}
+                {tutorialStep === 8 && 'Now tap Sell to pocket your profit!'}
+              </Text>
+            </View>
+          )}
+
+          <View style={[styles.buttonRow, (tutorialStep === 4 || tutorialStep === 8) && { zIndex: 10, elevation: 10 }]}>
             <PressableButton
               onPress={handleClose}
               shadowColor="rgba(185,28,28,1)"
@@ -670,7 +701,7 @@ function TransactionModal({
             </PressableButton>
             <PressableButton
               onPress={handleConfirm}
-              shadowColor={buttonBorderColor}
+              shadowColor={(tutorialStep === 4 || tutorialStep === 8) ? '#FFD700' : buttonBorderColor}
               shadowOffset={{ width: 0, height: 4 }}
               shadowOpacity={0.5}
               shadowRadius={5}
@@ -682,8 +713,8 @@ function TransactionModal({
                   <SparkEffect numSparks={numSparks} sparkColors={sparkColors} />
                 )}
                 <PixelBorder
-                  borderColor={buttonBorderColor}
-                  borderWidth={3}
+                  borderColor={(tutorialStep === 4 || tutorialStep === 8) ? '#FFD700' : buttonBorderColor}
+                  borderWidth={(tutorialStep === 4 || tutorialStep === 8) ? 4 : 3}
                   backgroundColor={buttonBackgroundColor}
                   innerPadding={0}
                   style={{ overflow: 'visible' }}
@@ -914,6 +945,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#92400e',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+  },
+  tutorialDimOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    zIndex: 5,
+    elevation: 5,
+    borderRadius: 8,
+  },
+  tutorialHint: {
+    backgroundColor: '#1a1a2e',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 8,
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  tutorialHintText: {
+    color: '#fff',
+    fontSize: 14,
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },

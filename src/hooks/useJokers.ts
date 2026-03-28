@@ -3,6 +3,8 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addJoker,
   removeJoker,
+  sellJoker,
+  swapJoker,
   upgradeJoker,
   lockJoker,
   unlockJoker,
@@ -21,11 +23,28 @@ import {
   selectAllJokers,
   selectLockedJokerIds,
   selectJokerActiveEffects,
+  selectPersistentJokerCount,
   recomputeJokerEffects,
+  MAX_PERSISTENT_SLOTS,
+  isJokerPersistent,
 } from '../store/slices/jokerSlice';
+import { addBalance } from '../store/slices/walletSlice';
 import { trackJokerObtained } from '../store/slices/localAnalyticsSlice';
 import { JOKER_IDS } from '../constants/jokerIds';
 import { selectDay } from '../store/slices/gameSlice';
+
+export interface Joker {
+  id: number | string;
+  name: string;
+  description?: string;
+  subject?: string;
+  theme?: string;
+  type?: 'one-time' | 'persistent';
+  effect?: string;
+  effects?: any[];
+  level?: number;
+  [key: string]: any;
+}
 
 interface ActiveJokerEffect {
   jokerId: number;
@@ -44,6 +63,7 @@ export const useJokers = () => {
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
   const usedTodayJokerIds = useAppSelector(selectUsedTodayJokerIds);
+  const persistentJokerCount = useAppSelector(selectPersistentJokerCount);
   const periodCount = useAppSelector(state => state.game.periodCount);
   const day = useAppSelector(selectDay);
   const [onFirstJokerCallbacks] = useState<(() => void)[]>([]);
@@ -89,6 +109,44 @@ export const useJokers = () => {
   const removeJokerAction = useCallback((jokerId: string | number) => {
     dispatch(removeJoker(typeof jokerId === 'string' ? jokerId : jokerId.toString()));
   }, [dispatch]);
+
+  // Sell a joker: remove from active set and grant cash based on level
+  const sellJokerAction = useCallback((jokerId: string | number) => {
+    const id = typeof jokerId === 'string' ? jokerId : jokerId.toString();
+    const joker = jokers.find(j => j.id.toString() === id);
+    if (!joker) return;
+
+    const level = joker.level ?? 1;
+    const sellValue = level <= 1 ? 500 : level === 2 ? 1000 : 2000;
+
+    dispatch(sellJoker(id));
+    dispatch(addBalance(sellValue));
+
+    // Recompute effects after selling
+    dispatch(recomputeJokerEffects({
+      baseInventoryLimit: 30,
+      periodCount,
+      day,
+    }));
+
+    if (__DEV__) console.log(`💰 Sold joker ${joker.name} (Lv${level}) for $${sellValue}`);
+  }, [dispatch, jokers, periodCount, day]);
+
+  // Sixth Sense joker grants +1 aura slot
+  const hasSixthSense = jokers.some(
+    j => j.id === JOKER_IDS.SIXTH_SENSE.toString() || j.id === JOKER_IDS.SIXTH_SENSE
+  );
+  const effectiveMaxSlots = MAX_PERSISTENT_SLOTS + (hasSixthSense ? 1 : 0);
+
+  // Check if a persistent joker can be added (slot limit)
+  const canAddPersistentJoker = useCallback((): boolean => {
+    return persistentJokerCount < effectiveMaxSlots;
+  }, [persistentJokerCount, effectiveMaxSlots]);
+
+  // Check if a specific joker is persistent
+  const isJokerPersistentCheck = useCallback((joker: any): boolean => {
+    return isJokerPersistent(joker);
+  }, []);
 
   const hasJoker = useCallback((jokerId: number): boolean => {
     return jokers.some(j => j.id === jokerId.toString());
@@ -175,9 +233,14 @@ export const useJokers = () => {
     lockedJokerIds,
     usedTodayJokerIds,
     activeEffects,
+    persistentJokerCount,
+    maxPersistentSlots: effectiveMaxSlots,
     isLoaded: true, // Always loaded in Redux
     addJoker: addJokerAction,
     removeJoker: removeJokerAction,
+    sellJoker: sellJokerAction,
+    canAddPersistentJoker,
+    isJokerPersistent: isJokerPersistentCheck,
     hasJoker,
     getJokersBySubject,
     activateJoker,

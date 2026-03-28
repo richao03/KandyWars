@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { GAME_TIPS } from '../../src/constants/gameTips';
 import { useTabBar } from '../../src/hooks/useTabBar';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
@@ -39,6 +40,10 @@ export default function GoingToSchoolModal({
   const randomNewDayText = useMemo(() => {
     return newDayTexts[Math.floor(Math.random() * newDayTexts.length)];
   }, [visible]); // Re-randomize when modal becomes visible
+
+  const randomTip = useMemo(() => {
+    return GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
+  }, [visible]);
 
   useEffect(() => {
     if (visible && !hasSetTimer.current) {
@@ -104,6 +109,7 @@ export default function GoingToSchoolModal({
               )}
 
               <Text style={styles.text}>{randomNewDayText}</Text>
+              <Text style={styles.tipText}>TIP: {randomTip}</Text>
             </View>
           </PixelBorder>
         </View>
@@ -163,5 +169,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     backgroundColor: 'rgba(255, 0, 0, 0.15)',
     borderRadius: 8,
+  },
+  tipText: {
+    fontSize: 10,
+    color: '#6B3A1F',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginTop: 12,
+    opacity: 0.85,
   },
 });

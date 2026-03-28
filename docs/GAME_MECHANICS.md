@@ -67,37 +67,21 @@ Every candy has exactly **2 types** from 6 possible types, and a **size**. Each 
 **6 Types:** Gummy, Chocolate, Hard Candy, Sour, Chewy, Fruity
 **3 Sizes:** Small, Medium, Big
 
-#### Small ($1–$10)
-| Candy | Types |
-|-------|-------|
-| Gummy Bears | Gummy + Chewy |
-| M&Ms | Chocolate + Hard Candy |
-| Jolly Ranchers | Hard Candy + Fruity |
-| Warheads | Sour + Hard Candy |
-| Nerd Rope | Chewy + Fruity |
+#### 5 Price Tiers (3 candies each)
 
-#### Medium ($500–$1,000)
-| Candy | Types |
-|-------|-------|
-| Swedish Fish | Gummy + Fruity |
-| Snickers | Chocolate + Chewy |
-| Caramel | Hard Candy + Chewy |
-| Sour Straws | Sour + Chewy |
-| Bubble Gum | Gummy + Sour |
-
-#### Big ($1,000–$2,000)
-| Candy | Types |
-|-------|-------|
-| Tootsie Roll | Gummy + Chocolate |
-| Strawberry Bark | Chocolate + Sour |
-| Jaw Breaker | Hard Candy + Gummy |
-| Sour Patch Kids | Sour + Fruity |
-| Taffy | Chocolate + Fruity |
+| Tier | Range | Candies |
+|------|-------|---------|
+| Penny | $1–$10 | Gummy Bears, Jolly Ranchers, Warheads |
+| Budget | $10–$200 | M&Ms, Nerd Rope, Bubble Gum |
+| Mid | $200–$1,000 | Swedish Fish, Sour Straws, Caramel |
+| Premium | $1k–$5k | Snickers, Jaw Breaker, Tootsie Roll |
+| Elite | $5k–$10k | Strawberry Bark, Sour Patch Kids, Taffy |
 
 ### Price Mechanics
 - All prices for all 40 periods are pre-generated at game start using a seeded RNG
-- Max spike price = `baseMax * 14` (e.g., small caps at $140, big at $28,000)
-- 5-feature price system: per-candy volatility, random walk momentum, day-based scaling (50%→100% ceiling over 5 days), personality bands, and trend clusters (2–5 period runs)
+- Prices stay within `[baseMin, baseMax]` scaled by day progress (50% on Day 1 → 100% on Day 5)
+- Each candy has a unique "home price" so same-tier candies trade at different levels
+- Per-candy volatility, random walk momentum, trend clusters (2–5 period runs)
 - Events (PRICE_SPIKE, PRICE_DROP) overlay on top of base prices
 - See [CANDY.md](./CANDY.md) for full price generation details
 
@@ -145,19 +129,19 @@ Pre-generated per game seed. Trigger at random periods.
 
 ## Minigames
 
-9 subjects, playable at lunch (optional) and after school (study):
+9 subjects, playable at lunch (optional) and after school (study). A random game is selected via roulette — once selected, it's locked for that session (backing out and returning shows the same game).
 
 1. Math
 2. Computer
-3. History
-4. Logic
-5. Art
-6. Economy
-7. Geography
-8. Home Economics
-9. Gym (Recess)
+3. Logic
+4. Art
+5. Economy
+6. Geography
+7. Home Economics
+8. Gym (Misère Nim — take turns removing from piles, last to take loses)
+9. Recess
 
-Playing minigames counts toward hall pass unlocks (e.g., Valedictorian Vendor requires all 9).
+Each minigame has 3 difficulty levels. Completing levels earns joker rewards. Playing minigames counts toward hall pass unlocks (e.g., Valedictorian Vendor requires all 9).
 
 ---
 

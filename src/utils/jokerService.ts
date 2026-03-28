@@ -339,22 +339,6 @@ export class JokerService {
           continue;
         }
 
-        // Consecutive sale bonus (Swingset Momentum)
-        if (effect.target === 'consecutive_sale_bonus') {
-          const consecutiveSales = consecutivePeriodSales || 0;
-          if (consecutiveSales <= 1) continue;
-          const level = joker.level ?? 1;
-          const bonusPer = level === 1 ? 0.10 : level === 2 ? 0.20 : 0.30;
-          const totalBonus = (consecutiveSales - 1) * bonusPer * 100;
-          jokerEmoji = '⚡';
-          breakdown.jokerEffects.push({
-            jokerName, jokerEmoji,
-            effect: `+${totalBonus.toFixed(0)}% (${consecutiveSales} streak)`,
-            amount: totalBonus, effectType: 'sell', isActive,
-          });
-          continue;
-        }
-
         // Next sale multiplier (Pursuasion)
         if (effect.target === 'next_sale_multiplier') {
           jokerEmoji = '🗣️';
@@ -440,12 +424,7 @@ function _getEmoji(id: number): string {
     [JOKER_IDS.TROPICAL_IMPORT]: '🍍',
     [JOKER_IDS.EVEN_STEVENS]: '⚖️',
     [JOKER_IDS.ODD_TODD]: '🎭',
-    [JOKER_IDS.PERFECT_CHANGE]: '💰',
-    [JOKER_IDS.OVERCLOCK]: '⚡',
-    [JOKER_IDS.ART_AUCTION]: '🎨',
-    [JOKER_IDS.HOPSCOTCH_BONUS]: '🏃',
     [JOKER_IDS.GOLDEN_HOUR]: '🌅',
-    [JOKER_IDS.SWINGSET_MOMENTUM]: '⛹️',
     [JOKER_IDS.PURSUASION]: '🗣️',
   };
   return map[id] || '🃏';

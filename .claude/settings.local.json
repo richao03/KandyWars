@@ -42,7 +42,13 @@
       "Bash(xcrun simctl list:*)",
       "WebFetch(domain:docs.expo.dev)",
       "WebFetch(domain:stackoverflow.com)",
-      "Bash(npx jest priceGeneration --no-coverage 2>&1)"
+      "Bash(npx jest priceGeneration --no-coverage 2>&1)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://www.google.com/search?q=balatro+blind+scaling+exponential+difficulty+curve+design\" 2>/dev/null | head -200)",
+      "Bash(curl -s \"https://www.google.com/search?q=balatro+economy+money+interest+cap+shop+design+roguelike\" 2>/dev/null | head -200)",
+      "WebFetch(domain:mechanicsofmagic.com)",
+      "Bash(cd /Users/Richao/KandyWarz/candyWarz/assets/images/emojis && mv cent.png not-used-cent.png && mv grinder.png not-used-grinder.png && mv bounceback.png not-used-bounceback.png && mv beast.png not-used-beast.png && mv hopscotch.png not-used-hopscotch.png && mv swingset.png not-used-swingset.png)",
+      "Bash(cd /Users/Richao/KandyWarz/candyWarz/assets/images/emojis && mv cooking.png not-used-cooking.png 2>/dev/null; echo \"done\")"
     ],
     "deny": [],
     "ask": []

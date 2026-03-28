@@ -166,7 +166,6 @@ describe('New Joker Integration Tests', () => {
       // Jokers that require confirmation
       const confirmationJokers = [
         JOKER_IDS.CONTINENTAL_DRIFT,
-        JOKER_IDS.TEMPORARY_EMPEROR,
       ];
 
       // Jokers that require candy selection

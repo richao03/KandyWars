@@ -12,7 +12,7 @@ import {
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { GEOGRAPHY_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import AvailableJokersModal from '../components/AvailableJokersModal';
@@ -477,25 +477,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Geography Puzzle!</Text>
 
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#3b82f6"
-              borderWidth={2}
-              backgroundColor="#1a2332"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
-
           <PixelBorder
             borderColor="#4a5568"
             borderWidth={3}
@@ -545,10 +526,9 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
+              setShowAvailableJokers(true);
             }}
-            shadowColor="rgba(185,28,28,1)"
+            shadowColor="#2d3748"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -556,9 +536,29 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#4a5568"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#2d3748"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -571,8 +571,8 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={GEOGRAPHY_JOKERS}
-          subject="Geography"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#3b82f6',
             backgroundColor: '#1a2332',
@@ -588,9 +588,9 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={GEOGRAPHY_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="geography"
-        subject="Geography"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}

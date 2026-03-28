@@ -39,6 +39,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import { resetFirebaseSession } from '../components/SugarWarsTitleScreen';
 import TextWithEmojis from '../components/TextWithEmojis';
+import { resetTutorial } from '../../src/store/slices/tutorialSlice';
 
 function Settings() {
   const { resetGame, jumpToPeriod } = useGame();
@@ -703,6 +704,45 @@ function Settings() {
                 >
                   <Text style={styles.debugButtonText}>
                     Show Total Completions
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+              <View style={{ height: 8 }} />
+              <PixelBorder
+                borderColor="#a855f7"
+                borderWidth={3}
+                backgroundColor="#f3e8ff"
+                innerPadding={0}
+              >
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={() => {
+                    dispatch(resetTutorial());
+                    Alert.alert(
+                      'Tutorial Reset',
+                      'Tutorial will show again on next difficulty 1 game.',
+                      [{ text: 'OK' }]
+                    );
+                  }}
+                >
+                  <Text style={styles.debugButtonText}>
+                    Reset Tutorial
+                  </Text>
+                </TouchableOpacity>
+              </PixelBorder>
+              <View style={{ height: 8 }} />
+              <PixelBorder
+                borderColor="#a855f7"
+                borderWidth={3}
+                backgroundColor="#f3e8ff"
+                innerPadding={0}
+              >
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={() => router.push('/debug-minigames' as any)}
+                >
+                  <Text style={styles.debugButtonText}>
+                    🎮 Minigame Picker
                   </Text>
                 </TouchableOpacity>
               </PixelBorder>

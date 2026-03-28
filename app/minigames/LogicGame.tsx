@@ -13,7 +13,7 @@ import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { MusicController } from '../../src/utils/musicController';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { LOGIC_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -302,7 +302,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
 
   const handleJokerChoice = (jokerId: number) => {
     console.log(
-      `Selected candy joker: ${LOGIC_JOKERS.find((j) => j.id === jokerId)?.name}`
+      `Selected candy joker: ${STANDARDIZED_JOKERS.find((j) => j.id === jokerId)?.name}`
     );
     onComplete();
   };
@@ -341,9 +341,9 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={LOGIC_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="candy"
-        subject="Logic"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -356,25 +356,6 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Logic Study Session!</Text>
-
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#ff6ec7"
-              borderWidth={2}
-              backgroundColor="#2d1b69"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
 
           <PixelBorder
             borderColor="#666"
@@ -441,8 +422,11 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           </PressableButton>
 
           <PressableButton
-            onPress={handleForfeit}
-            shadowColor="rgba(185,28,28,1)"
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowAvailableJokers(true);
+            }}
+            shadowColor="#ff6ec7"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -450,9 +434,29 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#ff1493"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#8b0060"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -465,8 +469,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={LOGIC_JOKERS}
-          subject="Logic"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#ff6ec7',
             backgroundColor: '#2d1b69',

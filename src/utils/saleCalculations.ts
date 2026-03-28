@@ -85,16 +85,18 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
   const profitPerUnit = Math.max(0, basePrice - purchasePrice);
   const totalProfit = profitPerUnit * quantity;
 
-  // === STEP 2: Collect flat bonuses (additive % of base profit) ===
-  let flatBonusPercent = 0;
+  // === STEP 2: Profit Boosts (candy TYPE jokers) ===
+  // These directly scale the profit. Additive with each other.
+  // e.g. base 1x + Cocoa Futures 0.5 + Bear Market 0.5 = 2x profit
+  let profitBoost = 1; // starts at 1x (no boost)
 
-  // Influencer Shoutout merchant item (+200% profit as flat bonus)
+  // Influencer Shoutout merchant item (+200% profit boost)
   if (MerchantUtils.hasInfluencerShoutout(merchantEffects)) {
-    flatBonusPercent += 2.0; // +200%
+    profitBoost += 2.0;
     bonusBreakdown.push({ emoji: '📣', name: 'Influencer Shoutout', multiplier: 1, flatBonus: totalProfit * 2.0 });
   }
 
-  // Collect flat bonus jokers (sell_flat_bonus and new dynamic bonus types)
+  // Collect flat bonus jokers (sell_flat_bonus)
   for (const joker of jokers) {
     const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
     const level = joker.level ?? 1;
@@ -102,94 +104,89 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
 
     for (const effect of effects) {
       if (effect.target === 'sell_flat_bonus' && effect.operation === 'add') {
-        flatBonusPercent += effect.amount;
-        const name = _getJokerName(jokerId);
+        profitBoost += effect.amount;
         bonusBreakdown.push({
           emoji: _getJokerEmoji(jokerId),
-          name,
+          name: _getJokerName(jokerId),
           multiplier: 1,
           flatBonus: totalProfit * effect.amount,
         });
       }
 
-      // Overclock: +X% per candy in inventory
-      if (effect.target === 'inventory_count_bonus' && effect.operation === 'add') {
-        const bonus = effect.amount * inventoryCount;
-        if (bonus > 0) {
-          flatBonusPercent += bonus;
+      // Type multipliers — profit boosts, fire for EACH matching type
+      if (effect.target === 'type_multiplier' && effect.conditions?.candyType) {
+        if (candyTypes.includes(effect.conditions.candyType)) {
+          profitBoost += (effect.amount - 1); // 1.5x adds 0.5
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
-            multiplier: 1,
-            flatBonus: totalProfit * bonus,
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
           });
         }
       }
 
-      // Art Auction: +X% per day elapsed
-      if (effect.target === 'day_scaling_bonus' && effect.operation === 'add') {
-        const bonus = effect.amount * day;
-        if (bonus > 0) {
-          flatBonusPercent += bonus;
+      // Early Bird — first sale of day profit boost
+      if (effect.target === 'first_sale_boost') {
+        if (hasEarlySaleToday === false) {
+          profitBoost += (effect.amount - 1);
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
-            multiplier: 1,
-            flatBonus: totalProfit * bonus,
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
           });
         }
       }
 
-      // Hopscotch Bonus: +X% per unique location visited today
-      if (effect.target === 'location_diversity_bonus' && effect.operation === 'add') {
-        const bonus = effect.amount * uniqueLocationsToday;
-        if (bonus > 0) {
-          flatBonusPercent += bonus;
+      // Bulk Discount — quantity threshold
+      if (effect.target === 'bulk_sale_boost' && effect.conditions?.bulkThreshold) {
+        if (quantity >= effect.conditions.bulkThreshold) {
+          profitBoost += (effect.amount - 1);
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
-            multiplier: 1,
-            flatBonus: totalProfit * bonus,
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
           });
         }
       }
 
-      // Golden Hour: bonus only in last 2 periods of the day
-      if (effect.target === 'late_period_bonus' && effect.operation === 'add') {
-        if (period >= periodsPerDay - 1) {
-          flatBonusPercent += effect.amount;
+      // Underdog / Broke and Hungry — cash below threshold
+      if (effect.target === 'cash_under_boost' && effect.conditions?.cashBelow) {
+        if (currentCash < effect.conditions.cashBelow) {
+          profitBoost += (effect.amount - 1);
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
-            multiplier: 1,
-            flatBonus: totalProfit * effect.amount,
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Penny Pincher — low profit per unit
+      if (effect.target === 'low_profit_boost' && effect.conditions?.maxProfitPerUnit) {
+        if (profitPerUnit <= effect.conditions.maxProfitPerUnit) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
           });
         }
       }
     }
   }
 
-  // Swingset Momentum: +X% per consecutive period sale
-  if (hasJokerById(jokers, JOKER_IDS.SWINGSET_MOMENTUM) && consecutivePeriodSales > 1) {
-    const j = findJokerById(jokers, JOKER_IDS.SWINGSET_MOMENTUM);
-    const level = j && 'level' in j ? (j as any).level ?? 1 : 1;
-    const bonusPerStreak = level === 1 ? 0.10 : level === 2 ? 0.20 : 0.30;
-    const swingsetBonus = (consecutivePeriodSales - 1) * bonusPerStreak;
-    flatBonusPercent += swingsetBonus;
-    bonusBreakdown.push({
-      emoji: '⛹️',
-      name: 'Swingset',
-      multiplier: 1,
-      flatBonus: totalProfit * swingsetBonus,
-    });
-  }
-
-  // Hall Pass bonus (flat bonus on profit)
+  // Hall Pass bonus (profit boost)
   const hallPassSaleBonusPercent = hallPassModifiers?.salePriceBonusPercent ?? 0;
   const hallPassProfitBonus =
     hallPassSaleBonusPercent > 0 ? totalProfit * ((hallPassSaleBonusPercent * 5) / 100) : 0;
 
   if (hallPassProfitBonus > 0) {
+    profitBoost += (hallPassSaleBonusPercent * 5) / 100;
     bonusBreakdown.push({
       emoji: '🎖️',
       name: 'Hall Pass',
@@ -198,32 +195,23 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     });
   }
 
-  const flatBonusAmount = totalProfit * flatBonusPercent + hallPassProfitBonus;
+  const boostedProfit = totalProfit * profitBoost;
 
-  // === STEP 3: Collect multipliers (multiplicative) ===
-  let productOfMultipliers = initialMultiplier;
+  // === STEP 3: Multipliers (size, conditional, one-time) ===
+  // Size, Even/Odd, Golden Hour stack additively: 1x base + (1.5-1) + (1.5-1) = 2x
+  // Pursuasion stacks additively too: 2x adds 1.0
+  let multiplier = 1; // starts at 1x (no multiplier)
 
-  // Type multipliers — fire for EACH matching type on the candy
   for (const joker of jokers) {
     const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
     const level = joker.level ?? 1;
     const effects = getJokerEffectsAtLevel(jokerId, level);
 
     for (const effect of effects) {
-      if (effect.target === 'type_multiplier' && effect.conditions?.candyType) {
-        if (candyTypes.includes(effect.conditions.candyType)) {
-          productOfMultipliers *= effect.amount;
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-          });
-        }
-      }
-
+      // Size multipliers
       if (effect.target === 'size_multiplier' && effect.conditions?.candySize) {
         if (candySize === effect.conditions.candySize) {
-          productOfMultipliers *= effect.amount;
+          multiplier += (effect.amount - 1); // 1.5x adds 0.5
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
@@ -232,6 +220,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
+      // Conditional multipliers (Even Stevens, Odd Todd, Golden Hour)
       if (effect.target === 'conditional_multiplier') {
         let conditionMet = false;
 
@@ -241,15 +230,13 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         if (effect.conditions?.inventoryParity === 'odd' && inventoryLimit % 2 === 1) {
           conditionMet = true;
         }
-        if (effect.conditions?.cashEndsWith === '.00') {
-          const cashStr = currentCash.toFixed(2);
-          if (cashStr.endsWith('.00')) {
-            conditionMet = true;
-          }
+        // Golden Hour: last 2 periods of the day (period flag = -1)
+        if (effect.conditions?.period === -1 && period >= periodsPerDay - 1) {
+          conditionMet = true;
         }
 
         if (conditionMet) {
-          productOfMultipliers *= effect.amount;
+          multiplier += (effect.amount - 1); // 1.5x adds 0.5
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
@@ -258,9 +245,9 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Next sale multiplier (Pursuasion) — one-time
+      // Pursuasion — one-time, stacks additively with other multipliers
       if (effect.target === 'next_sale_multiplier') {
-        productOfMultipliers *= effect.amount;
+        multiplier += (effect.amount - 1); // 2x adds 1.0
         bonusBreakdown.push({
           emoji: _getJokerEmoji(jokerId),
           name: _getJokerName(jokerId),
@@ -270,23 +257,22 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     }
   }
 
-  // === STEP 4: Apply Vacuum Sealer penalty ===
+  // === STEP 4: Apply Vacuum Sealer penalty to multiplier ===
   let vacuumSealerPenalty = 1;
   if (hasJokerById(jokers, JOKER_IDS.VACUUM_SEALER)) {
-    // -2 to final multiplier (min 1x — always get at least base profit)
-    productOfMultipliers = Math.max(1, productOfMultipliers - 2);
+    // -3 to multiplier (min 1x — always get at least base)
+    multiplier = Math.max(1, multiplier - 3);
     vacuumSealerPenalty = 0; // marker for display
     bonusBreakdown.push({
       emoji: '📦',
       name: 'Vacuum Sealer',
-      multiplier: -2,
+      multiplier: -3,
     });
   }
 
-  // === STEP 5: Calculate final profit ===
-  // finalProfit = (baseProfit + flatBonuses) × productOfAllMultipliers
-  const profitWithBonuses = totalProfit + flatBonusAmount;
-  const finalProfit = profitWithBonuses * productOfMultipliers;
+  // === STEP 5: Final calculation ===
+  // finalProfit = boostedProfit × multiplier
+  const finalProfit = boostedProfit * multiplier;
   const purchaseValue = purchasePrice * quantity;
   const totalGain = purchaseValue + finalProfit;
 
@@ -296,7 +282,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     totalProfit,
     purchaseValue,
     hallPassBonus: hallPassProfitBonus,
-    jokerMultiplier: productOfMultipliers,
+    jokerMultiplier: multiplier,
     vacuumSealerPenalty,
     bonusBreakdown,
   };
@@ -316,14 +302,14 @@ function _getJokerEmoji(id: number): string {
     [JOKER_IDS.TROPICAL_IMPORT]: '🍍',
     [JOKER_IDS.EVEN_STEVENS]: '⚖️',
     [JOKER_IDS.ODD_TODD]: '🎭',
-    [JOKER_IDS.PERFECT_CHANGE]: '💰',
-    [JOKER_IDS.OVERCLOCK]: '⚡',
-    [JOKER_IDS.ART_AUCTION]: '🎨',
-    [JOKER_IDS.HOPSCOTCH_BONUS]: '🏃',
     [JOKER_IDS.GOLDEN_HOUR]: '🌅',
-    [JOKER_IDS.SWINGSET_MOMENTUM]: '⛹️',
     [JOKER_IDS.PURSUASION]: '🗣️',
     [JOKER_IDS.VACUUM_SEALER]: '📦',
+    [JOKER_IDS.EARLY_BIRD]: '🌅',
+    [JOKER_IDS.BULK_DISCOUNT]: '📦',
+    [JOKER_IDS.UNDERDOG]: '💪',
+    [JOKER_IDS.PENNY_PINCHER]: '🪙',
+    [JOKER_IDS.BROKE_AND_HUNGRY]: '🔥',
   };
   return emojiMap[id] || '🃏';
 }
@@ -341,14 +327,14 @@ function _getJokerName(id: number): string {
     [JOKER_IDS.TROPICAL_IMPORT]: 'Tropical Import',
     [JOKER_IDS.EVEN_STEVENS]: 'Even Stevens',
     [JOKER_IDS.ODD_TODD]: 'Odd Todd',
-    [JOKER_IDS.PERFECT_CHANGE]: 'Perfect Change',
-    [JOKER_IDS.OVERCLOCK]: 'Overclock',
-    [JOKER_IDS.ART_AUCTION]: 'Art Auction',
-    [JOKER_IDS.HOPSCOTCH_BONUS]: 'Hopscotch Bonus',
     [JOKER_IDS.GOLDEN_HOUR]: 'Golden Hour',
-    [JOKER_IDS.SWINGSET_MOMENTUM]: 'Swingset',
     [JOKER_IDS.PURSUASION]: 'Pursuasion',
     [JOKER_IDS.VACUUM_SEALER]: 'Vacuum Sealer',
+    [JOKER_IDS.EARLY_BIRD]: 'Early Bird',
+    [JOKER_IDS.BULK_DISCOUNT]: 'Bulk Discount',
+    [JOKER_IDS.UNDERDOG]: 'Underdog',
+    [JOKER_IDS.PENNY_PINCHER]: 'Penny Pincher',
+    [JOKER_IDS.BROKE_AND_HUNGRY]: 'Broke and Hungry',
   };
   return nameMap[id] || 'Joker';
 }

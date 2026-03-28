@@ -1,15 +1,34 @@
 import { createSlice, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import { JokerService } from '../../utils/jokerService';
-import { getJokerEffectsAtLevel } from '../../utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../utils/jokerEffectEngine';
 import { resetGame } from './gameSlice';
 
 interface Joker {
   id: string;
   name: string;
   tier: string;
+  type?: 'one-time' | 'persistent';
   effect?: any;
   quantity?: number;
   level?: number;
+}
+
+// Max number of persistent (aura) jokers that can be active at once
+export const MAX_PERSISTENT_SLOTS = 5;
+
+// Helper to determine if a joker is persistent based on STANDARDIZED_JOKERS data
+function isJokerPersistent(joker: Joker): boolean {
+  // First check the joker's own type field if set
+  if (joker.type === 'one-time') return false;
+  if (joker.type === 'persistent') return true;
+  // Fall back to STANDARDIZED_JOKERS lookup
+  const standardized = STANDARDIZED_JOKERS.find(sj => sj.id.toString() === joker.id.toString());
+  return standardized ? standardized.type === 'persistent' : true; // default to persistent if unknown
+}
+
+// Count persistent jokers in an array
+function countPersistentJokers(jokers: Joker[]): number {
+  return jokers.filter(isJokerPersistent).length;
 }
 
 // Pre-computed joker effects to avoid repeated calculations
@@ -17,8 +36,6 @@ interface ComputedJokerEffects {
   inventoryLimit: number;
   hintChance: number;
   studyTimeMultiplier: number;
-  droughtReliefBonus: number;
-  emptyInventoryBonus: number;
 }
 
 interface JokerState {
@@ -37,8 +54,6 @@ const initialComputedEffects: ComputedJokerEffects = {
   inventoryLimit: 30, // default base inventory limit
   hintChance: 0,
   studyTimeMultiplier: 1,
-  droughtReliefBonus: 0,
-  emptyInventoryBonus: 0,
 };
 
 const initialState: JokerState = {
@@ -96,6 +111,21 @@ const jokerSlice = createSlice({
       state.jokers.push(action.payload);
       state.jokersOwned.push(action.payload);
     },
+    // Sell a persistent joker: remove from active, grant cash via wallet (caller handles cash)
+    sellJoker: (state, action: PayloadAction<string>) => {
+      const jokerId = action.payload;
+      state.jokers = state.jokers.filter(j => j.id.toString() !== jokerId.toString());
+      // Keep in jokersOwned for history tracking
+      if (__DEV__) console.log(`💰 Sold joker ${jokerId}. Active jokers remaining: ${state.jokers.length}`);
+    },
+    // Swap a persistent joker: remove old, add new (for slot limit enforcement)
+    swapJoker: (state, action: PayloadAction<{ removeId: string; newJoker: Joker }>) => {
+      const { removeId, newJoker } = action.payload;
+      state.jokers = state.jokers.filter(j => j.id.toString() !== removeId.toString());
+      state.jokers.push(newJoker);
+      state.jokersOwned.push(newJoker);
+      if (__DEV__) console.log(`🔄 Swapped joker ${removeId} for ${newJoker.name}. Active: ${state.jokers.length}`);
+    },
     removeJoker: (state, action: PayloadAction<string>) => {
       if (__DEV__) {
         console.log('🔧 removeJoker reducer: Removing joker with ID:', action.payload, 'Type:', typeof action.payload);
@@ -144,18 +174,6 @@ const jokerSlice = createSlice({
           periodCount
         );
 
-        // Handle day_scaled_inventory (Geometric Expansion): +X per day elapsed
-        for (const joker of state.jokers) {
-          const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : Number(joker.id);
-          const level = joker.level ?? 1;
-          const effects = getJokerEffectsAtLevel(jokerId, level);
-          for (const effect of effects) {
-            if (effect.target === 'day_scaled_inventory' && effect.operation === 'add') {
-              inventoryLimit += effect.amount * day;
-            }
-          }
-        }
-
         const hintChance = jokerService.computeEffect(
           0,
           'hint_chance',
@@ -168,24 +186,10 @@ const jokerSlice = createSlice({
           periodCount
         );
 
-        const droughtReliefBonus = jokerService.computeEffect(
-          0,
-          'drought_relief_bonus',
-          periodCount
-        );
-
-        const emptyInventoryBonus = jokerService.computeEffect(
-          0,
-          'empty_inventory_bonus',
-          periodCount
-        );
-
         state.computedEffects = {
           inventoryLimit,
           hintChance,
           studyTimeMultiplier,
-          droughtReliefBonus,
-          emptyInventoryBonus,
         };
       } catch (error) {
         console.error('❌ Error in recomputeJokerEffects:', error);
@@ -254,6 +258,8 @@ export const {
   setAllJokers,
   addJoker,
   removeJoker,
+  sellJoker,
+  swapJoker,
   upgradeJoker,
   lockJoker,
   unlockJoker,
@@ -278,12 +284,6 @@ export const selectComputedHintChance = (state: { joker: JokerState }) =>
 export const selectComputedStudyTimeMultiplier = (state: { joker: JokerState }) =>
   state.joker.computedEffects?.studyTimeMultiplier ?? initialComputedEffects.studyTimeMultiplier;
 
-export const selectComputedDroughtReliefBonus = (state: { joker: JokerState }) =>
-  state.joker.computedEffects?.droughtReliefBonus ?? initialComputedEffects.droughtReliefBonus;
-
-export const selectComputedEmptyInventoryBonus = (state: { joker: JokerState }) =>
-  state.joker.computedEffects?.emptyInventoryBonus ?? initialComputedEffects.emptyInventoryBonus;
-
 export const selectComputedEffects = (state: { joker: JokerState }) =>
   state.joker.computedEffects ?? initialComputedEffects;
 
@@ -305,5 +305,12 @@ export const selectJokersOwned = (state: { joker: JokerState }) => state.joker.j
 export const selectAllJokers = (state: { joker: JokerState }) => state.joker.allJokers;
 export const selectLockedJokerIds = (state: { joker: JokerState }) => state.joker.lockedJokerIds;
 export const selectJokerComputedEffects = (state: { joker: JokerState }) => state.joker.computedEffects;
+
+// Persistent joker count selector (for slot limit UI)
+export const selectPersistentJokerCount = (state: { joker: JokerState }) =>
+  countPersistentJokers(state.joker.jokers);
+
+// Re-export helpers for external use
+export { isJokerPersistent, countPersistentJokers };
 
 export default jokerSlice.reducer;

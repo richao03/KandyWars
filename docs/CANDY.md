@@ -2,54 +2,66 @@
 
 ## Overview
 
-SugarWars has **15 candies**, each with a unique combination of 2 types drawn from 6 possible types. Candies are divided into 3 size tiers that determine their base price range. Each type appears exactly 5 times across all candies (C(6,2) = 15 unique pairs).
+SugarWars has **15 candies**, each with a unique combination of 2 types drawn from 6 possible types. Candies are spread across **5 price tiers** (3 candies per tier) for a smooth economic progression. Each type appears exactly 5 times across all candies (C(6,2) = 15 unique pairs).
 
 ---
 
 ## Candy Registry
 
-### Small Candies ($1–$10 base)
+### Tier 1 — Penny ($1–$10)
 
-| Candy | Types | Base Min | Base Max |
-|-------|-------|----------|----------|
-| Gummy Bears | Gummy, Chewy | $1 | $10 |
-| M&Ms | Chocolate, Hard Candy | $1 | $10 |
-| Jolly Ranchers | Hard Candy, Fruity | $1 | $10 |
-| Warheads | Sour, Hard Candy | $1 | $10 |
-| Nerd Rope | Chewy, Fruity | $1 | $10 |
+| Candy | Size | Types | Base Min | Base Max |
+|-------|------|-------|----------|----------|
+| Gummy Bears | Small | Gummy, Chewy | $1 | $10 |
+| Jolly Ranchers | Small | Hard Candy, Fruity | $2 | $8 |
+| Warheads | Small | Sour, Hard Candy | $3 | $10 |
 
-### Medium Candies ($500–$1,000 base)
+### Tier 2 — Budget ($10–$200)
 
-| Candy | Types | Base Min | Base Max |
-|-------|-------|----------|----------|
-| Swedish Fish | Gummy, Fruity | $500 | $1,000 |
-| Snickers | Chocolate, Chewy | $500 | $1,000 |
-| Caramel | Hard Candy, Chewy | $500 | $1,000 |
-| Sour Straws | Sour, Chewy | $500 | $1,000 |
-| Bubble Gum | Gummy, Sour | $500 | $1,000 |
+| Candy | Size | Types | Base Min | Base Max |
+|-------|------|-------|----------|----------|
+| M&Ms | Small | Chocolate, Hard Candy | $10 | $200 |
+| Nerd Rope | Small | Chewy, Fruity | $15 | $150 |
+| Bubble Gum | Medium | Gummy, Sour | $20 | $200 |
 
-### Big Candies ($1,000–$2,000 base)
+### Tier 3 — Mid ($200–$1,000)
 
-| Candy | Types | Base Min | Base Max |
-|-------|-------|----------|----------|
-| Tootsie Roll | Gummy, Chocolate | $1,000 | $2,000 |
-| Strawberry Bark | Chocolate, Sour | $1,000 | $2,000 |
-| Jaw Breaker | Hard Candy, Gummy | $1,000 | $2,000 |
-| Sour Patch Kids | Sour, Fruity | $1,000 | $2,000 |
-| Taffy | Chocolate, Fruity | $1,000 | $2,000 |
+| Candy | Size | Types | Base Min | Base Max |
+|-------|------|-------|----------|----------|
+| Swedish Fish | Medium | Gummy, Fruity | $200 | $800 |
+| Sour Straws | Medium | Sour, Chewy | $250 | $900 |
+| Caramel | Medium | Hard Candy, Chewy | $300 | $1,000 |
+
+### Tier 4 — Premium ($1,000–$5,000)
+
+| Candy | Size | Types | Base Min | Base Max |
+|-------|------|-------|----------|----------|
+| Snickers | Medium | Chocolate, Chewy | $1,000 | $4,000 |
+| Jaw Breaker | Big | Hard Candy, Gummy | $1,200 | $4,500 |
+| Tootsie Roll | Big | Gummy, Chocolate | $1,500 | $5,000 |
+
+### Tier 5 — Elite ($5,000–$10,000)
+
+| Candy | Size | Types | Base Min | Base Max |
+|-------|------|-------|----------|----------|
+| Strawberry Bark | Big | Chocolate, Sour | $5,000 | $9,000 |
+| Sour Patch Kids | Big | Sour, Fruity | $5,500 | $10,000 |
+| Taffy | Big | Chocolate, Fruity | $6,000 | $10,000 |
 
 ---
 
 ## 6 Candy Types
 
-| Type | Candies |
-|------|---------|
-| Gummy | Gummy Bears, Swedish Fish, Bubble Gum, Tootsie Roll, Jaw Breaker |
-| Chocolate | M&Ms, Snickers, Tootsie Roll, Strawberry Bark, Taffy |
-| Hard Candy | M&Ms, Jolly Ranchers, Warheads, Caramel, Jaw Breaker |
-| Sour | Warheads, Sour Straws, Bubble Gum, Strawberry Bark, Sour Patch Kids |
-| Chewy | Gummy Bears, Nerd Rope, Snickers, Caramel, Sour Straws |
-| Fruity | Jolly Ranchers, Nerd Rope, Swedish Fish, Sour Patch Kids, Taffy |
+Each type appears exactly 5 times across all 15 candies:
+
+| Type | Candies (Tier) |
+|------|----------------|
+| Gummy | Gummy Bears (T1), Bubble Gum (T2), Swedish Fish (T3), Jaw Breaker (T4), Tootsie Roll (T4) |
+| Chocolate | M&Ms (T2), Snickers (T4), Tootsie Roll (T4), Strawberry Bark (T5), Taffy (T5) |
+| Hard Candy | Jolly Ranchers (T1), Warheads (T1), M&Ms (T2), Caramel (T3), Jaw Breaker (T4) |
+| Sour | Warheads (T1), Bubble Gum (T2), Sour Straws (T3), Strawberry Bark (T5), Sour Patch Kids (T5) |
+| Chewy | Gummy Bears (T1), Nerd Rope (T2), Sour Straws (T3), Caramel (T3), Snickers (T4) |
+| Fruity | Jolly Ranchers (T1), Nerd Rope (T2), Swedish Fish (T3), Sour Patch Kids (T5), Taffy (T5) |
 
 Multi-type candies trigger **all** matching joker effects independently (multiplicative stacking). A candy with types [Gummy, Chocolate] activates both Gummy jokers and Chocolate jokers.
 
@@ -57,34 +69,34 @@ Multi-type candies trigger **all** matching joker effects independently (multipl
 
 ## Price Generation
 
-Prices are generated per-seed in `utils/generateSeededGameData.tsx`. The system uses 5 layered features to make each candy feel unique:
+Prices are generated per-seed in `utils/generateSeededGameData.tsx`. Each candy trades within its `[baseMin, baseMax]` range, scaled by the current day.
 
 ### Price Range
-- **Max spike price**: `baseMax * 14` (e.g., small candies max at $140, big at $28,000)
-- **Floor price**: `max(maxSpikePrice * 0.03, 0.01)`
+- Prices are clamped to `[baseMin × dayScale, baseMax × dayScale]`
+- No artificial spike multipliers — prices stay within their intended tier
 
-### Feature 1: Per-Candy Volatility
-Each candy gets a seeded volatility factor (0.3–2.0). Low volatility = stable, predictable prices. High volatility = wild swings with high-risk/high-reward potential.
+### Per-Candy Volatility
+Each candy gets a seeded volatility factor (0.3–1.5). Low volatility = stable, predictable prices. High volatility = wild swings. Each size group has 1 guaranteed low-vol and 1 guaranteed high-vol candy.
 
-### Feature 2: Random Walk / Momentum
-Prices are based on the previous period's price plus a delta, creating visible trends rather than pure noise. The delta combines trend bias, random noise, mean reversion, and occasional shocks.
+### Per-Candy Home Price
+Each candy gets a unique "home price" — a resting point between 20%–80% of its range. This is what makes same-tier candies trade at different levels (e.g., one Tier 4 candy might hover around $1,800, another around $3,500). Gentle mean reversion pulls prices back toward the home price.
 
-### Feature 3: Day-Based Price Scaling
+### Random Walk / Momentum
+Prices are based on the previous period's price plus a delta, creating visible trends rather than pure noise. The delta combines trend bias, random noise, mean reversion toward home price, and occasional shocks (10% chance per period).
+
+### Day-Based Price Scaling
 Prices are compressed early and expand late:
-- **Day 1**: Ceiling at 50% of max spike price
-- **Day 5**: Full ceiling unlocked
+- **Day 1**: Range compressed to 50% (`dayScale = 0.5`)
+- **Day 5**: Full range unlocked (`dayScale = 1.0`)
 
 This creates natural progression — early game is safer, late game has bigger swings and potential payoffs.
 
-### Feature 4: Per-Candy Personality Bands
-Each candy gets a seeded "center" and "width" within its size tier. Some candies tend cheap, others premium. This means not all small candies behave the same — Gummy Bears might hover low while Warheads run hot.
-
-### Feature 5: Trend Clusters
+### Trend Clusters
 Prices trend in one direction for 2–5 periods before reversing. This creates buy-the-dip and sell-the-peak patterns that reward attentive players.
 
 ### Event Overlays
 On top of base prices, special events can modify prices:
-- **PRICE_SPIKE**: Multiplies price by 5x (capped at $100 for small)
+- **PRICE_SPIKE**: Multiplies price by 5x (capped at 5× the base price)
 - **PRICE_DROP**: Multiplies price by 0.2x (floored at $0.01)
 
 These are location-specific and appear as hints the period before.

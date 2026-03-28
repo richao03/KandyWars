@@ -22,7 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
-import { RECESS_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
@@ -982,9 +982,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   if (gameState === 'jokerSelection') {
     return (
       <JokerSelection
-        jokers={RECESS_JOKERS}
+        jokers={STANDARDIZED_JOKERS}
         theme="recess"
-        subject="Recess"
+        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -1000,24 +1000,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             Rock Paper Scissors Battle!
           </Text>
 
-          <TouchableOpacity
-            style={styles.jokerIconButton}
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-          >
-            <PixelBorder
-              borderColor="#4A90C1"
-              borderWidth={2}
-              backgroundColor="#87CEEB"
-              innerPadding={8}
-            >
-              <TextWithEmojis style={styles.jokerIconText} imageSize={20}>
-                🃏
-              </TextWithEmojis>
-            </PixelBorder>
-          </TouchableOpacity>
 
           <PixelBorder
             borderColor="#4A90C1"
@@ -1068,10 +1050,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.back();
+              setShowAvailableJokers(true);
             }}
-            shadowColor="rgba(185,28,28,1)"
+            shadowColor="#2E7D32"
             shadowOffset={{ width: 0, height: 4 }}
             shadowOpacity={0.5}
             shadowRadius={5}
@@ -1079,9 +1060,29 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             style={styles.backButton}
           >
             <PixelBorder
-              borderColor="rgba(185,28,28,1)"
+              borderColor="#388E3C"
               borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
+              backgroundColor="#1B5E20"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Available Jokers</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              router.back();
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 8, width: '100%' }}
+          >
+            <PixelBorder
+              borderColor="#999"
+              borderWidth={3}
+              backgroundColor="#666"
               innerPadding={0}
             >
               <View style={styles.backButtonInner}>
@@ -1094,8 +1095,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         <AvailableJokersModal
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
-          jokers={RECESS_JOKERS}
-          subject="Recess"
+          jokers={STANDARDIZED_JOKERS}
+          subject="All"
           themeColors={{
             borderColor: '#4A90C1',
             backgroundColor: '#87CEEB',

@@ -15,6 +15,7 @@ import {
   setIsInitialized,
   setMinigameContext,
   setIsAfterSchool,
+  setSelectedMinigame,
   selectDay,
   selectPeriod,
   selectGameResetSignal,
@@ -28,6 +29,7 @@ import {
   selectIsInitialized,
   selectLocationHistory,
   selectIsAfterSchool,
+  selectSelectedMinigame,
 } from '../store/slices/gameSlice';
 
 export const useGame = () => {
@@ -45,6 +47,7 @@ export const useGame = () => {
   const isInitialized = useAppSelector(selectIsInitialized);
   const locationHistory = useAppSelector(selectLocationHistory);
   const isAfterSchool = useAppSelector(selectIsAfterSchool);
+  const selectedMinigame = useAppSelector(selectSelectedMinigame);
   const gameResetSignal = useAppSelector(selectGameResetSignal);
 
   const incrementPeriodAction = useCallback((location: Parameters<typeof incrementPeriod>[0]) => {
@@ -105,6 +108,10 @@ export const useGame = () => {
     dispatch(setIsAfterSchool(isAfterSchool));
   }, [dispatch]);
 
+  const setSelectedMinigameAction = useCallback((minigame: string | null) => {
+    dispatch(setSelectedMinigame(minigame));
+  }, [dispatch]);
+
   // Return object directly - useAppSelector calls are already optimized
   return {
     day,
@@ -116,6 +123,7 @@ export const useGame = () => {
     hasStudiedTonight,
     hasPlayedLunchMinigame,
     minigameContext,
+    selectedMinigame,
     lastActiveView,
     pricesUpdating,
     isInitialized,
@@ -133,6 +141,7 @@ export const useGame = () => {
     setPricesUpdating: setPricesUpdatingAction,
     setIsInitialized: setIsInitializedAction,
     setMinigameContext: setMinigameContextAction,
+    setSelectedMinigame: setSelectedMinigameAction,
     setIsAfterSchool: setIsAfterSchoolAction,
   };
 };
