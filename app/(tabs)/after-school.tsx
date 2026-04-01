@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { Image, ImageBackground, StyleSheet, Text, View } from 'react-native';
@@ -31,6 +32,7 @@ import GoingToSchoolModal from '../components/GoingToSchoolModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SleepConfirmModal from '../components/SleepConfirmModal';
+import FirstTimeHint from '../components/FirstTimeHint';
 import StudySubjectSelector from '../components/StudySubjectSelector';
 import DeliPage from '../deli';
 import PiggyBankPage from '../piggy-bank';
@@ -114,15 +116,19 @@ function AfterSchoolPage() {
     setShowStudySubjects(true);
   }, [hasStudiedTonight]);
 
+  const userDismissedSubjects = useRef(false);
+
   const handleBackToOptions = useCallback(() => {
+    userDismissedSubjects.current = true;
     setShowStudySubjects(false);
   }, []);
 
-  // Reset study subjects view when returning from minigame
+  // Show study subjects (grayed out) when returning from a completed minigame,
+  // but not if the user already dismissed them with the back button
   useFocusEffect(
     useCallback(() => {
-      if (hasStudiedTonight && showStudySubjects) {
-        setShowStudySubjects(false);
+      if (hasStudiedTonight && !showStudySubjects && !userDismissedSubjects.current) {
+        setShowStudySubjects(true);
       }
     }, [hasStudiedTonight, showStudySubjects])
   );
@@ -418,6 +424,10 @@ function AfterSchoolPage() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" backgroundColor="#2a1845" />
+      <FirstTimeHint
+        hintKey="after_school"
+        message="School's out! Study to earn Jokers, deposit money, visit the deli, or sleep to start a new day."
+      />
 
       {showStash ? (
         <>

@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import PressableButton from './PressableButton';
+import PixelBorder from './PixelBorder';
 import { useTutorial } from '../../src/hooks/useTutorial';
 
 const OVERLAY_COLOR = 'rgba(0,0,0,0.7)';
@@ -15,65 +16,78 @@ const TOOLTIP_MARGIN = 16;
 
 interface StepConfig {
   text: string;
-  /** Whether advancement requires the user to tap the underlying target */
   actionBased: boolean;
   buttonLabel: string;
+  centered?: boolean;
 }
 
 const STEP_CONFIGS: Record<number, StepConfig> = {
   1: {
-    text: 'This is your cash. You start with $20 — spend it wisely!',
+    text: "You just adopted a pet rock. Problem is... you owe $5,000 for the adoption fee. Time to hustle candy at school to pay it off!",
     actionBased: false,
-    buttonLabel: 'Next',
+    buttonLabel: "Let's Go!",
+    centered: true,
   },
   2: {
-    text: 'This is your debt. Pay it off by the end of Day 5 to win!',
+    text: 'This is your cash — $20 to start. Spend wisely!',
     actionBased: false,
-    buttonLabel: 'Next',
+    buttonLabel: 'Got it',
   },
   3: {
+    text: 'This is your debt. Deposit money here to pay off $5,000 before Day 5 ends.',
+    actionBased: false,
+    buttonLabel: 'Got it',
+  },
+  4: {
     text: 'Gummy Bears are cheap right now! Tap to buy some.',
     actionBased: true,
     buttonLabel: '',
   },
-  4: {
-    text: 'Tap the Buy button to purchase Gummy Bears!',
-    actionBased: true,
-    buttonLabel: '',
-  },
   5: {
-    text: 'Nice! Now travel to the next period — prices will change!',
+    text: 'Tap Buy to grab them!',
     actionBased: true,
     buttonLabel: '',
   },
   6: {
-    text: 'Gummy Bears went up! Tap to sell them for a profit!',
+    text: 'Nice! You bought candy. Now go to the next period — prices change every period!',
     actionBased: true,
     buttonLabel: '',
   },
   7: {
-    text: 'Switch to the Sell tab to sell your candy.',
+    text: 'Gummy Bears jumped up! Tap to sell them for a profit!',
     actionBased: true,
     buttonLabel: '',
   },
   8: {
-    text: 'Now tap Sell to pocket your profit!',
+    text: 'Sell to pocket the profit!',
     actionBased: true,
     buttonLabel: '',
   },
-  // Steps 9-11 use custom overlays in _layout.tsx and jokers.tsx
 };
 
 export default function TutorialOverlay() {
-  const { currentStep, isActive, advance, skip, getTargetLayout } =
+  const { currentStep, isActive, advance, skip, getTargetLayout, tutorialComplete } =
     useTutorial();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const screenDims = Dimensions.get('window');
-  // Force re-render tick so we re-read the layout map after measurement
   const [layoutTick, setLayoutTick] = useState(0);
+  const [showCongrats, setShowCongrats] = useState(false);
+  const prevComplete = useRef(tutorialComplete);
+
+  const stepConfig = STEP_CONFIGS[currentStep] ?? null;
+  const targetLayout = getTargetLayout(currentStep);
+
+  // ALL hooks must be above any returns
 
   useEffect(() => {
-    if (isActive) {
+    if (!prevComplete.current && tutorialComplete) {
+      setShowCongrats(true);
+    }
+    prevComplete.current = tutorialComplete;
+  }, [tutorialComplete]);
+
+  useEffect(() => {
+    if (isActive || showCongrats) {
       fadeAnim.setValue(0);
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -87,25 +101,20 @@ export default function TutorialOverlay() {
         useNativeDriver: true,
       }).start();
     }
-  }, [isActive, currentStep, fadeAnim]);
+  }, [isActive, currentStep, fadeAnim, showCongrats]);
 
-  // Poll for target layout becoming available (measurements happen async)
   useEffect(() => {
     if (!isActive) return;
+    if (stepConfig?.centered) return;
     const target = getTargetLayout(currentStep);
-    if (target && target.width > 0) return; // Already have it
+    if (target && target.width > 0) return;
 
-    // Retry a few times with increasing delays
     const timers = [400, 800, 1500].map((delay) =>
       setTimeout(() => setLayoutTick((t) => t + 1), delay)
     );
     return () => timers.forEach(clearTimeout);
-  }, [isActive, currentStep, getTargetLayout]);
+  }, [isActive, currentStep, getTargetLayout, stepConfig]);
 
-  const stepConfig = STEP_CONFIGS[currentStep];
-  const targetLayout = getTargetLayout(currentStep);
-
-  // Compute cutout and tooltip positions
   const positions = useMemo(() => {
     if (!targetLayout || targetLayout.width === 0 || targetLayout.height === 0)
       return null;
@@ -117,7 +126,6 @@ export default function TutorialOverlay() {
       height: targetLayout.height + CUTOUT_PADDING * 2,
     };
 
-    // Determine tooltip placement
     const cutoutCenterY = cutout.y + cutout.height / 2;
     const tooltipBelow = cutoutCenterY < screenDims.height / 2;
 
@@ -125,7 +133,6 @@ export default function TutorialOverlay() {
       ? cutout.y + cutout.height + 16
       : cutout.y - 16;
 
-    // Center tooltip horizontally, clamped to screen
     const tooltipWidth = Math.min(screenDims.width - TOOLTIP_MARGIN * 2, 300);
     let tooltipX = cutout.x + cutout.width / 2 - tooltipWidth / 2;
     tooltipX = Math.max(
@@ -133,7 +140,6 @@ export default function TutorialOverlay() {
       Math.min(tooltipX, screenDims.width - tooltipWidth - TOOLTIP_MARGIN)
     );
 
-    // Arrow position (relative to tooltip)
     const arrowLeft = Math.max(
       20,
       Math.min(
@@ -146,9 +152,82 @@ export default function TutorialOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetLayout, screenDims, currentStep, layoutTick]);
 
+  // === RENDERING (early returns ok after all hooks) ===
+
+  // Congrats modal
+  if (showCongrats) {
+    return (
+      <Animated.View
+        style={[styles.fullOverlay, { opacity: fadeAnim }]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.fullDim} pointerEvents="auto" />
+        <View style={styles.centeredContainer}>
+          <PixelBorder
+            borderColor="#FFD700"
+            borderWidth={3}
+            backgroundColor="#1a1a2e"
+            innerPadding={20}
+          >
+            <Text style={styles.congratsEmoji}>🎉</Text>
+            <Text style={styles.congratsTitle}>Now You Get It!</Text>
+            <Text style={styles.congratsText}>
+              Buy low, sell high — that's the hustle! Make enough money to
+              adopt your pet before Day 5 ends. Study minigames to earn
+              Jokers that power up your profits!
+            </Text>
+            <PressableButton onPress={() => setShowCongrats(false)}>
+              <View style={styles.nextButton}>
+                <Text style={styles.nextButtonText}>Start Playing</Text>
+              </View>
+            </PressableButton>
+          </PixelBorder>
+        </View>
+      </Animated.View>
+    );
+  }
+
   if (!isActive || !stepConfig) return null;
 
-  // Wait for target to be measured before showing anything — prevents flash
+  // Steps 5 and 8 are handled inside TransactionModal
+  if (currentStep === 5 || currentStep === 8) return null;
+
+  // Centered modal (step 1 welcome)
+  if (stepConfig.centered) {
+    return (
+      <Animated.View
+        style={[styles.fullOverlay, { opacity: fadeAnim }]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.fullDim} pointerEvents="auto" />
+        <View style={styles.centeredContainer}>
+          <PixelBorder
+            borderColor="#FFD700"
+            borderWidth={3}
+            backgroundColor="#1a1a2e"
+            innerPadding={20}
+          >
+            <Text style={styles.congratsEmoji}>🪨</Text>
+            <Text style={styles.tooltipText}>{stepConfig.text}</Text>
+            <View style={styles.buttonRow}>
+              <PressableButton onPress={skip}>
+                <Text style={styles.skipText}>Skip Tutorial</Text>
+              </PressableButton>
+              <PressableButton onPress={advance}>
+                <View style={styles.nextButton}>
+                  <Text style={styles.nextButtonText}>
+                    {stepConfig.buttonLabel}
+                  </Text>
+                </View>
+              </PressableButton>
+            </View>
+          </PixelBorder>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  // Wait for spotlight target to be measured — show nothing until ready
   if (!positions) return null;
 
   const { cutout, tooltipBelow, tooltipY, tooltipX, tooltipWidth, arrowLeft } =
@@ -159,63 +238,25 @@ export default function TutorialOverlay() {
       style={[styles.fullOverlay, { opacity: fadeAnim }]}
       pointerEvents="box-none"
     >
-      {/* Top dim rect */}
+      {/* Dim rects */}
       <View
-        style={[
-          styles.dimRect,
-          {
-            top: 0,
-            left: 0,
-            right: 0,
-            height: Math.max(0, cutout.y),
-          },
-        ]}
+        style={[styles.dimRect, { top: 0, left: 0, right: 0, height: Math.max(0, cutout.y) }]}
+        pointerEvents="auto"
+      />
+      <View
+        style={[styles.dimRect, { top: cutout.y, left: 0, width: Math.max(0, cutout.x), height: cutout.height }]}
+        pointerEvents="auto"
+      />
+      <View
+        style={[styles.dimRect, { top: cutout.y, left: cutout.x + cutout.width, right: 0, height: cutout.height }]}
+        pointerEvents="auto"
+      />
+      <View
+        style={[styles.dimRect, { top: cutout.y + cutout.height, left: 0, right: 0, bottom: 0 }]}
         pointerEvents="auto"
       />
 
-      {/* Left dim rect */}
-      <View
-        style={[
-          styles.dimRect,
-          {
-            top: cutout.y,
-            left: 0,
-            width: Math.max(0, cutout.x),
-            height: cutout.height,
-          },
-        ]}
-        pointerEvents="auto"
-      />
-
-      {/* Right dim rect */}
-      <View
-        style={[
-          styles.dimRect,
-          {
-            top: cutout.y,
-            left: cutout.x + cutout.width,
-            right: 0,
-            height: cutout.height,
-          },
-        ]}
-        pointerEvents="auto"
-      />
-
-      {/* Bottom dim rect */}
-      <View
-        style={[
-          styles.dimRect,
-          {
-            top: cutout.y + cutout.height,
-            left: 0,
-            right: 0,
-            bottom: 0,
-          },
-        ]}
-        pointerEvents="auto"
-      />
-
-      {/* Cutout area — passthrough taps for action-based steps */}
+      {/* Cutout border */}
       <View
         style={{
           position: 'absolute',
@@ -244,7 +285,6 @@ export default function TutorialOverlay() {
         ]}
         pointerEvents="box-none"
       >
-        {/* Arrow */}
         <View
           style={[
             tooltipBelow ? styles.arrowUp : styles.arrowDown,
@@ -289,6 +329,38 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: OVERLAY_COLOR,
   },
+  centeredContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    zIndex: 10000,
+  },
+  congratsEmoji: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  congratsTitle: {
+    color: '#FFD700',
+    fontSize: 24,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  congratsText: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   tooltip: {
     position: 'absolute',
     backgroundColor: '#1a1a2e',
@@ -331,23 +403,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'PixeloidMono',
     fontWeight: 'bold',
-  },
-  centeredTooltip: {
-    position: 'absolute',
-    top: '40%',
-    left: 20,
-    right: 20,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: '#FFD700',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 20,
-    zIndex: 10000,
   },
   arrowUp: {
     position: 'absolute',

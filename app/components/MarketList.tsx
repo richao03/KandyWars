@@ -2,6 +2,12 @@ import React, { useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import CandyListItem, { CandyForMarket } from './CandyListItem';
 import StudySubjectSelector from './StudySubjectSelector';
+import UnlockCandyRow from './UnlockCandyRow';
+
+interface UnlockButtonInfo {
+  size: 'medium' | 'big';
+  cost: number;
+}
 
 interface MarketListProps {
   candies: CandyForMarket[];
@@ -13,6 +19,9 @@ interface MarketListProps {
   onCandyPress: (index: number) => void;
   onLunchBack: () => void;
   gummyBearsRef?: React.RefObject<View | null>;
+  unlockButton?: UnlockButtonInfo | null;
+  onUnlock?: (size: 'medium' | 'big') => void;
+  playerBalance?: number;
 }
 
 const MarketList = React.memo(function MarketList({
@@ -25,6 +34,9 @@ const MarketList = React.memo(function MarketList({
   onCandyPress,
   onLunchBack,
   gummyBearsRef,
+  unlockButton,
+  onUnlock,
+  playerBalance,
 }: MarketListProps) {
   const renderItem = useCallback(
     ({ item, index }: { item: CandyForMarket; index: number }) => {
@@ -92,6 +104,14 @@ const MarketList = React.memo(function MarketList({
           showsVerticalScrollIndicator={true}
           overScrollMode="never"
           renderItem={renderItem}
+          ListFooterComponent={unlockButton ? (
+            <UnlockCandyRow
+              size={unlockButton.size}
+              cost={unlockButton.cost}
+              canAfford={(playerBalance ?? 0) >= unlockButton.cost}
+              onPress={() => onUnlock?.(unlockButton.size)}
+            />
+          ) : null}
         />
       </View>
     </View>

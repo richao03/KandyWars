@@ -15,6 +15,8 @@ interface MarketActionButtonsProps {
   onEndDay: () => void;
   isNextPeriodEnabled?: boolean;
   nextPeriodRef?: React.RefObject<View | null>;
+  tutorialHidden?: boolean;
+  hideEndDay?: boolean;
 }
 
 const MarketActionButtons = React.memo(function MarketActionButtons({
@@ -27,7 +29,11 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
   onEndDay,
   isNextPeriodEnabled = true,
   nextPeriodRef,
+  tutorialHidden = false,
+  hideEndDay = false,
 }: MarketActionButtonsProps) {
+  // During tutorial, hide all buttons
+  if (tutorialHidden) return null;
   // Calculate lunch period dynamically (period 3 for 6-period days, period 4 for 8-period days)
   const lunchPeriod = Math.floor(periodsPerDay / 2);
   const isGoToLunch = period === lunchPeriod && !showLunchMinigames;
@@ -151,27 +157,29 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
       </PressableButton>
       </View>
 
-      <PressableButton
-        onPress={onEndDay}
-        shadowColor="rgba(185,28,28,1)"
-        shadowOffset={{ width: 0, height: 4 }}
-        shadowOpacity={0.5}
-        shadowRadius={5}
-        elevation={8}
-        style={styles.smallButton}
-      >
-        <PixelBorder
-          borderColor="rgba(185,28,28,1)"
-          borderWidth={3}
-          backgroundColor="rgba(239,68,68,1)"
-          innerPadding={0}
+      {!hideEndDay && (
+        <PressableButton
+          onPress={onEndDay}
+          shadowColor="rgba(185,28,28,1)"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.5}
+          shadowRadius={5}
+          elevation={8}
+          style={styles.smallButton}
         >
-          <View style={[styles.pixelButtonInner, styles.endDayButtonInner]}>
-            <Text style={styles.endDayButtonText}>End Day</Text>
-            <Text style={styles.endDaySubtext}>Skip to after school</Text>
-          </View>
-        </PixelBorder>
-      </PressableButton>
+          <PixelBorder
+            borderColor="rgba(185,28,28,1)"
+            borderWidth={3}
+            backgroundColor="rgba(239,68,68,1)"
+            innerPadding={0}
+          >
+            <View style={[styles.pixelButtonInner, styles.endDayButtonInner]}>
+              <Text style={styles.endDayButtonText}>End Day</Text>
+              <Text style={styles.endDaySubtext}>Skip to after school</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
+      )}
     </View>
   );
 });

@@ -48,7 +48,7 @@ const rootReducer = combineReducers({
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 5, // Increment version to trigger migration
+  version: 6, // Increment version to trigger migration
   storage: AsyncStorage,
   whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
@@ -114,6 +114,22 @@ const persistConfig = {
       }
       if (state.hallPass) {
         state.hallPass.isLoaded = false;
+      }
+    }
+
+    // Migration to version 6: Candy size unlock system
+    // - Candy prices now correlate with size (small=cheap, medium=mid, big=expensive)
+    // - Clear inventory and seed data (candy price ranges changed)
+    // - mediumCandiesUnlocked/bigCandiesUnlocked default to false via gameSlice initialState
+    if (state && state._persist?.version < 6) {
+      console.log('🔄 Migrating to version 6: Candy size unlock system');
+      if (state.inventory) {
+        state.inventory.items = [];
+        state.inventory.totalQuantity = 0;
+      }
+      if (state.seed) {
+        state.seed.gameData = null;
+        state.seed.currentSeed = null;
       }
     }
 

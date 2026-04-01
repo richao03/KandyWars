@@ -1,6 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -20,19 +18,20 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
-import TextWithEmojis from '../components/TextWithEmojis';
 import PressableButton from '../components/PressableButton';
-import AvailableJokersModal from '../components/AvailableJokersModal';
-import colors from '../../src/constants/colors';
-
+import TextWithEmojis from '../components/TextWithEmojis';
 
 interface RecessGameProps {
   onComplete: () => void;
@@ -90,18 +89,18 @@ const STAGE_TIMINGS = {
 const HAND_POSITIONS = {
   // Style 0: Diagonal positioning (player top-left, CPU bottom-right)
   style0: {
-    player: { x: -58, y: -175 }, // Negative X = left, Negative Y = up
-    cpu: { x: 122, y: 145 }, // Positive X = right, Positive Y = down
+    player: { x: -58, y: -155 }, // Negative X = left, Negative Y = up
+    cpu: { x: 147, y: 295 }, // Positive X = right, Positive Y = down
   },
   // Style 1: Reversed diagonal (player bottom-left, CPU top-right)
   style1: {
-    player: { x: -59, y: 55 },
-    cpu: { x: 93, y: -76 },
+    player: { x: -39, y: 135 },
+    cpu: { x: 123, y: -31 },
   },
   // Style 2: Horizontal (both centered vertically)
   style2: {
-    player: { x: -49, y: 0 },
-    cpu: { x: 98, y: 0 },
+    player: { x: -24, y: 70 },
+    cpu: { x: 98, y: 90 },
   },
 };
 
@@ -459,7 +458,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           if (completedLevel > 0) {
             // Player completed at least one stage, award jokers based on completion
             const jokerCount = completedLevel;
-            const jokerText = jokerCount > 1 ? `${jokerCount} stages` : '1 stage';
+            const jokerText =
+              jokerCount > 1 ? `${jokerCount} stages` : '1 stage';
 
             showModal(
               'Nice Effort!',
@@ -566,7 +566,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         // Reset isProcessingRound flag since we're done processing this round
         setIsProcessingRound(false);
         isProcessingRoundRef.current = false;
-        console.log(`⏰ Result timeout fired - shouldCompleteStage=${shouldCompleteStage}, isGameOver=${isGameOver}, gameState=${gameStateRef.current}`);
+        console.log(
+          `⏰ Result timeout fired - shouldCompleteStage=${shouldCompleteStage}, isGameOver=${isGameOver}, gameState=${gameStateRef.current}`
+        );
         // Check if stage was just completed (4 wins total)
         if (shouldCompleteStage) {
           console.log(
@@ -579,7 +581,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           if (completedLevel > 0) {
             // Player completed at least one stage, award jokers based on completion
             const jokerCount = completedLevel;
-            const jokerText = jokerCount > 1 ? `${jokerCount} stages` : '1 stage';
+            const jokerText =
+              jokerCount > 1 ? `${jokerCount} stages` : '1 stage';
 
             showModal(
               'Nice Effort!',
@@ -613,14 +616,18 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           !isProcessingRoundRef.current
         ) {
           // Reset positions to edges of game area (not off-screen)
-          console.log(`🔄 Starting next countdown after win - gameState=${gameStateRef.current}, isProcessing=${isProcessingRoundRef.current}`);
+          console.log(
+            `🔄 Starting next countdown after win - gameState=${gameStateRef.current}, isProcessing=${isProcessingRoundRef.current}`
+          );
           playerGestureX.value = -200;
           playerGestureY.value = 0;
           computerGestureX.value = 200;
           computerGestureY.value = 0;
           startCountdown(undefined, newRoundsPlayed);
         } else {
-          console.log(`❌ NOT starting countdown - gameState=${gameStateRef.current}, levelComplete=${gameStateRef.current === 'levelComplete'}, jokerSelection=${gameStateRef.current === 'jokerSelection'}, isProcessing=${isProcessingRoundRef.current}`);
+          console.log(
+            `❌ NOT starting countdown - gameState=${gameStateRef.current}, levelComplete=${gameStateRef.current === 'levelComplete'}, jokerSelection=${gameStateRef.current === 'jokerSelection'}, isProcessing=${isProcessingRoundRef.current}`
+          );
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
     }
@@ -824,9 +831,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           // Style 1: Start from corners - arms hidden within game area
           // For diagonal at 135°, start from true diagonal corner for angled entrance
           playerGestureX.value = -220; // Start further out diagonally
-          playerGestureY.value = -180; // Start further out diagonally
+          playerGestureY.value = -130; // Start further out diagonally
           computerGestureX.value = 200; // Start further out diagonally for angled entrance
-          computerGestureY.value = 200; // Start further out diagonally for angled entrance
+          computerGestureY.value = 250; // Start further out diagonally for angled entrance
 
           // Angles for diagonal entrance
           playerRotation.value = 135;
@@ -834,9 +841,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         } else if (entranceStyle === 1) {
           // Style 2: Opposite corners - arms hidden within game area
           playerGestureX.value = -180; // Arm hidden within left edge
-          playerGestureY.value = 150; // Arm hidden within bottom edge
+          playerGestureY.value = 200; // Arm hidden within bottom edge
           computerGestureX.value = 180; // Arm hidden within right edge
-          computerGestureY.value = -150; // Arm hidden within top edge
+          computerGestureY.value = -100; // Arm hidden within top edge
 
           // Angles for diagonal entrance
           playerRotation.value = 45;
@@ -844,9 +851,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         } else {
           // Style 3: Straight from sides - arms hidden within game area
           playerGestureX.value = -200; // Arm hidden within left edge
-          playerGestureY.value = 0;
+          playerGestureY.value = 50;
           computerGestureX.value = 200; // Arm hidden within right edge
-          computerGestureY.value = 0;
+          computerGestureY.value = 50;
 
           // Standard horizontal rotations
           playerRotation.value = 90;
@@ -999,7 +1006,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           <Text style={styles.instructionsTitle}>
             Rock Paper Scissors Battle!
           </Text>
-
 
           <PixelBorder
             borderColor="#4A90C1"

@@ -1,12 +1,10 @@
 import { Tabs, usePathname } from 'expo-router';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, Image, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, InteractionManager, Pressable, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import PressableButton from '../components/PressableButton';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import { useTutorial } from '../../src/hooks/useTutorial';
 import GameHUD from '../components/GameHUD';
 
 // Lazy load AdBanner for better initial render performance
@@ -59,7 +57,6 @@ export default function TabLayout() {
   const tabBarContext = useTabBar();
   const [shouldRenderAd, setShouldRenderAd] = useState(false);
   const pathname = usePathname();
-  const { currentStep: tutorialStep, isActive: tutorialActive, advance: advanceTutorial, skip: skipTutorial, registerTarget } = useTutorial();
 
   const isAfterSchool = gameContext?.isAfterSchool || false;
   const isTabBarVisible = tabBarContext?.isTabBarVisible || false;
@@ -113,10 +110,10 @@ export default function TabLayout() {
       animation: 'none', // Disable animations for instant switching
       lazy: true, // Only mount screens when they're focused for the first time
       unmountOnBlur: false, // Keep screens mounted for better performance and state preservation
-      tabBarStyle: (isTabBarVisible || tutorialStep === 9)
+      tabBarStyle: isTabBarVisible
         ? {
             backgroundColor: '#000000',
-            height: 49, // Standard iOS tab bar height
+            height: 49,
             paddingBottom: 0,
           }
         : {
@@ -131,7 +128,7 @@ export default function TabLayout() {
       },
       tabBarButton: (props: any) => <AnimatedTabButton {...props} />,
     }),
-    [isAfterSchool, isTabBarVisible, tutorialStep]
+    [isAfterSchool, isTabBarVisible]
   );
 
   return (
@@ -185,18 +182,6 @@ export default function TabLayout() {
                 resizeMode="contain"
               />
             ),
-            ...(tutorialStep === 9 && {
-              tabBarButton: (props: any) => (
-                <Pressable
-                  {...props}
-                  onPress={(e: any) => {
-                    advanceTutorial();
-                    props.onPress?.(e);
-                  }}
-                  style={[props.style, tutorialStep9Styles.highlightedTab]}
-                />
-              ),
-            }),
           }}
         />
         <Tabs.Screen
@@ -247,97 +232,7 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-      {/* Tutorial: step 9 custom overlay (leaves tab bar exposed) */}
-      {tutorialStep === 9 && (
-        <View style={tutorialStep9Styles.overlay} pointerEvents="box-none">
-          <View style={tutorialStep9Styles.dim} pointerEvents="auto" />
-          <View style={tutorialStep9Styles.tooltip} pointerEvents="box-none">
-            <Text style={tutorialStep9Styles.tooltipText}>
-              You can collect Jokers by completing minigames. Tap the Jokers tab!
-            </Text>
-            <View style={tutorialStep9Styles.buttonRow}>
-              <PressableButton onPress={skipTutorial}>
-                <Text style={tutorialStep9Styles.skipText}>Skip Tutorial</Text>
-              </PressableButton>
-            </View>
-            <View style={tutorialStep9Styles.arrowDown} />
-          </View>
-        </View>
-      )}
     </View>
   );
 }
 
-const TAB_BAR_HEIGHT = 49;
-
-const tutorialStep9Styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: TAB_BAR_HEIGHT, // Stop above tab bar so it stays exposed
-    zIndex: 9999,
-    elevation: 9999,
-  },
-  dim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  tooltip: {
-    position: 'absolute',
-    bottom: 16,
-    left: 20,
-    right: 20,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#FFD700',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 20,
-  },
-  tooltipText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'PixeloidMono',
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  skipText: {
-    color: '#888',
-    fontSize: 13,
-    fontFamily: 'PixeloidMono',
-  },
-  arrowDown: {
-    position: 'absolute',
-    bottom: -12,
-    left: Dimensions.get('window').width * 0.25 - 20, // Point toward 2nd tab (Jokers)
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 12,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#FFD700',
-  },
-  highlightedTab: {
-    borderWidth: 2,
-    borderColor: '#FFD700',
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-});

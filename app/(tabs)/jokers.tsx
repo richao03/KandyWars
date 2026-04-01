@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, FlatList, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { CANDY_NAMES } from '../../src/constants/candyRegistry';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
@@ -10,18 +11,14 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useTutorial } from '../../src/hooks/useTutorial';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import {
-  setHasDuplicatedVacuumSealer,
-  setStashedAmount,
-} from '../../src/store/slices/walletSlice';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
 import FastModal from '../components/FastModal';
+import FirstTimeHint from '../components/FirstTimeHint';
 import JokerCard from '../components/JokerCard';
 import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import { CANDY_NAMES } from '../../src/constants/candyRegistry';
 
 const CANDY_TYPES = CANDY_NAMES;
 
@@ -35,7 +32,13 @@ function JokersPage() {
   const seedContext = useSeed();
   const { triggerEvent } = useEventHandler();
   const isFocused = useIsFocused();
-  const { currentStep: tutorialStep, isActive: tutorialActive, advance: advanceTutorial, skip: skipTutorial, registerTarget } = useTutorial();
+  const {
+    currentStep: tutorialStep,
+    isActive: tutorialActive,
+    advance: advanceTutorial,
+    skip: skipTutorial,
+    registerTarget,
+  } = useTutorial();
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
@@ -115,18 +118,12 @@ function JokersPage() {
   );
   const [isModalTransitioning, setIsModalTransitioning] = useState(false);
 
-  // Tutorial: advance step 9→10 when jokers page is focused
-  useEffect(() => {
-    if (isFocused && tutorialStep === 9) {
-      const timer = setTimeout(() => advanceTutorial(), 400);
-      return () => clearTimeout(timer);
-    }
-  }, [isFocused, tutorialStep, advanceTutorial]);
-
+  // Old tutorial steps 9-11 removed — jokers tab now uses one-shot hints
 
   // Debug log for modal state changes
   useEffect(() => {
-    if (__DEV__) console.log('📋 confirmModal.visible changed to:', confirmModal.visible);
+    if (__DEV__)
+      console.log('📋 confirmModal.visible changed to:', confirmModal.visible);
   }, [confirmModal.visible]);
 
   // Extract values from contexts
@@ -149,7 +146,8 @@ function JokersPage() {
 
     // If a modal is transitioning, queue the new modal
     if (isModalTransitioning) {
-      if (__DEV__) console.log('📋 Modal is transitioning, queueing request...');
+      if (__DEV__)
+        console.log('📋 Modal is transitioning, queueing request...');
       setTimeout(() => {
         handleShowConfirmation(
           title,
@@ -383,32 +381,18 @@ function JokersPage() {
   const showLoading =
     !gameContext || !jokerContext || !seedContext || !isLoaded;
 
-  // Create sectioned data for browse tab with 2-column layout
-  const sectionedJokers = useMemo(() => {
-    const sections = [];
-    const subjects = (Object.keys(ALL_JOKERS) as Array<keyof typeof ALL_JOKERS>).sort();
-
-    for (const subject of subjects) {
-      const subjectJokers = ALL_JOKERS[subject] || [];
-      if (subjectJokers.length > 0) {
-        // Group jokers into rows of 2 for proper 2-column layout
-        const jokersInRows = [];
-        for (let i = 0; i < subjectJokers.length; i += 2) {
-          const row = [subjectJokers[i]];
-          if (subjectJokers[i + 1]) {
-            row.push(subjectJokers[i + 1]);
-          }
-          jokersInRows.push(row);
-        }
-
-        sections.push({
-          title: subject,
-          data: jokersInRows,
-        });
+  // Create flat list of all jokers in rows of 2 for browse tab
+  const allJokersInRows = useMemo(() => {
+    const flatJokers = Object.values(ALL_JOKERS).flat();
+    const rows = [];
+    for (let i = 0; i < flatJokers.length; i += 2) {
+      const row = [flatJokers[i]];
+      if (flatJokers[i + 1]) {
+        row.push(flatJokers[i + 1]);
       }
+      rows.push(row);
     }
-
-    return sections;
+    return rows;
   }, []);
 
   // Get total count for browse tab
@@ -446,7 +430,6 @@ function JokersPage() {
             disableActivation={false}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
-
             onTriggerEvent={triggerEvent}
           />
         </View>
@@ -467,7 +450,6 @@ function JokersPage() {
             debugMode={debugMode && __DEV__}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
-
             onTriggerEvent={triggerEvent}
           />
         </View>
@@ -488,6 +470,10 @@ function JokersPage() {
 
   return (
     <View style={styles.container}>
+      <FirstTimeHint
+        hintKey="jokers_tab"
+        message="These are your Jokers. Each one gives a special profit bonus when selling candy."
+      />
       <View style={headerStyles}>
         {/* <View style={styles.headerTop}>
           <View style={styles.titleRow}>
@@ -510,11 +496,13 @@ function JokersPage() {
           <PressableButton
             onPress={() => {
               setActiveTab('inventory');
-              if (tutorialStep === 10) advanceTutorial();
             }}
             shadowOpacity={0}
             elevation={0}
-            style={[styles.tab, activeTab === 'inventory' && styles.activeTab, tutorialStep === 10 && styles.tutorialHighlight, tutorialStep === 10 && { zIndex: 10001, elevation: 10001 }]}
+            style={[
+              styles.tab,
+              activeTab === 'inventory' && styles.activeTab,
+            ]}
           >
             <TextWithEmojis
               imageSize={20}
@@ -523,18 +511,20 @@ function JokersPage() {
                 activeTab == 'inventory' && styles.activeTabText,
               ]}
             >
-              {`🎒 Owned (${jokers.length}) | Aura: ${jokerContext.persistentJokerCount}/${jokerContext.maxPersistentSlots}`}
+              {`🎒 Owned (${jokers.length})`}
             </TextWithEmojis>
           </PressableButton>
 
           <PressableButton
             onPress={() => {
               setActiveTab('see-all');
-              if (tutorialStep === 11) advanceTutorial();
             }}
             shadowOpacity={0}
             elevation={0}
-            style={[styles.tab, activeTab !== 'inventory' && styles.activeTab, tutorialStep === 11 && styles.tutorialHighlight, tutorialStep === 11 && { zIndex: 10001, elevation: 10001 }]}
+            style={[
+              styles.tab,
+              activeTab !== 'inventory' && styles.activeTab,
+            ]}
           >
             <Text
               style={[
@@ -566,15 +556,10 @@ function JokersPage() {
           </View>
         )
       ) : (
-        <SectionList
-          sections={sectionedJokers}
+        <FlatList
+          data={allJokersInRows}
           keyExtractor={(item, index) => `row-${index}`}
           renderItem={renderJokerRow}
-          renderSectionHeader={({ section: { title } }) => (
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{title}</Text>
-            </View>
-          )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -589,7 +574,10 @@ function JokersPage() {
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
         onConfirm={confirmModal.onConfirm}
-        onCancel={confirmModal.onCancel || (() => setConfirmModal((prev) => ({ ...prev, visible: false })))}
+        onCancel={
+          confirmModal.onCancel ||
+          (() => setConfirmModal((prev) => ({ ...prev, visible: false })))
+        }
       />
 
       {/* Candy Selector Modal */}
@@ -611,8 +599,7 @@ function JokersPage() {
                 ? '📈'
                 : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
                   ? '💸'
-                  : candySelectorModal.joker?.id ===
-                      JOKER_IDS.BET_YOU_IM_FASTER
+                  : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
                     ? '⚡'
                     : '🍭'}
             </TextWithEmojis>
@@ -676,25 +663,6 @@ function JokersPage() {
           </PressableButton>
         </>
       </FastModal>
-
-      {/* Tutorial overlay for steps 10-11 */}
-      {(tutorialStep === 10 || tutorialStep === 11) && (
-        <View style={tutorialStyles.overlay} pointerEvents="box-none">
-          <View style={tutorialStyles.dim} pointerEvents="none" />
-          <View style={tutorialStyles.tooltip}>
-            <Text style={tutorialStyles.tooltipText}>
-              {tutorialStep === 10
-                ? 'You can find all the Jokers you own here.'
-                : 'Click here to see what subjects offer which Jokers. Good luck!'}
-            </Text>
-            <View style={tutorialStyles.buttonRow}>
-              <PressableButton onPress={skipTutorial}>
-                <Text style={tutorialStyles.skipText}>Skip Tutorial</Text>
-              </PressableButton>
-            </View>
-          </View>
-        </View>
-      )}
 
     </View>
   );

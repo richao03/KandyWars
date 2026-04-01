@@ -29,7 +29,14 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { resetDailyStats } from '../../src/store/slices/candySalesSlice';
-import { getPeriodsPerDay } from '../../src/store/slices/gameSlice';
+import {
+  getPeriodsPerDay,
+  selectMediumCandiesUnlocked,
+  selectBigCandiesUnlocked,
+  unlockMediumCandies,
+  unlockBigCandies,
+} from '../../src/store/slices/gameSlice';
+import { spendBalance, selectDifficultyLevel } from '../../src/store/slices/walletSlice';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
 import {
   consumeEffect,
@@ -38,8 +45,10 @@ import {
 import { JokerService } from '../../src/utils/jokerService';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
 import { MusicController } from '../../src/utils/musicController';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import ConfirmationModal from '../components/ConfirmationModal';
+import FirstTimeHint from '../components/FirstTimeHint';
 import EventModal from '../components/EventModal';
 import { Location } from '../components/LocationModal';
 import MarketContent from '../components/MarketContent';
@@ -49,7 +58,6 @@ import TransactionModalManager, {
 import { Candy } from '../types';
 import { CANDY_REGISTRY } from '../../src/constants/candyRegistry';
 import { useTutorial } from '../../src/hooks/useTutorial';
-import { selectDifficultyLevel } from '../../src/store/slices/walletSlice';
 import TutorialOverlay from '../components/TutorialOverlay';
 
 // Lazy load modals that are shown less frequently
@@ -80,6 +88,12 @@ function Market(props) {
 
   // Get periods per day based on hall pass selection (6 for Time Crunch, 8 otherwise)
   const periodsPerDay = useAppSelector((state) => getPeriodsPerDay(state));
+
+  // Candy size unlock state
+  const mediumUnlocked = useAppSelector(selectMediumCandiesUnlocked);
+  const bigUnlocked = useAppSelector(selectBigCandiesUnlocked);
+
+  const dispatch = useAppDispatch();
 
   // Debug: Log mount/unmount
   const instanceIdRef = useRef(Math.random().toString(36).substring(7));
@@ -242,18 +256,17 @@ function Market(props) {
   }, [registerTarget, measureContainerOffset]);
 
   // Re-measure targets when tutorial step changes
-  // Steps 4, 7, 8 are inside TransactionModal — measured there
-  // Step 9 is Jokers tab — measured in (tabs)/_layout.tsx
+  // Steps 5, 8 are inside TransactionModal — measured there
   useEffect(() => {
     if (!tutorialActive) return;
 
     // Small delay to ensure layout is complete
     const timer = setTimeout(() => {
-      if (tutorialStep === 1) measureTarget(walletRef, 1);
-      if (tutorialStep === 2) measureTarget(piggyRef, 2);
-      if (tutorialStep === 3) measureTarget(gummyBearsRef, 3);
-      if (tutorialStep === 5) measureTarget(nextPeriodRef, 5);
-      if (tutorialStep === 6) measureTarget(gummyBearsRef, 6);
+      if (tutorialStep === 2) measureTarget(walletRef, 2);
+      if (tutorialStep === 3) measureTarget(piggyRef, 3);
+      if (tutorialStep === 4) measureTarget(gummyBearsRef, 4);
+      if (tutorialStep === 6) measureTarget(nextPeriodRef, 6);
+      if (tutorialStep === 7) measureTarget(gummyBearsRef, 7);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -459,15 +472,7 @@ function Market(props) {
     periodsPerDay,
   ]);
 
-  const [candies, setCandies] = useState<CandyForMarket[]>(() =>
-    baseCandies.map((candy) => ({
-      ...candy,
-      basePrice: candy.baseMin, // Add basePrice property
-      cost: candy.baseMin, // Initialize with base minimum price
-      quantityOwned: 0,
-      averagePrice: null,
-    }))
-  );
+  const [candies, setCandies] = useState<CandyForMarket[]>([]);
 
   // Memoize joker count and inventory limit to prevent unnecessary re-renders
   const jokerCount = useMemo(() => jokers.length, [jokers.length]);
@@ -476,12 +481,37 @@ function Market(props) {
     [getInventoryLimit]
   );
 
+  // Filter candies based on unlock state (and tutorial — show only Gummy Bears during guided steps)
+  const visibleCandies = useMemo(() => {
+    // During tutorial steps 1-6, only show Gummy Bears
+    if (tutorialActive && tutorialStep <= 6) {
+      return baseCandies.filter((candy) => candy.name === 'Gummy Bears');
+    }
+    return baseCandies.filter((candy) => {
+      if (candy.size === 'small') return true;
+      if (candy.size === 'medium') return mediumUnlocked;
+      if (candy.size === 'big') return bigUnlocked;
+      return false;
+    });
+  }, [mediumUnlocked, bigUnlocked, tutorialActive, tutorialStep]);
+
+  // Determine which unlock button to show
+  const unlockButton = useMemo(() => {
+    if (!mediumUnlocked && day >= 2) {
+      return { size: 'medium' as const, cost: 500 };
+    }
+    if (mediumUnlocked && !bigUnlocked && day >= 3) {
+      return { size: 'big' as const, cost: 5000 };
+    }
+    return null;
+  }, [mediumUnlocked, bigUnlocked, day]);
+
   // Simple price lookup from gameData - NO heavy calculations
   // Price breakdowns are calculated lazily in TransactionModal when needed
   const calculatedCandies = useMemo(() => {
     const eventPrices = gameData.eventPrices || {};
 
-    return baseCandies.map((candy) => {
+    return visibleCandies.map((candy) => {
       // Just look up the price - no heavy calculations!
       let basePrice: number;
 
@@ -516,6 +546,7 @@ function Market(props) {
     gameData.candyPrices,
     gameData.eventPrices,
     inventory,
+    visibleCandies,
   ]);
 
   // Sync memoized candies to state only when they change
@@ -558,6 +589,43 @@ function Market(props) {
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
   const [isDroneDeposit, setIsDroneDeposit] = useState(false);
 
+  // Candy size unlock modal state
+  const [unlockModalVisible, setUnlockModalVisible] = useState(false);
+  const [unlockModalContent, setUnlockModalContent] = useState({
+    title: '',
+    message: '',
+    emoji: '',
+  });
+
+  const handleUnlockSize = useCallback(
+    (size: 'medium' | 'big') => {
+      const cost = size === 'medium' ? 500 : 5000;
+      if (balance < cost) return;
+
+      dispatch(spendBalance(cost));
+
+      if (size === 'medium') {
+        dispatch(unlockMediumCandies());
+        setUnlockModalContent({
+          title: 'New Candy Unlocked!',
+          message: "You've earned the big kids' candy shelf! Medium candies are now available in the market.",
+          emoji: '🍬',
+        });
+      } else {
+        dispatch(unlockBigCandies());
+        setUnlockModalContent({
+          title: 'Premium Candy Unlocked!',
+          message: 'Welcome to the top shelf! Big candies are now available. Time to make some serious money!',
+          emoji: '🍫',
+        });
+      }
+
+      SoundEffects.playCongratsSound();
+      setUnlockModalVisible(true);
+    },
+    [balance, dispatch]
+  );
+
   // Set music when screen is focused or lunch minigames toggle
   // This handles both initial mount and returning from minigames
   useFocusEffect(
@@ -583,8 +651,8 @@ function Market(props) {
     transactionModalRef.current?.open(index);
 
     // Advance tutorial when user taps Gummy Bears (index 0 = first candy)
-    // Step 3 → 4 (buy modal), Step 6 → 7 (sell modal)
-    if ((tutorialStep === 3 || tutorialStep === 6) && index === 0) {
+    // Step 4 → 5 (buy modal), Step 7 → 8 (sell modal)
+    if ((tutorialStep === 4 || tutorialStep === 7) && index === 0) {
       advanceTutorial();
     }
   }, [tutorialStep, advanceTutorial]);
@@ -885,10 +953,9 @@ function Market(props) {
       periodsPerDay
     );
 
-    // Advance tutorial when user taps Next Period during step 5
-    // Let normal flow happen (location modal), overlay hides until location is picked
-    if (tutorialStepRef.current === 5) {
-      advanceTutorial(); // → step 6
+    // Advance tutorial when user taps Next Period during step 6
+    if (tutorialStepRef.current === 6) {
+      advanceTutorial(); // → step 7
     }
 
     // Trigger success haptic feedback when advancing to next period
@@ -922,6 +989,9 @@ function Market(props) {
         );
       }
       setLunchConfirmVisible(true);
+    } else if (tutorialStepRef.current > 0 && tutorialStepRef.current <= 8) {
+      // During tutorial, skip location modal and auto-advance
+      incrementPeriod('home room');
     } else {
       // Check if there's an active event
       if (hasActiveEvent) {
@@ -938,7 +1008,6 @@ function Market(props) {
         }
         setLocationModalVisible(true);
         if (__DEV__) console.log('🔵 locationModalVisible should now be true');
-        // Check state after a brief delay to see if something is resetting it
         setTimeout(() => {
           if (__DEV__) console.log(
             '🔵 [Delayed check] locationModalVisible state after 100ms'
@@ -954,8 +1023,6 @@ function Market(props) {
     showLunchMinigames,
     periodsPerDay,
   ]);
-
-  const dispatch = useAppDispatch();
 
   const handleLocationSelect = useCallback(
     (location: Location) => {
@@ -1273,6 +1340,12 @@ function Market(props) {
       piggyBankRef: piggyRef,
       gummyBearsRef: gummyBearsRef,
       nextPeriodRef,
+      unlockButton,
+      onUnlock: handleUnlockSize,
+      playerBalance: balance,
+      // Tutorial: hide buttons until step 6 (Next Period), hide End Day during tutorial
+      tutorialHideButtons: tutorialActive && tutorialStep < 6,
+      tutorialHideEndDay: tutorialActive && tutorialStep >= 6,
     }),
     [
       candies,
@@ -1289,11 +1362,22 @@ function Market(props) {
       handleInventoryPress,
       handleNextDay,
       handleEndDay,
+      unlockButton,
+      handleUnlockSize,
+      balance,
+      tutorialActive,
+      tutorialStep,
     ]
   );
 
   return (
     <View ref={marketContainerRef} collapsable={false} style={styles.container}>
+      {showLunchMinigames && (
+        <FirstTimeHint
+          hintKey="lunch_minigame"
+          message="It's lunch! Pick a subject to study. Win the minigame to earn a Joker that boosts your profits."
+        />
+      )}
       <MarketContent {...marketProps} />
 
       <Suspense fallback={null}>
@@ -1405,6 +1489,18 @@ function Market(props) {
         dismissible={false}
       />
 
+      <ConfirmationModal
+        visible={unlockModalVisible}
+        title={unlockModalContent.title}
+        message={unlockModalContent.message}
+        emoji={unlockModalContent.emoji}
+        confirmText="Let's Go!"
+        onConfirm={() => setUnlockModalVisible(false)}
+        onCancel={() => setUnlockModalVisible(false)}
+        theme="market"
+        dismissible={true}
+      />
+
       {/* Transaction Modal Manager - manages its own state to prevent parent re-renders */}
       <TransactionModalManager
         ref={transactionModalRef}
@@ -1439,7 +1535,9 @@ function Market(props) {
 
       {/* Tutorial overlay - rendered last to be on top */}
       {/* Steps 4,7,8 are inside TransactionModal; steps 9-11 are in tab layout */}
-      {tutorialActive && tutorialStep <= 8 && tutorialStep !== 4 && tutorialStep !== 7 && tutorialStep !== 8 && <TutorialOverlay />}
+      {/* Tutorial overlay — always mounted so congrats modal can show after completion */}
+      {/* Steps 5 and 8 are inside TransactionModal; overlay hides itself when not needed */}
+      <TutorialOverlay />
     </View>
   );
 }

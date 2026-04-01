@@ -1,21 +1,37 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  Animated as RNAnimated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import colors from '../../src/constants/colors';
-import { MusicController } from '../../src/utils/musicController';
-import { SoundEffects } from '../../src/utils/soundEffects';
+import { JOKER_IDS, hasJokerById } from '../../src/constants/jokerIds';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { STANDARDIZED_JOKERS, StandardizedJoker } from '../../src/utils/jokerEffectEngine';
-import { JOKER_IDS, hasJokerById } from '../../src/constants/jokerIds';
-import { addBalance } from '../../src/store/slices/walletSlice';
-import { selectBalance } from '../../src/store/slices/walletSlice';
+import { addBalance, selectBalance } from '../../src/store/slices/walletSlice';
+import {
+  STANDARDIZED_JOKERS,
+  StandardizedJoker,
+  getJokerEffectsAtLevel,
+} from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import JokerCard from './JokerCard';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
 
 const UPGRADE_COSTS: Record<number, number> = {
-  1: 5000,   // L1 → L2
-  2: 30000,  // L2 → L3
+  1: 5000, // L1 → L2
+  2: 30000, // L2 → L3
 };
 
 interface JokerSelectionProps {
@@ -45,16 +61,25 @@ export default function JokerSelection({
   rewardTier = 3,
   completionLevel = 3,
 }: JokerSelectionProps) {
-  const [grantedJokers, setGrantedJokers] = useState<StandardizedJoker[]>([]);
+  const [availableJokers, setAvailableJokers] = useState<StandardizedJoker[]>(
+    []
+  );
+  const [chosenJokerId, setChosenJokerId] = useState<string | number | null>(
+    null
+  );
+  const [dismissedOthers, setDismissedOthers] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [hasGranted, setHasGranted] = useState(false);
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
+  const unchoseAnims = useRef<Record<string, RNAnimated.Value>>({}).current;
   const dispatch = useAppDispatch();
   const balance = useAppSelector(selectBalance);
   const {
     addJoker,
-    sellJoker,
-    jokers: ownedJokers,
+    removeJoker,
+    jokers: activeJokers,
     jokersOwned,
+    lockedJokerIds,
     persistentJokerCount,
     maxPersistentSlots,
     canAddPersistentJoker,
@@ -69,52 +94,107 @@ export default function JokerSelection({
     MusicController.setTrack('victory');
   }, []);
 
-  // Auto-grant random jokers on mount
+  // Generate available jokers on mount (but don't grant them yet)
   useEffect(() => {
-    if (hasGranted) return;
-    setHasGranted(true);
+    if (hasGenerated) return;
+    setHasGenerated(true);
 
     // Filter to jokers the player doesn't already own
     const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
     const available = jokers.filter((j) => !ownedIds.has(j.id.toString()));
 
     if (available.length === 0) {
-      setGrantedJokers([]);
+      setAvailableJokers([]);
       return;
     }
 
     // Extra Credit joker gives +1 to selection count
-    const extraCreditBonus = hasJokerById(jokersOwned, JOKER_IDS.EXTRA_CREDIT) ? 1 : 0;
-    const jokerCount = Math.min(completionLevel + extraCreditBonus, available.length);
+    const extraCreditBonus = hasJokerById(jokersOwned, JOKER_IDS.EXTRA_CREDIT)
+      ? 1
+      : 0;
+    // Valedictorian Vendor hall pass gives +1 joker selection
+    const hallPassJokerBonus = hallPassModifiers?.jokerBonusCount ?? 0;
+    const jokerCount = Math.min(
+      completionLevel + extraCreditBonus + hallPassJokerBonus,
+      available.length
+    );
     const shuffled = [...available].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, jokerCount);
 
-    // Grant each joker immediately
-    for (const joker of selected) {
-      const isOneTime = joker.type === 'one-time';
-      const jokerToAdd: JokerType = {
-        id: joker.id,
-        name: joker.name,
-        description: joker.description,
-        subject: joker.subject,
-        theme: theme,
-        type: isOneTime ? 'one-time' : 'persistent',
-        effect: '',
-        effects: joker.effects,
-        level: 1,
-      };
+    setAvailableJokers(selected);
+  }, []);
 
-      // If persistent and slots full, skip (don't block the flow)
-      if (!isOneTime && !canAddPersistentJoker()) {
-        continue;
+  // Initialize animation values for each joker
+  const getAnim = useCallback(
+    (id: string | number) => {
+      const key = id.toString();
+      if (!unchoseAnims[key]) {
+        unchoseAnims[key] = new RNAnimated.Value(1);
       }
+      return unchoseAnims[key];
+    },
+    [unchoseAnims]
+  );
 
-      addJoker(jokerToAdd, 'minigame', subject);
+  // Claim a joker when tapped — only one allowed
+  const handleClaimJoker = (joker: StandardizedJoker) => {
+    if (chosenJokerId !== null) return;
+
+    const isOneTime = joker.type === 'one-time';
+    const jokerToAdd: JokerType = {
+      id: joker.id,
+      name: joker.name,
+      description: joker.description,
+      subject: joker.subject,
+      theme: theme,
+      type: isOneTime ? 'one-time' : 'persistent',
+      effect: '',
+      effects: joker.effects,
+      level: 1,
+    };
+
+    // Block persistent (aura) jokers if slots are full
+    if (!isOneTime && !canAddPersistentJoker()) {
+      return;
     }
 
-    setGrantedJokers(selected);
+    addJoker(jokerToAdd, 'minigame', subject);
+    setChosenJokerId(joker.id);
     SoundEffects.playAchievementSound();
-  }, []);
+
+    // Wobble the chosen joker
+    const chosenAnim = getAnim(joker.id);
+    const chosenWobble = RNAnimated.sequence([
+      RNAnimated.timing(chosenAnim, { toValue: 1.1, duration: 80, useNativeDriver: true }),
+      RNAnimated.timing(chosenAnim, { toValue: 0.9, duration: 80, useNativeDriver: true }),
+      RNAnimated.timing(chosenAnim, { toValue: 1.05, duration: 60, useNativeDriver: true }),
+      RNAnimated.timing(chosenAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
+    ]);
+
+    // Fade out the unchosen jokers
+    const others = availableJokers.filter((j) => j.id !== joker.id);
+    if (others.length === 0) {
+      chosenWobble.start(() => setDismissedOthers(true));
+      return;
+    }
+
+    const dismissAnims = others.map((j) => {
+      const anim = getAnim(j.id);
+      return RNAnimated.timing(anim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      });
+    });
+
+    // Wobble chosen + dismiss others in parallel
+    RNAnimated.parallel([
+      chosenWobble,
+      RNAnimated.stagger(80, dismissAnims),
+    ]).start(() => {
+      setDismissedOthers(true);
+    });
+  };
 
   // Get upgradeable owned jokers (level < maxLevel)
   const upgradeableJokers = useMemo(() => {
@@ -139,16 +219,21 @@ export default function JokerSelection({
           type: standardized.type,
         };
       })
-      .filter(Boolean) as Array<{
-        id: string | number;
-        name: string;
-        description: string;
-        currentLevel: number;
-        maxLevel: number;
-        cost: number;
-        type: string;
-      }>;
-  }, [jokersOwned]);
+      .filter(Boolean)
+      .filter((j) => j!.cost <= balance) as Array<{
+      id: string | number;
+      name: string;
+      description: string;
+      currentLevel: number;
+      maxLevel: number;
+      cost: number;
+      type: string;
+    }>;
+  }, [jokersOwned, balance]);
+
+  const [upgradeConfirmJoker, setUpgradeConfirmJoker] = useState<
+    (typeof upgradeableJokers)[number] | null
+  >(null);
 
   const handleUpgrade = (jokerId: string | number) => {
     const joker = upgradeableJokers.find(
@@ -160,6 +245,74 @@ export default function JokerSelection({
     dispatch(addBalance(-joker.cost));
     upgradeJokerAction(jokerId.toString());
     SoundEffects.playAchievementSound();
+    setUpgradeConfirmJoker(null);
+  };
+
+  // Build a readable summary of effect values at a given level
+  const describeEffectsAtLevel = (jokerId: number, level: number): string => {
+    const effects = getJokerEffectsAtLevel(jokerId, level);
+    if (effects.length === 0) return 'No effects';
+
+    return effects
+      .map((e) => {
+        const op =
+          e.operation === 'multiply' ? 'x' : e.operation === 'add' ? '+' : '';
+        const amt =
+          e.operation === 'multiply' ? `${e.amount}x` : `${op}${e.amount}`;
+        const target = (e.target || '').replace(/_/g, ' ');
+        const cond = e.conditions
+          ? Object.values(e.conditions)
+              .filter((v) => v !== undefined && v !== -1)
+              .join(' ')
+          : '';
+        return `${amt} ${target}${cond ? ` (${cond})` : ''}`;
+      })
+      .join(', ');
+  };
+
+  const SELL_PRICE = 100;
+
+  // Sellable jokers: currently active jokers (not locked)
+  const sellableJokers = useMemo(() => {
+    return activeJokers
+      .filter((j) => !lockedJokerIds?.includes(j.id.toString()))
+      .map((j) => {
+        const standardized = STANDARDIZED_JOKERS.find(
+          (sj) => sj.id.toString() === j.id.toString()
+        );
+        return {
+          id: j.id,
+          name: j.name || standardized?.name || 'Unknown',
+          description: standardized?.description || j.description || '',
+          type: j.type,
+          level: (j as any).level ?? 1,
+        };
+      });
+  }, [activeJokers, lockedJokerIds]);
+
+  const handleSellJoker = (jokerId: string | number) => {
+    removeJoker(jokerId);
+    dispatch(addBalance(SELL_PRICE));
+    SoundEffects.playRandomPop();
+  };
+
+  // Build a JokerCard-compatible object from an id + level
+  const toCardJoker = (id: string | number, level?: number) => {
+    const std = STANDARDIZED_JOKERS.find(
+      (sj) => sj.id.toString() === id.toString()
+    );
+    const owned = jokersOwned.find((j) => j.id.toString() === id.toString());
+    return {
+      id: Number(id),
+      name: owned?.name || std?.name || 'Unknown',
+      subject: std?.subject || '',
+      type: (std?.type === 'one-time' ? 'one-time' : 'persistent') as
+        | 'one-time'
+        | 'persistent',
+      flavorText: std?.flavorText || '',
+      description: std?.description || '',
+      level: level ?? (owned as any)?.level ?? 1,
+    };
   };
 
   const getThemeStyles = () => {
@@ -303,82 +456,63 @@ export default function JokerSelection({
   if (showUpgradeModal) {
     return (
       <View style={[styles.container, themeStyles.container]}>
-        <ScrollView contentContainerStyle={styles.jokerContainer}>
+        {/* Fixed header */}
+        <View style={styles.modalHeader}>
           <Text style={[styles.jokerTitle, themeStyles.title]}>
             Level Up Jokers
           </Text>
-          <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+          <Text
+            style={[
+              styles.jokerSubtitle,
+              themeStyles.subtitle,
+              { marginBottom: 0 },
+            ]}
+          >
             Balance: ${balance.toLocaleString()}
           </Text>
+        </View>
 
+        {/* Scrollable joker list */}
+        <ScrollView
+          contentContainerStyle={styles.modalScrollContent}
+          style={styles.modalScrollView}
+          showsVerticalScrollIndicator={true}
+        >
           {upgradeableJokers.length === 0 ? (
             <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
               No jokers available to upgrade.
             </Text>
           ) : (
-            upgradeableJokers.map((joker) => {
-              const canAfford = balance >= joker.cost;
-              const isOneTime = joker.type === 'one-time';
-              const typeEmoji = isOneTime ? '⚡' : '🔮';
-              const jokerType = isOneTime ? 'instant' : 'aura';
+            <View style={styles.cardGrid}>
+              {upgradeableJokers.map((joker) => {
+                const canAfford = balance >= joker.cost;
+                const cardJoker = toCardJoker(joker.id, joker.currentLevel);
 
-              return (
-                <PressableButton
-                  key={joker.id.toString()}
-                  onPress={() => canAfford && handleUpgrade(joker.id)}
-                  disabled={!canAfford}
-                  shadowOpacity={0}
-                  elevation={0}
-                  style={{
-                    backgroundColor: 'transparent',
-                    marginBottom: 12,
-                    width: '100%',
-                    opacity: canAfford ? 1 : 0.5,
-                  }}
-                >
-                  <PixelBorder
-                    borderColor={canAfford ? '#10b981' : '#666'}
-                    borderWidth={3}
-                    backgroundColor={
-                      themeStyles.jokerCard?.backgroundColor || '#1a2f23'
-                    }
-                    innerPadding={16}
+                return (
+                  <PressableButton
+                    key={joker.id.toString()}
+                    onPress={() => canAfford && setUpgradeConfirmJoker(joker)}
+                    disabled={!canAfford}
+                    shadowOpacity={0}
+                    elevation={0}
+                    style={{
+                      backgroundColor: 'transparent',
+                      opacity: canAfford ? 1 : 0.5,
+                    }}
                   >
-                    <View style={styles.jokerHeader}>
-                      <Text style={[styles.jokerName, themeStyles.jokerName, { flex: 1 }]}>
-                        {joker.name}
-                      </Text>
+                    <View style={styles.cardContainer}>
+                      <JokerCard
+                        joker={cardJoker}
+                        isAfterSchool={false}
+                        isCompact={true}
+                        showOwned={false}
+                        disableActivation={true}
+                      />
+                    </View>
+                    <View style={styles.cardOverlayRow}>
                       <View style={styles.upgradeBadge}>
                         <Text style={styles.upgradeBadgeText}>
                           LV{joker.currentLevel} → LV{joker.currentLevel + 1}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text
-                      style={[
-                        styles.jokerDescription,
-                        themeStyles.jokerDescription,
-                      ]}
-                    >
-                      {joker.description}
-                    </Text>
-                    <View style={styles.upgradeRow}>
-                      <View
-                        style={[
-                          styles.typeIndicator,
-                          isOneTime ? styles.instantIndicator : styles.auraIndicator,
-                        ]}
-                      >
-                        <TextWithEmojis style={styles.typeEmoji}>
-                          {typeEmoji}
-                        </TextWithEmojis>
-                        <Text
-                          style={[
-                            styles.typeText,
-                            isOneTime ? styles.instantText : styles.auraText,
-                          ]}
-                        >
-                          {jokerType.toUpperCase()}
                         </Text>
                       </View>
                       <Text
@@ -390,12 +524,15 @@ export default function JokerSelection({
                         ${joker.cost.toLocaleString()}
                       </Text>
                     </View>
-                  </PixelBorder>
-                </PressableButton>
-              );
-            })
+                  </PressableButton>
+                );
+              })}
+            </View>
           )}
+        </ScrollView>
 
+        {/* Fixed back button */}
+        <View style={styles.modalFooter}>
           <PressableButton
             onPress={() => setShowUpgradeModal(false)}
             shadowOpacity={0}
@@ -403,7 +540,6 @@ export default function JokerSelection({
             style={{
               alignItems: 'center',
               backgroundColor: 'transparent',
-              marginTop: 12,
             }}
           >
             <PixelBorder
@@ -423,7 +559,231 @@ export default function JokerSelection({
               </View>
             </PixelBorder>
           </PressableButton>
+        </View>
+
+        {/* Upgrade confirmation modal */}
+        {upgradeConfirmJoker && (
+          <View style={styles.confirmOverlay}>
+            <View style={styles.confirmBackdrop} />
+            <View style={styles.confirmContent}>
+              <PixelBorder
+                borderColor="#10b981"
+                borderWidth={3}
+                backgroundColor={
+                  themeStyles.jokerCard?.backgroundColor || '#1a2f23'
+                }
+                innerPadding={20}
+              >
+                <Text
+                  style={[
+                    styles.jokerTitle,
+                    themeStyles.title,
+                    { fontSize: 22 },
+                  ]}
+                >
+                  {upgradeConfirmJoker.name}
+                </Text>
+                <View style={styles.upgradeBadge}>
+                  <Text style={styles.upgradeBadgeText}>
+                    LV{upgradeConfirmJoker.currentLevel} → LV
+                    {upgradeConfirmJoker.currentLevel + 1}
+                  </Text>
+                </View>
+
+                <Text style={[styles.confirmLabel, themeStyles.subtitle]}>
+                  Current (LV{upgradeConfirmJoker.currentLevel}):
+                </Text>
+                <Text
+                  style={[
+                    styles.confirmEffectText,
+                    themeStyles.jokerDescription,
+                  ]}
+                >
+                  {describeEffectsAtLevel(
+                    Number(upgradeConfirmJoker.id),
+                    upgradeConfirmJoker.currentLevel
+                  )}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.confirmLabel,
+                    themeStyles.subtitle,
+                    { marginTop: 12 },
+                  ]}
+                >
+                  Next (LV{upgradeConfirmJoker.currentLevel + 1}):
+                </Text>
+                <Text
+                  style={[
+                    styles.confirmEffectText,
+                    { color: '#10b981', fontWeight: '700' },
+                  ]}
+                >
+                  {describeEffectsAtLevel(
+                    Number(upgradeConfirmJoker.id),
+                    upgradeConfirmJoker.currentLevel + 1
+                  )}
+                </Text>
+
+                <Text
+                  style={[
+                    styles.upgradeCost,
+                    styles.canAfford,
+                    { textAlign: 'center', marginTop: 16 },
+                  ]}
+                >
+                  Cost: ${upgradeConfirmJoker.cost.toLocaleString()}
+                </Text>
+
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+                  <PressableButton
+                    onPress={() => setUpgradeConfirmJoker(null)}
+                    shadowOpacity={0}
+                    elevation={0}
+                    style={{ flex: 1 }}
+                  >
+                    <PixelBorder
+                      borderColor={
+                        themeStyles.skipButton?.borderColor || '#daa520'
+                      }
+                      borderWidth={3}
+                      backgroundColor={
+                        themeStyles.skipButton?.backgroundColor || '#8b4513'
+                      }
+                      innerPadding={0}
+                    >
+                      <View style={{ padding: 12, alignItems: 'center' }}>
+                        <Text
+                          style={[
+                            styles.skipButtonText,
+                            themeStyles.skipButtonText,
+                          ]}
+                        >
+                          Back
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
+
+                  <PressableButton
+                    onPress={() => handleUpgrade(upgradeConfirmJoker.id)}
+                    shadowOpacity={0}
+                    elevation={0}
+                    style={{ flex: 1 }}
+                  >
+                    <PixelBorder
+                      borderColor="#10b981"
+                      borderWidth={3}
+                      backgroundColor="#065f46"
+                      innerPadding={0}
+                    >
+                      <View style={{ padding: 12, alignItems: 'center' }}>
+                        <Text
+                          style={[styles.skipButtonText, { color: '#10b981' }]}
+                        >
+                          Upgrade
+                        </Text>
+                      </View>
+                    </PixelBorder>
+                  </PressableButton>
+                </View>
+              </PixelBorder>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // Sell modal
+  if (showSellModal) {
+    return (
+      <View style={[styles.container, themeStyles.container]}>
+        {/* Fixed header */}
+        <View style={styles.modalHeader}>
+          <Text style={[styles.jokerTitle, themeStyles.title]}>
+            Sell Jokers
+          </Text>
+          <Text
+            style={[
+              styles.jokerSubtitle,
+              themeStyles.subtitle,
+              { marginBottom: 0 },
+            ]}
+          >
+            Sell a joker for ${SELL_PRICE}
+          </Text>
+        </View>
+
+        {/* Scrollable joker list */}
+        <ScrollView
+          contentContainerStyle={styles.modalScrollContent}
+          style={styles.modalScrollView}
+          showsVerticalScrollIndicator={true}
+        >
+          {sellableJokers.length === 0 ? (
+            <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+              No jokers to sell.
+            </Text>
+          ) : (
+            <View style={styles.cardGrid}>
+              {sellableJokers.map((joker) => {
+                const cardJoker = toCardJoker(joker.id, joker.level);
+
+                return (
+                  <PressableButton
+                    key={joker.id.toString()}
+                    onPress={() => handleSellJoker(joker.id)}
+                    shadowOpacity={0}
+                    elevation={0}
+                    style={{ backgroundColor: 'transparent' }}
+                  >
+                    <View style={styles.cardContainer}>
+                      <JokerCard
+                        joker={cardJoker}
+                        isAfterSchool={false}
+                        isCompact={true}
+                        showOwned={false}
+                        disableActivation={true}
+                      />
+                    </View>
+                  </PressableButton>
+                );
+              })}
+            </View>
+          )}
         </ScrollView>
+
+        {/* Fixed back button */}
+        <View style={styles.modalFooter}>
+          <PressableButton
+            onPress={() => setShowSellModal(false)}
+            shadowOpacity={0}
+            elevation={0}
+            style={{
+              alignItems: 'center',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <PixelBorder
+              borderColor={themeStyles.skipButton?.borderColor || '#daa520'}
+              borderWidth={3}
+              backgroundColor={
+                themeStyles.skipButton?.backgroundColor || '#8b4513'
+              }
+              innerPadding={0}
+            >
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <Text
+                  style={[styles.skipButtonText, themeStyles.skipButtonText]}
+                >
+                  Back
+                </Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+        </View>
       </View>
     );
   }
@@ -431,11 +791,16 @@ export default function JokerSelection({
   // Main reward screen
   return (
     <View style={[styles.container, themeStyles.container]}>
-      <ScrollView contentContainerStyle={styles.jokerContainer}>
-        <Text style={[styles.jokerTitle, themeStyles.title]}>
-          Rewards!
-        </Text>
-        <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
+      {/* Fixed header */}
+      <View style={styles.modalHeader}>
+        <Text style={[styles.jokerTitle, themeStyles.title]}>Rewards!</Text>
+        <Text
+          style={[
+            styles.jokerSubtitle,
+            themeStyles.subtitle,
+            { marginBottom: 4 },
+          ]}
+        >
           {completionLevel === 1
             ? 'You completed Level 1!'
             : completionLevel === 2
@@ -445,116 +810,211 @@ export default function JokerSelection({
         <Text style={[styles.slotCounter, themeStyles.subtitle]}>
           Aura Slots: {persistentJokerCount}/{maxPersistentSlots}
         </Text>
+      </View>
 
-        {grantedJokers.length === 0 ? (
+      {/* Scrollable middle */}
+      <ScrollView
+        contentContainerStyle={styles.modalScrollContent}
+        style={styles.modalScrollView}
+        showsVerticalScrollIndicator={true}
+      >
+        {availableJokers.length === 0 ? (
           <Text style={[styles.jokerSubtitle, themeStyles.subtitle]}>
             You already own all available jokers!
           </Text>
         ) : (
           <>
             <Text style={[styles.grantedLabel, themeStyles.subtitle]}>
-              +{grantedJokers.length} Joker{grantedJokers.length > 1 ? 's' : ''} Obtained:
+              {chosenJokerId === null
+                ? 'Choose 1 joker to keep:'
+                : 'Joker obtained!'}
             </Text>
-            {grantedJokers.map((joker) => {
+            {availableJokers.map((joker) => {
               const isOneTime = joker.type === 'one-time';
               const typeEmoji = isOneTime ? '⚡' : '🔮';
               const jokerType = isOneTime ? 'instant' : 'aura';
+              const isChosen = chosenJokerId === joker.id;
+              const isUnchosen = chosenJokerId !== null && !isChosen;
 
-              return (
-                <View
-                  key={joker.id}
-                  style={{ marginBottom: 12, width: '100%' }}
+              // Hide unchosen jokers after dismiss animation completes
+              if (isUnchosen && dismissedOthers) return null;
+
+              const cardContent = (
+                <PixelBorder
+                  borderColor={
+                    isChosen
+                      ? '#10b981'
+                      : themeStyles.jokerCard?.borderColor || '#8fbc8f'
+                  }
+                  borderWidth={3}
+                  backgroundColor={
+                    themeStyles.jokerCard?.backgroundColor || '#1a2f23'
+                  }
+                  innerPadding={16}
                 >
-                  <PixelBorder
-                    borderColor={themeStyles.jokerCard?.borderColor || '#8fbc8f'}
-                    borderWidth={3}
-                    backgroundColor={
-                      themeStyles.jokerCard?.backgroundColor || '#1a2f23'
-                    }
-                    innerPadding={16}
-                  >
-                    <View style={styles.jokerHeader}>
-                      <Text style={[styles.jokerName, themeStyles.jokerName, { flex: 1 }]}>
-                        {joker.name}
-                      </Text>
-                      <View
-                        style={[
-                          styles.typeIndicator,
-                          isOneTime
-                            ? styles.instantIndicator
-                            : styles.auraIndicator,
-                        ]}
-                      >
-                        <TextWithEmojis style={styles.typeEmoji}>
-                          {typeEmoji}
-                        </TextWithEmojis>
-                        <Text
-                          style={[
-                            styles.typeText,
-                            isOneTime ? styles.instantText : styles.auraText,
-                          ]}
-                        >
-                          {jokerType.toUpperCase()}
-                        </Text>
-                      </View>
-                    </View>
+                  <View style={styles.jokerHeader}>
                     <Text
                       style={[
-                        styles.jokerDescription,
-                        themeStyles.jokerDescription,
+                        styles.jokerName,
+                        themeStyles.jokerName,
+                        { flex: 1 },
                       ]}
                     >
-                      {joker.description}
+                      {isChosen ? '✓ ' : ''}
+                      {joker.name}
                     </Text>
-                  </PixelBorder>
-                </View>
+                    <View
+                      style={[
+                        styles.typeIndicator,
+                        isOneTime
+                          ? styles.instantIndicator
+                          : styles.auraIndicator,
+                      ]}
+                    >
+                      <TextWithEmojis style={styles.typeEmoji}>
+                        {typeEmoji}
+                      </TextWithEmojis>
+                      <Text
+                        style={[
+                          styles.typeText,
+                          isOneTime ? styles.instantText : styles.auraText,
+                        ]}
+                      >
+                        {jokerType.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text
+                    style={[
+                      styles.jokerDescription,
+                      themeStyles.jokerDescription,
+                    ]}
+                  >
+                    {joker.description}
+                  </Text>
+                </PixelBorder>
+              );
+
+              // Unchosen jokers animate out
+              if (isUnchosen) {
+                const anim = getAnim(joker.id);
+                return (
+                  <RNAnimated.View
+                    key={joker.id}
+                    style={{
+                      marginBottom: 12,
+                      width: '100%',
+                      opacity: anim,
+                      transform: [{ scale: anim }],
+                    }}
+                  >
+                    {cardContent}
+                  </RNAnimated.View>
+                );
+              }
+
+              // Chosen joker — wobble animation
+              if (isChosen) {
+                const anim = getAnim(joker.id);
+                return (
+                  <RNAnimated.View
+                    key={joker.id}
+                    style={{
+                      marginBottom: 12,
+                      width: '100%',
+                      transform: [{ scale: anim }],
+                    }}
+                  >
+                    {cardContent}
+                  </RNAnimated.View>
+                );
+              }
+
+              // Not yet chosen — tappable (disabled if aura and slots full)
+              const isAuraFull = !isOneTime && !canAddPersistentJoker();
+              return (
+                <PressableButton
+                  key={joker.id}
+                  onPress={() => handleClaimJoker(joker)}
+                  disabled={chosenJokerId !== null || isAuraFull}
+                  shadowOpacity={0}
+                  elevation={0}
+                  style={{ marginBottom: 12, width: '100%', opacity: isAuraFull ? 0.4 : 1 }}
+                >
+                  {cardContent}
+                  {isAuraFull && (
+                    <Text style={styles.auraFullText}>Aura slots full</Text>
+                  )}
+                </PressableButton>
               );
             })}
           </>
         )}
 
-        {/* Level Up Joker button */}
-        <PressableButton
-          onPress={() => {
-            SoundEffects.playRandomPop();
-            setShowUpgradeModal(true);
-          }}
-          shadowOpacity={0}
-          elevation={0}
-          style={{
-            alignItems: 'center',
-            backgroundColor: 'transparent',
-            marginTop: 8,
-            marginBottom: 12,
-          }}
-        >
-          <PixelBorder
-            borderColor="#10b981"
-            borderWidth={3}
-            backgroundColor={
-              themeStyles.generateButton?.backgroundColor || '#1a2f23'
-            }
-            innerPadding={0}
+        {/* Level Up Joker button — wallet green */}
+        {upgradeableJokers.length > 0 && (
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowUpgradeModal(true);
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{
+              backgroundColor: 'transparent',
+              marginTop: 8,
+              marginBottom: 12,
+              width: '100%',
+            }}
           >
-            <View style={{ padding: 16, alignItems: 'center' }}>
-              <Text
-                style={[
-                  styles.showButtonText,
-                  themeStyles.generateButtonText,
-                ]}
-              >
-                Level Up Joker
-              </Text>
-              {upgradeableJokers.length > 0 && (
-                <Text style={[styles.upgradeCount, themeStyles.subtitle]}>
-                  {upgradeableJokers.length} upgradeable
+            <PixelBorder
+              borderColor="#4a7c4a"
+              borderWidth={3}
+              backgroundColor="#d4f6d4"
+              innerPadding={0}
+            >
+              <View style={{ padding: 14, alignItems: 'center' }}>
+                <Text style={[styles.showButtonText, { color: '#2d5a2d' }]}>
+                  Level Up Joker
                 </Text>
-              )}
-            </View>
-          </PixelBorder>
-        </PressableButton>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+        )}
 
-        {/* Continue button */}
+        {/* Sell Joker button — piggy bank red/pink */}
+        {sellableJokers.length > 0 && (
+          <PressableButton
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setShowSellModal(true);
+            }}
+            shadowOpacity={0}
+            elevation={0}
+            style={{
+              backgroundColor: 'transparent',
+              marginBottom: 12,
+              width: '100%',
+            }}
+          >
+            <PixelBorder
+              borderColor="#b85c8a"
+              borderWidth={3}
+              backgroundColor="#ffd6e8"
+              innerPadding={0}
+            >
+              <View style={{ padding: 14, alignItems: 'center' }}>
+                <Text style={[styles.showButtonText, { color: '#8a4a6b' }]}>
+                  Sell Joker
+                </Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+        )}
+      </ScrollView>
+
+      {/* Fixed footer — Continue button */}
+      <View style={styles.modalFooter}>
         <PressableButton
           onPress={onComplete}
           shadowOpacity={0}
@@ -562,7 +1022,6 @@ export default function JokerSelection({
           style={{
             alignItems: 'center',
             backgroundColor: 'transparent',
-            marginTop: 0,
           }}
         >
           <PixelBorder
@@ -574,15 +1033,13 @@ export default function JokerSelection({
             innerPadding={0}
           >
             <View style={{ padding: 16, alignItems: 'center' }}>
-              <Text
-                style={[styles.skipButtonText, themeStyles.skipButtonText]}
-              >
+              <Text style={[styles.skipButtonText, themeStyles.skipButtonText]}>
                 Continue
               </Text>
             </View>
           </PixelBorder>
         </PressableButton>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -595,6 +1052,74 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     justifyContent: 'center',
+  },
+  modalHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  confirmBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  confirmContent: {
+    width: '85%',
+    maxWidth: 360,
+    zIndex: 101,
+  },
+  confirmLabel: {
+    fontSize: 13,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  confirmEffectText: {
+    fontSize: 14,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 20,
+  },
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  cardContainer: {
+    width: 160,
+    height: 180,
+  },
+  auraFullText: {
+    fontSize: 11,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    color: '#ef4444',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  cardOverlayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   jokerTitle: {
     fontSize: 28,

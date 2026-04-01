@@ -35,7 +35,7 @@ import { selectTutorialComplete, resetTutorial } from '../../src/store/slices/tu
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import DifficultySelectionModal from './DifficultySelectionModal';
-import ExactFontHandwriting from './ExactFontHandwriting';
+import TypewriterTitle from './TypewriterTitle';
 import HallPassModal from './HallPassModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -232,8 +232,8 @@ export default function SugarWarsTitleScreen({
 
       // Generate game data using the seed with hall pass-adjusted periods
       // Pass difficulty level to enable price range shuffling for level > 3
-      // Enable tutorial mode for difficulty 1 if tutorial hasn't been completed
-      const isTutorialMode = level === 1 && !tutorialComplete;
+      // Enable tutorial mode for difficulty 1 (tutorial resets on every new game)
+      const isTutorialMode = level === 1;
       const gameData = generateSeededGameData(newSeed, totalPeriods, level, isTutorialMode);
       setGameData(gameData);
 
@@ -242,6 +242,11 @@ export default function SugarWarsTitleScreen({
       resetInventory();
       resetJokers();
       resetFlavorText();
+
+      // Reset tutorial for difficulty 1 so it plays on each new game
+      if (level === 1) {
+        dispatch(resetTutorial());
+      }
 
       // Initialize wallet with the selected difficulty level
       // NOTE: This will trigger another resetGame() call internally, which clears modifiers
@@ -313,7 +318,7 @@ export default function SugarWarsTitleScreen({
             }
           >
             <View style={styles.titleWrapper}>
-              <ExactFontHandwriting
+              <TypewriterTitle
                 onAnimationComplete={handleAnimationComplete}
                 onSugarComplete={handleSugarComplete}
               />

@@ -30,6 +30,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
 import PressableButton from './components/PressableButton';
+import FirstTimeHint from './components/FirstTimeHint';
 import TextWithEmojis from './components/TextWithEmojis';
 
 interface PiggyBankPageProps {
@@ -286,6 +287,10 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
   return (
     <>
       <View style={styles.container}>
+        <FirstTimeHint
+          hintKey="piggy_bank"
+          message="Deposit cash here to pay off your $5,000 adoption fee. Anything you deposit counts toward your goal!"
+        />
         <ImageBackground
           source={require('../assets/images/piggy-bank.png')}
           style={styles.backgroundImage}

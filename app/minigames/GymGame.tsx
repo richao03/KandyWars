@@ -648,23 +648,23 @@ export default function GymGame({ onComplete }: GymGameProps) {
                   ))}
                 </View>
               </View>
-              <PixelBorder
-                borderColor="#e74c3c"
-                borderWidth={3}
-                backgroundColor="#1a2332"
-                innerPadding={0}
-                style={{ marginTop: 20 }}
-              >
-                <TouchableOpacity
-                  style={styles.leaveButton}
-                  onPress={handleForfeit}
-                >
-                  <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
-                    🚪 Leave
-                  </TextWithEmojis>
-                </TouchableOpacity>
-              </PixelBorder>
             </View>
+            <PixelBorder
+              borderColor="#e74c3c"
+              borderWidth={3}
+              backgroundColor="#1a2332"
+              innerPadding={0}
+              style={{ marginTop: 8 }}
+            >
+              <TouchableOpacity
+                style={styles.leaveButton}
+                onPress={handleForfeit}
+              >
+                <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
+                  🚪 Leave
+                </TextWithEmojis>
+              </TouchableOpacity>
+            </PixelBorder>
 
             <GameModal
               visible={modal.visible}
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'space-evenly',
+    justifyContent: 'center',
   },
   gameContainer: {
     justifyContent: 'center',

@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 
 import { JOKER_IDS } from '../../src/constants/jokerIds';
-import { CANDY_NAMES } from '../../src/constants/candyRegistry';
+import { CANDY_NAMES, CANDY_REGISTRY } from '../../src/constants/candyRegistry';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
-import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS, getJokerDescription } from '../../src/utils/jokerEffectEngine';
 import ConfirmationModal from './ConfirmationModal';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
@@ -562,44 +562,37 @@ function JokerCard({
       const activationId = (joker as any).originalId || joker.id;
       markJokerUsedToday(activationId.toString());
 
-      // Use candy registry
-      const candyTypes = CANDY_TYPES;
-
-      // Get all current prices for this period
-      const currentPrices = candyTypes.map((candyType) => ({
-        candy: candyType,
-        price: getOriginalCandyPrice(candyType, periodCount),
-      }));
-
-      if (__DEV__) console.log('🌍 Continental Drift: Current prices:', currentPrices);
-
-      // Extract just the prices and shuffle them
-      const prices = currentPrices.map((cp) => cp.price);
-
-      // Fisher-Yates shuffle algorithm
-      for (let i = prices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [prices[i], prices[j]] = [prices[j], prices[i]];
+      // Shuffle prices within each size group to prevent big candy prices on small candies
+      const sizeGroups: Record<string, { candy: string; price: number }[]> = {};
+      for (const def of CANDY_REGISTRY) {
+        const price = getOriginalCandyPrice(def.name, periodCount);
+        if (!sizeGroups[def.size]) sizeGroups[def.size] = [];
+        sizeGroups[def.size].push({ candy: def.name, price });
       }
 
-      if (__DEV__) console.log('🌍 Continental Drift: Shuffled prices:', prices);
-
-      // Apply shuffled prices to candies
       const priceChanges: string[] = [];
-      candyTypes.forEach((candyType, index) => {
-        const originalPrice = currentPrices[index].price;
-        const newPrice = prices[index];
 
-        // Apply the shuffled price
-        modifyCandyPrice(candyType, newPrice, periodCount);
+      // Fisher-Yates shuffle within each size group
+      for (const size of Object.keys(sizeGroups)) {
+        const group = sizeGroups[size];
+        const prices = group.map((g) => g.price);
 
-        priceChanges.push(
-          `${candyType}: $${originalPrice.toFixed(2)} → $${newPrice.toFixed(2)}`
-        );
-        if (__DEV__) console.log(
-          `🌍 Continental Drift: ${candyType} price changed from $${originalPrice} to $${newPrice}`
-        );
-      });
+        for (let i = prices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [prices[i], prices[j]] = [prices[j], prices[i]];
+        }
+
+        group.forEach((entry, index) => {
+          const newPrice = prices[index];
+          modifyCandyPrice(entry.candy, newPrice, periodCount);
+          priceChanges.push(
+            `${entry.candy}: $${entry.price.toFixed(2)} → $${newPrice.toFixed(2)}`
+          );
+          if (__DEV__) console.log(
+            `🌍 Continental Drift: ${entry.candy} price changed from $${entry.price} to $${newPrice}`
+          );
+        });
+      }
 
       showAlert(
         'Continental Drift Activated!',
@@ -708,7 +701,9 @@ function JokerCard({
 
           {/* Main Content */}
           <View style={styles.contentSection}>
-            <Text style={styles.jokerDescription}>{joker.description}</Text>
+            <Text style={styles.jokerDescription}>
+              {getJokerDescription(joker.id, (joker as any).level ?? 1) || joker.description}
+            </Text>
           </View>
 
           {/* Footer Section */}

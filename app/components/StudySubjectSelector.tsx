@@ -257,6 +257,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     const isHighlighted = highlightedIndex === globalIndex;
     const isWinner = selectedSubject === subject.name;
     const isLocked = isLockedIn && subject.name !== selectedMinigame;
+    const shouldDim = disabled || (isLunchPeriod && hasPlayedLunchMinigame) || isLocked || (!isHighlighted && !isWinner && highlightedIndex !== null);
 
     return (
       <Animated.View
@@ -283,7 +284,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
               source={subject.icon}
               style={[
                 styles.subjectIcon,
-                (isLocked || (!isHighlighted && !isWinner && highlightedIndex !== null)) && styles.dimmedIcon,
+                shouldDim && styles.dimmedIcon,
               ]}
             />
             <View style={styles.subjectBorderWrapper}>
@@ -296,7 +297,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                 <View
                   style={[
                     styles.subjectButtonInner,
-                    (isLocked || (!isHighlighted && !isWinner && highlightedIndex !== null)) && styles.dimmedButton,
+                    shouldDim && styles.dimmedButton,
                   ]}
                 >
                   <Text
@@ -310,7 +311,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                   <Text
                     style={[
                       styles.jokerCount,
-                      (isLocked || (!isHighlighted && !isWinner && highlightedIndex !== null)) && styles.dimmedText,
+                      shouldDim && styles.dimmedText,
                     ]}
                   >
                     {getUnobtainedJokerCount(subject.name)} jokers left

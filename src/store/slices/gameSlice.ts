@@ -32,6 +32,8 @@ interface GameState {
   totalCompletions: number;
   gameResetSignal: number; // Increments on each game reset to signal zombie cleanup
   markFarmersCarryBonusApplied: number[]; // Tracks which periods have received Farmers Carry bonus
+  mediumCandiesUnlocked: boolean; // Unlocked on Day 2 for $500
+  bigCandiesUnlocked: boolean; // Unlocked on Day 3 for $5000
 }
 
 const initialState: GameState = {
@@ -51,6 +53,8 @@ const initialState: GameState = {
   totalCompletions: 0,
   gameResetSignal: 0,
   markFarmersCarryBonusApplied: [],
+  mediumCandiesUnlocked: false,
+  bigCandiesUnlocked: false,
 };
 
 const gameSlice = createSlice({
@@ -224,6 +228,12 @@ const gameSlice = createSlice({
     setSelectedMinigame: (state, action: PayloadAction<string | null>) => {
       state.selectedMinigame = action.payload;
     },
+    unlockMediumCandies: (state) => {
+      state.mediumCandiesUnlocked = true;
+    },
+    unlockBigCandies: (state) => {
+      state.bigCandiesUnlocked = true;
+    },
     markFarmersCarryBonusApplied: (state, action: PayloadAction<number>) => {
       const period = action.payload;
       if (!state.markFarmersCarryBonusApplied.includes(period)) {
@@ -266,6 +276,8 @@ export const {
   markLunchMinigamePlayed,
   markFarmersCarryBonusApplied,
   setSelectedMinigame,
+  unlockMediumCandies,
+  unlockBigCandies,
 } = gameSlice.actions;
 
 export default gameSlice.reducer;
@@ -297,6 +309,8 @@ export const selectLastActiveView = (state: any) => state.game?.lastActiveView ?
 export const selectHasStudiedTonight = (state: any) => state.game?.hasStudiedTonight ?? false;
 export const selectHasPlayedLunchMinigame = (state: any) => state.game?.hasPlayedLunchMinigame ?? false;
 export const selectMinigameContext = (state: any) => state.game?.minigameContext ?? null;
+export const selectMediumCandiesUnlocked = (state: any) => state.game?.mediumCandiesUnlocked ?? false;
+export const selectBigCandiesUnlocked = (state: any) => state.game?.bigCandiesUnlocked ?? false;
 export const selectPricesUpdating = (state: any) => state.game?.pricesUpdating ?? false;
 export const selectIsInitialized = (state: any) => state.game?.isInitialized ?? false;
 export const selectLocationHistory = (state: any) => state.game?.locationHistory ?? [];

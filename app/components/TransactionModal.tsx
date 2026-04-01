@@ -4,18 +4,46 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { scoreboardService } from '../../src/services/firebase';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import {
+  advanceTutorial,
+  selectTutorialStep,
+} from '../../src/store/slices/tutorialSlice';
 import { Candy } from '../../src/types/candy';
-import type { SaleInputs } from './TransactionModalManager';
-import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
+import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import { useAppSelector, useAppDispatch } from '../../src/store/hooks';
-import { selectTutorialStep, advanceTutorial } from '../../src/store/slices/tutorialSlice';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import SparkEffect from './SparkEffect';
 import TextWithEmojis from './TextWithEmojis';
+import type { SaleInputs } from './TransactionModalManager';
+
+// Joker icon lookup by name — matches StatusIndicators.tsx
+const JOKER_ICON_BY_NAME: Record<string, any> = {
+  'Median Formula': require('../../assets/images/emojis/bullseye.png'),
+  'Micro Chip': require('../../assets/images/emojis/computer.png'),
+  'Super Size Me': require('../../assets/images/emojis/slowcooker.png'),
+  'Cocoa Futures': require('../../assets/images/emojis/chocolate.png'),
+  'Bear Market': require('../../assets/images/emojis/priceCrash.png'),
+  'Hard Knocks': require('../../assets/images/emojis/diamondHand.png'),
+  'Sour Logic': require('../../assets/images/emojis/magic.png'),
+  'Double Dutch': require('../../assets/images/emojis/jumpRope.png'),
+  'Tropical Import': require('../../assets/images/emojis/clock.png'),
+  'Even Stevens': require('../../assets/images/emojis/scale.png'),
+  'Odd Todd': require('../../assets/images/emojis/theater.png'),
+  'Golden Hour': require('../../assets/images/emojis/sunrise.png'),
+  Pursuasion: require('../../assets/images/emojis/talkingHead.png'),
+  'Vacuum Sealer': require('../../assets/images/emojis/vacuumsealer.png'),
+  'Early Bird': require('../../assets/images/emojis/sunrise.png'),
+  'Bulk Discount': require('../../assets/images/emojis/bulkSale.png'),
+  Underdog: require('../../assets/images/emojis/gym.png'),
+  'Penny Pincher': require('../../assets/images/emojis/coin.png'),
+  'Broke and Hungry': require('../../assets/images/emojis/priceCrash.png'),
+  'Influencer Shoutout': require('../../assets/images/emojis/talkingHead.png'),
+  'Hall Pass': require('../../assets/images/emojis/hallpass.png'),
+};
 
 type PriceBreakdown = {
   basePrice: number;
@@ -82,14 +110,17 @@ function TransactionModal({
   // Tutorial
   const tutorialStep = useAppSelector(selectTutorialStep);
   const tutorialDispatch = useAppDispatch();
-  const isTutorialModal = tutorialStep === 4 || tutorialStep === 7 || tutorialStep === 8;
+  const isTutorialModal = tutorialStep === 5 || tutorialStep === 8;
   const dimOpacity = isTutorialModal ? 0.25 : 1;
 
   // Read from snapshotted saleInputs prop (captured when modal opens) — no Redux subscriptions
   const jokers = saleInputs?.jokers ?? [];
   const activeEffects = saleInputs?.activeEffects ?? [];
   const computedInventoryLimit = saleInputs?.computedInventoryLimit ?? 30;
-  const hallPassModifiers = saleInputs?.hallPassModifiers ?? { inventoryBonusSlots: 0, salePriceBonusPercent: 0 };
+  const hallPassModifiers = saleInputs?.hallPassModifiers ?? {
+    inventoryBonusSlots: 0,
+    salePriceBonusPercent: 0,
+  };
   const periodCount = saleInputs?.periodCount ?? 0;
   const hasEarlySaleToday = saleInputs?.hasEarlySaleToday ?? false;
   const merchantEffects = saleInputs?.merchantEffects ?? [];
@@ -112,7 +143,11 @@ function TransactionModal({
   const inventoryLimit = useMemo(() => {
     let limit = computedInventoryLimit + hallPassModifiers.inventoryBonusSlots;
     return MerchantUtils.applyInventoryBonus(limit, merchantEffects);
-  }, [computedInventoryLimit, hallPassModifiers.inventoryBonusSlots, merchantEffects]);
+  }, [
+    computedInventoryLimit,
+    hallPassModifiers.inventoryBonusSlots,
+    merchantEffects,
+  ]);
 
   // Inline consecutivePeriodSales (from useCandySales.ts:48-94)
   const consecutiveSalesCount = useMemo(() => {
@@ -134,18 +169,22 @@ function TransactionModal({
     return consecutiveCount;
   }, [visible, candySales]);
 
-  // Set quantity to max when modal opens
+  // Set quantity to max when modal opens; auto-switch to sell for tutorial step 8
   useEffect(() => {
     if (visible) {
       if (__DEV__) console.log('isVisible maxQuantity: ', maxQuantity);
-      // Set to max quantity for current mode (minimum 1)
-      setQuantity(Math.max(1, maxQuantity));
+      // Tutorial step 8: auto-switch to sell mode
+      if (tutorialStep === 8) {
+        setMode('Sell');
+        setQuantity(Math.max(1, clampedMaxSellQuantity));
+      } else {
+        setQuantity(Math.max(1, maxQuantity));
+      }
     }
   }, [visible]);
 
-  const finalUnitPrice = (mode === 'Sell' && priceBreakdown)
-    ? priceBreakdown.finalPrice
-    : candy.cost;
+  const finalUnitPrice =
+    mode === 'Sell' && priceBreakdown ? priceBreakdown.finalPrice : candy.cost;
 
   // Calculate sale result for selling - contains pocket value and bonus breakdown
   // Skip expensive calculation when modal is hidden (stays mounted by TransactionModalManager)
@@ -243,7 +282,7 @@ function TransactionModal({
       onConfirm(quantity, mode.toLowerCase() as 'buy' | 'sell');
 
       // Advance tutorial: step 4 (buy confirm) or step 8 (sell confirm)
-      if (tutorialStep === 4 || tutorialStep === 8) {
+      if (tutorialStep === 5 || tutorialStep === 8) {
         tutorialDispatch(advanceTutorial());
       }
     }
@@ -296,45 +335,110 @@ function TransactionModal({
   // Sell value for tier-based styling
   const sellValue = mode === 'Sell' ? parseFloat(pocketValue) : 0;
 
-  const numSparks = sellValue < 100 ? 0
-    : sellValue < 500 ? 3
-    : sellValue < 1000 ? 5
-    : sellValue < 5000 ? 7
-    : sellValue < 10000 ? 12
-    : sellValue < 30000 ? 20
-    : 24;
+  const numSparks =
+    sellValue < 100
+      ? 0
+      : sellValue < 500
+        ? 3
+        : sellValue < 1000
+          ? 5
+          : sellValue < 5000
+            ? 7
+            : sellValue < 10000
+              ? 12
+              : sellValue < 30000
+                ? 20
+                : 24;
 
-  const buttonBorderColor = sellValue >= 20000 ? '#0066ff'
-    : sellValue >= 15000 ? '#00cccc'
-    : sellValue >= 10000 ? '#00ffcc'
-    : sellValue >= 5000 ? '#00ff99'
-    : sellValue >= 2000 ? '#2ecc71'
-    : sellValue >= 1000 ? '#4caf50'
-    : 'rgba(123,169,101,1)';
+  const buttonBorderColor =
+    sellValue >= 20000
+      ? '#0066ff'
+      : sellValue >= 15000
+        ? '#00cccc'
+        : sellValue >= 10000
+          ? '#00ffcc'
+          : sellValue >= 5000
+            ? '#00ff99'
+            : sellValue >= 2000
+              ? '#2ecc71'
+              : sellValue >= 1000
+                ? '#4caf50'
+                : 'rgba(123,169,101,1)';
 
-  const buttonBackgroundColor = sellValue >= 20000 ? 'rgba(0, 102, 255, 0.3)'
-    : sellValue >= 15000 ? 'rgba(0, 204, 204, 0.3)'
-    : sellValue >= 10000 ? 'rgba(0, 255, 204, 0.3)'
-    : sellValue >= 5000 ? 'rgba(0, 255, 153, 0.3)'
-    : sellValue >= 2000 ? 'rgba(46, 204, 113, 0.3)'
-    : sellValue >= 1000 ? 'rgba(76, 175, 80, 0.3)'
-    : 'rgba(154,193,118,1)';
+  const buttonBackgroundColor =
+    sellValue >= 20000
+      ? 'rgba(0, 102, 255, 0.3)'
+      : sellValue >= 15000
+        ? 'rgba(0, 204, 204, 0.3)'
+        : sellValue >= 10000
+          ? 'rgba(0, 255, 204, 0.3)'
+          : sellValue >= 5000
+            ? 'rgba(0, 255, 153, 0.3)'
+            : sellValue >= 2000
+              ? 'rgba(46, 204, 113, 0.3)'
+              : sellValue >= 1000
+                ? 'rgba(76, 175, 80, 0.3)'
+                : 'rgba(154,193,118,1)';
 
-  const sparkColors = sellValue >= 20000
-    ? ['#0066ff', '#0080ff', '#0099ff', '#00b3ff', '#1e90ff', '#4169e1', '#5a7fff', '#00bfff']
-    : sellValue >= 15000
-    ? ['#00cccc', '#00e6e6', '#00d9ff', '#00c3ff', '#00b0ff', '#009fff', '#1e90ff', '#4db8ff']
-    : sellValue >= 10000
-    ? ['#00ffcc', '#00ffb3', '#00e6cc', '#00d9e6', '#00cccc', '#00b8d4', '#26c6da', '#4dd0e1']
-    : sellValue >= 5000
-    ? ['#00ff99', '#00e68a', '#00cc88', '#00b894', '#1abc9c', '#16a085', '#26d9a0', '#2ecc71']
-    : sellValue >= 2000
-    ? ['#3dff88', '#2ecc71', '#27ae60', '#16a085', '#1abc9c', '#20c997']
-    : sellValue >= 1000
-    ? ['#4caf50', '#43a047', '#388e3c', '#2e7d32']
-    : sellValue >= 500
-    ? ['#5ced00', '#4caf50', '#43a047']
-    : ['rgba(123,169,101,1)', '#7ba965', '#6a9a54'];
+  const sparkColors =
+    sellValue >= 20000
+      ? [
+          '#0066ff',
+          '#0080ff',
+          '#0099ff',
+          '#00b3ff',
+          '#1e90ff',
+          '#4169e1',
+          '#5a7fff',
+          '#00bfff',
+        ]
+      : sellValue >= 15000
+        ? [
+            '#00cccc',
+            '#00e6e6',
+            '#00d9ff',
+            '#00c3ff',
+            '#00b0ff',
+            '#009fff',
+            '#1e90ff',
+            '#4db8ff',
+          ]
+        : sellValue >= 10000
+          ? [
+              '#00ffcc',
+              '#00ffb3',
+              '#00e6cc',
+              '#00d9e6',
+              '#00cccc',
+              '#00b8d4',
+              '#26c6da',
+              '#4dd0e1',
+            ]
+          : sellValue >= 5000
+            ? [
+                '#00ff99',
+                '#00e68a',
+                '#00cc88',
+                '#00b894',
+                '#1abc9c',
+                '#16a085',
+                '#26d9a0',
+                '#2ecc71',
+              ]
+            : sellValue >= 2000
+              ? [
+                  '#3dff88',
+                  '#2ecc71',
+                  '#27ae60',
+                  '#16a085',
+                  '#1abc9c',
+                  '#20c997',
+                ]
+              : sellValue >= 1000
+                ? ['#4caf50', '#43a047', '#388e3c', '#2e7d32']
+                : sellValue >= 500
+                  ? ['#5ced00', '#4caf50', '#43a047']
+                  : ['rgba(123,169,101,1)', '#7ba965', '#6a9a54'];
 
   return (
     <FastModal
@@ -350,7 +454,9 @@ function TransactionModal({
         backgroundColor={colors.gold.beige}
         innerPadding={0}
       >
-        <View style={[styles.container, isTutorialModal && { overflow: 'visible' }]}>
+        <View
+          style={[styles.container, isTutorialModal && { overflow: 'visible' }]}
+        >
           {/* Tutorial dim overlay */}
           {isTutorialModal && (
             <View style={styles.tutorialDimOverlay} pointerEvents="none" />
@@ -431,12 +537,25 @@ function TransactionModal({
             </View>
           </PixelBorder>
 
-          {/* Buy mode discounts now handled by new joker system in saleCalculations.ts */}
+          {/* Sale breakdown */}
+          {saleResult && mode === 'Sell' && candy.averagePrice !== null && (() => {
+            const boosts = saleResult.bonusBreakdown.filter(b => b.flatBonus && b.flatBonus > 0);
+            const mults = saleResult.bonusBreakdown.filter(b => b.multiplier > 1 && !b.flatBonus);
+            const boostedProfit = (saleResult.totalGain - saleResult.purchaseValue) / Math.max(saleResult.jokerMultiplier, 1);
+            const finalProfit = saleResult.totalGain - saleResult.purchaseValue;
 
-          {/* Display bonuses from shared calculation */}
-          {saleResult &&
-            saleResult.bonusBreakdown.length > 0 &&
-            mode === 'Sell' && (
+            const renderIcon = (bonus: typeof boosts[0], i: number, prefix: string) => {
+              const iconSource = JOKER_ICON_BY_NAME[bonus.name];
+              return iconSource ? (
+                <Image key={`${prefix}-${i}`} source={iconSource} style={styles.receiptIcon} />
+              ) : (
+                <TextWithEmojis key={`${prefix}-${i}`} style={{ fontSize: 14 }} imageSize={18}>
+                  {bonus.emoji}
+                </TextWithEmojis>
+              );
+            };
+
+            return (
               <PixelBorder
                 borderColor="#fde047"
                 borderWidth={3}
@@ -444,82 +563,59 @@ function TransactionModal({
                 innerPadding={0}
               >
                 <View style={styles.priceBreakdownContainer}>
-                  {saleResult.bonusBreakdown.filter(b => b.name !== 'Vacuum Sealer').map((bonus, index) => {
-                    // Map emojis to custom images
-                    const emojiImageMap: { [key: string]: any } = {
-                      '🍲': require('../../assets/images/emojis/slowcooker.png'),
-                      '🪢': require('../../assets/images/emojis/jumpRope.png'),
-                      '🌅': require('../../assets/images/emojis/sunrise.png'),
-                      '📦': require('../../assets/images/emojis/bulkSale.png'),
-                      '⚖️': require('../../assets/images/emojis/scale.png'),
-                      '🎖️': require('../../assets/images/emojis/hallpass.png'),
-                    };
-
-                    const imageSource = emojiImageMap[bonus.emoji];
-
-                    return (
-                      <View
-                        key={index}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                        }}
-                      >
-                        {imageSource ? (
-                          <Image
-                            source={imageSource}
-                            style={{
-                              width: 24,
-                              height: 24,
-                              resizeMode: 'contain',
-                            }}
-                          />
-                        ) : (
-                          <TextWithEmojis
-                            style={styles.slowCookerText}
-                            imageSize={24}
-                          >
-                            {bonus.emoji}
-                          </TextWithEmojis>
-                        )}
-                        <Text style={styles.slowCookerText}>
-                          {bonus.name}:{' '}
-                          {bonus.multiplier > 1
-                            ? `${bonus.multiplier.toFixed(2)}x`
-                            : ''}
-                          {bonus.flatBonus
-                            ? ` +$${bonus.flatBonus.toFixed(2)}`
-                            : ''}
-                        </Text>
+                  {/* Profit row: label + boost icons + amount */}
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.breakdownLabel}>Profit</Text>
+                    {boosts.length > 0 && (
+                      <View style={styles.iconRow}>
+                        {boosts.map((b, i) => renderIcon(b, i, 'bi'))}
                       </View>
-                    );
-                  })}
-                  {/* Show vacuum sealer penalty if active */}
-                  {saleResult.vacuumSealerPenalty < 1 && (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <Image
-                        source={require('../../assets/images/emojis/vacuumsealer.png')}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          resizeMode: 'contain',
-                        }}
-                      />
-                      <Text style={styles.penaltyText}>
-                        Vacuum Sealer: -2 to sale multiplier
-                      </Text>
-                    </View>
-                  )}
+                    )}
+                    <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
+                      ${boostedProfit.toFixed(2)}
+                    </Text>
+                  </View>
+
+                  {/* Multiplier row: label + mult icons + value */}
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.breakdownLabel}>Multiplier</Text>
+                    {(mults.length > 0 || saleResult.vacuumSealerPenalty < 1) && (
+                      <View style={styles.iconRow}>
+                        {mults.map((b, i) => renderIcon(b, i, 'mi'))}
+                        {saleResult.vacuumSealerPenalty < 1 && (
+                          <Image
+                            source={require('../../assets/images/emojis/vacuumsealer.png')}
+                            style={[styles.receiptIcon, { opacity: 0.5 }]}
+                          />
+                        )}
+                      </View>
+                    )}
+                    <Text style={[styles.breakdownValue, { color: '#d97706' }]}>
+                      {saleResult.jokerMultiplier}x
+                    </Text>
+                  </View>
+
+                  {/* Formula: profit × multiplier = total */}
+                  <View style={styles.divider} />
+                  <Text style={styles.formulaText}>
+                    ${boostedProfit.toFixed(2)}
+                    {' × '}
+                    <Text style={{ color: '#d97706' }}>{saleResult.jokerMultiplier}x</Text>
+                    {' = '}
+                    <Text style={{ color: colors.green.success }}>${finalProfit.toFixed(2)}</Text>
+                  </Text>
+
+                  {/* You Pocket */}
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.finalPriceLabel}>You Pocket</Text>
+                    <Text style={styles.finalPriceValue}>
+                      ${saleResult.totalGain.toFixed(2)}
+                    </Text>
+                  </View>
                 </View>
               </PixelBorder>
-            )}
+            );
+          })()}
 
           <View style={styles.sliderSection}>
             <Text style={styles.quantityLabel}>
@@ -561,36 +657,38 @@ function TransactionModal({
                   disabled={true}
                 />
               )
+            ) : maxQuantity > 0 ? (
+              <Slider
+                key={`sell-${maxQuantity}`}
+                style={{ width: '100%', height: 50, marginVertical: 2 }}
+                minimumValue={10000}
+                maximumValue={10000 + maxQuantity}
+                step={1}
+                value={10000 + Math.max(0, Math.min(quantity, maxQuantity))}
+                onValueChange={(value) => handleSliderChange(value - 10000)}
+                onSlidingComplete={(value) =>
+                  handleSliderComplete(value - 10000)
+                }
+                minimumTrackTintColor="#4ade80"
+                maximumTrackTintColor="#ccc"
+              />
             ) : (
-              maxQuantity > 0 ? (
-                <Slider
-                  key={`sell-${maxQuantity}`}
-                  style={{ width: '100%', height: 50, marginVertical: 2 }}
-                  minimumValue={10000}
-                  maximumValue={10000 + maxQuantity}
-                  step={1}
-                  value={10000 + Math.max(0, Math.min(quantity, maxQuantity))}
-                  onValueChange={(value) => handleSliderChange(value - 10000)}
-                  onSlidingComplete={(value) => handleSliderComplete(value - 10000)}
-                  minimumTrackTintColor="#4ade80"
-                  maximumTrackTintColor="#ccc"
-                />
-              ) : (
-                <Slider
-                  key="sell-disabled"
-                  style={{ width: '100%', height: 50, marginVertical: 2 }}
-                  minimumValue={10000}
-                  maximumValue={10001}
-                  step={1}
-                  value={10000}
-                  onValueChange={() => {}}
-                  minimumTrackTintColor="#4ade80"
-                  maximumTrackTintColor="#ccc"
-                  disabled={true}
-                />
-              )
+              <Slider
+                key="sell-disabled"
+                style={{ width: '100%', height: 50, marginVertical: 2 }}
+                minimumValue={10000}
+                maximumValue={10001}
+                step={1}
+                value={10000}
+                onValueChange={() => {}}
+                minimumTrackTintColor="#4ade80"
+                maximumTrackTintColor="#ccc"
+                disabled={true}
+              />
             )}
-            <View style={[styles.tabContainer, tutorialStep === 7 && { zIndex: 10, elevation: 10 }]}>
+            {/* Hide tabs during tutorial: step 5 = buy only, step 8 = sell only */}
+            {tutorialStep !== 5 && tutorialStep !== 8 && (
+            <View style={styles.tabContainer}>
               <PixelBorder
                 borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
                 borderWidth={3}
@@ -605,8 +703,8 @@ function TransactionModal({
                 </TouchableOpacity>
               </PixelBorder>
               <PixelBorder
-                borderColor={tutorialStep === 7 ? '#FFD700' : (mode === 'Sell' ? '#cc7a00' : '#e5e7eb')}
-                borderWidth={tutorialStep === 7 ? 4 : 3}
+                borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
+                borderWidth={3}
                 backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
                 style={{ flex: 1 }}
               >
@@ -614,15 +712,13 @@ function TransactionModal({
                   style={styles.tab}
                   onPress={() => {
                     changeMode('Sell');
-                    if (tutorialStep === 7) {
-                      tutorialDispatch(advanceTutorial());
-                    }
                   }}
                 >
                   <Text style={styles.tabText}>Sell</Text>
                 </TouchableOpacity>
               </PixelBorder>
             </View>
+            )}
             {mode === 'Buy' ? (
               <PixelBorder
                 borderColor="#bae6fd"
@@ -668,17 +764,24 @@ function TransactionModal({
           </View>
 
           {/* Tutorial hint banner */}
-          {(tutorialStep === 4 || tutorialStep === 7 || tutorialStep === 8) && (
+          {(tutorialStep === 5 || tutorialStep === 8) && (
             <View style={[styles.tutorialHint, { zIndex: 10, elevation: 10 }]}>
               <Text style={styles.tutorialHintText}>
-                {tutorialStep === 4 && 'Tap the Buy button to purchase Gummy Bears!'}
-                {tutorialStep === 7 && 'Switch to the Sell tab above!'}
-                {tutorialStep === 8 && 'Now tap Sell to pocket your profit!'}
+                {tutorialStep === 5 && 'Tap Buy to grab them!'}
+                {tutorialStep === 8 && 'Tap Sell to pocket your profit!'}
               </Text>
             </View>
           )}
 
-          <View style={[styles.buttonRow, (tutorialStep === 4 || tutorialStep === 8) && { zIndex: 10, elevation: 10 }]}>
+          <View
+            style={[
+              styles.buttonRow,
+              (tutorialStep === 5 || tutorialStep === 8) && {
+                zIndex: 10,
+                elevation: 10,
+              },
+            ]}
+          >
             <PressableButton
               onPress={handleClose}
               shadowColor="rgba(185,28,28,1)"
@@ -701,7 +804,11 @@ function TransactionModal({
             </PressableButton>
             <PressableButton
               onPress={handleConfirm}
-              shadowColor={(tutorialStep === 4 || tutorialStep === 8) ? '#FFD700' : buttonBorderColor}
+              shadowColor={
+                tutorialStep === 5 || tutorialStep === 8
+                  ? '#FFD700'
+                  : buttonBorderColor
+              }
               shadowOffset={{ width: 0, height: 4 }}
               shadowOpacity={0.5}
               shadowRadius={5}
@@ -710,11 +817,18 @@ function TransactionModal({
             >
               <View style={{ position: 'relative' }}>
                 {mode === 'Sell' && numSparks > 0 && (
-                  <SparkEffect numSparks={numSparks} sparkColors={sparkColors} />
+                  <SparkEffect
+                    numSparks={numSparks}
+                    sparkColors={sparkColors}
+                  />
                 )}
                 <PixelBorder
-                  borderColor={(tutorialStep === 4 || tutorialStep === 8) ? '#FFD700' : buttonBorderColor}
-                  borderWidth={(tutorialStep === 4 || tutorialStep === 8) ? 4 : 3}
+                  borderColor={
+                    tutorialStep === 5 || tutorialStep === 8
+                      ? '#FFD700'
+                      : buttonBorderColor
+                  }
+                  borderWidth={tutorialStep === 5 || tutorialStep === 8 ? 4 : 3}
                   backgroundColor={buttonBackgroundColor}
                   innerPadding={0}
                   style={{ overflow: 'visible' }}
@@ -859,11 +973,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'PixeloidMono',
   },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  receiptSubLabel: {
+    fontSize: 10,
+    color: '#92400e',
+    fontFamily: 'PixeloidMono',
+    marginBottom: 2,
+  },
+  formulaText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.brown.primary,
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  iconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    flex: 1,
+    marginHorizontal: 6,
+  },
+  receiptBonusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 2,
+    gap: 6,
+  },
+  receiptIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
   priceBreakdownContainer: {
-    padding: 4,
+    padding: 12,
     marginVertical: 4,
     flexDirection: 'column',
-    alignItems: 'center',
     gap: 4,
   },
   slowCookerText: {
@@ -875,7 +1026,7 @@ const styles = StyleSheet.create({
   penaltyText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#ef4444', // Red color for penalties
+    color: '#ef4444',
     fontFamily: 'PixeloidMono',
   },
   breakdownTitle: {

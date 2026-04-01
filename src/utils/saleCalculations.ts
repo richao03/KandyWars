@@ -274,7 +274,9 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
   // finalProfit = boostedProfit × multiplier
   const finalProfit = boostedProfit * multiplier;
   const purchaseValue = purchasePrice * quantity;
-  const totalGain = purchaseValue + finalProfit;
+  // If selling at a loss (current price < purchase price), player gets current market value
+  const marketValue = basePrice * quantity;
+  const totalGain = profitPerUnit > 0 ? purchaseValue + finalProfit : marketValue;
 
   return {
     totalGain,

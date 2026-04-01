@@ -41,7 +41,7 @@ function generateHeaps(level: number): number[] {
   if (level === 1) return [1, 3, 5];
 
   const minSize = level === 2 ? 1 : 2;
-  const maxSize = level === 2 ? 5 : 7;
+  const maxSize = 5; // Max 5 items per row
   const numPiles = 4;
 
   // Loop until we get a position where nim-sum != 0
@@ -54,7 +54,7 @@ function generateHeaps(level: number): number[] {
     if (computeNimSum(heaps) !== 0) return heaps;
   }
   // Fallback guaranteed nim-sum != 0
-  return level === 2 ? [1, 2, 3, 4] : [2, 3, 5, 7];
+  return level === 2 ? [1, 2, 3, 4] : [2, 3, 4, 5];
 }
 
 function getOptimalMove(
@@ -68,15 +68,15 @@ function getOptimalMove(
   // Endgame: all heaps are 0 or 1
   const allSmall = heaps.every((h) => h <= 1);
   if (allSmall) {
-    // Misère: leave odd number of 1-heaps (opponent takes last)
+    // Misère: we want to leave an ODD number of 1-heaps for the opponent
+    // so they are forced to take the very last one and lose
     const onesCount = heaps.filter((h) => h === 1).length;
-    if (onesCount % 2 === 0) {
-      // Even 1-heaps: take one to make it odd
+    if (onesCount % 2 === 1) {
+      // Odd 1-heaps: AI takes one → leaves even for opponent → opponent takes last = opponent loses
       const idx = heaps.findIndex((h) => h === 1);
       if (idx !== -1) return { heap: idx, take: 1 };
     }
-    // Odd 1-heaps: opponent is forced to take last — but we must move
-    // Just take from any 1-heap (we'll lose in this position)
+    // Even 1-heaps: AI is in a losing position, just take from any 1-heap
     const idx = heaps.findIndex((h) => h === 1);
     if (idx !== -1) return { heap: idx, take: 1 };
     return null;
@@ -205,7 +205,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
       const newHeaps = [...currentHeaps];
       newHeaps[move.heap] -= move.take;
 
-      setLastAIMove(`AI took ${move.take} from Pile ${move.heap + 1}`);
+      setLastAIMove(`AI took ${move.take} from row ${move.heap + 1}`);
       setAiActedPile(move.heap);
       setHeaps(newHeaps);
       setAiThinking(false);
@@ -276,8 +276,14 @@ export default function NimGame({ onComplete }: NimGameProps) {
     if (!gameActive || currentTurn !== 'player' || heaps[index] === 0) return;
     SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedHeap(index);
-    setSelectedCount(1);
+    if (selectedHeap === index) {
+      // Already selected — increment count (tap to add more)
+      setSelectedCount((c) => Math.min(heaps[index], c + 1));
+    } else {
+      // New row selected
+      setSelectedHeap(index);
+      setSelectedCount(1);
+    }
   };
 
   const handleTake = () => {
@@ -358,41 +364,97 @@ export default function NimGame({ onComplete }: NimGameProps) {
     const count = heaps[pileIndex];
     const isSelected = selectedHeap === pileIndex;
     const isAiActed = aiActedPile === pileIndex;
-    const candyImage = CANDY_IMAGES[0];
-
-    // How many are "marked" for taking
+    const studentImage = CANDY_IMAGES[0];
     const markedCount = isSelected ? selectedCount : 0;
+    const canInteract = count > 0 && currentTurn === 'player' && gameActive;
 
     return (
-      <TouchableOpacity
-        key={pileIndex}
-        style={[
-          styles.pileRow,
-          isSelected && styles.pileRowSelected,
-          isAiActed && styles.pileRowAiActed,
-        ]}
-        onPress={() => handleSelectHeap(pileIndex)}
-        activeOpacity={0.7}
-        disabled={count === 0 || currentTurn !== 'player' || !gameActive}
-      >
-        <View style={styles.candyRow}>
-          {count === 0 ? (
-            <Text style={styles.emptyPileText}>—</Text>
-          ) : (
-            Array.from({ length: count }, (_, i) => {
-              const isMarked = isSelected && i >= count - markedCount;
-              return (
-                <View
-                  key={i}
-                  style={[styles.candyItem, isMarked && styles.candyItemMarked]}
-                >
-                  <Image source={candyImage} style={styles.candyImage} />
-                </View>
-              );
-            })
-          )}
-        </View>
-      </TouchableOpacity>
+      <View key={pileIndex} style={styles.pileRowOuter}>
+        {/* Minus button — only on selected row */}
+        {isSelected ? (
+          <TouchableOpacity
+            style={[
+              styles.inlinePmButton,
+              selectedCount <= 1 && styles.inlinePmButtonDisabled,
+            ]}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setSelectedCount((c) => Math.max(1, c - 1));
+            }}
+            disabled={selectedCount <= 1}
+          >
+            <Text
+              style={[
+                styles.pmButtonText,
+                selectedCount <= 1 && styles.pmButtonDisabled,
+              ]}
+            >
+              −
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.inlinePmSpacer} />
+        )}
+
+        {/* Pile items */}
+        <TouchableOpacity
+          style={[
+            styles.pileRow,
+            isSelected && styles.pileRowSelected,
+            isAiActed && styles.pileRowAiActed,
+          ]}
+          onPress={() => handleSelectHeap(pileIndex)}
+          activeOpacity={0.7}
+          disabled={!canInteract}
+        >
+          <View style={styles.candyRow}>
+            {count === 0 ? (
+              <Text style={styles.emptyPileText}>—</Text>
+            ) : (
+              Array.from({ length: count }, (_, i) => {
+                const isMarked = isSelected && i >= count - markedCount;
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.candyItem,
+                      isMarked && styles.candyItemMarked,
+                    ]}
+                  >
+                    <Image source={studentImage} style={styles.studentImage} />
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Plus button — only on selected row */}
+        {isSelected ? (
+          <TouchableOpacity
+            style={[
+              styles.inlinePmButton,
+              selectedCount >= count && styles.inlinePmButtonDisabled,
+            ]}
+            onPress={() => {
+              SoundEffects.playRandomPop();
+              setSelectedCount((c) => Math.min(count, c + 1));
+            }}
+            disabled={selectedCount >= count}
+          >
+            <Text
+              style={[
+                styles.pmButtonText,
+                selectedCount >= count && styles.pmButtonDisabled,
+              ]}
+            >
+              +
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.inlinePmSpacer} />
+        )}
+      </View>
     );
   };
 
@@ -436,7 +498,8 @@ export default function NimGame({ onComplete }: NimGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
-                You can pick as many students as you want from any one row
+                Tap a row to select it, tap again to pick more. Use +/− to
+                adjust
               </Text>
             </View>
 
@@ -574,95 +637,42 @@ export default function NimGame({ onComplete }: NimGameProps) {
             {heaps.map((_, i) => renderPile(i))}
           </View>
 
-          {/* Action bar */}
-          {selectedHeap !== null && heaps[selectedHeap] > 0 && (
-            <PixelBorder
-              borderColor="#8B7355"
-              borderWidth={3}
-              backgroundColor="#d4c5a9"
-              innerPadding={12}
-              style={{ marginTop: 16 }}
-            >
-              <Text style={styles.actionLabel}>
-                Pick student from row {selectedHeap + 1}:
-              </Text>
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.pmButton}
-                  onPress={() => {
-                    SoundEffects.playRandomPop();
-                    setSelectedCount((c) => Math.max(1, c - 1));
-                  }}
-                  disabled={selectedCount <= 1}
-                >
-                  <Text
-                    style={[
-                      styles.pmButtonText,
-                      selectedCount <= 1 && styles.pmButtonDisabled,
-                    ]}
-                  >
-                    −
-                  </Text>
-                </TouchableOpacity>
-
-                <Text style={styles.countText}>{selectedCount}</Text>
-
-                <TouchableOpacity
-                  style={styles.pmButton}
-                  onPress={() => {
-                    SoundEffects.playRandomPop();
-                    setSelectedCount((c) =>
-                      Math.min(heaps[selectedHeap!], c + 1)
-                    );
-                  }}
-                  disabled={selectedCount >= heaps[selectedHeap]}
-                >
-                  <Text
-                    style={[
-                      styles.pmButtonText,
-                      selectedCount >= heaps[selectedHeap] &&
-                        styles.pmButtonDisabled,
-                    ]}
-                  >
-                    +
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <PressableButton
-                onPress={handleTake}
-                shadowOpacity={0}
-                elevation={0}
-                style={{ marginTop: 10 }}
-              >
-                <View style={styles.takeButton}>
-                  <Text style={styles.takeButtonText}>Join my team!</Text>
-                </View>
-              </PressableButton>
-            </PixelBorder>
-          )}
-
           {/* Last AI move */}
           {lastAIMove && <Text style={styles.lastMoveText}>{lastAIMove}</Text>}
-
-          {/* Leave button */}
-          <PixelBorder
-            borderColor="#8B7355"
-            borderWidth={3}
-            backgroundColor="#c4b596"
-            innerPadding={0}
-            style={{ marginTop: 20 }}
-          >
-            <TouchableOpacity
-              style={styles.leaveButton}
-              onPress={handleForfeit}
-            >
-              <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
-                🚪 Leave
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
         </ScrollView>
+
+        {/* Confirm button */}
+        {selectedHeap !== null && heaps[selectedHeap] > 0 && (
+          <PressableButton
+            onPress={handleTake}
+            shadowOpacity={0}
+            elevation={0}
+            style={{ marginTop: 12, alignItems: 'center' }}
+          >
+            <View style={styles.takeButton}>
+              <Text style={styles.takeButtonText}>
+                Pick {selectedCount} from row {selectedHeap + 1}!
+              </Text>
+            </View>
+          </PressableButton>
+        )}
+        <Text style={styles.hintText}>
+          Don't get stuck with the last pick or you lose!
+        </Text>
+        {/* Leave button pinned to bottom */}
+        <PixelBorder
+          borderColor="#8B7355"
+          borderWidth={3}
+          backgroundColor="#c4b596"
+          innerPadding={0}
+          style={{ marginTop: 8 }}
+        >
+          <TouchableOpacity style={styles.leaveButton} onPress={handleForfeit}>
+            <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
+              🚪 Leave
+            </TextWithEmojis>
+          </TouchableOpacity>
+        </PixelBorder>
 
         <GameModal
           visible={modal.visible}
@@ -766,19 +776,51 @@ const styles = StyleSheet.create({
   contentInner: {
     paddingBottom: 20,
   },
+  hintText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#8B7355',
+    fontFamily: 'PixeloidMono',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 28,
+  },
   heapsContainer: {
     marginTop: 12,
     alignItems: 'center',
   },
+  pileRowOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    justifyContent: 'center',
+  },
+  inlinePmButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#c4b596',
+    borderWidth: 2,
+    borderColor: '#8B7355',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlinePmButtonDisabled: {
+    opacity: 0.4,
+  },
+  inlinePmSpacer: {
+    width: 36,
+  },
   pileRow: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
     borderWidth: 2,
     borderColor: 'transparent',
     padding: 6,
-    marginBottom: 6,
     minHeight: 40,
+    marginHorizontal: 8,
   },
   pileRowSelected: {
     borderColor: '#8B7355',
@@ -800,8 +842,8 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   candyItem: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
@@ -813,7 +855,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(192, 57, 43, 0.2)',
     transform: [{ scale: 1.1 }],
   },
-  candyImage: {
+  studentImage: {
     width: 44,
     height: 44,
   },

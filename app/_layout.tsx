@@ -42,6 +42,7 @@ export default function RootLayout() {
     MoreCandy: require('../assets/fonts/MoreCandy.ttf'),
     Graffiti: require('../assets/fonts/Graffiti.ttf'),
     DonGraffiti: require('../assets/fonts/DonGraffiti.otf'),
+    PlayMeGames: require('../assets/fonts/PlayMeGames.otf'),
   });
 
   // Initialize Google Mobile Ads (only in dev/production builds, not Expo Go)

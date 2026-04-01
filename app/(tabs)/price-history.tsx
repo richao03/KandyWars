@@ -3,8 +3,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { getCandyDefinition } from '../../src/constants/candyRegistry';
 import { useGame } from '../../src/hooks/useGame';
 import { useSeed } from '../../src/hooks/useSeed';
+import { useAppSelector } from '../../src/store/hooks';
+import { selectMediumCandiesUnlocked, selectBigCandiesUnlocked } from '../../src/store/slices/gameSlice';
 import CandyPriceChart from '../components/CandyPriceChart';
 
 // Memoized chart component to prevent unnecessary re-renders
@@ -14,10 +17,18 @@ export default function PriceHistory() {
   const { periodCount } = useGame();
   const { gameData } = useSeed();
   const [isTabFocused, setIsTabFocused] = useState(false);
+  const mediumUnlocked = useAppSelector(selectMediumCandiesUnlocked);
+  const bigUnlocked = useAppSelector(selectBigCandiesUnlocked);
 
   const candyNames = useMemo(
-    () => Object.keys(gameData.candyPrices || {}),
-    [gameData.candyPrices]
+    () => Object.keys(gameData.candyPrices || {}).filter((name) => {
+      const def = getCandyDefinition(name);
+      if (!def) return true;
+      if (def.size === 'medium') return mediumUnlocked;
+      if (def.size === 'big') return bigUnlocked;
+      return true;
+    }),
+    [gameData.candyPrices, mediumUnlocked, bigUnlocked]
   );
 
   // Only render charts when this tab is focused

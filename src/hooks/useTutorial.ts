@@ -2,8 +2,10 @@ import { useCallback, useContext } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   advanceTutorial,
+  markHintSeen,
   selectTutorialComplete,
   selectTutorialStep,
+  selectFirstTimeHints,
   skipTutorial,
   startTutorial,
 } from '../store/slices/tutorialSlice';
@@ -22,7 +24,8 @@ export function useTutorial() {
   const tutorialComplete = useAppSelector(selectTutorialComplete);
   const tutorialContext = useContext(TutorialContext);
 
-  const isActive = currentStep > 0 && currentStep <= 11;
+  const isActive = currentStep > 0 && currentStep <= 8;
+  const hints = useAppSelector(selectFirstTimeHints);
 
   const advance = useCallback(() => {
     dispatch(advanceTutorial());
@@ -50,6 +53,20 @@ export function useTutorial() {
     [tutorialContext]
   );
 
+  const showHint = useCallback(
+    (key: string): boolean => {
+      return !hints[key];
+    },
+    [hints]
+  );
+
+  const dismissHint = useCallback(
+    (key: string) => {
+      dispatch(markHintSeen(key));
+    },
+    [dispatch]
+  );
+
   return {
     currentStep,
     isActive,
@@ -59,5 +76,7 @@ export function useTutorial() {
     start,
     registerTarget,
     getTargetLayout,
+    showHint,
+    dismissHint,
   };
 }

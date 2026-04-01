@@ -260,6 +260,95 @@ export function getJokerEffectsAtLevel(jokerId: number, level: number): JokerEff
   return factory(level);
 }
 
+// Generate a human-readable description for a joker at a given level
+export function getJokerDescription(jokerId: number, level: number): string | null {
+  const factory = JOKER_EFFECT_FACTORIES[jokerId];
+  if (!factory) return null;
+  const effects = factory(level);
+  if (effects.length === 0) return null;
+
+  const parts: string[] = [];
+  for (const e of effects) {
+    const size = e.conditions?.candySize ? ` ${e.conditions.candySize}` : '';
+    const type = e.conditions?.candyType ? ` ${e.conditions.candyType.replace('_', ' ')}` : '';
+
+    switch (e.target) {
+      case 'size_multiplier':
+        parts.push(`${e.amount}x multiplier on${size} candy profits`);
+        break;
+      case 'type_multiplier':
+        parts.push(`${e.amount}x multiplier on${type} candy profits`);
+        break;
+      case 'conditional_multiplier':
+        if (e.conditions?.inventoryParity)
+          parts.push(`${e.amount}x profit when inventory is ${e.conditions.inventoryParity}`);
+        else if (e.conditions?.period === -1)
+          parts.push(`${e.amount}x multiplier in last 2 periods`);
+        else
+          parts.push(`${e.amount}x conditional multiplier`);
+        break;
+      case 'allowance_multiplier':
+        parts.push(`${e.amount}x your daily allowance`);
+        break;
+      case 'allowance_add':
+        parts.push(`+$${e.amount} allowance`);
+        break;
+      case 'inventory_limit':
+        parts.push(`Inventory limit +${e.amount}`);
+        break;
+      case 'money':
+        parts.push(`Instantly gain $${e.amount.toLocaleString()}`);
+        break;
+      case 'empty_inventory_bonus':
+        parts.push(`End day with 0 candy and get $${e.amount.toLocaleString()}`);
+        break;
+      case 'morning_inventory_bonus':
+        parts.push(`Gain $${e.amount} per candy at start of day`);
+        break;
+      case 'deposit_bonus': {
+        const pct = Math.round((e.amount - 1) * 100);
+        parts.push(`+${pct}% piggy bank deposit`);
+        break;
+      }
+      case 'farmers_carry_bonus':
+        parts.push(`Inventory count × $${e.amount} per period`);
+        break;
+      case 'next_sale_multiplier':
+        parts.push(`${e.amount}x profits on next sale`);
+        break;
+      case 'first_sale_boost':
+        parts.push(`${e.amount}x first sale of day profit`);
+        break;
+      case 'bulk_sale_boost':
+        parts.push(`${e.amount}x profit selling ${e.conditions?.bulkThreshold}+ at once`);
+        break;
+      case 'cash_under_boost':
+        parts.push(`${e.amount}x profit when cash under $${e.conditions?.cashBelow?.toLocaleString()}`);
+        break;
+      case 'low_profit_boost':
+        parts.push(`${e.amount}x profit on low-margin candy`);
+        break;
+      case 'stash_interest': {
+        const pct = Math.round((e.amount - 1) * 100);
+        parts.push(`${pct}% daily stash interest`);
+        break;
+      }
+      case 'deli_price_discount': {
+        const pct = Math.round((1 - e.amount) * 100);
+        parts.push(`Deli prices ${pct}% off`);
+        break;
+      }
+      case 'empty_slot_daily_bonus':
+        parts.push(`$${e.amount} per empty slot at end of day`);
+        break;
+      default:
+        return null; // Unknown target — fall back to static description
+    }
+  }
+
+  return parts.length > 0 ? parts.join('. ') : null;
+}
+
 // Effect factories keyed by joker ID — used to generate level-specific effects
 const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> = {
   // === MATH (Size multiplier: Medium) ===

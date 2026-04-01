@@ -20,11 +20,18 @@ interface MarketContentProps {
   onNextPeriod: () => void;
   onEndDay: () => void;
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
+  // Candy size unlock
+  unlockButton?: { size: 'medium' | 'big'; cost: number } | null;
+  onUnlock?: (size: 'medium' | 'big') => void;
+  playerBalance?: number;
   // Tutorial refs
   walletRef?: React.RefObject<View | null>;
   piggyBankRef?: React.RefObject<View | null>;
   gummyBearsRef?: React.RefObject<View | null>;
   nextPeriodRef?: React.RefObject<View | null>;
+  // Tutorial button visibility
+  tutorialHideButtons?: boolean;
+  tutorialHideEndDay?: boolean;
 }
 
 function MarketContent({
@@ -43,10 +50,15 @@ function MarketContent({
   onNextPeriod,
   onEndDay,
   flavorTextWrapper,
+  unlockButton,
+  onUnlock,
+  playerBalance,
   walletRef,
   piggyBankRef,
   gummyBearsRef,
   nextPeriodRef,
+  tutorialHideButtons = false,
+  tutorialHideEndDay = false,
 }: MarketContentProps) {
   return (
     <ImageBackground
@@ -74,6 +86,9 @@ function MarketContent({
             onCandyPress={onCandyPress}
             onLunchBack={onLunchBack}
             gummyBearsRef={gummyBearsRef}
+            unlockButton={unlockButton}
+            onUnlock={onUnlock}
+            playerBalance={playerBalance}
           />
         </View>
 
@@ -87,6 +102,8 @@ function MarketContent({
             onNextPeriod={onNextPeriod}
             onEndDay={onEndDay}
             nextPeriodRef={nextPeriodRef}
+            tutorialHidden={tutorialHideButtons}
+            hideEndDay={tutorialHideEndDay}
           />
         </View>
       </View>
