@@ -234,8 +234,8 @@ export default function NimGame({ onComplete }: NimGameProps) {
         } else {
           SoundEffects.playCongratsSound();
           showModal(
-            'Nim Master!',
-            'You beat all 3 levels! The AI keeps taking the last student!',
+            'Winner Winner',
+            "You didn't take the last pick!",
             '🏆',
             () => {
               setGameState('jokerSelection');

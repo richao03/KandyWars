@@ -4,7 +4,12 @@ import { useGame } from '../src/hooks/useGame';
 import NimGame from './minigames/NimGame';
 
 export default function HistoryGameScreen() {
-  const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
+  const {
+    markStudiedTonight,
+    markLunchMinigamePlayed,
+    minigameContext,
+    setMinigameContext,
+  } = useGame();
 
   const navigateBack = () => {
     // Since we use router.push() to get here, we can use router.back() to return
@@ -12,8 +17,6 @@ export default function HistoryGameScreen() {
   };
 
   const handleGameComplete = () => {
-    console.log('Nim game completed! Context:', minigameContext);
-
     // Mark study as completed based on context BEFORE navigating
     // This ensures the state is updated before Market re-renders
     if (minigameContext === 'after-school') {

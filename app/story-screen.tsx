@@ -19,6 +19,7 @@ import {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { formatNumber } from '../src/utils/priceUtils';
 import { useWallet } from '../src/hooks/useWallet';
 import { useGame } from '../src/hooks/useGame';
 import { MusicController } from '../src/utils/musicController';
@@ -356,7 +357,7 @@ export default function StoryScreen() {
   const dogBreed = getDogBreed(currentLevel);
   const adoptionFee = wallet?.adoptionFee || 5000;
 
-  const storyLines = getStoryLines(dogBreed, adoptionFee.toLocaleString());
+  const storyLines = getStoryLines(dogBreed, formatNumber(adoptionFee));
 
   // Early return if story data is invalid
   if (!storyLines || storyLines.length === 0) {

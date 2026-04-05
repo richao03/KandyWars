@@ -2,6 +2,7 @@
 // 47 jokers with level support (1-3)
 
 import { CandyTypeName, CandySize } from '../types/candy';
+import { formatNumber } from './priceUtils';
 
 export type EffectTarget =
   | 'inventory_limit'
@@ -297,10 +298,10 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
         parts.push(`Inventory limit +${e.amount}`);
         break;
       case 'money':
-        parts.push(`Instantly gain $${e.amount.toLocaleString()}`);
+        parts.push(`Instantly gain $${formatNumber(e.amount)}`);
         break;
       case 'empty_inventory_bonus':
-        parts.push(`End day with 0 candy and get $${e.amount.toLocaleString()}`);
+        parts.push(`End day with 0 candy and get $${formatNumber(e.amount)}`);
         break;
       case 'morning_inventory_bonus':
         parts.push(`Gain $${e.amount} per candy at start of day`);
@@ -323,7 +324,7 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
         parts.push(`${e.amount}x profit selling ${e.conditions?.bulkThreshold}+ at once`);
         break;
       case 'cash_under_boost':
-        parts.push(`${e.amount}x profit when cash under $${e.conditions?.cashBelow?.toLocaleString()}`);
+        parts.push(`${e.amount}x profit when cash under $${formatNumber(e.conditions?.cashBelow ?? 0)}`);
         break;
       case 'low_profit_boost':
         parts.push(`${e.amount}x profit on low-margin candy`);
@@ -521,10 +522,10 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
 
   // === ECONOMY (Type multiplier: Gummy) ===
 
-  // 19: Bear Market — 1.5x/2x/3x mult Gummy
+  // 19: Bear Market — +1.5/+2/+3 mult Gummy
   19: (lv) => [{
     target: 'type_multiplier',
-    operation: 'multiply',
+    operation: 'add',
     amount: levelScale(1.5, 2, 3, lv),
     duration: 'persistent',
     conditions: { candyType: 'gummy' },

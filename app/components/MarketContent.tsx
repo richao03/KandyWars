@@ -1,8 +1,10 @@
 import React from 'react';
 import { ImageBackground, StyleSheet, View } from 'react-native';
+import { CandySize } from '../../src/types/candy';
 import GameHUD from './GameHUD';
 import MarketActionButtons from './MarketActionButtons';
 import MarketList from './MarketList';
+import SizeTabs from './SizeTabs';
 
 interface MarketContentProps {
   candies: any[];
@@ -24,14 +26,16 @@ interface MarketContentProps {
   unlockButton?: { size: 'medium' | 'big'; cost: number } | null;
   onUnlock?: (size: 'medium' | 'big') => void;
   playerBalance?: number;
-  // Tutorial refs
-  walletRef?: React.RefObject<View | null>;
-  piggyBankRef?: React.RefObject<View | null>;
-  gummyBearsRef?: React.RefObject<View | null>;
-  nextPeriodRef?: React.RefObject<View | null>;
-  // Tutorial button visibility
-  tutorialHideButtons?: boolean;
-  tutorialHideEndDay?: boolean;
+  // Size tabs
+  availableSizes?: { key: CandySize; label: string }[];
+  selectedSize?: CandySize;
+  onSizeSelect?: (size: CandySize) => void;
+  showSizeTabs?: boolean;
+  // Tutorial layout callbacks
+  onWalletLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
+  onPiggyBankLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
+  onGummyBearsLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
+  onNextPeriodLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
 }
 
 function MarketContent({
@@ -53,12 +57,14 @@ function MarketContent({
   unlockButton,
   onUnlock,
   playerBalance,
-  walletRef,
-  piggyBankRef,
-  gummyBearsRef,
-  nextPeriodRef,
-  tutorialHideButtons = false,
-  tutorialHideEndDay = false,
+  availableSizes,
+  selectedSize,
+  onSizeSelect,
+  showSizeTabs = false,
+  onWalletLayout,
+  onPiggyBankLayout,
+  onGummyBearsLayout,
+  onNextPeriodLayout,
 }: MarketContentProps) {
   return (
     <ImageBackground
@@ -71,9 +77,17 @@ function MarketContent({
           onInventoryPress={onInventoryPress}
           flavorTextWrapper={flavorTextWrapper}
           showLunchMinigames={showLunchMinigames}
-          walletRef={walletRef}
-          piggyBankRef={piggyBankRef}
+          onWalletLayout={onWalletLayout}
+          onPiggyBankLayout={onPiggyBankLayout}
         />
+
+        {showSizeTabs && availableSizes && selectedSize && onSizeSelect && (
+          <SizeTabs
+            sizes={availableSizes}
+            selectedSize={selectedSize}
+            onSelect={onSizeSelect}
+          />
+        )}
 
         <View style={styles.listContainer}>
           <MarketList
@@ -85,10 +99,10 @@ function MarketContent({
             hasPlayedLunchMinigame={hasPlayedLunchMinigame}
             onCandyPress={onCandyPress}
             onLunchBack={onLunchBack}
-            gummyBearsRef={gummyBearsRef}
             unlockButton={unlockButton}
             onUnlock={onUnlock}
             playerBalance={playerBalance}
+            onGummyBearsLayout={onGummyBearsLayout}
           />
         </View>
 
@@ -101,9 +115,7 @@ function MarketContent({
             showLunchMinigames={showLunchMinigames}
             onNextPeriod={onNextPeriod}
             onEndDay={onEndDay}
-            nextPeriodRef={nextPeriodRef}
-            tutorialHidden={tutorialHideButtons}
-            hideEndDay={tutorialHideEndDay}
+            onNextPeriodLayout={onNextPeriodLayout}
           />
         </View>
       </View>

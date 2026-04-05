@@ -19,6 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import colors from '../src/constants/colors';
+import { formatCurrency } from '../src/utils/priceUtils';
 import { JOKER_IDS, findJokerById } from '../src/constants/jokerIds';
 import { useFlavorText } from '../src/context/FlavorTextContext';
 import { useGame } from '../src/hooks/useGame';
@@ -220,7 +221,7 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
   const displayAmount = hasBonus ? amount * 1.1 : amount;
 
   // Calculate dynamic font size for stashed amount based on text length
-  const stashedAmountText = `$${stashedAmount.toFixed(2)}`;
+  const stashedAmountText = formatCurrency(stashedAmount);
   const stashedAmountFontSize = useMemo(() => {
     const textLength = stashedAmountText.length;
     if (textLength <= 8) return 28; // Normal size for amounts like $1000.00
@@ -254,7 +255,7 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
       if (isMaxDeposit) {
         dispatch(incrementMaxDeposit());
         console.log(
-          `🏆 Maximalist: Full wallet deposited! ($${amount.toFixed(2)})`
+          `🏆 Maximalist: Full wallet deposited! (${formatCurrency(amount)})`
         );
       }
     }
@@ -275,8 +276,8 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
         title: 'Transaction Failed',
         message:
           mode === 'deposit'
-            ? `Unable to deposit $${amount.toFixed(2)}. Current balance: $${balance.toFixed(2)}`
-            : `Unable to withdraw $${amount.toFixed(2)}. Stashed amount: $${stashedAmount.toFixed(2)}`,
+            ? `Unable to deposit ${formatCurrency(amount)}. Current balance: ${formatCurrency(balance)}`
+            : `Unable to withdraw ${formatCurrency(amount)}. Stashed amount: ${formatCurrency(stashedAmount)}`,
 
         onConfirm: () =>
           setConfirmModal((prev) => ({ ...prev, visible: false })),
@@ -344,7 +345,7 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
                         },
                       ]}
                     >
-                      {stashedChange > 0 ? '+' : ''}${stashedChange.toFixed(2)}
+                      {stashedChange > 0 ? '+' : ''}{formatCurrency(stashedChange)}
                     </Text>
                   </Animated.View>
                 )}
@@ -422,7 +423,7 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
                         isTyping
                           ? `$${typingValue}`
                           : amount > 0
-                            ? `$${amount.toFixed(2)}`
+                            ? formatCurrency(amount)
                             : '$0.00'
                       }
                       onChangeText={handleTextInput}
@@ -437,7 +438,7 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
                 {hasBonus && (
                   <View style={styles.bonusIndicator}>
                     <Text style={styles.bonusText}>
-                      💰 +10% bonus = ${displayAmount.toFixed(2)}
+                      💰 +10% bonus = {formatCurrency(displayAmount)}
                     </Text>
                   </View>
                 )}

@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { GAME_TIPS } from '../../src/constants/gameTips';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import { useTabBar } from '../../src/hooks/useTabBar';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
@@ -93,7 +94,7 @@ export default function GoingToSchoolModal({
             <View style={styles.textBox}>
               {allowanceAmount && (
                 <Text style={styles.allowanceText}>
-                  Received ${allowanceAmount.toFixed(2)} for allowance for the
+                  Received ${formatCurrency(allowanceAmount)} for allowance for the
                   day! Yay!
                 </Text>
               )}

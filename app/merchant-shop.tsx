@@ -16,6 +16,7 @@ import {
   selectOwnedLevel,
   selectPurchaseCount,
 } from '../src/store/slices/merchantSlice';
+import { formatNumber } from '../src/utils/priceUtils';
 import FastModal from './components/FastModal';
 import GameHUD from './components/GameHUD';
 import PixelBorder from './components/PixelBorder';
@@ -270,7 +271,7 @@ const ItemInfoModal = React.memo(function ItemInfoModal({
           </Text>
 
           <Text style={styles.infoPrice}>
-            Price: ${selectedItem.price.toLocaleString()}
+            Price: ${formatNumber(selectedItem.price)}
           </Text>
 
           {!canAfford && (

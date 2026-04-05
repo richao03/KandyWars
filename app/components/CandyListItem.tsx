@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import { getCandyDefinition, CANDY_TYPE_LABELS, CANDY_SIZE_LABELS } from '../../src/constants/candyRegistry';
 import type { Candy } from '../../src/types/candy';
 import PixelBorder from './PixelBorder';
@@ -34,6 +35,7 @@ interface CandyListItemProps {
   index: number;
   localPricesUpdating: boolean;
   onPress: (index: number) => void;
+  onItemLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
 }
 
 const CandyListItem = React.memo(function CandyListItem({
@@ -41,7 +43,20 @@ const CandyListItem = React.memo(function CandyListItem({
   index,
   localPricesUpdating,
   onPress,
+  onItemLayout,
 }: CandyListItemProps) {
+  const itemRef = useRef<View>(null);
+
+  const handleLayout = useCallback(() => {
+    if (onItemLayout && itemRef.current) {
+      requestAnimationFrame(() => {
+        itemRef.current?.measureInWindow((x, y, width, height) => {
+          if (__DEV__) console.log(`📖 CandyListItem measured: x=${x}, y=${y}, w=${width}, h=${height}`);
+          if (width > 0 && height > 0) onItemLayout({ x, y, width, height });
+        });
+      });
+    }
+  }, [onItemLayout]);
   const candyDef = getCandyDefinition(item.name);
 
   // Memoize badge JSX — candyDef is static per candy name, never changes
@@ -62,41 +77,43 @@ const CandyListItem = React.memo(function CandyListItem({
   }, [candyDef]);
 
   return (
-    <PressableButton
-      onPress={() => onPress(index)}
-      shadowColor="#d4a574"
-      shadowOffset={{ width: 0, height: 3 }}
-      shadowOpacity={0.4}
-      shadowRadius={4}
-      elevation={6}
-      style={styles.container}
-    >
-      <PixelBorder
-        borderColor="#d4a574"
-        borderWidth={3}
-        backgroundColor="rgba(255, 255, 255, 0.7)"
-        innerPadding={8}
+    <View ref={itemRef} onLayout={handleLayout} collapsable={false}>
+      <PressableButton
+        onPress={() => onPress(index)}
+        shadowColor="#d4a574"
+        shadowOffset={{ width: 0, height: 3 }}
+        shadowOpacity={0.4}
+        shadowRadius={4}
+        elevation={6}
+        style={styles.container}
       >
-        <View style={styles.candyInfo}>
-          <View style={styles.candyLeftSection}>
-            <View style={styles.candyNameRow}>
-              <Text style={styles.name}>{item.name}</Text>
-              {item.quantityOwned > 0 && (
-                <View style={styles.ownedBadge}>
-                  <Text style={styles.ownedText}>{item.quantityOwned}</Text>
-                </View>
-              )}
+        <PixelBorder
+          borderColor="#d4a574"
+          borderWidth={3}
+          backgroundColor="rgba(255, 255, 255, 0.7)"
+          innerPadding={8}
+        >
+          <View style={styles.candyInfo}>
+            <View style={styles.candyLeftSection}>
+              <View style={styles.candyNameRow}>
+                <Text style={styles.name}>{item.name}</Text>
+                {item.quantityOwned > 0 && (
+                  <View style={styles.ownedBadge}>
+                    <Text style={styles.ownedText}>{item.quantityOwned}</Text>
+                  </View>
+                )}
+              </View>
+              {badges}
             </View>
-            {badges}
+            <View style={styles.candyPriceRow}>
+              <Text style={styles.price}>
+                {localPricesUpdating ? '$-.--' : `$${formatCurrency(item.cost)}`}
+              </Text>
+            </View>
           </View>
-          <View style={styles.candyPriceRow}>
-            <Text style={styles.price}>
-              {localPricesUpdating ? '$-.--' : `$${item.cost.toFixed(2)}`}
-            </Text>
-          </View>
-        </View>
-      </PixelBorder>
-    </PressableButton>
+        </PixelBorder>
+      </PressableButton>
+    </View>
   );
 });
 

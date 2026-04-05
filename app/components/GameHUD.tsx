@@ -1,5 +1,5 @@
 import { Marquee } from '@animatereactnative/marquee';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -16,6 +16,7 @@ import { useWallet } from '../../src/hooks/useWallet';
 import { EMOJI_IMAGES, EMOJI_TO_IMAGE_MAP } from '../../utils/eventImages';
 import PixelBorder from './PixelBorder';
 import StatusIndicators from './StatusIndicators';
+import { formatCurrency } from '../../src/utils/priceUtils';
 
 // Helper function to render text with emojis replaced by images
 const renderTextWithEmojis = (text: string, textStyle: any) => {
@@ -78,6 +79,13 @@ const locationNames = {
   'the connect': 'The Connect',
 } as const;
 
+export interface LayoutRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface GameHUDProps {
   isModalOpening?: boolean;
   isModalOpen?: boolean;
@@ -89,9 +97,8 @@ interface GameHUDProps {
   onInventoryPress?: () => void;
   disableBalanceAnimation?: boolean;
   showLunchMinigames: boolean;
-  // Tutorial refs
-  walletRef?: React.RefObject<View | null>;
-  piggyBankRef?: React.RefObject<View | null>;
+  onWalletLayout?: (layout: LayoutRect) => void;
+  onPiggyBankLayout?: (layout: LayoutRect) => void;
 }
 
 function GameHUD({
@@ -105,8 +112,8 @@ function GameHUD({
   onInventoryPress,
   showLunchMinigames,
   disableBalanceAnimation = false,
-  walletRef,
-  piggyBankRef,
+  onWalletLayout,
+  onPiggyBankLayout,
 }: GameHUDProps) {
   const { balance, stashedAmount } = useWallet();
   const { day, period, currentLocation } = useGame();
@@ -130,6 +137,33 @@ function GameHUD({
   const stashedOpacity = useSharedValue(0);
   const stashedScale = useSharedValue(0.8);
   const piggyShakeX = useSharedValue(0);
+
+  // Refs for tutorial measurement
+  const walletRef = useRef<View>(null);
+  const piggyBankRef = useRef<View>(null);
+
+  const handleWalletLayout = useCallback(() => {
+    if (onWalletLayout && walletRef.current) {
+      // Delay measurement to ensure layout is finalized
+      requestAnimationFrame(() => {
+        walletRef.current?.measureInWindow((x, y, width, height) => {
+          if (__DEV__) console.log(`📖 Wallet measured: x=${x}, y=${y}, w=${width}, h=${height}`);
+          if (width > 0 && height > 0) onWalletLayout({ x, y, width, height });
+        });
+      });
+    }
+  }, [onWalletLayout]);
+
+  const handlePiggyBankLayout = useCallback(() => {
+    if (onPiggyBankLayout && piggyBankRef.current) {
+      requestAnimationFrame(() => {
+        piggyBankRef.current?.measureInWindow((x, y, width, height) => {
+          if (__DEV__) console.log(`📖 PiggyBank measured: x=${x}, y=${y}, w=${width}, h=${height}`);
+          if (width > 0 && height > 0) onPiggyBankLayout({ x, y, width, height });
+        });
+      });
+    }
+  }, [onPiggyBankLayout]);
 
   // Initialize previous balance on first render
   useEffect(() => {
@@ -340,7 +374,7 @@ function GameHUD({
   }, [locationText]);
 
   // Calculate dynamic font size for piggy bank amount based on text length
-  const piggyAmountText = `$${(stashedAmount || 0).toFixed(2)}`;
+  const piggyAmountText = `$${formatCurrency(stashedAmount || 0)}`;
   const piggyFontSize = useMemo(() => {
     const textLength = piggyAmountText.length;
     if (textLength <= 8) return 16; // Normal size for amounts like $1000.00
@@ -392,7 +426,7 @@ function GameHUD({
         <Animated.View
           style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}
         >
-          <View ref={walletRef} collapsable={false}>
+          <View ref={walletRef} onLayout={handleWalletLayout} collapsable={false}>
           <PixelBorder
             borderColor="#4a7c4a"
             borderWidth={3}
@@ -403,7 +437,7 @@ function GameHUD({
             <View style={[styles.statBox, styles.cashBox]}>
               <Text style={statTitleStyle}>Wallet</Text>
               <Text style={styles.cashAmount}>
-                ${(balance || 0).toFixed(2)}
+                ${formatCurrency(balance || 0)}
               </Text>
 
               {/* Animated money change indicator */}
@@ -421,7 +455,7 @@ function GameHUD({
                     ]}
                   >
                     {moneyChange > 0 ? '+' : '-'}$
-                    {Math.abs(moneyChange).toFixed(2)}
+                    {formatCurrency(Math.abs(moneyChange))}
                   </Text>
                 </Animated.View>
               )}
@@ -431,7 +465,7 @@ function GameHUD({
         </Animated.View>
 
         <Animated.View style={[{ flex: 1 }, animatedPiggyBankStyle]}>
-          <View ref={piggyBankRef} collapsable={false}>
+          <View ref={piggyBankRef} onLayout={handlePiggyBankLayout} collapsable={false}>
           <PixelBorder
             borderColor="#b85c8a"
             borderWidth={3}
@@ -460,7 +494,7 @@ function GameHUD({
                     ]}
                   >
                     {stashedChange > 0 ? '+' : '-'}$
-                    {Math.abs(stashedChange).toFixed(2)}
+                    {formatCurrency(Math.abs(stashedChange))}
                   </Text>
                 </Animated.View>
               )}

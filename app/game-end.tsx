@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import colors from '../src/constants/colors';
+import { formatCurrency } from '../src/utils/priceUtils';
 import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useGame } from '../src/hooks/useGame';
 import { useHallPass } from '../src/hooks/useHallPass';
@@ -630,7 +631,7 @@ export default function GameEndScreen() {
                 <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
                   💰 Balance
                 </TextWithEmojis>
-                <Text style={styles.statValueRight}>${balance.toFixed(2)}</Text>
+                <Text style={styles.statValueRight}>${formatCurrency(balance)}</Text>
               </View>
 
               <View style={styles.statItemRow}>
@@ -638,7 +639,7 @@ export default function GameEndScreen() {
                   {stashedAmount >= 0 ? '⚖️ Savings' : '⚖️ Debt'}
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${Math.abs(stashedAmount).toFixed(2) || '0.00'}
+                  ${formatCurrency(Math.abs(stashedAmount))}
                 </Text>
               </View>
 
@@ -649,7 +650,7 @@ export default function GameEndScreen() {
                 <Text style={styles.statValueRight}>
                   {gameResult === 'won'
                     ? 'All debt paid off!'
-                    : `$${(Math.abs(stashedAmount) - balance).toFixed(2)} remaining`}
+                    : `$${formatCurrency(Math.abs(stashedAmount) - balance)} remaining`}
                 </Text>
               </View>
             </PixelBorder>
@@ -674,7 +675,7 @@ export default function GameEndScreen() {
                   💰 Total Profit
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${playthroughStats?.totalProfit?.toFixed(2) || '0.00'}
+                  ${playthroughStats?.totalProfit != null ? formatCurrency(playthroughStats.totalProfit) : '0.00'}
                 </Text>
               </View>
 
@@ -683,7 +684,7 @@ export default function GameEndScreen() {
                   💸 Spent on Candy
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${playthroughStats?.totalSpentOnCandy?.toFixed(2) || '0.00'}
+                  ${playthroughStats?.totalSpentOnCandy != null ? formatCurrency(playthroughStats.totalSpentOnCandy) : '0.00'}
                 </Text>
               </View>
 
@@ -692,7 +693,7 @@ export default function GameEndScreen() {
                   💰 Total Allowance
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${playthroughStats?.totalAllowance?.toFixed(2) || '0.00'}
+                  ${playthroughStats?.totalAllowance != null ? formatCurrency(playthroughStats.totalAllowance) : '0.00'}
                 </Text>
               </View>
 
@@ -722,7 +723,7 @@ export default function GameEndScreen() {
                     💎 Best Single Sale
                   </TextWithEmojis>
                   <Text style={styles.statValueRight}>
-                    {bestSale.candyName} (+${bestSale.profit.toFixed(2)})
+                    {bestSale.candyName} (+${formatCurrency(bestSale.profit)})
                   </Text>
                 </View>
               )}

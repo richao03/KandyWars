@@ -24,6 +24,7 @@ import {
 } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
+import { formatNumber } from '../../src/utils/priceUtils';
 import JokerCard from './JokerCard';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -468,7 +469,7 @@ export default function JokerSelection({
               { marginBottom: 0 },
             ]}
           >
-            Balance: ${balance.toLocaleString()}
+            Balance: ${formatNumber(balance)}
           </Text>
         </View>
 
@@ -521,7 +522,7 @@ export default function JokerSelection({
                           canAfford ? styles.canAfford : styles.cantAfford,
                         ]}
                       >
-                        ${joker.cost.toLocaleString()}
+                        ${formatNumber(joker.cost)}
                       </Text>
                     </View>
                   </PressableButton>
@@ -633,7 +634,7 @@ export default function JokerSelection({
                     { textAlign: 'center', marginTop: 16 },
                   ]}
                 >
-                  Cost: ${upgradeConfirmJoker.cost.toLocaleString()}
+                  Cost: ${formatNumber(upgradeConfirmJoker.cost)}
                 </Text>
 
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>

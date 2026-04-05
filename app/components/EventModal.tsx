@@ -5,14 +5,13 @@ import {
   ImageBackground,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import ReAnimated, {
   Easing,
   runOnJS,
-  useAnimatedProps,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -22,6 +21,7 @@ import colors from '../../src/constants/colors';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useWallet } from '../../src/hooks/useWallet';
 import { SoundEffects } from '../../src/utils/soundEffects';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
@@ -68,8 +68,6 @@ const getResolvedImage = (backgroundImage: any, eventEffect?: string) => {
   return require('../../assets/images/pricedrop.png');
 };
 
-const AnimatedTextInput = ReAnimated.createAnimatedComponent(TextInput);
-
 // Custom component for animated money display
 const AnimatedMoneyCounter = ({
   startValue,
@@ -80,6 +78,11 @@ const AnimatedMoneyCounter = ({
   prefix = '$',
 }) => {
   const animatedValue = useSharedValue(startValue);
+  const [displayText, setDisplayText] = useState(`${prefix}${formatCurrency(startValue)}`);
+
+  const updateDisplay = useCallback((val: number) => {
+    setDisplayText(`${prefix}${formatCurrency(val)}`);
+  }, [prefix]);
 
   useEffect(() => {
     if (isActive) {
@@ -89,20 +92,21 @@ const AnimatedMoneyCounter = ({
       });
     } else {
       animatedValue.value = startValue;
+      setDisplayText(`${prefix}${formatCurrency(startValue)}`);
     }
   }, [isActive, startValue, endValue, duration]);
 
-  const animatedProps = useAnimatedProps(() => {
-    return {
-      text: `${prefix}${animatedValue.value.toFixed(2)}`,
-      defaultValue: `${prefix}${animatedValue.value.toFixed(2)}`,
-    };
-  });
+  useAnimatedReaction(
+    () => Math.round(animatedValue.value * 100) / 100,
+    (current, previous) => {
+      if (current !== previous) {
+        runOnJS(updateDisplay)(current);
+      }
+    }
+  );
 
   return (
-    <AnimatedTextInput
-      animatedProps={animatedProps}
-      editable={false}
+    <Text
       style={{
         fontSize: 24,
         fontWeight: 'bold',
@@ -113,7 +117,9 @@ const AnimatedMoneyCounter = ({
         textShadowOffset: { width: 0, height: 0 },
         textShadowRadius: isActive && endValue < startValue ? 3 : 4,
       }}
-    />
+    >
+      {displayText}
+    </Text>
   );
 };
 
@@ -525,11 +531,11 @@ const EventModal = React.memo(function EventModal() {
                             style={{ marginTop: 12 }}
                           >
                             <Text style={styles.moneyChangeLabel}>
-                              Lost: -${(startAmount - finalAmount).toFixed(2)}
+                              Lost: -${formatCurrency(startAmount - finalAmount)}
                             </Text>
                             <View style={styles.moneyCountdownContainer}>
                               <Text style={styles.moneyLabel}>
-                                ${startAmount.toFixed(2)} →
+                                ${formatCurrency(startAmount)} →
                               </Text>
                               <AnimatedMoneyCounter
                                 startValue={startAmount}
@@ -550,11 +556,11 @@ const EventModal = React.memo(function EventModal() {
                           style={{ marginTop: 12 }}
                         >
                           <Text style={styles.moneyGainLabel}>
-                            Gained: +${(finalAmount - startAmount).toFixed(2)}
+                            Gained: +${formatCurrency(finalAmount - startAmount)}
                           </Text>
                           <View style={styles.moneyGainContainer}>
                             <Text style={styles.moneyLabel}>
-                              ${startAmount.toFixed(2)} →
+                              ${formatCurrency(startAmount)} →
                             </Text>
                             <AnimatedMoneyCounter
                               startValue={startAmount}
@@ -668,11 +674,11 @@ const EventModal = React.memo(function EventModal() {
                       style={{ marginTop: 12 }}
                     >
                       <Text style={styles.moneyChangeLabel}>
-                        Lost: -${(startAmount - finalAmount).toFixed(2)}
+                        Lost: -${formatCurrency(startAmount - finalAmount)}
                       </Text>
                       <View style={styles.moneyCountdownContainer}>
                         <Text style={styles.moneyLabel}>
-                          ${startAmount.toFixed(2)} →
+                          ${formatCurrency(startAmount)} →
                         </Text>
                         <AnimatedMoneyCounter
                           startValue={startAmount}
@@ -692,11 +698,11 @@ const EventModal = React.memo(function EventModal() {
                       style={{ marginTop: 12 }}
                     >
                       <Text style={styles.moneyGainLabel}>
-                        Gained: +${(finalAmount - startAmount).toFixed(2)}
+                        Gained: +${formatCurrency(finalAmount - startAmount)}
                       </Text>
                       <View style={styles.moneyGainContainer}>
                         <Text style={styles.moneyLabel}>
-                          ${startAmount.toFixed(2)} →
+                          ${formatCurrency(startAmount)} →
                         </Text>
                         <AnimatedMoneyCounter
                           startValue={startAmount}

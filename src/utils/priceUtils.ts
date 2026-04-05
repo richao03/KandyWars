@@ -47,3 +47,34 @@ export const applyPercentageBonus = (baseValue: number, bonusPercentage: number)
 export const applyMultiplier = (baseValue: number, multiplier: number): number => {
   return roundToTwoDecimals(baseValue * multiplier);
 };
+
+/**
+ * Formats a number as a currency string with commas and 2 decimal places.
+ * Does NOT include the "$" prefix — callers add that contextually.
+ * Uses regex (not toLocaleString) for consistent cross-platform output.
+ *
+ * @example
+ * formatCurrency(1234.5)   // "1,234.50"
+ * formatCurrency(-999.99)  // "-999.99"
+ * formatCurrency(0)        // "0.00"
+ */
+export const formatCurrency = (amount: number): string => {
+  const fixed = Math.abs(amount).toFixed(2);
+  const [whole, decimal] = fixed.split('.');
+  const withCommas = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return amount < 0 ? `-${withCommas}.${decimal}` : `${withCommas}.${decimal}`;
+};
+
+/**
+ * Formats an integer with commas, no decimal places.
+ * For whole-number displays like unlock costs, quantities, etc.
+ *
+ * @example
+ * formatNumber(5000)   // "5,000"
+ * formatNumber(100)    // "100"
+ */
+export const formatNumber = (amount: number): string => {
+  const whole = Math.abs(Math.round(amount)).toString();
+  const withCommas = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return amount < 0 ? `-${withCommas}` : withCommas;
+};

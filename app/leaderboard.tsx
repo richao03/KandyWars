@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import colors from '../src/constants/colors';
+import { formatNumber } from '../src/utils/priceUtils';
 import { useScoreboard } from '../src/hooks/useScoreboard';
 import { scoreboardService } from '../src/services/firebase';
 import PixelBorder from './components/PixelBorder';
@@ -78,8 +79,8 @@ export default function LeaderboardScreen() {
 
   const formatBalance = (balance: number): string => {
     return balance >= 0
-      ? `$${balance.toLocaleString()}`
-      : `-$${Math.abs(balance).toLocaleString()}`;
+      ? `$${formatNumber(balance)}`
+      : `-$${formatNumber(Math.abs(balance))}`;
   };
 
   const formatTime = (minutes: number): string => {

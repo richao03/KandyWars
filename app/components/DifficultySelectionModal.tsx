@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { formatNumber } from '../../src/utils/priceUtils';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppSelector } from '../../src/store/hooks';
 import FastModal from './FastModal';
@@ -321,7 +322,7 @@ export default function DifficultySelectionModal({
                                   ]}
                                 >
                                   {isUnlocked
-                                    ? `Adoption Fee: $${option.piggyBank.toLocaleString()}`
+                                    ? `Adoption Fee: $${formatNumber(option.piggyBank)}`
                                     : `Beat Level ${option.level - 1} to unlock`}
                                 </Text>
                               </View>

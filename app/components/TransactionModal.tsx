@@ -13,6 +13,7 @@ import { Candy } from '../../src/types/candy';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
 import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import { SoundEffects } from '../../src/utils/soundEffects';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -110,7 +111,7 @@ function TransactionModal({
   // Tutorial
   const tutorialStep = useAppSelector(selectTutorialStep);
   const tutorialDispatch = useAppDispatch();
-  const isTutorialModal = tutorialStep === 5 || tutorialStep === 8;
+  const isTutorialModal = tutorialStep === 4 || tutorialStep === 7;
   const dimOpacity = isTutorialModal ? 0.25 : 1;
 
   // Read from snapshotted saleInputs prop (captured when modal opens) — no Redux subscriptions
@@ -169,12 +170,12 @@ function TransactionModal({
     return consecutiveCount;
   }, [visible, candySales]);
 
-  // Set quantity to max when modal opens; auto-switch to sell for tutorial step 8
+  // Set quantity to max when modal opens; auto-switch to sell for tutorial step 7
   useEffect(() => {
     if (visible) {
       if (__DEV__) console.log('isVisible maxQuantity: ', maxQuantity);
-      // Tutorial step 8: auto-switch to sell mode
-      if (tutorialStep === 8) {
+      // Tutorial step 7: auto-switch to sell mode
+      if (tutorialStep === 7) {
         setMode('Sell');
         setQuantity(Math.max(1, clampedMaxSellQuantity));
       } else {
@@ -239,10 +240,10 @@ function TransactionModal({
   ]);
 
   const pocketValue = saleResult
-    ? saleResult.totalGain.toFixed(2)
+    ? formatCurrency(saleResult.totalGain)
     : mode === 'Sell'
-      ? (candy.cost * quantity).toFixed(2)
-      : (finalUnitPrice * quantity).toFixed(2);
+      ? formatCurrency(candy.cost * quantity)
+      : formatCurrency(finalUnitPrice * quantity);
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
@@ -281,8 +282,8 @@ function TransactionModal({
 
       onConfirm(quantity, mode.toLowerCase() as 'buy' | 'sell');
 
-      // Advance tutorial: step 4 (buy confirm) or step 8 (sell confirm)
-      if (tutorialStep === 5 || tutorialStep === 8) {
+      // Advance tutorial: step 4 (buy confirm) or step 7 (sell confirm)
+      if (tutorialStep === 4 || tutorialStep === 7) {
         tutorialDispatch(advanceTutorial());
       }
     }
@@ -476,7 +477,7 @@ function TransactionModal({
               </View>
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Current Price:</Text>
-                <Text style={styles.priceValue}>${candy.cost.toFixed(2)}</Text>
+                <Text style={styles.priceValue}>${formatCurrency(candy.cost)}</Text>
               </View>
 
               {candy.quantityOwned > 0 && (
@@ -499,7 +500,7 @@ function TransactionModal({
                               },
                             ]}
                           >
-                            ${candy.averagePrice.toFixed(2)}
+                            ${formatCurrency(candy.averagePrice)}
                           </Text>
                         </View>
                       )}
@@ -526,7 +527,7 @@ function TransactionModal({
                               },
                             ]}
                           >
-                            ${candy.averagePrice.toFixed(2)}
+                            ${formatCurrency(candy.averagePrice)}
                           </Text>
                         </View>
                       )}
@@ -572,7 +573,7 @@ function TransactionModal({
                       </View>
                     )}
                     <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
-                      ${boostedProfit.toFixed(2)}
+                      ${formatCurrency(boostedProfit)}
                     </Text>
                   </View>
 
@@ -595,21 +596,31 @@ function TransactionModal({
                     </Text>
                   </View>
 
-                  {/* Formula: profit × multiplier = total */}
+                  {/* Totals section - right-aligned values */}
                   <View style={styles.divider} />
-                  <Text style={styles.formulaText}>
-                    ${boostedProfit.toFixed(2)}
-                    {' × '}
-                    <Text style={{ color: '#d97706' }}>{saleResult.jokerMultiplier}x</Text>
-                    {' = '}
-                    <Text style={{ color: colors.green.success }}>${finalProfit.toFixed(2)}</Text>
-                  </Text>
+                  <View style={styles.receiptRow}>
+                    <Text style={[styles.breakdownLabel, { fontSize: 12 }]}>
+                      ${formatCurrency(boostedProfit)} × <Text style={{ color: '#d97706' }}>{saleResult.jokerMultiplier}x</Text>
+                    </Text>
+                    <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
+                      ${formatCurrency(finalProfit)}
+                    </Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={[styles.breakdownLabel, { fontSize: 12, color: '#92400e' }]}>
+                      + Cost Back
+                    </Text>
+                    <Text style={[styles.breakdownValue, { color: '#92400e' }]}>
+                      ${formatCurrency(saleResult.purchaseValue)}
+                    </Text>
+                  </View>
+                  <View style={styles.divider} />
 
                   {/* You Pocket */}
                   <View style={styles.receiptRow}>
                     <Text style={styles.finalPriceLabel}>You Pocket</Text>
                     <Text style={styles.finalPriceValue}>
-                      ${saleResult.totalGain.toFixed(2)}
+                      ${formatCurrency(saleResult.totalGain)}
                     </Text>
                   </View>
                 </View>
@@ -686,8 +697,8 @@ function TransactionModal({
                 disabled={true}
               />
             )}
-            {/* Hide tabs during tutorial: step 5 = buy only, step 8 = sell only */}
-            {tutorialStep !== 5 && tutorialStep !== 8 && (
+            {/* Hide tabs during tutorial: step 4 = buy only, step 7 = sell only */}
+            {tutorialStep !== 4 && tutorialStep !== 7 && (
             <View style={styles.tabContainer}>
               <PixelBorder
                 borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
@@ -729,7 +740,7 @@ function TransactionModal({
                 <View style={styles.totalValueContainer}>
                   <Text style={styles.totalValueLabel}>Total Cost:</Text>
                   <Text style={[styles.totalValueAmount, { color: '#ef4444' }]}>
-                    ${(quantity * candy.cost).toFixed(2)}
+                    ${formatCurrency(quantity * candy.cost)}
                   </Text>
                 </View>
               </PixelBorder>
@@ -764,11 +775,11 @@ function TransactionModal({
           </View>
 
           {/* Tutorial hint banner */}
-          {(tutorialStep === 5 || tutorialStep === 8) && (
+          {(tutorialStep === 4 || tutorialStep === 7) && (
             <View style={[styles.tutorialHint, { zIndex: 10, elevation: 10 }]}>
               <Text style={styles.tutorialHintText}>
-                {tutorialStep === 5 && 'Tap Buy to grab them!'}
-                {tutorialStep === 8 && 'Tap Sell to pocket your profit!'}
+                {tutorialStep === 4 && 'Smash that Buy button!'}
+                {tutorialStep === 7 && 'Cash out! Hit Sell and watch the money roll in'}
               </Text>
             </View>
           )}
@@ -776,7 +787,7 @@ function TransactionModal({
           <View
             style={[
               styles.buttonRow,
-              (tutorialStep === 5 || tutorialStep === 8) && {
+              (tutorialStep === 4 || tutorialStep === 7) && {
                 zIndex: 10,
                 elevation: 10,
               },
@@ -805,7 +816,7 @@ function TransactionModal({
             <PressableButton
               onPress={handleConfirm}
               shadowColor={
-                tutorialStep === 5 || tutorialStep === 8
+                tutorialStep === 4 || tutorialStep === 7
                   ? '#FFD700'
                   : buttonBorderColor
               }
@@ -824,11 +835,11 @@ function TransactionModal({
                 )}
                 <PixelBorder
                   borderColor={
-                    tutorialStep === 5 || tutorialStep === 8
+                    tutorialStep === 4 || tutorialStep === 7
                       ? '#FFD700'
                       : buttonBorderColor
                   }
-                  borderWidth={tutorialStep === 5 || tutorialStep === 8 ? 4 : 3}
+                  borderWidth={tutorialStep === 4 || tutorialStep === 7 ? 4 : 3}
                   backgroundColor={buttonBackgroundColor}
                   innerPadding={0}
                   style={{ overflow: 'visible' }}

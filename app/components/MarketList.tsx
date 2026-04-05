@@ -18,10 +18,10 @@ interface MarketListProps {
   hasPlayedLunchMinigame: boolean;
   onCandyPress: (index: number) => void;
   onLunchBack: () => void;
-  gummyBearsRef?: React.RefObject<View | null>;
   unlockButton?: UnlockButtonInfo | null;
   onUnlock?: (size: 'medium' | 'big') => void;
   playerBalance?: number;
+  onGummyBearsLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
 }
 
 const MarketList = React.memo(function MarketList({
@@ -33,51 +33,26 @@ const MarketList = React.memo(function MarketList({
   hasPlayedLunchMinigame,
   onCandyPress,
   onLunchBack,
-  gummyBearsRef,
   unlockButton,
   onUnlock,
   playerBalance,
+  onGummyBearsLayout,
 }: MarketListProps) {
   const renderItem = useCallback(
-    ({ item, index }: { item: CandyForMarket; index: number }) => {
-      // Wrap Gummy Bears (index 0) with tutorial ref
-      if (index === 0 && gummyBearsRef) {
-        return (
-          <View ref={gummyBearsRef} collapsable={false}>
-            <CandyListItem
-              item={item}
-              index={index}
-              localPricesUpdating={localPricesUpdating}
-              onPress={onCandyPress}
-            />
-          </View>
-        );
-      }
-      return (
-        <CandyListItem
-          item={item}
-          index={index}
-          localPricesUpdating={localPricesUpdating}
-          onPress={onCandyPress}
-        />
-      );
-    },
-    [localPricesUpdating, onCandyPress, gummyBearsRef]
+    ({ item, index }: { item: CandyForMarket; index: number }) => (
+      <CandyListItem
+        item={item}
+        index={index}
+        localPricesUpdating={localPricesUpdating}
+        onPress={onCandyPress}
+        onItemLayout={item.name === 'Gummy Bears' ? onGummyBearsLayout : undefined}
+      />
+    ),
+    [localPricesUpdating, onCandyPress, onGummyBearsLayout]
   );
 
   return (
     <View style={styles.container}>
-      {/* Only render StudySubjectSelector when tab is focused and conditions are met */}
-      {console.log(
-        '🎮 MarketList render - isFocused:',
-        isFocused,
-        'isLunchPeriod:',
-        isLunchPeriod,
-        'showLunchMinigames:',
-        showLunchMinigames,
-        'hasPlayedLunchMinigame:',
-        hasPlayedLunchMinigame
-      )}
       {isFocused && showLunchMinigames && (
         <View style={{ flex: 1 }}>
           <StudySubjectSelector
@@ -90,13 +65,7 @@ const MarketList = React.memo(function MarketList({
         </View>
       )}
 
-      {/* Always render FlatList to maintain consistent hook calls */}
-      <View
-        style={{
-          display: showLunchMinigames ? 'none' : 'flex',
-          flex: 1,
-        }}
-      >
+      <View style={{ display: showLunchMinigames ? 'none' : 'flex', flex: 1 }}>
         <FlatList
           data={candies}
           keyExtractor={(item) => item.name}
@@ -121,11 +90,6 @@ const MarketList = React.memo(function MarketList({
 export default MarketList;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  list: {
-    padding: 16,
-    flexGrow: 1,
-  },
+  container: { flex: 1 },
+  list: { padding: 16, flexGrow: 1 },
 });

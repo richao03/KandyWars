@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
+
 
 interface MarketActionButtonsProps {
   period: number;
@@ -14,9 +15,7 @@ interface MarketActionButtonsProps {
   onNextPeriod: () => void;
   onEndDay: () => void;
   isNextPeriodEnabled?: boolean;
-  nextPeriodRef?: React.RefObject<View | null>;
-  tutorialHidden?: boolean;
-  hideEndDay?: boolean;
+  onNextPeriodLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
 }
 
 const MarketActionButtons = React.memo(function MarketActionButtons({
@@ -28,12 +27,20 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
   onNextPeriod,
   onEndDay,
   isNextPeriodEnabled = true,
-  nextPeriodRef,
-  tutorialHidden = false,
-  hideEndDay = false,
+  onNextPeriodLayout,
 }: MarketActionButtonsProps) {
-  // During tutorial, hide all buttons
-  if (tutorialHidden) return null;
+  const nextPeriodRef = useRef<View>(null);
+
+  const handleNextPeriodLayout = useCallback(() => {
+    if (onNextPeriodLayout && nextPeriodRef.current) {
+      requestAnimationFrame(() => {
+        nextPeriodRef.current?.measureInWindow((x, y, width, height) => {
+          if (__DEV__) console.log(`📖 NextPeriod measured: x=${x}, y=${y}, w=${width}, h=${height}`);
+          if (width > 0 && height > 0) onNextPeriodLayout({ x, y, width, height });
+        });
+      });
+    }
+  }, [onNextPeriodLayout]);
   // Calculate lunch period dynamically (period 3 for 6-period days, period 4 for 8-period days)
   const lunchPeriod = Math.floor(periodsPerDay / 2);
   const isGoToLunch = period === lunchPeriod && !showLunchMinigames;
@@ -110,7 +117,7 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
   // All other periods: Show both next period and end day buttons
   return (
     <View style={styles.buttonRow}>
-      <View ref={nextPeriodRef} collapsable={false} style={styles.bigButton}>
+      <View style={styles.bigButton} ref={nextPeriodRef} onLayout={handleNextPeriodLayout} collapsable={false}>
       <PressableButton
         onPress={onNextPeriod}
         shadowColor={isGoToLunch ? 'rgba(59,130,246,1)' : 'rgba(123,169,101,1)'}
@@ -121,43 +128,25 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
         disabled={!isNextPeriodEnabled}
       >
         <PixelBorder
-          borderColor={
-            isGoToLunch ? 'rgba(59,130,246,1)' : 'rgba(123,169,101,1)'
-          }
+          borderColor={isGoToLunch ? 'rgba(59,130,246,1)' : 'rgba(123,169,101,1)'}
           borderWidth={3}
-          backgroundColor={
-            isGoToLunch ? 'rgba(96,165,250,1)' : 'rgba(154,193,118,1)'
-          }
+          backgroundColor={isGoToLunch ? 'rgba(96,165,250,1)' : 'rgba(154,193,118,1)'}
           innerPadding={0}
         >
-          <View
-            style={[
-              styles.pixelButtonInner,
-              isGoToLunch && styles.pixelButtonInnerRow,
-            ]}
-          >
+          <View style={[styles.pixelButtonInner, isGoToLunch && styles.pixelButtonInnerRow]}>
             {isGoToLunch && (
-              <Image
-                source={require('../../assets/images/emojis/cafeteria.png')}
-                style={styles.buttonIcon}
-              />
+              <Image source={require('../../assets/images/emojis/cafeteria.png')} style={styles.buttonIcon} />
             )}
             <View style={styles.buttonTextRow}>
-              <Text style={styles.nextPeriodButtonText}>
-                {isGoToLunch ? 'Go to Lunch' : 'Next Period'}
-              </Text>
-              <Text style={styles.nextPeriodSubtext}>
-                {isGoToLunch
-                  ? 'Time for a break'
-                  : `Going to period ${period + 1}`}
-              </Text>
+              <Text style={styles.nextPeriodButtonText}>{isGoToLunch ? 'Go to Lunch' : 'Next Period'}</Text>
+              <Text style={styles.nextPeriodSubtext}>{isGoToLunch ? 'Time for a break' : `Going to period ${period + 1}`}</Text>
             </View>
           </View>
         </PixelBorder>
       </PressableButton>
       </View>
 
-      {!hideEndDay && (
+      {(
         <PressableButton
           onPress={onEndDay}
           shadowColor="rgba(185,28,28,1)"

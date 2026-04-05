@@ -114,15 +114,20 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
       }
 
       // Type multipliers — profit boosts, fire for EACH matching type
+      // 'add' operation adds directly to the multiplier (step 3), 'multiply' adds to profit boost
       if (effect.target === 'type_multiplier' && effect.conditions?.candyType) {
         if (candyTypes.includes(effect.conditions.candyType)) {
-          profitBoost += (effect.amount - 1); // 1.5x adds 0.5
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-            flatBonus: totalProfit * (effect.amount - 1),
-          });
+          if (effect.operation === 'add') {
+            // Deferred to step 3 — adds to multiplier directly
+          } else {
+            profitBoost += (effect.amount - 1); // 1.5x adds 0.5
+            bonusBreakdown.push({
+              emoji: _getJokerEmoji(jokerId),
+              name: _getJokerName(jokerId),
+              multiplier: effect.amount,
+              flatBonus: totalProfit * (effect.amount - 1),
+            });
+          }
         }
       }
 
@@ -208,6 +213,18 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     const effects = getJokerEffectsAtLevel(jokerId, level);
 
     for (const effect of effects) {
+      // Type multipliers with 'add' operation — adds directly to multiplier
+      if (effect.target === 'type_multiplier' && effect.operation === 'add' && effect.conditions?.candyType) {
+        if (candyTypes.includes(effect.conditions.candyType)) {
+          multiplier += effect.amount; // +1.5 adds 1.5 to multiplier
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + effect.amount,
+          });
+        }
+      }
+
       // Size multipliers
       if (effect.target === 'size_multiplier' && effect.conditions?.candySize) {
         if (candySize === effect.conditions.candySize) {

@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
+import { formatCurrency } from '../../src/utils/priceUtils';
 
 interface DayStatsModalProps {
   visible: boolean;
@@ -81,7 +82,7 @@ export default function DayStatsModal({
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Total Profit Made:</Text>
               <Text style={[styles.statValue, styles.profitValue]}>
-                ${stats.profit.toFixed(2)}
+                ${formatCurrency(stats.profit)}
               </Text>
             </View>
           </PixelBorder>
@@ -96,7 +97,7 @@ export default function DayStatsModal({
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Total Spent Buying:</Text>
               <Text style={[styles.statValue, styles.spentValue]}>
-                ${stats.spent.toFixed(2)}
+                ${formatCurrency(stats.spent)}
               </Text>
             </View>
           </PixelBorder>
@@ -133,7 +134,7 @@ export default function DayStatsModal({
                       {bonus.jokerName}:
                     </Text>
                     <Text style={styles.bonusValue}>
-                      +${bonus.amount.toFixed(2)}
+                      +${formatCurrency(bonus.amount)}
                     </Text>
                   </View>
                 </PixelBorder>
@@ -159,7 +160,7 @@ export default function DayStatsModal({
                 ]}
               >
                 {netGainWithBonuses >= 0 ? '+' : ''}$
-                {netGainWithBonuses.toFixed(2)}
+                {formatCurrency(netGainWithBonuses)}
               </Text>
             </View>
           </PixelBorder>

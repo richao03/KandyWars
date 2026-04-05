@@ -11,7 +11,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
@@ -42,6 +42,13 @@ import {
   consumeEffect,
   selectActiveEffects,
 } from '../../src/store/slices/merchantSlice';
+import {
+  advanceTutorial,
+  selectTutorialStep,
+  selectTutorialComplete,
+  skipTutorial,
+  startTutorial,
+} from '../../src/store/slices/tutorialSlice';
 import { JokerService } from '../../src/utils/jokerService';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
 import { MusicController } from '../../src/utils/musicController';
@@ -52,13 +59,13 @@ import FirstTimeHint from '../components/FirstTimeHint';
 import EventModal from '../components/EventModal';
 import { Location } from '../components/LocationModal';
 import MarketContent from '../components/MarketContent';
+import TutorialOverlay from '../components/TutorialOverlay';
 import TransactionModalManager, {
   TransactionModalHandle,
 } from '../components/TransactionModalManager';
 import { Candy } from '../types';
 import { CANDY_REGISTRY } from '../../src/constants/candyRegistry';
-import { useTutorial } from '../../src/hooks/useTutorial';
-import TutorialOverlay from '../components/TutorialOverlay';
+import { CandySize } from '../../src/types/candy';
 
 // Lazy load modals that are shown less frequently
 const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
@@ -95,24 +102,82 @@ function Market(props) {
 
   const dispatch = useAppDispatch();
 
-  // Debug: Log mount/unmount
+  // Tutorial state
+  const tutorialStep = useAppSelector(selectTutorialStep);
+  const tutorialComplete = useAppSelector(selectTutorialComplete);
+  const difficultyLevel = useAppSelector(selectDifficultyLevel);
+  const isTutorialActive = tutorialStep > 0 && !tutorialComplete;
+
+  // Tutorial measurement state — store raw window coordinates, compute adjusted in useMemo
+  const [containerOffset, setContainerOffset] = useState({ x: 0, y: 0 });
+  const [rawMeasurements, setRawMeasurements] = useState<{
+    wallet?: { x: number; y: number; width: number; height: number };
+    piggyBank?: { x: number; y: number; width: number; height: number };
+    gummyBears?: { x: number; y: number; width: number; height: number };
+    nextPeriod?: { x: number; y: number; width: number; height: number };
+  }>({});
+
+  // Measure the market container's window offset
+  const handleContainerLayout = useCallback(() => {
+    if (marketContainerRef.current) {
+      requestAnimationFrame(() => {
+        marketContainerRef.current?.measureInWindow((x, y) => {
+          if (__DEV__) console.log(`📖 Container offset: x=${x}, y=${y}`);
+          setContainerOffset({ x, y });
+        });
+      });
+    }
+  }, []);
+
+  // Adjust all measurements by subtracting container offset
+  const tutorialMeasurements = useMemo(() => {
+    const adjust = (rect?: { x: number; y: number; width: number; height: number }) => {
+      if (!rect) return undefined;
+      return {
+        x: rect.x - containerOffset.x,
+        y: rect.y - containerOffset.y,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    return {
+      wallet: adjust(rawMeasurements.wallet),
+      piggyBank: adjust(rawMeasurements.piggyBank),
+      gummyBears: adjust(rawMeasurements.gummyBears),
+      nextPeriod: adjust(rawMeasurements.nextPeriod),
+    };
+  }, [rawMeasurements, containerOffset]);
+
+  const handleWalletLayout = useCallback(
+    (layout: { x: number; y: number; width: number; height: number }) => {
+      setRawMeasurements((prev) => ({ ...prev, wallet: layout }));
+    },
+    []
+  );
+  const handlePiggyBankLayout = useCallback(
+    (layout: { x: number; y: number; width: number; height: number }) => {
+      setRawMeasurements((prev) => ({ ...prev, piggyBank: layout }));
+    },
+    []
+  );
+  const handleGummyBearsLayout = useCallback(
+    (layout: { x: number; y: number; width: number; height: number }) => {
+      setRawMeasurements((prev) => ({ ...prev, gummyBears: layout }));
+    },
+    []
+  );
+  const handleNextPeriodLayout = useCallback(
+    (layout: { x: number; y: number; width: number; height: number }) => {
+      setRawMeasurements((prev) => ({ ...prev, nextPeriod: layout }));
+    },
+    []
+  );
+
   const instanceIdRef = useRef(Math.random().toString(36).substring(7));
   useEffect(() => {
-    if (__DEV__) {
-      console.log(
-        `🟢 Market component MOUNTED - Instance: ${instanceIdRef.current}`
-      );
-    }
-
     // Music will be managed by the showLunchMinigames effect below
     // No need to manually stop/start here - MusicController handles transitions
-
     return () => {
-      if (__DEV__) {
-        console.log(
-          `🔴 Market component UNMOUNTED - Instance: ${instanceIdRef.current}`
-        );
-      }
       // No cleanup needed - next view will set its own music
     };
   }, []);
@@ -131,9 +196,6 @@ function Market(props) {
   const lunchPeriod = Math.floor(periodsPerDay / 2);
   useEffect(() => {
     if (period !== lunchPeriod && showLunchMinigames) {
-      if (__DEV__) console.log(
-        `🍽️ Period advanced past ${lunchPeriod}, hiding lunch minigames`
-      );
       setShowLunchMinigames(false);
     }
   }, [period, lunchPeriod, showLunchMinigames]);
@@ -159,14 +221,6 @@ function Market(props) {
     isAfterSchool,
     locationHistory,
   } = useGame();
-
-  // Music is managed by the showLunchMinigames effect below
-  // (removed duplicate music effect to prevent race conditions)
-
-  // Log every render to see how many instances are active
-  if (__DEV__) console.log(
-    `📊 Market RENDER - Instance: ${instanceIdRef.current}, Period: ${period}, PeriodCount: ${periodCount}, Day: ${day}, isAfterSchool: ${isAfterSchool}`
-  );
 
   const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
@@ -203,83 +257,33 @@ function Market(props) {
 
   const jokerService = useMemo(() => JokerService.getInstance(), []);
 
-  // Tutorial system
-  const { currentStep: tutorialStep, isActive: tutorialActive, advance: advanceTutorial, skip: skipTutorial, start: startTutorial, tutorialComplete, registerTarget } = useTutorial();
-  const difficultyLevel = useAppSelector(selectDifficultyLevel);
-
-  // Tutorial target refs
-  const walletRef = useRef<View>(null);
-  const piggyRef = useRef<View>(null);
-  const gummyBearsRef = useRef<View>(null);
-  const nextPeriodRef = useRef<View>(null);
   const marketContainerRef = useRef<View>(null);
-  const containerOffsetRef = useRef({ x: 0, y: 0 });
-
-  // Start tutorial on mount for difficulty 1 first game
-  useEffect(() => {
-    if (difficultyLevel === 1 && !tutorialComplete && periodCount === 0 && !tutorialActive) {
-      startTutorial();
-    }
-  }, [difficultyLevel, tutorialComplete, periodCount, tutorialActive, startTutorial]);
-
-  // Measure the market container offset so we can convert window coords to local coords
-  const measureContainerOffset = useCallback((): Promise<{ x: number; y: number }> => {
-    return new Promise((resolve) => {
-      if (marketContainerRef.current) {
-        (marketContainerRef.current as View).measureInWindow((cx: number, cy: number) => {
-          containerOffsetRef.current = { x: cx, y: cy };
-          resolve({ x: cx, y: cy });
-        });
-      } else {
-        resolve(containerOffsetRef.current);
-      }
-    });
-  }, []);
-
-  // Measure tutorial targets when step changes
-  const measureTarget = useCallback((ref: React.RefObject<View | null>, stepId: number) => {
-    if (ref.current) {
-      measureContainerOffset().then((offset) => {
-        (ref.current as View).measureInWindow((x: number, y: number, width: number, height: number) => {
-          if (width > 0 && height > 0) {
-            // Convert from window coords to market container local coords
-            registerTarget(stepId, {
-              x: x - offset.x,
-              y: y - offset.y,
-              width,
-              height,
-            });
-          }
-        });
-      });
-    }
-  }, [registerTarget, measureContainerOffset]);
-
-  // Re-measure targets when tutorial step changes
-  // Steps 5, 8 are inside TransactionModal — measured there
-  useEffect(() => {
-    if (!tutorialActive) return;
-
-    // Small delay to ensure layout is complete
-    const timer = setTimeout(() => {
-      if (tutorialStep === 2) measureTarget(walletRef, 2);
-      if (tutorialStep === 3) measureTarget(piggyRef, 3);
-      if (tutorialStep === 4) measureTarget(gummyBearsRef, 4);
-      if (tutorialStep === 6) measureTarget(nextPeriodRef, 6);
-      if (tutorialStep === 7) measureTarget(gummyBearsRef, 7);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [tutorialStep, tutorialActive, measureTarget]);
 
   usePriceDoubling(); // This hook handles price restoration on period change
   useHomeMadeBonus(); // This hook handles Home Made joker bonus
   // Farmers Carry hook now runs in GameEffectsManager (root layout) to ensure it's always mounted
 
+  // Auto-start tutorial on difficulty 1, day 1, period 1
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(
+        `📖 Tutorial check - difficulty: ${difficultyLevel}, periodCount: ${periodCount}, complete: ${tutorialComplete}, step: ${tutorialStep}, active: ${isTutorialActive}`
+      );
+    }
+    if (
+      difficultyLevel === 1 &&
+      periodCount === 0 &&
+      !tutorialComplete &&
+      tutorialStep === 0
+    ) {
+      if (__DEV__) console.log('📖 Tutorial auto-starting!');
+      dispatch(startTutorial());
+    }
+  }, [difficultyLevel, periodCount, tutorialComplete, tutorialStep, dispatch]);
+
   // Show location modal after event modal is dismissed
   useEffect(() => {
     if (pendingLocationModal && !hasActiveEvent) {
-      if (__DEV__) console.log('Market - Event dismissed, showing location modal');
       // Small delay to ensure event modal is fully dismissed
       setTimeout(() => {
         setLocationModalVisible(true);
@@ -291,7 +295,6 @@ function Market(props) {
   // Safety: Clear pending modal if location changes (period advanced)
   useEffect(() => {
     if (pendingLocationModal) {
-      if (__DEV__) console.log('Market - Location/period changed, clearing pending modal');
       setPendingLocationModal(false);
     }
   }, [currentLocation, periodCount]);
@@ -302,22 +305,6 @@ function Market(props) {
 
   // Ref for transaction modal manager (prevents parent re-renders)
   const transactionModalRef = useRef<TransactionModalHandle>(null);
-
-  // Log all events once when game is initialized
-  const hasLoggedEventsRef = useRef(false);
-  if (!hasLoggedEventsRef.current && gameData.periodEvents.length > 0) {
-    hasLoggedEventsRef.current = true;
-    if (__DEV__) {
-      console.log(
-        `📊 ALL GENERATED EVENTS (${gameData.periodEvents.length} total):`
-      );
-      gameData.periodEvents.forEach((event, index) => {
-        console.log(
-          `  Event ${index + 1}: Period ${event.period}, Effect: ${event.effect}, Candy: ${event.candy || 'N/A'}, Location: ${event.location || 'ANY'}, Multiplier: ${event.multiplier || 'N/A'}`
-        );
-      });
-    }
-  }
 
   // Update flavor text when period changes
   useEffect(() => {
@@ -356,10 +343,6 @@ function Market(props) {
         setEvent(currentEvent.effect);
 
         // Only trigger event if we haven't already triggered it for this period
-        // This prevents duplicate event triggers when other dependencies change
-        if (__DEV__) console.log(
-          `🔄 Event trigger check - lastEventPeriod: ${lastEventPeriodRef.current}, currentPeriod: ${periodCount}`
-        );
         if (lastEventPeriodRef.current !== periodCount) {
           lastEventPeriodRef.current = periodCount;
 
@@ -368,26 +351,10 @@ function Market(props) {
             currentEvent.effect === 'PRICE_SPIKE' ||
             currentEvent.effect === 'PRICE_DROP'
           ) {
-            if (__DEV__) console.log(
-              '🎯 MINOR EVENT: Showing flavor text only (no modal):',
-              currentEvent.flavorText
-            );
             setFlavorText(currentEvent.flavorText || '');
-          }
-          // Major events (FOUND_MONEY, LOSE_MONEY, STASH_LOCKED): Show modal
-          else {
-            if (__DEV__) console.log(
-              '🎯 MAJOR EVENT: Triggering event modal for period',
-              period,
-              ':',
-              currentEvent.title
-            );
+          } else {
             handleEvent(currentEvent);
           }
-        } else {
-          if (__DEV__) console.log(
-            `⏭️ Event already triggered for period ${periodCount}, skipping`
-          );
         }
       } else if (nextPeriodEvents.length > 0) {
         // Show hints for all upcoming events in next period
@@ -408,22 +375,13 @@ function Market(props) {
             periodsPerDay
           );
 
-          if (__DEV__) console.log(
-            `💡 Hint check - ${nextPeriodEvents.length} events next period, baseChance: ${baseHintChance}, effectiveChance: ${effectiveHintChance}`
-          );
-
           if (Math.random() < effectiveHintChance) {
-            // Show all hints from upcoming events (multiple hints possible)
             const allHints = nextPeriodEvents
               .map((e) => e.hint)
               .filter((h) => h)
               .join('\n\n');
-            if (__DEV__) console.log(
-              `💡 Showing hints for ${nextPeriodEvents.length} events:\n${allHints}`
-            );
             setHint(allHints);
           } else {
-            if (__DEV__) console.log(`💡 Random check failed, showing flavor text instead`);
 
             // Show period-specific flavor text instead of hint
             if (period <= 2) {
@@ -473,6 +431,7 @@ function Market(props) {
   ]);
 
   const [candies, setCandies] = useState<CandyForMarket[]>([]);
+  const [selectedSize, setSelectedSize] = useState<CandySize>('small');
 
   // Memoize joker count and inventory limit to prevent unnecessary re-renders
   const jokerCount = useMemo(() => jokers.length, [jokers.length]);
@@ -481,30 +440,40 @@ function Market(props) {
     [getInventoryLimit]
   );
 
-  // Filter candies based on unlock state (and tutorial — show only Gummy Bears during guided steps)
-  const visibleCandies = useMemo(() => {
-    // During tutorial steps 1-6, only show Gummy Bears
-    if (tutorialActive && tutorialStep <= 6) {
-      return baseCandies.filter((candy) => candy.name === 'Gummy Bears');
-    }
-    return baseCandies.filter((candy) => {
-      if (candy.size === 'small') return true;
-      if (candy.size === 'medium') return mediumUnlocked;
-      if (candy.size === 'big') return bigUnlocked;
-      return false;
-    });
-  }, [mediumUnlocked, bigUnlocked, tutorialActive, tutorialStep]);
+  // Available size tabs (only unlocked sizes)
+  const availableSizes = useMemo(() => {
+    const sizes: { key: CandySize; label: string }[] = [
+      { key: 'small', label: 'Small' },
+    ];
+    if (mediumUnlocked) sizes.push({ key: 'medium', label: 'Medium' });
+    if (bigUnlocked) sizes.push({ key: 'big', label: 'Large' });
+    return sizes;
+  }, [mediumUnlocked, bigUnlocked]);
 
-  // Determine which unlock button to show
+  // Filter candies based on unlock state and selected size tab
+  const visibleCandies = useMemo(() => {
+    let filtered = baseCandies.filter((candy) => {
+      if (candy.size === 'medium' && !mediumUnlocked) return false;
+      if (candy.size === 'big' && !bigUnlocked) return false;
+      return candy.size === selectedSize;
+    });
+    // During tutorial step 3, only show Gummy Bears
+    if (tutorialStep === 3) {
+      filtered = filtered.filter((c) => c.name === 'Gummy Bears');
+    }
+    return filtered;
+  }, [mediumUnlocked, bigUnlocked, selectedSize, tutorialStep]);
+
+  // Determine which unlock button to show (only on the highest unlocked size tab)
   const unlockButton = useMemo(() => {
-    if (!mediumUnlocked && day >= 2) {
+    if (!mediumUnlocked && day >= 2 && selectedSize === 'small') {
       return { size: 'medium' as const, cost: 500 };
     }
-    if (mediumUnlocked && !bigUnlocked && day >= 3) {
+    if (mediumUnlocked && !bigUnlocked && day >= 3 && selectedSize === 'medium') {
       return { size: 'big' as const, cost: 5000 };
     }
     return null;
-  }, [mediumUnlocked, bigUnlocked, day]);
+  }, [mediumUnlocked, bigUnlocked, day, selectedSize]);
 
   // Simple price lookup from gameData - NO heavy calculations
   // Price breakdowns are calculated lazily in TransactionModal when needed
@@ -606,6 +575,7 @@ function Market(props) {
 
       if (size === 'medium') {
         dispatch(unlockMediumCandies());
+        setSelectedSize('medium');
         setUnlockModalContent({
           title: 'New Candy Unlocked!',
           message: "You've earned the big kids' candy shelf! Medium candies are now available in the market.",
@@ -613,6 +583,7 @@ function Market(props) {
         });
       } else {
         dispatch(unlockBigCandies());
+        setSelectedSize('big');
         setUnlockModalContent({
           title: 'Premium Candy Unlocked!',
           message: 'Welcome to the top shelf! Big candies are now available. Time to make some serious money!',
@@ -633,7 +604,6 @@ function Market(props) {
       const targetTrack = showLunchMinigames ? 'day2' : 'day1';
       // Only change music if it's different from current track
       if (MusicController.getCurrentTrack() !== targetTrack) {
-        if (__DEV__) console.log(`🎵 [MARKET] Setting music: ${targetTrack}`);
         MusicController.setTrack(targetTrack);
       }
     }, [showLunchMinigames])
@@ -647,15 +617,12 @@ function Market(props) {
   }, [schoolsOutModalVisible]);
 
   const openModal = useCallback((index: number) => {
-    // Open modal via ref - this does NOT cause parent re-render!
     transactionModalRef.current?.open(index);
-
-    // Advance tutorial when user taps Gummy Bears (index 0 = first candy)
-    // Step 4 → 5 (buy modal), Step 7 → 8 (sell modal)
-    if ((tutorialStep === 4 || tutorialStep === 7) && index === 0) {
-      advanceTutorial();
+    // Advance tutorial when tapping candy during step 3 (buy) or step 6 (sell)
+    if (tutorialStep === 3 || tutorialStep === 6) {
+      dispatch(advanceTutorial());
     }
-  }, [tutorialStep, advanceTutorial]);
+  }, [tutorialStep, dispatch]);
 
   const closeModal = useCallback(() => {
     transactionModalRef.current?.close();
@@ -711,10 +678,7 @@ function Market(props) {
 
         let purchasePrice = candy.cost;
         if (hasTimeZoneArbitrage && isMorning) {
-          purchasePrice = candy.cost * 0.9; // 10% discount
-          if (__DEV__) console.log(
-            `🕘 Time Zone Arbitrage: Morning purchase discount applied! ${candy.cost} -> ${purchasePrice.toFixed(2)}`
-          );
+          purchasePrice = candy.cost * 0.9;
         }
 
         const totalCost = purchasePrice * quantity;
@@ -789,25 +753,15 @@ function Market(props) {
             name: sellMultiplierInfo.jokerName,
             multiplier: sellMultiplierInfo.multiplier,
           });
-          if (__DEV__) console.log(
-            `🗣️ ${sellMultiplierInfo.jokerName} activated! ${sellMultiplierInfo.multiplier}x multiplier applied`
-          );
 
-          // Clear the one-time effect after use
           if (sellMultiplierInfo.jokerId) {
             clearActiveEffect(sellMultiplierInfo.jokerId);
-            if (__DEV__) console.log(
-              `🗣️ ${sellMultiplierInfo.jokerName} effect cleared after sale`
-            );
           }
         }
 
         // Consume Influencer Shoutout if active (before calculation)
         if (MerchantUtils.hasInfluencerShoutout(currentMerchantEffects)) {
           dispatch(consumeEffect({ itemId: 'influencer_shoutout' }));
-          if (__DEV__) console.log(
-            '📣 Influencer Shoutout consumed (will be applied in calculation)'
-          );
         }
 
         // === CALCULATE SALE USING SHARED FUNCTION ===
@@ -865,33 +819,6 @@ function Market(props) {
 
         const finalProfit = totalGain - purchaseValue;
 
-        if (__DEV__) console.log(
-          '🛒 Market: Selling candy:',
-          candy.name,
-          'quantity:',
-          quantity,
-          'sale price:',
-          candy.cost,
-          'purchase price:',
-          purchasePrice,
-          'profit per unit:',
-          profitPerUnit,
-          'total profit:',
-          totalProfit,
-          'hall pass bonus:',
-          hallPassBonus,
-          'joker multiplier:',
-          jokerMultiplier,
-          'vacuum sealer penalty:',
-          vacuumSealerPenalty,
-          'final profit:',
-          finalProfit,
-          'purchase value returned:',
-          purchaseValue,
-          'total gain:',
-          totalGain
-        );
-
         // All dispatches in the flat function body — React batches these
         add(totalGain);
         addProfit(finalProfit); // Track daily profit (profit only, not purchase value)
@@ -900,9 +827,6 @@ function Market(props) {
 
         // Track sale for period-based hall pass unlocks (Time Crunch, Final Exam)
         // IMPORTANT: Pass finalProfit (profit after all bonuses/penalties) not revenue for accurate tracking
-        if (__DEV__) console.log(
-          `📊 Tracking sale for hall pass: ${candy.name}, Period: ${currentPeriodCount}, Profit: ${finalProfit.toFixed(2)}`
-        );
         addSale({
           candyId: candy.name,
           candyName: candy.name,
@@ -937,82 +861,22 @@ function Market(props) {
     ]
   );
 
-  // Tutorial step ref for use in callbacks without recreating them
-  const tutorialStepRef = useRef(tutorialStep);
-  useEffect(() => { tutorialStepRef.current = tutorialStep; }, [tutorialStep]);
 
   const handleNextDay = useCallback(() => {
-    if (__DEV__) console.log(
-      '🔵 handleNextDay called - period:',
-      period,
-      'day:',
-      day,
-      'hasActiveEvent:',
-      hasActiveEvent,
-      'periodsPerDay:',
-      periodsPerDay
-    );
-
-    // Advance tutorial when user taps Next Period during step 6
-    if (tutorialStepRef.current === 6) {
-      advanceTutorial(); // → step 7
-    }
-
-    // Trigger success haptic feedback when advancing to next period
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     // Calculate lunch period dynamically (period 4 for 8-period days, period 3 for 6-period days)
     const lunchPeriod = Math.floor(periodsPerDay / 2);
 
     if (period === periodsPerDay) {
-      // End of day - show day stats first
-      if (__DEV__) {
-        console.log(
-          `🔵 Period ${periodsPerDay} reached (end of day) - showing day stats modal for day:`,
-          day
-        );
-        console.log(
-          '🔵 Current dayStatsModalVisible state:',
-          dayStatsModalVisible
-        );
-      }
       setDayStatsModalVisible(true);
-      if (__DEV__) console.log('🔵 setDayStatsModalVisible(true) called');
     } else if (period === lunchPeriod && !showLunchMinigames) {
-      // Lunch period - Show lunch confirmation modal
-      if (__DEV__) {
-        console.log(
-          `🍽️ [MARKET] 🎯 LUNCH PERIOD DETECTED! Period ${lunchPeriod} (lunch) - Showing lunch confirmation modal`
-        );
-        console.log(
-          `🍽️ [MARKET] Day: ${day}, Period: ${period}, PeriodsPerDay: ${periodsPerDay}`
-        );
-      }
       setLunchConfirmVisible(true);
-    } else if (tutorialStepRef.current > 0 && tutorialStepRef.current <= 8) {
-      // During tutorial, skip location modal and auto-advance
-      incrementPeriod('home room');
     } else {
-      // Check if there's an active event
       if (hasActiveEvent) {
-        if (__DEV__) console.log(
-          '🔵 Market - Active event detected, will show location modal after event is dismissed'
-        );
         setPendingLocationModal(true);
       } else {
-        if (__DEV__) {
-          console.log(
-            '🔵 Market - No active event, showing location modal immediately'
-          );
-          console.log('🔵 Setting locationModalVisible to true');
-        }
         setLocationModalVisible(true);
-        if (__DEV__) console.log('🔵 locationModalVisible should now be true');
-        setTimeout(() => {
-          if (__DEV__) console.log(
-            '🔵 [Delayed check] locationModalVisible state after 100ms'
-          );
-        }, 100);
       }
     }
   }, [
@@ -1026,33 +890,22 @@ function Market(props) {
 
   const handleLocationSelect = useCallback(
     (location: Location) => {
-      // Check if player selected The Connect merchant
       if (location === 'the connect') {
-        if (__DEV__) console.log(
-          '🕶️ Player selected The Connect - navigating to merchant shop page'
-        );
         setLocationModalVisible(false);
         router.push('/merchant-shop');
         return;
       }
 
-      // Wrap all updates in startTransition to batch them together
       startTransition(() => {
         setLocationModalVisible(false);
         setLocalPricesUpdating(true);
 
-        // Check for Trade Routes joker (id: 39) and increment inventory limit if present
         const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
         if (hasTradeRoutes) {
-          if (__DEV__) console.log(
-            '🗺️ Trade Routes active: +1 inventory limit on location change'
-          );
           dispatch(incrementMaxInventory(1));
         }
 
-        // Reset lunch minigames flag when advancing from period 4
         if (showLunchMinigames) {
-          if (__DEV__) console.log('🍽️ Advancing from lunch, hiding minigame view');
           setShowLunchMinigames(false);
         }
 
@@ -1063,15 +916,17 @@ function Market(props) {
         incrementPeriod(location);
         setEvent('PERIOD_CHANGE');
 
+        // Advance tutorial from step 5 (next period) to step 6 (sell gummy bears)
+        if (tutorialStep === 5) {
+          dispatch(advanceTutorial());
+        }
+
         // Check if we crossed into a new day and reset daily stats if so
         // Note: We can't directly read the new day here, but we can use periodCount
         // Day changes when periodCount % periodsPerDay === 0
         const newPeriodCount = periodCount + 1;
         const newDay = Math.floor((newPeriodCount - 1) / periodsPerDay) + 1;
         if (newDay > oldDay) {
-          if (__DEV__) console.log(
-            `🔄 Day changed from ${oldDay} to ${newDay} - resetting daily stats`
-          );
           dispatch(resetDailyStats());
         }
 
@@ -1092,25 +947,20 @@ function Market(props) {
       showLunchMinigames,
       day,
       periodsPerDay,
+      tutorialStep,
     ]
   );
 
   const handleLunchConfirm = useCallback(() => {
-    if (__DEV__) {
-      console.log('🍽️ [MARKET] Lunch confirmed - showing minigame selection');
-      console.log('🍽️ [MARKET] Setting showLunchMinigames = true');
-    }
     setLunchConfirmVisible(false);
     setShowLunchMinigames(true);
   }, []);
 
   const handleEndDay = useCallback(() => {
-    if (__DEV__) console.log('🏠 End Day button pressed');
     setEndDayConfirmVisible(true);
   }, []);
 
   const handleEndDayConfirm = useCallback(() => {
-    if (__DEV__) console.log('🏠 End Day confirmed');
     // Trigger success haptic feedback when ending day
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -1118,20 +968,10 @@ function Market(props) {
 
     // Reset lunch minigames flag when ending day early
     if (showLunchMinigames) {
-      if (__DEV__) console.log('🍽️ Ending day during lunch, hiding minigame view');
       setShowLunchMinigames(false);
     }
 
-    // If we're on day 5 or completed all periods (40 for 8/day, 30 for 6/day), game will end after day stats
     const maxPeriods = periodsPerDay * 5;
-    if (day >= 5 || periodCount >= maxPeriods) {
-      if (__DEV__) {
-        console.log(
-          `🎮 Day 5 or all periods complete - will end game after showing day stats (max: ${maxPeriods})`
-        );
-        console.log('🎮 Day:', day, 'PeriodCount:', periodCount);
-      }
-    }
 
     // Check for Perfect Bake joker bonus (empty inventory at end of day)
     const bonuses: Array<{
@@ -1151,9 +991,6 @@ function Market(props) {
           amount: bonusAmount,
           emoji: '🧁',
         });
-        if (__DEV__) console.log(
-          `🧁 Perfect Bake: +$${bonusAmount} for ending day with 0 candy!`
-        );
       }
     }
 
@@ -1173,29 +1010,17 @@ function Market(props) {
           amount: treasureBonus,
           emoji: '🏴‍☠️',
         });
-        if (__DEV__) console.log(
-          `🏴‍☠️ Treasure Chest: +$${treasureBonus} for ${emptySlots} empty slots ($${cashPerSlot}/slot)!`
-        );
       }
     }
 
     setDayStatsBonuses(bonuses);
 
-    // Don't advance periods - just show day stats to simulate end of day
-    if (__DEV__) console.log('🏠 Ending day early - showing day stats modal');
-
-    // Reset all modal states and show day stats in a single batch
-    if (__DEV__) console.log('🏠 Resetting all modal states');
     setLocationModalVisible(false);
     setSchoolsOutModalVisible(false);
     setStashMoneyModalVisible(false);
     setSleepConfirmModalVisible(false);
 
-    // Brief delay to let modal closings render before opening day stats
     setTimeout(() => {
-      if (__DEV__) {
-        console.log('🏠 Now showing DayStatsModal for day:', day);
-      }
       setDayStatsModalVisible(true);
     }, 150);
   }, [
@@ -1217,66 +1042,39 @@ function Market(props) {
 
   // Day stats modal handlers
   const handleDayStatsClose = useCallback(() => {
-    if (__DEV__) {
-      console.log('📊 Day stats modal closing - checking if game should end');
-      console.log(
-        `📊 Current state: day=${day}, period=${period}, periodCount=${periodCount}, periodsPerDay=${periodsPerDay}`
-      );
-    }
     setDayStatsModalVisible(false);
 
-    // If we're on day 5 OR the last period of the game, end the game
-    // For 8-period days: maxPeriods = 40, last period is at periodCount 39
-    // For 6-period days: maxPeriods = 30, last period is at periodCount 29
     const maxPeriods = periodsPerDay * 5;
     const isDay5 = day >= 5;
-    const isLastPeriod = period === periodsPerDay;
-    const hasCompletedAllPeriods = periodCount >= maxPeriods - 1; // -1 because we check BEFORE incrementing
+    const hasCompletedAllPeriods = periodCount >= maxPeriods - 1;
 
     if (isDay5 || hasCompletedAllPeriods) {
-      if (__DEV__) console.log(
-        `🎮 Game ending - Day ${day}, Period ${period}/${periodsPerDay}, PeriodCount ${periodCount}/${maxPeriods}`
-      );
       router.push('/game-end');
       return;
     }
 
-    // Show schools out modal first (only for days 1-4)
-    if (__DEV__) console.log('📊 Showing schools out modal');
-    // Stop current music and play cricket sounds
     MusicController.stop();
     MusicController.setTrack('cricket');
     setSchoolsOutModalVisible(true);
   }, [periodCount, day, period, periodsPerDay]);
 
   const handleDayStatsCancel = useCallback(() => {
-    if (__DEV__) console.log('📊 Day stats modal cancelled - staying at school');
     setDayStatsModalVisible(false);
-    // Don't show any other modals, just return to market
   }, []);
 
   // Schools out modal handler
   const handleSchoolsOutComplete = useCallback(() => {
-    if (__DEV__) console.log('🏫 Schools out modal complete');
     setSchoolsOutModalVisible(false);
-
-    // Stop cricket sounds before navigating
     MusicController.stop();
-    // Now navigate to after school - after-school screen will start its own music
-    if (__DEV__) console.log('🏫 Navigating to after school');
     startAfterSchool();
     router.replace('/(tabs)/after-school');
   }, [startAfterSchool]);
 
   const handleSleepConfirm = useCallback(() => {
     setSleepConfirmModalVisible(false);
-
-    // Show loading prices immediately
     setLocalPricesUpdating(true);
 
-    // Reset lunch minigames flag when starting new day
     if (showLunchMinigames) {
-      if (__DEV__) console.log('🍽️ Starting new day, resetting lunch minigames flag');
       setShowLunchMinigames(false);
     }
 
@@ -1298,7 +1096,6 @@ function Market(props) {
     if (isDroneDeposit) {
       // Consume the Air Delivery Drone after using it
       dispatch(consumeEffect({ itemId: 'air_delivery_drone' }));
-      if (__DEV__) console.log('✈️ Air Delivery Drone consumed after depositing money');
       setIsDroneDeposit(false);
     }
 
@@ -1315,7 +1112,6 @@ function Market(props) {
   const isLunchPeriod = period === Math.floor(periodsPerDay / 2);
 
   const handleLunchBack = useCallback(() => {
-    if (__DEV__) console.log('🍔 handleLunchBack called');
     setShowLunchMinigames(false);
   }, []);
 
@@ -1336,16 +1132,23 @@ function Market(props) {
       onInventoryPress: handleInventoryPress,
       onNextPeriod: handleNextDay,
       onEndDay: handleEndDay,
-      walletRef,
-      piggyBankRef: piggyRef,
-      gummyBearsRef: gummyBearsRef,
-      nextPeriodRef,
       unlockButton,
       onUnlock: handleUnlockSize,
       playerBalance: balance,
-      // Tutorial: hide buttons until step 6 (Next Period), hide End Day during tutorial
-      tutorialHideButtons: tutorialActive && tutorialStep < 6,
-      tutorialHideEndDay: tutorialActive && tutorialStep >= 6,
+      // Size tabs
+      availableSizes,
+      selectedSize,
+      onSizeSelect: setSelectedSize,
+      showSizeTabs: availableSizes.length > 1,
+      // Tutorial layout callbacks
+      ...(isTutorialActive
+        ? {
+            onWalletLayout: handleWalletLayout,
+            onPiggyBankLayout: handlePiggyBankLayout,
+            onGummyBearsLayout: handleGummyBearsLayout,
+            onNextPeriodLayout: handleNextPeriodLayout,
+          }
+        : {}),
     }),
     [
       candies,
@@ -1365,13 +1168,18 @@ function Market(props) {
       unlockButton,
       handleUnlockSize,
       balance,
-      tutorialActive,
-      tutorialStep,
+      availableSizes,
+      selectedSize,
+      isTutorialActive,
+      handleWalletLayout,
+      handlePiggyBankLayout,
+      handleGummyBearsLayout,
+      handleNextPeriodLayout,
     ]
   );
 
   return (
-    <View ref={marketContainerRef} collapsable={false} style={styles.container}>
+    <View ref={marketContainerRef} collapsable={false} style={styles.container} onLayout={handleContainerLayout}>
       {showLunchMinigames && (
         <FirstTimeHint
           hintKey="lunch_minigame"
@@ -1379,6 +1187,15 @@ function Market(props) {
         />
       )}
       <MarketContent {...marketProps} />
+
+      {isTutorialActive && (
+        <TutorialOverlay
+          tutorialStep={tutorialStep}
+          measurements={tutorialMeasurements}
+          onAdvance={() => dispatch(advanceTutorial())}
+          onSkip={() => dispatch(skipTutorial())}
+        />
+      )}
 
       <Suspense fallback={null}>
         <LocationModal
@@ -1424,9 +1241,6 @@ function Market(props) {
           onClose={() => {
             // If in drone mode and user just closes (backs out), don't consume drone
             if (isDroneDeposit) {
-              if (__DEV__) console.log(
-                '✈️ User backed out of drone deposit - not consuming drone'
-              );
               setIsDroneDeposit(false);
             }
             setStashMoneyModalVisible(false);
@@ -1516,12 +1330,7 @@ function Market(props) {
           <InventoryModal
             visible={inventoryModalVisible}
             onClose={() => {
-              if (__DEV__) console.log(
-                '🔴 Market onClose called, current state:',
-                inventoryModalVisible
-              );
               setInventoryModalVisible(false);
-              if (__DEV__) console.log('🔴 Market onClose completed, should be false now');
             }}
             inventory={inventory}
             totalCount={getTotalInventoryCount()}
@@ -1533,11 +1342,6 @@ function Market(props) {
       {/* EventModal for special events */}
       <EventModal />
 
-      {/* Tutorial overlay - rendered last to be on top */}
-      {/* Steps 4,7,8 are inside TransactionModal; steps 9-11 are in tab layout */}
-      {/* Tutorial overlay — always mounted so congrats modal can show after completion */}
-      {/* Steps 5 and 8 are inside TransactionModal; overlay hides itself when not needed */}
-      <TutorialOverlay />
     </View>
   );
 }

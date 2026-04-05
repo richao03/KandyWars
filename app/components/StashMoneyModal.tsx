@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useWallet } from '../../src/hooks/useWallet';
@@ -133,7 +134,7 @@ function StashMoneyModal({
     if (isMaxDeposit) {
       dispatch(incrementMaxDeposit());
       console.log(
-        `🏆 Maximalist: Full wallet deposited! ($${amount.toFixed(2)})`
+        `🏆 Maximalist: Full wallet deposited! ($${formatCurrency(amount)})`
       );
     }
 
@@ -254,7 +255,7 @@ function StashMoneyModal({
               <Text style={styles.stashedLabel}>Currently Stashed</Text>
               <Animated.View style={animatedShakeStyle}>
                 <Text style={styles.stashedAmount}>
-                  ${stashedAmount.toFixed(2)}
+                  ${formatCurrency(stashedAmount)}
                 </Text>
               </Animated.View>
 
@@ -271,7 +272,7 @@ function StashMoneyModal({
                         : styles.negativeChange,
                     ]}
                   >
-                    {changeAmount > 0 ? '+' : ''}${changeAmount.toFixed(2)}
+                    {changeAmount > 0 ? '+' : ''}${formatCurrency(changeAmount)}
                   </Text>
                 </Animated.View>
               )}
@@ -280,7 +281,7 @@ function StashMoneyModal({
             {/* Current Balance */}
             <View style={styles.balanceContainer}>
               <Text style={styles.balanceLabel}>Available to Deposit</Text>
-              <Text style={styles.balanceAmount}>${balance.toFixed(2)}</Text>
+              <Text style={styles.balanceAmount}>${formatCurrency(balance)}</Text>
             </View>
 
             {/* Amount Selection */}
@@ -294,7 +295,7 @@ function StashMoneyModal({
                       isTyping
                         ? `$${typingValue}`
                         : amount > 0
-                          ? `$${amount.toFixed(2)}`
+                          ? `$${formatCurrency(amount)}`
                           : '$0.00'
                     }
                     onChangeText={handleTextInput}
@@ -307,7 +308,7 @@ function StashMoneyModal({
                 {hasBonus && (
                   <View style={styles.bonusIndicator}>
                     <Text style={styles.bonusText}>
-                      💰 +10% = ${displayAmount.toFixed(2)}
+                      💰 +10% = ${formatCurrency(displayAmount)}
                     </Text>
                   </View>
                 )}

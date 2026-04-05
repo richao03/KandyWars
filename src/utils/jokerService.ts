@@ -7,7 +7,7 @@ import {
 } from './jokerEffectEngine';
 import { JOKER_IDS } from '../constants/jokerIds';
 import { getCandyDefinition } from '../constants/candyRegistry';
-import { roundToTwoDecimals } from './priceUtils';
+import { formatCurrency, roundToTwoDecimals } from './priceUtils';
 
 // Hook for mini-games to get study time multiplier
 export const useStudyTimeMultiplier = (
@@ -261,7 +261,7 @@ export class JokerService {
             const change = currentPrice * (effect.amount - 1);
             breakdown.jokerEffects.push({
               jokerName, jokerEmoji,
-              effect: `×${effect.amount} (+$${change.toFixed(2)})`,
+              effect: `×${effect.amount} (+$${formatCurrency(change)})`,
               amount: change, effectType, isActive,
             });
             currentPrice = roundToTwoDecimals(currentPrice * effect.amount);
@@ -323,7 +323,7 @@ export class JokerService {
             label = 'odd inv';
             jokerEmoji = '🎭';
           } else if (effect.conditions?.cashEndsWith === '.00') {
-            const cashStr = (currentCash ?? 0).toFixed(2);
+            const cashStr = formatCurrency(currentCash ?? 0);
             condMet = cashStr.endsWith('.00');
             label = 'cash .00';
             jokerEmoji = '💰';

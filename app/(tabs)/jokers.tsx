@@ -9,9 +9,10 @@ import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
-import { useTutorial } from '../../src/hooks/useTutorial';
+import { selectTutorialStep } from '../../src/store/slices/tutorialSlice';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from '../components/FastModal';
 import FirstTimeHint from '../components/FirstTimeHint';
 import JokerCard from '../components/JokerCard';
@@ -32,13 +33,8 @@ function JokersPage() {
   const seedContext = useSeed();
   const { triggerEvent } = useEventHandler();
   const isFocused = useIsFocused();
-  const {
-    currentStep: tutorialStep,
-    isActive: tutorialActive,
-    advance: advanceTutorial,
-    skip: skipTutorial,
-    registerTarget,
-  } = useTutorial();
+  const tutorialStep = useAppSelector(selectTutorialStep);
+  const tutorialActive = tutorialStep > 0 && tutorialStep <= 8;
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
@@ -289,7 +285,7 @@ function JokersPage() {
 
       handleShowConfirmation(
         'Market Manipulation Activated!',
-        `${selectedCandy} price set to highest market price: $${highestPrice.toFixed(2)}`,
+        `${selectedCandy} price set to highest market price: $${formatCurrency(highestPrice)}`,
         '📈'
       );
     } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
@@ -318,7 +314,7 @@ function JokersPage() {
 
       handleShowConfirmation(
         'The Big Short Activated!',
-        `${selectedCandy} price set to lowest market price: $${lowestPrice.toFixed(2)}`,
+        `${selectedCandy} price set to lowest market price: $${formatCurrency(lowestPrice)}`,
         '📉'
       );
     } else if (
@@ -337,7 +333,7 @@ function JokersPage() {
 
       handleShowConfirmation(
         'Double Up Activated!',
-        `${selectedCandy} price doubled to $${newPrice.toFixed(2)} for this period!`,
+        `${selectedCandy} price doubled to $${formatCurrency(newPrice)} for this period!`,
         '💰'
       );
     } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {

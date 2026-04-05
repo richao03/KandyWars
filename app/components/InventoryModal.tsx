@@ -6,6 +6,7 @@ import {
   TouchableHighlight,
   View,
 } from 'react-native';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from './FastModal';
 import TextWithEmojis from './TextWithEmojis';
 
@@ -88,7 +89,7 @@ function InventoryModal({
           <TextWithEmojis style={styles.totalLabel}>
             Total Stash Value:
           </TextWithEmojis>
-          <Text style={styles.totalValue}>${totalValue.toFixed(2)}</Text>
+          <Text style={styles.totalValue}>${formatCurrency(totalValue)}</Text>
         </View>
       )}
 

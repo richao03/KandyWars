@@ -21,6 +21,7 @@ import PixelBorder from './components/PixelBorder';
 import TransactionModal from './components/TransactionModal';
 import { Candy } from './types';
 import { CANDY_REGISTRY } from '../src/constants/candyRegistry';
+import { formatCurrency } from '../src/utils/priceUtils';
 
 type CandyForDeli = Candy & {
   cost: number;
@@ -220,7 +221,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
                 >
                   <View style={styles.itemHeader}>
                     <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.price}>${item.cost.toFixed(2)}</Text>
+                    <Text style={styles.price}>${formatCurrency(item.cost)}</Text>
                   </View>
                   <View style={styles.itemDetails}>
                     <Text style={styles.owned}>
@@ -229,7 +230,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
                     <Text style={styles.avgPrice}>
                       Avg Cost:{' '}
                       {item.averagePrice !== null
-                        ? `$${item.averagePrice.toFixed(2)}`
+                        ? `$${formatCurrency(item.averagePrice)}`
                         : '—'}
                     </Text>
                   </View>

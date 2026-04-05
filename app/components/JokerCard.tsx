@@ -18,6 +18,7 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { STANDARDIZED_JOKERS, getJokerDescription } from '../../src/utils/jokerEffectEngine';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import ConfirmationModal from './ConfirmationModal';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
@@ -586,7 +587,7 @@ function JokerCard({
           const newPrice = prices[index];
           modifyCandyPrice(entry.candy, newPrice, periodCount);
           priceChanges.push(
-            `${entry.candy}: $${entry.price.toFixed(2)} → $${newPrice.toFixed(2)}`
+            `${entry.candy}: $${formatCurrency(entry.price)} → $${formatCurrency(newPrice)}`
           );
           if (__DEV__) console.log(
             `🌍 Continental Drift: ${entry.candy} price changed from $${entry.price} to $${newPrice}`
@@ -762,10 +763,10 @@ function JokerCard({
                       </View>
                       <Text style={styles.candyAvgPrice}>
                         Avg: $
-                        {(
+                        {formatCurrency(
                           inventory.find((item) => item.name === candyType)
                             ?.price || 0
-                        ).toFixed(2)}
+                        )}
                       </Text>
                     </TouchableOpacity>
                   ))
@@ -839,9 +840,9 @@ function JokerCard({
                 <Text style={styles.candyOptionText}>{candyType}</Text>
                 <Text style={styles.targetPrice}>
                   Current Price: $
-                  {(
+                  {formatCurrency(
                     gameData.candyPrices[candyType]?.[periodCount] || 0
-                  ).toFixed(2)}
+                  )}
                 </Text>
               </TouchableOpacity>
             ))}

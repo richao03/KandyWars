@@ -3,6 +3,7 @@ import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import PixelBorder from './PixelBorder';
 import colors from '../../src/constants/colors';
+import { formatCurrency } from '../../src/utils/priceUtils';
 
 
 const screenWidth = Dimensions.get('window').width;
@@ -145,17 +146,17 @@ function CandyPriceChart({
             <Text
               style={[styles.currentPriceValue, { color: getTrendColor() }]}
             >
-              ${currentPrice.toFixed(2)}
+              ${formatCurrency(currentPrice)}
             </Text>
           </View>
           <View style={styles.changeDisplay}>
             <Text style={[styles.changeValue, { color: getTrendColor() }]}>
               {getTrendSymbol()} {priceChange >= 0 ? '+' : ''}$
-              {Math.abs(priceChange).toFixed(2)}
+              {formatCurrency(Math.abs(priceChange))}
             </Text>
             <Text style={[styles.changePercent, { color: getTrendColor() }]}>
               ({priceChangePercent >= 0 ? '+' : ''}
-              {priceChangePercent.toFixed(2)}%)
+              {formatCurrency(priceChangePercent)}%)
             </Text>
           </View>
         </View>
@@ -164,18 +165,18 @@ function CandyPriceChart({
         <View style={styles.statsGrid}>
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>HIGH</Text>
-            <Text style={styles.statValue}>${maxPrice.toFixed(2)}</Text>
+            <Text style={styles.statValue}>${formatCurrency(maxPrice)}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>LOW</Text>
-            <Text style={styles.statValue}>${minPrice.toFixed(2)}</Text>
+            <Text style={styles.statValue}>${formatCurrency(minPrice)}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statLabel}>Average</Text>
             <Text style={styles.statValue}>
-              ${averagePrice.toFixed(2)}
+              ${formatCurrency(averagePrice)}
             </Text>
           </View>
         </View>

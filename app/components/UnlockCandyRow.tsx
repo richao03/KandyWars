@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
+import { formatNumber } from '../../src/utils/priceUtils';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 
@@ -46,7 +47,7 @@ const UnlockCandyRow = React.memo(function UnlockCandyRow({
   }, [canAfford, onPress, rotation]);
 
   const label = size === 'medium' ? 'Unlock Medium Candies' : 'Unlock Big Candies';
-  const costLabel = `$${cost.toLocaleString()}`;
+  const costLabel = `$${formatNumber(cost)}`;
 
   return (
     <Animated.View style={[styles.container, animatedStyle, !canAfford && styles.disabled]}>

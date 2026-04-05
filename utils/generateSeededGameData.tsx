@@ -1,5 +1,5 @@
 import seedrandom from 'seedrandom';
-import { CANDY_REGISTRY, CANDY_NAMES } from '../src/constants/candyRegistry';
+import { CANDY_NAMES, CANDY_REGISTRY } from '../src/constants/candyRegistry';
 
 // Image mapping to resolve references at runtime
 const getBackgroundImage = (imageType: string) => {
@@ -87,7 +87,7 @@ const locations = [
 
 // Actor pools for major events
 const teachers = ['Mrs. Johnson', 'Mr. Smith', 'The Principal', 'The Dean'];
-const bullies = ['A bully', 'The lunch thief', 'Some tough kid'];
+const bullies = ['A bully', 'The lunch thief', 'Some tough guy'];
 const foundMoneySubjects = ['Somebody', 'A student', 'Someone'];
 
 // Hint templates for major events (5 variations each)
@@ -229,7 +229,9 @@ export function generateSeededGameData(
   const LOW_VOL = 0.4;
   const HIGH_VOL = 1.3;
   (['small', 'medium', 'big'] as const).forEach((size) => {
-    const sizeGroup = CANDY_REGISTRY.filter((c) => c.size === size).map((c) => c.name);
+    const sizeGroup = CANDY_REGISTRY.filter((c) => c.size === size).map(
+      (c) => c.name
+    );
     // Shuffle the group with separate RNG
     for (let i = sizeGroup.length - 1; i > 0; i--) {
       const j = Math.floor(volRng() * (i + 1));
@@ -242,7 +244,7 @@ export function generateSeededGameData(
   Object.entries(basePrices).forEach(
     ([candy, [min, max, _unusedFloorPrice]]) => {
       // Per-candy volatility: how much price swings each period (0.4 = stable, 1.3 = wild)
-      const volatility = volatilityOverrides[candy] ?? (0.4 + rng() * 0.9);
+      const volatility = volatilityOverrides[candy] ?? 0.4 + rng() * 0.9;
 
       const prices: number[] = [];
 
@@ -260,9 +262,12 @@ export function generateSeededGameData(
         // Volatility controls how spread out: low-vol clusters mid-range, high-vol hits extremes
         const r = rng();
         // Bias toward extremes for high volatility, toward center for low
-        const shaped = volatility > 0.8
-          ? (r < 0.5 ? r * r * 2 : 1 - (1 - r) * (1 - r) * 2) // U-shaped: more lows and highs
-          : r; // uniform
+        const shaped =
+          volatility > 0.8
+            ? r < 0.5
+              ? r * r * 2
+              : 1 - (1 - r) * (1 - r) * 2 // U-shaped: more lows and highs
+            : r; // uniform
         const price = periodMin + (periodMax - periodMin) * shaped;
 
         prices.push(parseFloat(price.toFixed(2)));
@@ -555,8 +560,8 @@ export function generateSeededGameData(
   // Tutorial mode: override Gummy Bears prices (periodCount is 0-indexed)
   // periodCount 0 = first period player sees, periodCount 1 = after first Next Period
   if (tutorialMode && candyPrices['Gummy Bears']) {
-    candyPrices['Gummy Bears'][0] = 2;  // periodCount 0: cheap buy ($2)
-    candyPrices['Gummy Bears'][1] = 8;  // periodCount 1: profitable sell ($8)
+    candyPrices['Gummy Bears'][0] = 2; // periodCount 0: cheap buy ($2)
+    candyPrices['Gummy Bears'][1] = 8; // periodCount 1: profitable sell ($8)
   }
 
   return {
