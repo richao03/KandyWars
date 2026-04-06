@@ -24,6 +24,7 @@ export interface SaleInputs {
   candySales: any[];
   totalCandiesSold: number;
   inventoryCount: number;
+  inventory: any[];
   day: number;
   uniqueLocationsToday: number;
   period: number;
@@ -99,6 +100,7 @@ const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
             candySales: state.candySales.sales,
             totalCandiesSold: state.candySales.totalCandiesSold,
             inventoryCount,
+            inventory: state.inventory?.inventory ?? [],
             day: currentDay,
             uniqueLocationsToday: todayLocations.size,
             period: currentPeriod,

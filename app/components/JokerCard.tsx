@@ -30,7 +30,7 @@ interface JokerCardProps {
   joker: {
     id: number;
     name: string;
-    subject: string;
+    subject?: string;
     type: 'one-time' | 'persistent';
     flavorText: string;
     description: string;
@@ -252,9 +252,6 @@ function JokerCard({
     } else if (activationId === JOKER_IDS.MARKET_MANIPULATION) {
       // Show candy selector modal for market manipulation
       onShowCandySelector?.(joker);
-    } else if (activationId === JOKER_IDS.THE_BIG_SHORT) {
-      // Show candy selector modal for big short
-      onShowCandySelector?.(joker);
     } else if (activationId === JOKER_IDS.BET_YOU_IM_FASTER) {
       // Show candy selector modal for inventory filling
       onShowCandySelector?.(joker);
@@ -288,28 +285,6 @@ function JokerCard({
         '🧁',
         () => handleBakeSale(),
         'Collect Money!',
-        'Cancel',
-        () => {}
-      );
-    } else if (activationId === JOKER_IDS.CONTINENTAL_DRIFT) {
-      // Show confirmation for Continental Drift
-      showConfirm(
-        'Continental Drift',
-        'Shuffle all candy prices for this period?',
-        '🌍',
-        () => handleContinentalDrift(),
-        'Activate',
-        'Cancel',
-        () => {}
-      );
-    } else if (activationId === JOKER_IDS.ATLAS_BONUS) {
-      // Show confirmation for Atlas Bonus
-      showConfirm(
-        'Atlas Bonus',
-        'Instantly gain $2500?',
-        '🏔️',
-        () => handleAtlasBonus(),
-        'Collect Money',
         'Cancel',
         () => {}
       );
@@ -551,91 +526,6 @@ function JokerCard({
       }
     }
   }, [debugMode, showOwned, joker, addJoker, onShowConfirmation]);
-
-  const handleContinentalDrift = async () => {
-    if (__DEV__) console.log(
-      '🌍 Continental Drift: Starting activation - shuffling candy prices'
-    );
-
-    try {
-      // Mark the joker as used today FIRST to prevent double-activation
-      // Use originalId for copies so all copies share the same "used" status
-      const activationId = (joker as any).originalId || joker.id;
-      markJokerUsedToday(activationId.toString());
-
-      // Shuffle prices within each size group to prevent big candy prices on small candies
-      const sizeGroups: Record<string, { candy: string; price: number }[]> = {};
-      for (const def of CANDY_REGISTRY) {
-        const price = getOriginalCandyPrice(def.name, periodCount);
-        if (!sizeGroups[def.size]) sizeGroups[def.size] = [];
-        sizeGroups[def.size].push({ candy: def.name, price });
-      }
-
-      const priceChanges: string[] = [];
-
-      // Fisher-Yates shuffle within each size group
-      for (const size of Object.keys(sizeGroups)) {
-        const group = sizeGroups[size];
-        const prices = group.map((g) => g.price);
-
-        for (let i = prices.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [prices[i], prices[j]] = [prices[j], prices[i]];
-        }
-
-        group.forEach((entry, index) => {
-          const newPrice = prices[index];
-          modifyCandyPrice(entry.candy, newPrice, periodCount);
-          priceChanges.push(
-            `${entry.candy}: $${formatCurrency(entry.price)} → $${formatCurrency(newPrice)}`
-          );
-          if (__DEV__) console.log(
-            `🌍 Continental Drift: ${entry.candy} price changed from $${entry.price} to $${newPrice}`
-          );
-        });
-      }
-
-      showAlert(
-        'Continental Drift Activated!',
-        `The market landscape has shifted! All candy prices have been shuffled:\n\n${priceChanges.join('\n')}`,
-        '🌍'
-      );
-    } catch (error) {
-      console.error('🌍 Continental Drift: Error during activation:', error);
-      showAlert(
-        'Error',
-        'An error occurred while activating Continental Drift',
-        '❌'
-      );
-    }
-  };
-
-  const handleAtlasBonus = async () => {
-    if (__DEV__) console.log('🏔️ Atlas Bonus: Starting activation - adding $2500');
-
-    try {
-      // Mark the joker as used today FIRST to prevent double-activation
-      // Use originalId for copies so all copies share the same "used" status
-      const activationId = (joker as any).originalId || joker.id;
-      markJokerUsedToday(activationId.toString());
-
-      // Add $2500 to wallet (Lv1 amount)
-      addMoney(2500);
-
-      showAlert(
-        'Atlas Bonus Activated!',
-        'The weight of the world brings heavy profits! You gained $2500.',
-        '🏔️'
-      );
-    } catch (error) {
-      console.error('🏔️ Atlas Bonus: Error during activation:', error);
-      showAlert(
-        'Error',
-        'An error occurred while activating Atlas Bonus',
-        '❌'
-      );
-    }
-  };
 
   const cardWrapperProps = onLongPress
     ? { onLongPress, activeOpacity: 0.8 }

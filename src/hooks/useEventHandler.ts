@@ -62,14 +62,8 @@ export const useEventHandler = () => {
       }
 
       // Check for protection jokers
-      const hasMedievalShield = jokers.some(
-        (j) => j.id.toString() === JOKER_IDS.MEDIEVAL_SHIELD.toString()
-      );
-      const hasCandyVault = jokers.some(
-        (j) => j.id.toString() === JOKER_IDS.SECRET_HIDEOUT.toString()
-      );
-      const hasHideAndSeek = jokers.some(
-        (j) => j.id.toString() === JOKER_IDS.HIDE_AND_SEEK.toString()
+      const hasSafeHouse = jokers.some(
+        (j) => j.id.toString() === JOKER_IDS.SAFE_HOUSE.toString()
       );
 
       // Create a mutable copy of eventData to add protection flags
@@ -77,13 +71,11 @@ export const useEventHandler = () => {
 
       // Apply event effects immediately when event is triggered
       if (eventData.effect === 'LOSE_MONEY') {
-        // Check for Medieval Shield protection (joker) - PRIORITY 1
-        if (hasMedievalShield) {
-          if (__DEV__) console.log('🛡️ Medieval Shield: Protected from money loss!');
-          // Add protection flag to event data
+        // Check for Safe House protection (joker) - PRIORITY 1
+        if (hasSafeHouse) {
+          if (__DEV__) console.log('🛡️ Safe House: Protected from money loss!');
           processedEventData.protectedByMedievalShield = true;
-          // Remove Medieval Shield from inventory (one-time use)
-          dispatch(removeJoker(JOKER_IDS.MEDIEVAL_SHIELD.toString()));
+          dispatch(removeJoker(JOKER_IDS.SAFE_HOUSE.toString()));
         }
         // Check for 6th Grade Bodyguard protection (merchant item) - PRIORITY 2
         else if (MerchantUtils.hasBodyguard(merchantEffects)) {
@@ -124,11 +116,6 @@ export const useEventHandler = () => {
         let amountFound = Math.max(Math.floor(currentBalance * 0.25), 100);
         if (__DEV__) console.log('💰 EVENT: Found $', amountFound, `(25% of $${currentBalance})`);
 
-        // Apply Hide and Seek joker multiplier (2x)
-        if (hasHideAndSeek) {
-          amountFound = amountFound * 2;
-        }
-
         // Apply Metal Detector merchant multiplier
         amountFound = MerchantUtils.applyFoundMoneyMultiplier(amountFound, merchantEffects);
 
@@ -136,13 +123,11 @@ export const useEventHandler = () => {
         processedEventData.dollarAmount = amountFound;
         wallet.add(amountFound);
       } else if (eventData.effect === 'STASH_LOCKED') {
-        // Check for Secret Hideout protection (joker) - PRIORITY 1
-        if (hasCandyVault) {
-          if (__DEV__) console.log('🔒 Secret Hideout: Protected from confiscation!');
-          // Add protection flag to event data
+        // Check for Safe House protection (joker) - PRIORITY 1
+        if (hasSafeHouse) {
+          if (__DEV__) console.log('🔒 Safe House: Protected from confiscation!');
           processedEventData.protectedByCandyVault = true;
-          // Remove Candy Vault from inventory (one-time use)
-          dispatch(removeJoker(JOKER_IDS.SECRET_HIDEOUT.toString()));
+          dispatch(removeJoker(JOKER_IDS.SAFE_HOUSE.toString()));
         }
         // Check for Hall Monitor Bribe protection (merchant item) - PRIORITY 2
         else if (MerchantUtils.hasHallMonitorBribe(merchantEffects)) {

@@ -34,6 +34,9 @@ interface GameState {
   markFarmersCarryBonusApplied: number[]; // Tracks which periods have received Farmers Carry bonus
   mediumCandiesUnlocked: boolean; // Unlocked on Day 2 for $500
   bigCandiesUnlocked: boolean; // Unlocked on Day 3 for $5000
+  bulkEmpireStacks: number; // Bulk Empire: permanent +0.5x per stack
+  bulkEmpireDailySales: number; // Bulk Empire: candy count for current day
+  bulkEmpireLastDay: number; // Bulk Empire: last day stacks were checked
 }
 
 const initialState: GameState = {
@@ -55,6 +58,9 @@ const initialState: GameState = {
   markFarmersCarryBonusApplied: [],
   mediumCandiesUnlocked: false,
   bigCandiesUnlocked: false,
+  bulkEmpireStacks: 0,
+  bulkEmpireDailySales: 0,
+  bulkEmpireLastDay: 1,
 };
 
 const gameSlice = createSlice({
@@ -234,6 +240,26 @@ const gameSlice = createSlice({
     unlockBigCandies: (state) => {
       state.bigCandiesUnlocked = true;
     },
+    // Bulk Empire: track daily candy sales and award stacks
+    addBulkEmpireSales: (state, action: PayloadAction<{ quantity: number; threshold: number; day: number }>) => {
+      const { quantity, threshold, day } = action.payload;
+      // Reset daily counter if it's a new day
+      if (day !== state.bulkEmpireLastDay) {
+        // Check if previous day earned a stack before resetting
+        if (state.bulkEmpireDailySales >= threshold) {
+          state.bulkEmpireStacks += Math.floor(state.bulkEmpireDailySales / threshold);
+        }
+        state.bulkEmpireDailySales = 0;
+        state.bulkEmpireLastDay = day;
+      }
+      state.bulkEmpireDailySales += quantity;
+      // Check if we crossed the threshold this sale
+      const oldStacks = Math.floor((state.bulkEmpireDailySales - quantity) / threshold);
+      const newStacks = Math.floor(state.bulkEmpireDailySales / threshold);
+      if (newStacks > oldStacks) {
+        state.bulkEmpireStacks += (newStacks - oldStacks);
+      }
+    },
     markFarmersCarryBonusApplied: (state, action: PayloadAction<number>) => {
       const period = action.payload;
       if (!state.markFarmersCarryBonusApplied.includes(period)) {
@@ -278,7 +304,10 @@ export const {
   setSelectedMinigame,
   unlockMediumCandies,
   unlockBigCandies,
+  addBulkEmpireSales,
 } = gameSlice.actions;
+
+export const selectBulkEmpireStacks = (state: any) => state.game?.bulkEmpireStacks ?? 0;
 
 export default gameSlice.reducer;
 

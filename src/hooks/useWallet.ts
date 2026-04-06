@@ -152,28 +152,29 @@ export const useWallet = () => {
       }
     }
 
-    dispatch(addBalance(finalAllowance));
-    return finalAllowance;
-  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects]);
-
-  const stashMoneyAction = useCallback((amount: number, jokers?: any[]): boolean => {
-    // Use small epsilon to handle floating point precision issues
-    const epsilon = 0.001;
-    if (balance >= amount - epsilon) {
-      // Check for deposit bonus joker (10% extra stashed)
-      let amountStashed = amount;
-      if (jokers) {
-        const depositBonusJoker = jokers.find((j: any) => j.id === 'deposit_bonus');
-        if (depositBonusJoker) {
-          amountStashed = amount * 1.1; // 10% bonus
-          if (__DEV__) console.log(`💰 Deposit Bonus: Stashing $${amount} → $${amountStashed.toFixed(2)}`);
+    // Deposit Bonus: earn % of stashed amount as daily allowance
+    if (jokers && jokers.length > 0 && stashedAmount > 0) {
+      const stashBonusEffects = processEffectsByTarget(jokers, 'stash_allowance_bonus');
+      for (const effect of stashBonusEffects) {
+        // stashedAmount can be negative (debt), only apply if positive
+        if (stashedAmount > 0) {
+          const bonus = Math.round(stashedAmount * effect.amount);
+          finalAllowance += bonus;
+          if (__DEV__) console.log(`💰 Deposit Bonus: ${Math.round(effect.amount * 100)}% of $${stashedAmount} stash → +$${bonus} allowance`);
         }
       }
+    }
 
-      dispatch(stashMoney({ amountPaid: amount, amountStashed }));
+    dispatch(addBalance(finalAllowance));
+    return finalAllowance;
+  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects, stashedAmount]);
+
+  const stashMoneyAction = useCallback((amount: number): boolean => {
+    const epsilon = 0.001;
+    if (balance >= amount - epsilon) {
+      dispatch(stashMoney({ amountPaid: amount, amountStashed: amount }));
       return true;
     }
-    if (__DEV__) console.log(`❌ Stash failed - balance: ${balance}, amount: ${amount}, difference: ${balance - amount}`);
     return false;
   }, [dispatch, balance]);
 

@@ -722,7 +722,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="art"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -835,7 +834,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             visible={showAvailableJokers}
             onClose={() => setShowAvailableJokers(false)}
             jokers={STANDARDIZED_JOKERS}
-            subject="All"
             themeColors={{
               borderColor: '#ff6b35',
               backgroundColor: '#1a2332',

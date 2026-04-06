@@ -572,7 +572,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#3b82f6',
             backgroundColor: '#1a2332',
@@ -590,7 +589,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="geography"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}

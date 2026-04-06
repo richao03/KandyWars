@@ -466,7 +466,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="computer"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -574,7 +573,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             visible={showAvailableJokers}
             onClose={() => setShowAvailableJokers(false)}
             jokers={STANDARDIZED_JOKERS}
-            subject="All"
             themeColors={{
               borderColor: '#00d4ff',
               backgroundColor: '#0a0e1a',

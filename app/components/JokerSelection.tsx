@@ -48,7 +48,6 @@ interface JokerSelectionProps {
     | 'logic'
     | 'recess'
     | 'geography';
-  subject: string;
   onComplete: () => void;
   rewardTier?: 1 | 2 | 3;
   completionLevel?: 1 | 2 | 3;
@@ -57,7 +56,6 @@ interface JokerSelectionProps {
 export default function JokerSelection({
   jokers,
   theme,
-  subject,
   onComplete,
   rewardTier = 3,
   completionLevel = 3,
@@ -146,7 +144,6 @@ export default function JokerSelection({
       id: joker.id,
       name: joker.name,
       description: joker.description,
-      subject: joker.subject,
       theme: theme,
       type: isOneTime ? 'one-time' : 'persistent',
       effect: '',
@@ -159,7 +156,7 @@ export default function JokerSelection({
       return;
     }
 
-    addJoker(jokerToAdd, 'minigame', subject);
+    addJoker(jokerToAdd, 'minigame');
     setChosenJokerId(joker.id);
     SoundEffects.playAchievementSound();
 
@@ -306,7 +303,6 @@ export default function JokerSelection({
     return {
       id: Number(id),
       name: owned?.name || std?.name || 'Unknown',
-      subject: std?.subject || '',
       type: (std?.type === 'one-time' ? 'one-time' : 'persistent') as
         | 'one-time'
         | 'persistent',

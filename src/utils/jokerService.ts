@@ -295,16 +295,41 @@ export class JokerService {
           continue;
         }
 
-        // Size multipliers
-        if (effect.target === 'size_multiplier' && effect.conditions?.candySize) {
-          const matches = candyDef ? candyDef.size === effect.conditions.candySize : false;
+        // Flip Artist — bonus when selling at 3x+ markup
+        if (effect.target === 'flip_artist_boost') {
           jokerEmoji = _getEmoji(jokerId);
           breakdown.jokerEffects.push({
             jokerName, jokerEmoji,
-            effect: `×${effect.amount} ${effect.conditions.candySize}`,
-            amount: matches ? effect.amount : 0,
+            effect: `×${effect.amount} on 3x+ markup`,
+            amount: effect.amount,
             effectType: 'sell',
-            isActive: isActive && matches,
+            isActive,
+          });
+          continue;
+        }
+
+        // Combo Platter — bonus when both candy types covered by jokers
+        if (effect.target === 'combo_platter_boost') {
+          jokerEmoji = _getEmoji(jokerId);
+          breakdown.jokerEffects.push({
+            jokerName, jokerEmoji,
+            effect: `+${effect.amount}x dual-type bonus`,
+            amount: effect.amount,
+            effectType: 'sell',
+            isActive,
+          });
+          continue;
+        }
+
+        // Bulk Empire — permanent stacking multiplier
+        if (effect.target === 'bulk_empire_boost') {
+          jokerEmoji = _getEmoji(jokerId);
+          breakdown.jokerEffects.push({
+            jokerName, jokerEmoji,
+            effect: `+0.5x per ${effect.amount} sold/day`,
+            amount: effect.amount,
+            effectType: 'sell',
+            isActive,
           });
           continue;
         }
@@ -413,9 +438,9 @@ export class JokerService {
 
 function _getEmoji(id: number): string {
   const map: Record<number, string> = {
-    [JOKER_IDS.MEDIAN_FORMULA]: '📐',
-    [JOKER_IDS.MICRO_CHIP]: '🔬',
-    [JOKER_IDS.SUPER_SIZE_ME]: '🍔',
+    [JOKER_IDS.FLIP_ARTIST]: '🔄',
+    [JOKER_IDS.COMBO_PLATTER]: '🍱',
+    [JOKER_IDS.BULK_EMPIRE]: '👑',
     [JOKER_IDS.COCOA_FUTURES]: '🍫',
     [JOKER_IDS.BEAR_MARKET]: '🐻',
     [JOKER_IDS.HARD_KNOCKS]: '💎',

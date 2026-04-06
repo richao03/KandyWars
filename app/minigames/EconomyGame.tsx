@@ -955,7 +955,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="economy"
-        subject="All"
         onComplete={onComplete}
         rewardTier={rewardLevel}
         completionLevel={rewardLevel}
@@ -1064,7 +1063,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#52c41a',
             backgroundColor: '#1a2332',

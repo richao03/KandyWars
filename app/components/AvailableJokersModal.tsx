@@ -9,8 +9,7 @@ import TextWithEmojis from './TextWithEmojis';
 interface AvailableJokersModalProps {
   visible: boolean;
   onClose: () => void;
-  jokers: any[]; // Array of jokers for this subject
-  subject: string; // e.g., "Math", "Art", etc.
+  jokers: any[];
   themeColors: {
     borderColor: string;
     backgroundColor: string;
@@ -23,7 +22,6 @@ export default function AvailableJokersModal({
   visible,
   onClose,
   jokers,
-  subject,
   themeColors,
 }: AvailableJokersModalProps) {
   const { jokers: ownedJokers } = useJokers();
@@ -106,7 +104,7 @@ export default function AvailableJokersModal({
                   style={[styles.emptyText, { color: themeColors.textColor }]}
                   imageSize={32}
                 >
-                  🎉 All {subject} Jokers Collected!
+                  🎉 All Jokers Collected!
                 </TextWithEmojis>
                 <Text
                   style={[
@@ -114,7 +112,7 @@ export default function AvailableJokersModal({
                     { color: themeColors.textColor },
                   ]}
                 >
-                  You've discovered every joker from this subject!
+                  You've discovered every available joker!
                 </Text>
               </PixelBorder>
             )}

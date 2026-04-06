@@ -11,7 +11,7 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { selectTutorialStep } from '../../src/store/slices/tutorialSlice';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { ALL_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from '../components/FastModal';
 import FirstTimeHint from '../components/FirstTimeHint';
@@ -288,35 +288,6 @@ function JokersPage() {
         `${selectedCandy} price set to highest market price: $${formatCurrency(highestPrice)}`,
         '📈'
       );
-    } else if (joker.id === JOKER_IDS.THE_BIG_SHORT) {
-      // Mark as used FIRST to prevent double-use
-      markJokerUsedToday(joker.id.toString());
-
-      // Set the selected candy's price to the lowest price of all candies this period
-      const allCandyTypes = Object.keys(gameData.candyPrices);
-      let lowestPrice = Infinity;
-
-      // Find the lowest price among all candies for this period
-      for (const candyType of allCandyTypes) {
-        const priceForThisPeriod =
-          gameData.candyPrices[candyType]?.[periodCount] || 0;
-        if (priceForThisPeriod > 0 && priceForThisPeriod < lowestPrice) {
-          lowestPrice = priceForThisPeriod;
-        }
-      }
-
-      // If no valid lowest price found, use minimum price
-      if (lowestPrice === Infinity) {
-        lowestPrice = 0.01;
-      }
-
-      modifyCandyPrice(selectedCandy, lowestPrice, periodCount);
-
-      handleShowConfirmation(
-        'The Big Short Activated!',
-        `${selectedCandy} price set to lowest market price: $${formatCurrency(lowestPrice)}`,
-        '📉'
-      );
     } else if (
       joker.id === JOKER_IDS.DOUBLE_UP ||
       joker.effect === 'double_candy_price'
@@ -379,7 +350,7 @@ function JokersPage() {
 
   // Create flat list of all jokers in rows of 2 for browse tab
   const allJokersInRows = useMemo(() => {
-    const flatJokers = Object.values(ALL_JOKERS).flat();
+    const flatJokers = STANDARDIZED_JOKERS;
     const rows = [];
     for (let i = 0; i < flatJokers.length; i += 2) {
       const row = [flatJokers[i]];
@@ -393,7 +364,7 @@ function JokersPage() {
 
   // Get total count for browse tab
   const allJokersCount = useMemo(() => {
-    return Object.values(ALL_JOKERS).flat().length;
+    return STANDARDIZED_JOKERS.length;
   }, []);
 
   // Current user's jokers for "Inventory" tab - organize into rows like the "All" tab
@@ -593,21 +564,17 @@ function JokersPage() {
             <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
               {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
                 ? '📈'
-                : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
-                  ? '💸'
-                  : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
-                    ? '⚡'
-                    : '🍭'}
+                : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
+                  ? '⚡'
+                  : '🍭'}
             </TextWithEmojis>
           </View>
           <TextWithEmojis style={styles.modalTitle} imageSize={24}>
             {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
               ? 'Choose Candy to Manipulate'
-              : candySelectorModal.joker?.id === JOKER_IDS.THE_BIG_SHORT
-                ? 'Choose Candy to Short'
-                : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
-                  ? 'Choose Candy to Fill Inventory'
-                  : 'Choose Candy Type'}
+              : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
+                ? 'Choose Candy to Fill Inventory'
+                : 'Choose Candy Type'}
           </TextWithEmojis>
 
           {CANDY_TYPES.map((candyType) => (

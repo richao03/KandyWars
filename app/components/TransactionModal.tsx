@@ -1,7 +1,7 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated as RNAnimated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
@@ -23,9 +23,9 @@ import type { SaleInputs } from './TransactionModalManager';
 
 // Joker icon lookup by name — matches StatusIndicators.tsx
 const JOKER_ICON_BY_NAME: Record<string, any> = {
-  'Median Formula': require('../../assets/images/emojis/bullseye.png'),
-  'Micro Chip': require('../../assets/images/emojis/computer.png'),
-  'Super Size Me': require('../../assets/images/emojis/slowcooker.png'),
+  'Flip Artist': require('../../assets/images/emojis/bullseye.png'),
+  'Combo Platter': require('../../assets/images/emojis/computer.png'),
+  'Bulk Empire': require('../../assets/images/emojis/slowcooker.png'),
   'Cocoa Futures': require('../../assets/images/emojis/chocolate.png'),
   'Bear Market': require('../../assets/images/emojis/priceCrash.png'),
   'Hard Knocks': require('../../assets/images/emojis/diamondHand.png'),
@@ -40,7 +40,7 @@ const JOKER_ICON_BY_NAME: Record<string, any> = {
   'Early Bird': require('../../assets/images/emojis/sunrise.png'),
   'Bulk Discount': require('../../assets/images/emojis/bulkSale.png'),
   Underdog: require('../../assets/images/emojis/gym.png'),
-  'Penny Pincher': require('../../assets/images/emojis/coin.png'),
+  'Variety Pack': require('../../assets/images/emojis/coin.png'),
   'Broke and Hungry': require('../../assets/images/emojis/priceCrash.png'),
   'Influencer Shoutout': require('../../assets/images/emojis/talkingHead.png'),
   'Hall Pass': require('../../assets/images/emojis/hallpass.png'),
@@ -108,8 +108,18 @@ function TransactionModal({
   const [quantity, setQuantity] = useState(1);
   const [isClosing, setIsClosing] = useState(false);
 
+  // Scoring animation state
+  const [scoringActive, setScoringActive] = useState(false);
+  const [scoringStep, setScoringStep] = useState(-1); // -1 = not started, 0+ = current bonus index
+  const [animatedProfit, setAnimatedProfit] = useState(0);
+  const [animatedMult, setAnimatedMult] = useState(1);
+  const [scoringDone, setScoringDone] = useState(false);
+  const scoringFlash = useRef(new RNAnimated.Value(0)).current;
+  const pendingConfirmRef = useRef<(() => void) | null>(null);
+
   // Tutorial
   const tutorialStep = useAppSelector(selectTutorialStep);
+  const bulkEmpireStacks = useAppSelector((state: any) => state.game?.bulkEmpireStacks ?? 0);
   const tutorialDispatch = useAppDispatch();
   const isTutorialModal = tutorialStep === 4 || tutorialStep === 7;
   const dimOpacity = isTutorialModal ? 0.25 : 1;
@@ -213,6 +223,8 @@ function TransactionModal({
         uniqueLocationsToday,
         period: salePeriod,
         periodsPerDay,
+        bulkEmpireStacks,
+        inventory: saleInputs?.inventory ?? [],
       });
     }
     return null;
@@ -245,47 +257,105 @@ function TransactionModal({
       ? formatCurrency(candy.cost * quantity)
       : formatCurrency(finalUnitPrice * quantity);
 
+  // Build ordered scoring steps: boosts first, then mults
+  const scoringSteps = useMemo(() => {
+    if (!saleResult) return [];
+    const boosts = saleResult.bonusBreakdown
+      .filter((b) => b.flatBonus && b.flatBonus > 0)
+      .map((b) => ({ ...b, bucket: 'boost' as const }));
+    const mults = saleResult.bonusBreakdown
+      .filter((b) => b.multiplier > 1 && !b.flatBonus)
+      .map((b) => ({ ...b, bucket: 'mult' as const }));
+    return [...boosts, ...mults];
+  }, [saleResult]);
+
+  // Run the scoring animation sequence
+  const runScoringAnimation = useCallback(() => {
+    if (!saleResult || scoringSteps.length === 0) {
+      pendingConfirmRef.current?.();
+      pendingConfirmRef.current = null;
+      return;
+    }
+
+    const baseProfit = saleResult.totalProfit;
+    setScoringActive(true);
+    setScoringDone(false);
+    setAnimatedProfit(baseProfit);
+    setAnimatedMult(1);
+    setScoringStep(-1);
+
+    let currentProfit = baseProfit;
+    let currentMult = 1;
+    let step = 0;
+
+    const animate = () => {
+      if (step >= scoringSteps.length) {
+        setScoringDone(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setTimeout(() => {
+          setScoringActive(false);
+          setScoringStep(-1);
+          pendingConfirmRef.current?.();
+          pendingConfirmRef.current = null;
+        }, 600);
+        return;
+      }
+
+      const bonus = scoringSteps[step];
+      setScoringStep(step);
+
+      scoringFlash.setValue(1);
+      RNAnimated.timing(scoringFlash, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      if (bonus.bucket === 'boost') {
+        currentProfit += bonus.flatBonus ?? 0;
+        setAnimatedProfit(currentProfit);
+      } else {
+        currentMult += (bonus.multiplier - 1);
+        setAnimatedMult(currentMult);
+      }
+
+      step++;
+      setTimeout(animate, 300);
+    };
+
+    setTimeout(animate, 200);
+  }, [saleResult, scoringSteps, scoringFlash]);
+
+  const doConfirm = useCallback(() => {
+    setIsClosing(true);
+    SoundEffects.playRandomPop();
+
+    if (mode === 'Sell' && priceBreakdown) {
+      const saleRevenue = priceBreakdown.finalPrice * quantity;
+      const userObject = scoreboardService.getCachedUserObject();
+      if (userObject && saleRevenue > userObject.highestSingleSale) {
+        scoreboardService.updateLocalUserObject({ highestSingleSale: saleRevenue });
+      }
+    }
+
+    onConfirm(quantity, mode.toLowerCase() as 'buy' | 'sell');
+
+    if (tutorialStep === 4 || tutorialStep === 7) {
+      tutorialDispatch(advanceTutorial());
+    }
+  }, [mode, quantity, priceBreakdown, onConfirm, tutorialStep, tutorialDispatch]);
+
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
-      // Mark modal as closing to prevent slider events
-      setIsClosing(true);
-
-      // Play pop sound when confirming transaction
-      SoundEffects.playRandomPop();
-
-      // Track highest single sale for SELL transactions
-      if (mode === 'Sell' && priceBreakdown) {
-        const saleRevenue = priceBreakdown.finalPrice * quantity;
-        if (__DEV__) console.log('💰 Sale revenue:', saleRevenue);
-
-        const userObject = scoreboardService.getCachedUserObject();
-        if (!userObject) {
-          if (__DEV__) {
-            console.warn(
-              '⚠️ User object not cached, cannot track highest single sale'
-            );
-          }
-        } else if (saleRevenue > userObject.highestSingleSale) {
-          if (__DEV__) {
-            console.log(
-              '🎉 New highest single sale!',
-              saleRevenue,
-              'Previous:',
-              userObject.highestSingleSale
-            );
-          }
-          scoreboardService.updateLocalUserObject({
-            highestSingleSale: saleRevenue,
-          });
-        }
+      // For sells with bonuses, play scoring animation first
+      if (mode === 'Sell' && scoringSteps.length > 0 && !scoringActive) {
+        pendingConfirmRef.current = doConfirm;
+        runScoringAnimation();
+        return;
       }
-
-      onConfirm(quantity, mode.toLowerCase() as 'buy' | 'sell');
-
-      // Advance tutorial: step 4 (buy confirm) or step 7 (sell confirm)
-      if (tutorialStep === 4 || tutorialStep === 7) {
-        tutorialDispatch(advanceTutorial());
-      }
+      doConfirm();
     }
   };
 
@@ -294,10 +364,13 @@ function TransactionModal({
     onClose();
   };
 
-  // Reset closing state when modal visibility changes
+  // Reset state when modal visibility changes
   useEffect(() => {
     if (visible) {
       setIsClosing(false);
+      setScoringActive(false);
+      setScoringStep(-1);
+      setScoringDone(false);
     }
   }, [visible]);
 
@@ -545,16 +618,43 @@ function TransactionModal({
             const boostedProfit = (saleResult.totalGain - saleResult.purchaseValue) / Math.max(saleResult.jokerMultiplier, 1);
             const finalProfit = saleResult.totalGain - saleResult.purchaseValue;
 
-            const renderIcon = (bonus: typeof boosts[0], i: number, prefix: string) => {
+            // During scoring animation, show animated version
+            const displayProfit = scoringActive ? animatedProfit : boostedProfit;
+            const displayMult = scoringActive ? animatedMult : saleResult.jokerMultiplier;
+            const displayFinal = scoringActive
+              ? (scoringDone ? finalProfit : displayProfit * displayMult)
+              : finalProfit;
+            const displayTotal = scoringActive
+              ? (scoringDone ? saleResult.totalGain : displayProfit * displayMult + saleResult.purchaseValue)
+              : saleResult.totalGain;
+
+            // Currently animating joker
+            const activeBonus = scoringActive && scoringStep >= 0 && scoringStep < scoringSteps.length
+              ? scoringSteps[scoringStep]
+              : null;
+
+            const flashBg = scoringFlash.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['rgba(0,0,0,0)', activeBonus?.bucket === 'mult' ? 'rgba(217,119,6,0.3)' : 'rgba(34,197,94,0.3)'],
+            });
+
+            const renderIcon = (bonus: typeof boosts[0], i: number, prefix: string, isActive: boolean) => {
               const iconSource = JOKER_ICON_BY_NAME[bonus.name];
+              const opacity = scoringActive && scoringStep >= 0
+                ? (isActive ? 1 : 0.3)
+                : 1;
               return iconSource ? (
-                <Image key={`${prefix}-${i}`} source={iconSource} style={styles.receiptIcon} />
+                <Image key={`${prefix}-${i}`} source={iconSource} style={[styles.receiptIcon, { opacity }]} />
               ) : (
-                <TextWithEmojis key={`${prefix}-${i}`} style={{ fontSize: 14 }} imageSize={18}>
+                <TextWithEmojis key={`${prefix}-${i}`} style={{ fontSize: 14, opacity }} imageSize={18}>
                   {bonus.emoji}
                 </TextWithEmojis>
               );
             };
+
+            // Check if a specific bonus is the currently animating one
+            const isActiveBonus = (bonus: typeof boosts[0]) =>
+              activeBonus?.name === bonus.name && activeBonus?.emoji === bonus.emoji;
 
             return (
               <PixelBorder
@@ -564,25 +664,35 @@ function TransactionModal({
                 innerPadding={0}
               >
                 <View style={styles.priceBreakdownContainer}>
-                  {/* Profit row: label + boost icons + amount */}
+                  {/* Active joker name flash */}
+                  {scoringActive && activeBonus && (
+                    <RNAnimated.View style={[styles.scoringNameBanner, { backgroundColor: flashBg }]}>
+                      <Text style={styles.scoringNameText}>
+                        {activeBonus.bucket === 'boost' ? '[+Profit] ' : '[xMult] '}
+                        {activeBonus.name}
+                      </Text>
+                    </RNAnimated.View>
+                  )}
+
+                  {/* Profit row */}
                   <View style={styles.receiptRow}>
                     <Text style={styles.breakdownLabel}>Profit</Text>
                     {boosts.length > 0 && (
                       <View style={styles.iconRow}>
-                        {boosts.map((b, i) => renderIcon(b, i, 'bi'))}
+                        {boosts.map((b, i) => renderIcon(b, i, 'bi', isActiveBonus(b)))}
                       </View>
                     )}
                     <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
-                      ${formatCurrency(boostedProfit)}
+                      ${formatCurrency(displayProfit)}
                     </Text>
                   </View>
 
-                  {/* Multiplier row: label + mult icons + value */}
+                  {/* Multiplier row */}
                   <View style={styles.receiptRow}>
                     <Text style={styles.breakdownLabel}>Multiplier</Text>
                     {(mults.length > 0 || saleResult.vacuumSealerPenalty < 1) && (
                       <View style={styles.iconRow}>
-                        {mults.map((b, i) => renderIcon(b, i, 'mi'))}
+                        {mults.map((b, i) => renderIcon(b, i, 'mi', isActiveBonus(b)))}
                         {saleResult.vacuumSealerPenalty < 1 && (
                           <Image
                             source={require('../../assets/images/emojis/vacuumsealer.png')}
@@ -592,18 +702,18 @@ function TransactionModal({
                       </View>
                     )}
                     <Text style={[styles.breakdownValue, { color: '#d97706' }]}>
-                      {saleResult.jokerMultiplier}x
+                      {displayMult.toFixed(1)}x
                     </Text>
                   </View>
 
-                  {/* Totals section - right-aligned values */}
+                  {/* Totals */}
                   <View style={styles.divider} />
                   <View style={styles.receiptRow}>
                     <Text style={[styles.breakdownLabel, { fontSize: 12 }]}>
-                      ${formatCurrency(boostedProfit)} × <Text style={{ color: '#d97706' }}>{saleResult.jokerMultiplier}x</Text>
+                      ${formatCurrency(displayProfit)} × <Text style={{ color: '#d97706' }}>{displayMult.toFixed(1)}x</Text>
                     </Text>
                     <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
-                      ${formatCurrency(finalProfit)}
+                      ${formatCurrency(displayFinal)}
                     </Text>
                   </View>
                   <View style={styles.receiptRow}>
@@ -620,7 +730,7 @@ function TransactionModal({
                   <View style={styles.receiptRow}>
                     <Text style={styles.finalPriceLabel}>You Pocket</Text>
                     <Text style={styles.finalPriceValue}>
-                      ${formatCurrency(saleResult.totalGain)}
+                      ${formatCurrency(displayTotal)}
                     </Text>
                   </View>
                 </View>
@@ -1094,6 +1204,20 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#bae6fd',
     marginVertical: 8,
+  },
+  scoringNameBanner: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 6,
+    alignItems: 'center',
+  },
+  scoringNameText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+    color: '#1a1a2e',
+    textAlign: 'center',
   },
   warningContainer: {
     marginTop: 10,

@@ -138,8 +138,7 @@ function StashMoneyModal({
       );
     }
 
-    // stashMoney handles deposit bonus internally
-    stashMoney(amount, jokers);
+    stashMoney(amount);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setAmount(0);

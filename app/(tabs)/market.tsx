@@ -13,7 +13,8 @@ import React, {
 } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
-import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { JOKER_IDS, findJokerById, hasJokerById } from '../../src/constants/jokerIds';
+import { getJokerEffectsAtLevel } from '../../src/utils/jokerEffectEngine';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects';
@@ -35,6 +36,8 @@ import {
   selectBigCandiesUnlocked,
   unlockMediumCandies,
   unlockBigCandies,
+  addBulkEmpireSales,
+  selectBulkEmpireStacks,
 } from '../../src/store/slices/gameSlice';
 import { spendBalance, selectDifficultyLevel } from '../../src/store/slices/walletSlice';
 import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
@@ -646,6 +649,8 @@ function Market(props) {
   const periodCountRef = useRef(periodCount);
   const totalCandiesSoldRef = useRef(totalCandiesSold);
   const locationHistoryRef = useRef(locationHistory);
+  const bulkEmpireStacks = useAppSelector(selectBulkEmpireStacks);
+  const bulkEmpireStacksRef = useRef(bulkEmpireStacks);
 
   useEffect(() => { candiesRef.current = candies; }, [candies]);
   useEffect(() => { balanceRef.current = balance; }, [balance]);
@@ -659,6 +664,7 @@ function Market(props) {
   useEffect(() => { periodCountRef.current = periodCount; }, [periodCount]);
   useEffect(() => { totalCandiesSoldRef.current = totalCandiesSold; }, [totalCandiesSold]);
   useEffect(() => { locationHistoryRef.current = locationHistory; }, [locationHistory]);
+  useEffect(() => { bulkEmpireStacksRef.current = bulkEmpireStacks; }, [bulkEmpireStacks]);
 
   const handleTransaction = useCallback(
     (candyIndex: number, quantity: number, mode: 'buy' | 'sell') => {
@@ -802,6 +808,8 @@ function Market(props) {
           uniqueLocationsToday: todayLocations.size,
           period: currentPeriodInDay,
           periodsPerDay: currentPeriodsPerDayVal,
+          bulkEmpireStacks: bulkEmpireStacksRef.current,
+          inventory: currentInventory,
         });
 
         // Merge bonus breakdown from one-time jokers
@@ -823,7 +831,18 @@ function Market(props) {
         add(totalGain);
         addProfit(finalProfit); // Track daily profit (profit only, not purchase value)
         addCandySold(quantity); // Track daily candy sales
-        recordDailyStatsSale(candy.name, quantity, totalGain, currentPeriodCount); // Track best sale and most sold candy
+        recordDailyStatsSale(candy.name, quantity, totalGain, currentPeriodCount);
+
+        // Track Bulk Empire daily sales if player has the joker
+        if (hasJokerById(currentJokers, JOKER_IDS.BULK_EMPIRE)) {
+          const beLevel = currentJokers.find((j: any) => {
+            const id = typeof j.id === 'string' ? parseInt(j.id) : j.id;
+            return id === JOKER_IDS.BULK_EMPIRE;
+          })?.level ?? 1;
+          const beEffects = getJokerEffectsAtLevel(JOKER_IDS.BULK_EMPIRE, beLevel);
+          const threshold = beEffects[0]?.amount ?? 50;
+          dispatch(addBulkEmpireSales({ quantity, threshold, day: currentDay }));
+        }
 
         // Track sale for period-based hall pass unlocks (Time Crunch, Final Exam)
         // IMPORTANT: Pass finalProfit (profit after all bonuses/penalties) not revenue for accurate tracking

@@ -1,5 +1,5 @@
 // Centralized Joker Effect System
-// 47 jokers with level support (1-3)
+// 40 jokers with level support (1-3)
 
 import { CandyTypeName, CandySize } from '../types/candy';
 import { formatNumber } from './priceUtils';
@@ -21,29 +21,29 @@ export type EffectTarget =
   | 'holding_inventory_bonus'
   | 'compound_interest_bonus'
   | 'market_manipulation'
-  | 'big_short'
   | 'morning_inventory_bonus'
-  | 'deposit_bonus'
+  | 'stash_allowance_bonus'    // Deposit Bonus — earn % of stashed amount as daily allowance
   | 'deli_price_discount'
   | 'fill_inventory_choice'
-  | 'found_money_multiplier'
   | 'allowance_multiplier'
   | 'allowance_add'
   | 'study_time'
   | 'next_sale_multiplier'
   | 'perfect_balance_bonus'
-  | 'randomize_prices'
   | 'stash_interest'
   | 'farmers_carry_bonus'
   | 'type_multiplier'        // multiplier targeting a candy type
-  | 'size_multiplier'        // multiplier targeting a candy size
+  | 'flip_artist_boost'      // Flip Artist — bonus when selling at 3x+ markup over purchase price
+  | 'combo_platter_boost'    // Combo Platter — bonus when both candy types covered by owned jokers
+  | 'bulk_empire_boost'      // Bulk Empire — permanent stacking multiplier for high daily volume
+  | 'variety_pack_boost'     // Variety Pack — bonus when 3+ candy types in inventory
   | 'conditional_multiplier' // multiplier with special conditions (even/odd inv, perfect change)
   | 'inventory_double_with_penalty' // Vacuum Sealer special
   | 'empty_slot_daily_bonus'       // cash per empty slot at end of day (Treasure Chest)
   | 'first_sale_boost'             // Early Bird — first sale of day profit boost
   | 'bulk_sale_boost'              // Bulk Discount — sell N+ at once
   | 'cash_under_boost'             // Underdog & Broke and Hungry — cash below threshold
-  | 'low_profit_boost'             // Penny Pincher — low profit per unit
+  | 'variety_pack_boost'           // Variety Pack — 3+ candy types in inventory
   | 'extra_joker_choice'           // Extra Credit — +1 joker choice after minigame
   | 'extra_aura_slot'              // Sixth Sense — +1 persistent joker slot
 
@@ -72,14 +72,13 @@ export interface JokerEffect {
     cashEndsWith?: string; // e.g. '.00'
     bulkThreshold?: number;    // Bulk Discount: min quantity to trigger
     cashBelow?: number;        // Underdog/Broke and Hungry: cash threshold
-    maxProfitPerUnit?: number; // Penny Pincher: max profit per candy to trigger
+    maxProfitPerUnit?: number;
   };
 }
 
 export interface StandardizedJoker {
   id: number;
   name: string;
-  subject: string;
   type: 'one-time' | 'persistent';
   flavorText: string;
   description: string;
@@ -274,8 +273,14 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
     const type = e.conditions?.candyType ? ` ${e.conditions.candyType.replace('_', ' ')}` : '';
 
     switch (e.target) {
-      case 'size_multiplier':
-        parts.push(`${e.amount}x multiplier on${size} candy profits`);
+      case 'flip_artist_boost':
+        parts.push(`${e.amount}x profit when selling at 3x+ markup`);
+        break;
+      case 'combo_platter_boost':
+        parts.push(`+${e.amount}x bonus when both candy types covered by your jokers`);
+        break;
+      case 'bulk_empire_boost':
+        parts.push(`Sell ${e.amount}+ candies/day for permanent +0.5x multiplier`);
         break;
       case 'type_multiplier':
         parts.push(`${e.amount}x multiplier on${type} candy profits`);
@@ -306,9 +311,9 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
       case 'morning_inventory_bonus':
         parts.push(`Gain $${e.amount} per candy at start of day`);
         break;
-      case 'deposit_bonus': {
-        const pct = Math.round((e.amount - 1) * 100);
-        parts.push(`+${pct}% piggy bank deposit`);
+      case 'stash_allowance_bonus': {
+        const pct = Math.round(e.amount * 100);
+        parts.push(`Earn ${pct}% of stashed money as daily allowance`);
         break;
       }
       case 'farmers_carry_bonus':
@@ -326,8 +331,8 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
       case 'cash_under_boost':
         parts.push(`${e.amount}x profit when cash under $${formatNumber(e.conditions?.cashBelow ?? 0)}`);
         break;
-      case 'low_profit_boost':
-        parts.push(`${e.amount}x profit on low-margin candy`);
+      case 'variety_pack_boost':
+        parts.push(`${e.amount}x profit when 3+ candy types in inventory`);
         break;
       case 'stash_interest': {
         const pct = Math.round((e.amount - 1) * 100);
@@ -352,32 +357,38 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
 
 // Effect factories keyed by joker ID — used to generate level-specific effects
 const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> = {
-  // === MATH (Size multiplier: Medium) ===
 
-  // 1: Double Up — one-time, not upgradeable
-  1: (_lv) => [{
+  // 1: Double Up — 2x/3x/4x price on 1 candy for 1 period
+  1: (lv) => [{
     target: 'candy_price',
     operation: 'multiply',
-    amount: 2,
+    amount: levelScale(2, 3, 4, lv),
     duration: 'one-time',
   }],
 
-  // 2: Median Formula — 1.5x/2x/3x mult Medium
+  // 2: Flip Artist — 1.5x/2x/3x when selling at 3x+ markup over purchase price
   2: (lv) => [{
-    target: 'size_multiplier',
+    target: 'flip_artist_boost',
     operation: 'multiply',
     amount: levelScale(1.5, 2, 3, lv),
     duration: 'persistent',
-    conditions: { candySize: 'medium' },
   }],
 
-  // 31: Ace the Test — 2x/3x/4x allowance
-  31: (lv) => [{
-    target: 'allowance_multiplier',
-    operation: 'multiply',
-    amount: levelScale(2, 3, 4, lv),
-    duration: 'persistent',
-  }],
+  // 31: Ace the Test — 2x/3x/4x allowance + $300/$600/$900 flat (merged with Coaching)
+  31: (lv) => [
+    {
+      target: 'allowance_multiplier',
+      operation: 'multiply',
+      amount: levelScale(2, 3, 4, lv),
+      duration: 'persistent',
+    },
+    {
+      target: 'allowance_add',
+      operation: 'add',
+      amount: levelScale(300, 600, 900, lv),
+      duration: 'persistent',
+    },
+  ],
 
   // 43: Inductive Reasoning — Inv +5/+10/+15 per new day
   43: (lv) => [{
@@ -387,7 +398,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'persistent',
   }],
 
-  // === COMPUTER (Size multiplier: Small) ===
 
   // 6: Tapped In — 100% event hints, not upgradeable
   6: (_lv) => [{
@@ -397,21 +407,12 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'persistent',
   }],
 
-  // 7: Side Gig — 2x/3x/4x allowance
-  7: (lv) => [{
-    target: 'allowance_multiplier',
-    operation: 'multiply',
-    amount: levelScale(2, 3, 4, lv),
-    duration: 'persistent',
-  }],
-
-  // 8: Micro Chip — 1.5x/2x/3x mult Small
+  // 8: Combo Platter — +1x/+1.5x/+2x bonus when both candy types covered by owned jokers
   8: (lv) => [{
-    target: 'size_multiplier',
-    operation: 'multiply',
-    amount: levelScale(1.5, 2, 3, lv),
+    target: 'combo_platter_boost',
+    operation: 'add',
+    amount: levelScale(1, 1.5, 2, lv),
     duration: 'persistent',
-    conditions: { candySize: 'small' },
   }],
 
   // 9: Data Compression — Inventory +13/+26/+39
@@ -422,7 +423,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'persistent',
   }],
 
-  // === HOME ECONOMICS (Size multiplier: Big) ===
 
   // 12: Vacuum Sealer — 2x inventory, -2 final mult (min 0), not upgradeable
   12: (_lv) => [
@@ -450,24 +450,22 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'one-time',
   }],
 
-  // 17: Home Made — $10/$20/$30 per candy at start of day
+  // 17: Home Made — $25/$50/$100 per candy at start of day
   17: (lv) => [{
     target: 'morning_inventory_bonus',
     operation: 'add',
-    amount: levelScale(10, 20, 30, lv),
+    amount: levelScale(25, 50, 100, lv),
     duration: 'persistent',
   }],
 
-  // 18: Super Size Me — 1.5x/2x/3x mult Big
+  // 18: Bulk Empire — permanent +0.5x for every 50/35/20 candies sold per day (stacks across days)
   18: (lv) => [{
-    target: 'size_multiplier',
-    operation: 'multiply',
-    amount: levelScale(1.5, 2, 3, lv),
+    target: 'bulk_empire_boost',
+    operation: 'add',
+    amount: levelScale(50, 35, 20, lv), // threshold: sell this many per day to earn +0.5x permanent
     duration: 'persistent',
-    conditions: { candySize: 'big' },
   }],
 
-  // === ART (Type multiplier: Chocolate) ===
 
   // 66: Treasure Chest — Inventory +8/+15/+25, plus $20/$50/$100 per empty slot at end of day
   66: (lv) => [
@@ -503,13 +501,21 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { candyType: 'chocolate' },
   }],
 
-  // 67: Medieval Shield — Protect money from loss events, not upgradeable
-  67: (_lv) => [{
-    target: 'money_protection',
-    operation: 'enable',
-    amount: 1,
-    duration: 'persistent',
-  }],
+  // 67: Safe House — Protect wallet from loss events + stash from confiscation (merged)
+  67: (_lv) => [
+    {
+      target: 'money_protection',
+      operation: 'enable',
+      amount: 1,
+      duration: 'persistent',
+    },
+    {
+      target: 'stash_protection',
+      operation: 'enable',
+      amount: 1,
+      duration: 'persistent',
+    },
+  ],
 
   // 24: The Good Old Days — Deli 50%/75%/90% off
   24: (lv) => [{
@@ -520,7 +526,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { location: 'deli' },
   }],
 
-  // === ECONOMY (Type multiplier: Gummy) ===
 
   // 19: Bear Market — +1.5/+2/+3 mult Gummy
   19: (lv) => [{
@@ -539,19 +544,11 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'one-time',
   }],
 
-  // 21: The Big Short — Set 1 candy to lowest price, not upgradeable
-  21: (_lv) => [{
-    target: 'big_short',
-    operation: 'match_lowest',
-    amount: 1,
-    duration: 'one-time',
-  }],
-
-  // 22: Deposit Bonus — +10%/+25%/+50% piggy bank deposit
+  // 22: Deposit Bonus — earn 5%/10%/15% of stashed amount as daily allowance
   22: (lv) => [{
-    target: 'deposit_bonus',
+    target: 'stash_allowance_bonus',
     operation: 'multiply',
-    amount: levelScale(1.10, 1.25, 1.50, lv),
+    amount: levelScale(0.05, 0.10, 0.15, lv),
     duration: 'persistent',
   }],
 
@@ -563,21 +560,12 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'one-time',
   }],
 
-  // === GYM (Type multiplier: Hard Candy) ===
 
   // 11: Farmers Carry — inventory count × $5/$25/$100 per period
   11: (lv) => [{
     target: 'farmers_carry_bonus',
     operation: 'add',
     amount: levelScale(5, 25, 100, lv),
-    duration: 'persistent',
-  }],
-
-  // 13: Coaching — +$300/+$600/+$900 allowance
-  13: (lv) => [{
-    target: 'allowance_add',
-    operation: 'add',
-    amount: levelScale(300, 600, 900, lv),
     duration: 'persistent',
   }],
 
@@ -589,14 +577,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'one-time',
   }],
 
-  // 54: Bulk Up — Inventory +15/+30/+45
-  54: (lv) => [{
-    target: 'inventory_limit',
-    operation: 'add',
-    amount: levelScale(15, 30, 45, lv),
-    duration: 'persistent',
-  }],
-
   // 26: Hard Knocks — 1.5x/2x/3x mult Hard Candy
   26: (lv) => [{
     target: 'type_multiplier',
@@ -606,7 +586,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { candyType: 'hard_candy' },
   }],
 
-  // === LOGIC (Type multiplier: Sour) ===
 
   // 29: Even Stevens — 1.5x/2x/3x ALL (even inv limit)
   29: (lv) => [{
@@ -634,7 +613,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { candyType: 'sour' },
   }],
 
-  // === RECESS (Type multiplier: Chewy) ===
 
   // 32: Double Dutch — 1.5x/2x/3x mult Chewy
   32: (lv) => [{
@@ -645,23 +623,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { candyType: 'chewy' },
   }],
 
-  // 51: Hide and Seek — 2x found money, not upgradeable
-  51: (_lv) => [{
-    target: 'found_money_multiplier',
-    operation: 'multiply',
-    amount: 2,
-    duration: 'persistent',
-  }],
-
-  // 74: Secret Hideout — Protect stash from confiscation, not upgradeable
-  74: (_lv) => [{
-    target: 'stash_protection',
-    operation: 'enable',
-    amount: 1,
-    duration: 'persistent',
-  }],
-
-  // === GEOGRAPHY (Type multiplier: Fruity) ===
 
   // 38: Golden Hour — Last 2 periods: 1.5x/2x/3x multiplier
   38: (lv) => [{
@@ -672,20 +633,12 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { period: -1 }, // -1 = special flag for "last 2 periods"
   }],
 
-  // 39: Trade Routes — +1/+2/+3 inv per period
+  // 39: Trade Routes — +2/+3/+4 inv per period
   39: (lv) => [{
     target: 'inventory_limit',
     operation: 'add',
-    amount: levelScale(1, 2, 3, lv),
+    amount: levelScale(2, 3, 4, lv),
     duration: 'persistent',
-  }],
-
-  // 40: Continental Drift — Shuffle all candy prices, not upgradeable
-  40: (_lv) => [{
-    target: 'randomize_prices',
-    operation: 'activate',
-    amount: 1,
-    duration: 'one-time',
   }],
 
   // 53: Mysterious Artifact — 8%/15%/25% daily stash interest
@@ -703,14 +656,6 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     amount: levelScale(1.5, 2, 3, lv),
     duration: 'persistent',
     conditions: { candyType: 'fruity' },
-  }],
-
-  // 44: Atlas Bonus — Gain $2.5k/$5k/$7.5k
-  44: (lv) => [{
-    target: 'money',
-    operation: 'add',
-    amount: levelScale(2500, 5000, 7500, lv),
-    duration: 'one-time',
   }],
 
   // === CONDITIONAL PROFIT BOOSTS ===
@@ -741,22 +686,21 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     conditions: { cashBelow: levelScale(5000, 10000, 15000, lv) },
   }],
 
-  // 50: Penny Pincher — profit per candy ≤ $5
+  // 50: Variety Pack — 1.5x/2x/3x when 3+ candy types in inventory at time of sale
   50: (lv) => [{
-    target: 'low_profit_boost',
+    target: 'variety_pack_boost',
     operation: 'multiply',
-    amount: levelScale(2, 3, 4, lv),
+    amount: levelScale(1.5, 2, 3, lv),
     duration: 'persistent',
-    conditions: { maxProfitPerUnit: 5 },
   }],
 
-  // 52: Broke and Hungry — cash under $500
+  // 52: Broke and Hungry — cash under $2k/$3k/$5k
   52: (lv) => [{
     target: 'cash_under_boost',
     operation: 'multiply',
     amount: levelScale(2, 3, 4, lv),
     duration: 'persistent',
-    conditions: { cashBelow: 500 },
+    conditions: { cashBelow: levelScale(2000, 3000, 5000, lv) },
   }],
 
   // 55: Extra Credit — +1 joker choice after minigame, not upgradeable
@@ -778,327 +722,247 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
 
 // Predefined standardized jokers with the new system
 export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
-  // === MATH JOKERS (Size multiplier: Medium) ===
+  // === [+Profit] TYPE BOOSTS — add to base profit ===
   makeJoker({
-    id: 1, name: 'Double Up', subject: 'Math', type: 'one-time', maxLevel: 1,
-    flavorText: 'The theorem of the period is f(x) = 2x',
-    description: '2x the price of 1 candy for 1 period',
-  }, JOKER_EFFECT_FACTORIES[1]),
-
-  makeJoker({
-    id: 2, name: 'Median Formula', subject: 'Math', type: 'persistent', maxLevel: 3,
-    flavorText: 'The middle value always wins',
-    description: '1.5x multiplier on Medium candy profits',
-  }, JOKER_EFFECT_FACTORIES[2]),
-
-  makeJoker({
-    id: 31, name: 'Ace the Test', subject: 'Math', type: 'persistent', maxLevel: 3,
-    flavorText: 'Perfect scores mean better rewards from mom',
-    description: '2x your daily allowance (max 4x)',
-  }, JOKER_EFFECT_FACTORIES[31]),
-
-  makeJoker({
-    id: 43, name: 'Inductive Reasoning', subject: 'Math', type: 'persistent', maxLevel: 3,
-    flavorText: "Every day's a reason to add five more.",
-    description: 'Every new day, inventory limit +5',
-  }, JOKER_EFFECT_FACTORIES[43]),
-
-  // === COMPUTER JOKERS (Size multiplier: Small) ===
-  makeJoker({
-    id: 6, name: 'Tapped in', subject: 'Computer', type: 'persistent', maxLevel: 1,
-    flavorText: 'Signal Through the Noise',
-    description: 'Hear about events before they happen',
-  }, JOKER_EFFECT_FACTORIES[6]),
-
-  makeJoker({
-    id: 7, name: 'Side Gig', subject: 'Computer', type: 'persistent', maxLevel: 3,
-    flavorText: 'Turn your coding skills into extra cash',
-    description: '2x your daily allowance (max 4x)',
-  }, JOKER_EFFECT_FACTORIES[7]),
-
-  makeJoker({
-    id: 8, name: 'Micro Chip', subject: 'Computer', type: 'persistent', maxLevel: 3,
-    flavorText: 'Small but mighty processing power',
-    description: '1.5x multiplier on Small candy profits',
-  }, JOKER_EFFECT_FACTORIES[8]),
-
-  makeJoker({
-    id: 9, name: 'Data Compression', subject: 'Computer', type: 'persistent', maxLevel: 3,
-    flavorText: 'No loss compression for sugar to save space',
-    description: 'Inventory limit +13',
-  }, JOKER_EFFECT_FACTORIES[9]),
-
-  // === HOME ECONOMICS JOKERS (Size multiplier: Big) ===
-  makeJoker({
-    id: 12, name: 'Vacuum Sealer', subject: 'Home Economics', type: 'persistent', maxLevel: 1,
-    flavorText: 'All candy, no air!',
-    description: '2x inventory limit, -3 to final sale multiplier (min 1x)',
-    requiresSnapshot: true,
-  }, JOKER_EFFECT_FACTORIES[12]),
-
-  makeJoker({
-    id: 15, name: 'Perfect Bake', subject: 'Home Economics', type: 'persistent', maxLevel: 3,
-    flavorText: 'Timing... ... ...is everything',
-    description: 'End the day with 0 candy in inventory and get $1000',
-  }, JOKER_EFFECT_FACTORIES[15]),
-
-  makeJoker({
-    id: 16, name: 'Bake Sale', subject: 'Home Economics', type: 'one-time', maxLevel: 3,
-    flavorText: 'Cash rules everything around me CREAM! and cookies',
-    description: 'Instantly Gain $3000',
-  }, JOKER_EFFECT_FACTORIES[16]),
-
-  makeJoker({
-    id: 17, name: 'Home Made', subject: 'Home Economics', type: 'persistent', maxLevel: 3,
-    flavorText: 'Home made is better than store bought',
-    description: 'Gain $10 for every candy you bring to period 1 on a new day',
-  }, JOKER_EFFECT_FACTORIES[17]),
-
-  makeJoker({
-    id: 18, name: 'Super Size Me', subject: 'Home Economics', type: 'persistent', maxLevel: 3,
-    flavorText: 'Go big or go home',
-    description: '1.5x multiplier on Big candy profits',
-  }, JOKER_EFFECT_FACTORIES[18]),
-
-  // === ART JOKERS (Type multiplier: Chocolate) ===
-  makeJoker({
-    id: 66, name: 'Treasure Chest', subject: 'Art', type: 'persistent', maxLevel: 3,
-    flavorText: 'Empty slots are room for treasure',
-    description: 'Inventory +8, earn $20 per empty slot at end of day',
-  }, JOKER_EFFECT_FACTORIES[66]),
-
-  makeJoker({
-    id: 30, name: 'Odd Todd', subject: 'Art', type: 'persistent', maxLevel: 3,
-    flavorText: 'Never tell me the odds!',
-    description: 'If total inventory limit is odd, 1.5x all candy profits',
-  }, JOKER_EFFECT_FACTORIES[30]),
-
-  makeJoker({
-    id: 23, name: 'Cocoa Futures', subject: 'Art', type: 'persistent', maxLevel: 3,
+    id: 23, name: 'Cocoa Futures', type: 'persistent', maxLevel: 3,
     flavorText: 'Invest in the bean, reap the chocolate',
-    description: '1.5x multiplier on Chocolate candy profits',
+    description: '[+Profit] +0.5/+1/+2 on Chocolate candy',
   }, JOKER_EFFECT_FACTORIES[23]),
 
   makeJoker({
-    id: 67, name: 'Medieval Shield', subject: 'Art', type: 'persistent', maxLevel: 1,
-    flavorText: 'This shield belonged to one Captain Rogers, of Brooklyn',
-    description: 'Protect against money loss from negative events',
-  }, JOKER_EFFECT_FACTORIES[67]),
-
-  makeJoker({
-    id: 24, name: 'The Good Old Days', subject: 'Art', type: 'persistent', maxLevel: 3,
-    flavorText: 'OG stories for OG prices -- half off from the bodega plug',
-    description: 'All candy at the afterschool deli costs half price',
-  }, JOKER_EFFECT_FACTORIES[24]),
-
-  // === ECONOMY JOKERS (Type multiplier: Gummy) ===
-  makeJoker({
-    id: 19, name: 'Bear Market', subject: 'Economy', type: 'persistent', maxLevel: 3,
-    flavorText: 'When the bears come out, gummy profits soar',
-    description: '1.5x multiplier on Gummy candy profits',
-  }, JOKER_EFFECT_FACTORIES[19]),
-
-  makeJoker({
-    id: 20, name: 'Market Manipulation', subject: 'Economy', type: 'one-time', maxLevel: 1,
-    flavorText: 'Pump and dump!',
-    description: 'Set any candy to the highest price of all candies this period',
-  }, JOKER_EFFECT_FACTORIES[20]),
-
-  makeJoker({
-    id: 21, name: 'The Big Short', subject: 'Economy', type: 'one-time', maxLevel: 1,
-    flavorText: 'Crash the price then buy it back for cheap',
-    description: 'Set any candy to the lowest price of all candies this period',
-  }, JOKER_EFFECT_FACTORIES[21]),
-
-  makeJoker({
-    id: 22, name: 'Deposit Bonus', subject: 'Economy', type: 'persistent', maxLevel: 3,
-    flavorText: 'A dollar saved is a dollar earned',
-    description: 'Get 10% bonus when depositing money to the piggy bank',
-  }, JOKER_EFFECT_FACTORIES[22]),
-
-  makeJoker({
-    id: 37, name: 'Roman Coin', subject: 'Economy', type: 'one-time', maxLevel: 3,
-    flavorText: "Mo' money mo' problems, but I'll take the coin",
-    description: 'Instantly gain $2000',
-  }, JOKER_EFFECT_FACTORIES[37]),
-
-  // === GYM JOKERS (Type multiplier: Hard Candy) ===
-  makeJoker({
-    id: 11, name: 'Farmers Carry', subject: 'Gym', type: 'persistent', maxLevel: 3,
-    flavorText: 'Massive operations requires massive forearms',
-    description: 'Earn $5 per candy in inventory each period',
-  }, JOKER_EFFECT_FACTORIES[11]),
-
-  makeJoker({
-    id: 13, name: 'Coaching', subject: 'Gym', type: 'persistent', maxLevel: 3,
-    flavorText: 'Our deepest fear is that we are powerful beyond measure.',
-    description: '+$300 to daily allowance',
-  }, JOKER_EFFECT_FACTORIES[13]),
-
-  makeJoker({
-    id: 25, name: "Bet You I'm Faster", subject: 'Gym', type: 'one-time', maxLevel: 1,
-    flavorText: 'Bet you all the candies in the world',
-    description: 'Fill your inventory with any 1 candy',
-  }, JOKER_EFFECT_FACTORIES[25]),
-
-  makeJoker({
-    id: 54, name: 'Bulk Up', subject: 'Gym', type: 'persistent', maxLevel: 3,
-    flavorText: 'Get brolic to carry more goods',
-    description: 'Inventory limit +15',
-  }, JOKER_EFFECT_FACTORIES[54]),
-
-  makeJoker({
-    id: 26, name: 'Hard Knocks', subject: 'Gym', type: 'persistent', maxLevel: 3,
-    flavorText: 'The school of hard knocks teaches hard candy lessons',
-    description: '1.5x multiplier on Hard Candy profits',
+    id: 26, name: 'Hard Knocks', type: 'persistent', maxLevel: 3,
+    flavorText: 'Hard candy, hard cash',
+    description: '[+Profit] +0.5/+1/+2 on Hard Candy',
   }, JOKER_EFFECT_FACTORIES[26]),
 
-  // === LOGIC JOKERS (Type multiplier: Sour) ===
   makeJoker({
-    id: 29, name: 'Even Stevens', subject: 'Logic', type: 'persistent', maxLevel: 3,
-    flavorText: 'All good things come in pairs',
-    description: 'If total inventory limit is even, 1.5x all candy profits',
-  }, JOKER_EFFECT_FACTORIES[29]),
-
-  makeJoker({
-    id: 48, name: 'Pursuasion', subject: 'Logic', type: 'one-time', maxLevel: 3,
-    flavorText: 'Oh these? These are limited edition man',
-    description: 'Doubles your next sale (2x total value)',
-  }, JOKER_EFFECT_FACTORIES[48]),
-
-  makeJoker({
-    id: 46, name: 'Sour Logic', subject: 'Logic', type: 'persistent', maxLevel: 3,
+    id: 46, name: 'Sour Logic', type: 'persistent', maxLevel: 3,
     flavorText: 'When life gives you lemons, sell sour candy',
-    description: '1.5x multiplier on Sour candy profits',
+    description: '[+Profit] +0.5/+1/+2 on Sour candy',
   }, JOKER_EFFECT_FACTORIES[46]),
 
-  // === RECESS JOKERS (Type multiplier: Chewy) ===
   makeJoker({
-    id: 32, name: 'Double Dutch', subject: 'Recess', type: 'persistent', maxLevel: 3,
-    flavorText: 'Two ropes, double the fun, double the profits',
-    description: '1.5x multiplier on Chewy candy profits',
+    id: 32, name: 'Double Dutch', type: 'persistent', maxLevel: 3,
+    flavorText: 'Two ropes, double the profits',
+    description: '[+Profit] +0.5/+1/+2 on Chewy candy',
   }, JOKER_EFFECT_FACTORIES[32]),
 
   makeJoker({
-    id: 51, name: 'Hide and Seek', subject: 'Recess', type: 'persistent', maxLevel: 1,
-    flavorText: 'Finding treasure is a skill',
-    description: 'Double the money you find in found money events',
-  }, JOKER_EFFECT_FACTORIES[51]),
-
-  makeJoker({
-    id: 74, name: 'Secret Hideout', subject: 'Recess', type: 'persistent', maxLevel: 1,
-    flavorText: 'Never let no one know, how much dough you hold',
-    description: 'Protect stash from confiscation permanently',
-  }, JOKER_EFFECT_FACTORIES[74]),
-
-  // === GEOGRAPHY JOKERS (Type multiplier: Fruity) ===
-  makeJoker({
-    id: 38, name: 'Golden Hour', subject: 'Geography', type: 'persistent', maxLevel: 3,
-    flavorText: 'The last light of day is the most valuable',
-    description: 'Last 2 periods of the day: 1.5x multiplier',
-  }, JOKER_EFFECT_FACTORIES[38]),
-
-  makeJoker({
-    id: 39, name: 'Trade Routes', subject: 'Geography', type: 'persistent', maxLevel: 3,
-    flavorText: 'Ancient paths lead to modern profits',
-    description: '+1 inventory limit every period',
-  }, JOKER_EFFECT_FACTORIES[39]),
-
-  makeJoker({
-    id: 40, name: 'Continental Drift', subject: 'Geography', type: 'one-time', maxLevel: 1,
-    flavorText: 'Shift the market landscape',
-    description: 'Shuffle all candy prices for this period',
-  }, JOKER_EFFECT_FACTORIES[40]),
-
-  makeJoker({
-    id: 53, name: 'Mysterious Artifact', subject: 'Geography', type: 'persistent', maxLevel: 3,
-    flavorText: 'Be blessed with endless fortune',
-    description: 'Stashed money generates 8% compound interest daily',
-  }, JOKER_EFFECT_FACTORIES[53]),
-
-  makeJoker({
-    id: 42, name: 'Tropical Import', subject: 'Geography', type: 'persistent', maxLevel: 3,
+    id: 42, name: 'Tropical Import', type: 'persistent', maxLevel: 3,
     flavorText: 'Exotic fruits from faraway lands',
-    description: '1.5x multiplier on Fruity candy profits',
+    description: '[+Profit] +0.5/+1/+2 on Fruity candy',
   }, JOKER_EFFECT_FACTORIES[42]),
 
   makeJoker({
-    id: 44, name: 'Atlas Bonus', subject: 'Geography', type: 'one-time', maxLevel: 3,
-    flavorText: 'The weight of the world brings heavy profits',
-    description: 'Instantly gain $2500',
-  }, JOKER_EFFECT_FACTORIES[44]),
+    id: 8, name: 'Combo Platter', type: 'persistent', maxLevel: 3,
+    flavorText: 'Two flavors, one big payday',
+    description: '[+Profit] +1/+1.5/+2 when both candy types covered by your jokers',
+  }, JOKER_EFFECT_FACTORIES[8]),
 
-  // === CONDITIONAL PROFIT BOOST JOKERS ===
   makeJoker({
-    id: 45, name: 'Early Bird', subject: 'Recess', type: 'persistent', maxLevel: 3,
-    flavorText: 'The early worm catches the... candy?',
-    description: 'First sale of each day gets a profit boost',
+    id: 47, name: 'Bulk Discount', type: 'persistent', maxLevel: 3,
+    flavorText: 'Buy in bulk, sell in bulk',
+    description: '[+Profit] +0.5/+1/+2 when selling 5+/35+/55+ at once',
+  }, JOKER_EFFECT_FACTORIES[47]),
+
+  // === [xMult] MULTIPLIERS — multiply total profit ===
+  makeJoker({
+    id: 19, name: 'Bear Market', type: 'persistent', maxLevel: 3,
+    flavorText: 'When the bears come out, gummy profits soar',
+    description: '[xMult] +1.5/+2/+3 on Gummy candy',
+  }, JOKER_EFFECT_FACTORIES[19]),
+
+  makeJoker({
+    id: 29, name: 'Even Stevens', type: 'persistent', maxLevel: 3,
+    flavorText: 'All good things come in pairs',
+    description: '[xMult] +0.5/+1/+2 when inventory limit is even',
+  }, JOKER_EFFECT_FACTORIES[29]),
+
+  makeJoker({
+    id: 30, name: 'Odd Todd', type: 'persistent', maxLevel: 3,
+    flavorText: 'Never tell me the odds!',
+    description: '[xMult] +0.5/+1/+2 when inventory limit is odd',
+  }, JOKER_EFFECT_FACTORIES[30]),
+
+  makeJoker({
+    id: 38, name: 'Golden Hour', type: 'persistent', maxLevel: 3,
+    flavorText: 'The last light of day is the most valuable',
+    description: '[xMult] +0.5/+1/+2 in last 2 periods of day',
+  }, JOKER_EFFECT_FACTORIES[38]),
+
+  makeJoker({
+    id: 45, name: 'Early Bird', type: 'persistent', maxLevel: 3,
+    flavorText: 'First come, first served',
+    description: '[xMult] +0.5/+1/+2 on first sale each day',
   }, JOKER_EFFECT_FACTORIES[45]),
 
   makeJoker({
-    id: 47, name: 'Bulk Discount', subject: 'Economy', type: 'persistent', maxLevel: 3,
-    flavorText: 'Buy in bulk, sell in bulk',
-    description: 'Selling large quantities boosts profit',
-  }, JOKER_EFFECT_FACTORIES[47]),
-
-  makeJoker({
-    id: 49, name: 'Underdog', subject: 'Gym', type: 'persistent', maxLevel: 3,
+    id: 49, name: 'Underdog', type: 'persistent', maxLevel: 3,
     flavorText: 'Nothing to lose, everything to gain',
-    description: 'Profit boost when your cash is low',
+    description: '[xMult] +0.5/+1/+2 when cash < $5k/$10k/$15k',
   }, JOKER_EFFECT_FACTORIES[49]),
 
   makeJoker({
-    id: 50, name: 'Penny Pincher', subject: 'Math', type: 'persistent', maxLevel: 3,
-    flavorText: 'Every penny counts',
-    description: 'Boost profits on low-margin candy',
+    id: 52, name: 'Broke and Hungry', type: 'persistent', maxLevel: 3,
+    flavorText: 'Desperation is the mother of profit',
+    description: '[xMult] +1/+2/+3 when cash < $2k/$3k/$5k',
+  }, JOKER_EFFECT_FACTORIES[52]),
+
+  makeJoker({
+    id: 2, name: 'Flip Artist', type: 'persistent', maxLevel: 3,
+    flavorText: 'Buy the dip, sell the rip',
+    description: '[xMult] +0.5/+1/+2 when selling at 3x+ markup',
+  }, JOKER_EFFECT_FACTORIES[2]),
+
+  makeJoker({
+    id: 50, name: 'Variety Pack', type: 'persistent', maxLevel: 3,
+    flavorText: "Don't put all your candy in one bag",
+    description: '[xMult] +0.5/+1/+2 when 3+ candy types in inventory',
   }, JOKER_EFFECT_FACTORIES[50]),
 
   makeJoker({
-    id: 52, name: 'Broke and Hungry', subject: 'Economy', type: 'persistent', maxLevel: 3,
-    flavorText: 'Desperation is the mother of profit',
-    description: 'Big profit boost when nearly broke',
-  }, JOKER_EFFECT_FACTORIES[52]),
+    id: 18, name: 'Bulk Empire', type: 'persistent', maxLevel: 3,
+    flavorText: 'Move product, build an empire',
+    description: '[xMult] +0.5 permanent per 50/35/20 candies sold daily',
+  }, JOKER_EFFECT_FACTORIES[18]),
 
-  // === UTILITY JOKERS ===
   makeJoker({
-    id: 55, name: 'Extra Credit', subject: 'Logic', type: 'persistent', maxLevel: 1,
-    flavorText: 'Always doing more than required',
-    description: 'See 1 extra joker to choose from after beating a minigame',
+    id: 48, name: 'Pursuasion', type: 'one-time', maxLevel: 3,
+    flavorText: 'These are limited edition, trust me',
+    description: '[xMult] +1/+3/+5 on your next sale (one-time)',
+  }, JOKER_EFFECT_FACTORIES[48]),
+
+  // === INVENTORY ===
+  makeJoker({
+    id: 9, name: 'Data Compression', type: 'persistent', maxLevel: 3,
+    flavorText: 'Lossless compression for sugar',
+    description: '+13/+26/+39 inventory slots',
+  }, JOKER_EFFECT_FACTORIES[9]),
+
+  makeJoker({
+    id: 43, name: 'Inductive Reasoning', type: 'persistent', maxLevel: 3,
+    flavorText: "Every day's a reason to carry more",
+    description: '+5/+7/+10 inventory slots each new day',
+  }, JOKER_EFFECT_FACTORIES[43]),
+
+  makeJoker({
+    id: 39, name: 'Trade Routes', type: 'persistent', maxLevel: 3,
+    flavorText: 'Ancient paths, modern profits',
+    description: '+2/+3/+4 inventory slots every period',
+  }, JOKER_EFFECT_FACTORIES[39]),
+
+  makeJoker({
+    id: 66, name: 'Treasure Chest', type: 'persistent', maxLevel: 3,
+    flavorText: 'Empty slots are room for treasure',
+    description: '+8/+15/+25 inv, $20/$50/$100 per empty slot at end of day',
+  }, JOKER_EFFECT_FACTORIES[66]),
+
+  makeJoker({
+    id: 12, name: 'Vacuum Sealer', type: 'persistent', maxLevel: 1,
+    flavorText: 'All candy, no air!',
+    description: '2x inventory limit, -2 to [xMult] (min 1x)',
+    requiresSnapshot: true,
+  }, JOKER_EFFECT_FACTORIES[12]),
+
+  // === INCOME ===
+  makeJoker({
+    id: 31, name: 'Ace the Test', type: 'persistent', maxLevel: 3,
+    flavorText: 'Perfect scores, better rewards',
+    description: '2x/3x/4x allowance + $300/$600/$900 flat',
+  }, JOKER_EFFECT_FACTORIES[31]),
+
+  makeJoker({
+    id: 22, name: 'Deposit Bonus', type: 'persistent', maxLevel: 3,
+    flavorText: 'A dollar saved is a dollar earned',
+    description: '5%/10%/15% of stash added to daily allowance',
+  }, JOKER_EFFECT_FACTORIES[22]),
+
+  makeJoker({
+    id: 11, name: 'Farmers Carry', type: 'persistent', maxLevel: 3,
+    flavorText: 'Big arms, big bags',
+    description: '$5/$25/$100 per candy in inventory each period',
+  }, JOKER_EFFECT_FACTORIES[11]),
+
+  makeJoker({
+    id: 17, name: 'Home Made', type: 'persistent', maxLevel: 3,
+    flavorText: 'Home made hits different',
+    description: '$25/$50/$100 per candy in inventory at start of day',
+  }, JOKER_EFFECT_FACTORIES[17]),
+
+  makeJoker({
+    id: 15, name: 'Perfect Bake', type: 'persistent', maxLevel: 3,
+    flavorText: 'Timing is everything',
+    description: '$1k/$3k/$5k bonus for ending day with 0 inventory',
+  }, JOKER_EFFECT_FACTORIES[15]),
+
+  makeJoker({
+    id: 53, name: 'Mysterious Artifact', type: 'persistent', maxLevel: 3,
+    flavorText: 'Blessed with endless fortune',
+    description: '8%/15%/25% daily compound interest on stash',
+  }, JOKER_EFFECT_FACTORIES[53]),
+
+  // === ONE-TIME ===
+  makeJoker({
+    id: 1, name: 'Double Up', type: 'one-time', maxLevel: 3,
+    flavorText: 'f(x) = 2x',
+    description: '2x/3x/4x price of any 1 candy for 1 period',
+  }, JOKER_EFFECT_FACTORIES[1]),
+
+  makeJoker({
+    id: 16, name: 'Bake Sale', type: 'one-time', maxLevel: 3,
+    flavorText: 'Cash rules everything around me',
+    description: '$3k/$6k/$9k instant cash',
+  }, JOKER_EFFECT_FACTORIES[16]),
+
+  makeJoker({
+    id: 37, name: 'Roman Coin', type: 'one-time', maxLevel: 3,
+    flavorText: "Mo' money, mo' problems",
+    description: '$2k/$5k/$10k instant cash',
+  }, JOKER_EFFECT_FACTORIES[37]),
+
+  makeJoker({
+    id: 20, name: 'Market Manipulation', type: 'one-time', maxLevel: 1,
+    flavorText: 'Pump and dump!',
+    description: 'Set any candy to the highest price this period',
+  }, JOKER_EFFECT_FACTORIES[20]),
+
+  makeJoker({
+    id: 25, name: "Bet You I'm Faster", type: 'one-time', maxLevel: 1,
+    flavorText: 'Bet you all the candies in the world',
+    description: 'Fill entire inventory with any 1 candy',
+  }, JOKER_EFFECT_FACTORIES[25]),
+
+  // === UTILITY ===
+  makeJoker({
+    id: 6, name: 'Tapped In', type: 'persistent', maxLevel: 1,
+    flavorText: 'Signal through the noise',
+    description: '100% chance to preview upcoming events',
+  }, JOKER_EFFECT_FACTORIES[6]),
+
+  makeJoker({
+    id: 67, name: 'Safe House', type: 'persistent', maxLevel: 1,
+    flavorText: "Never let em know how much dough you hold",
+    description: 'Protects wallet from bullies and stash from confiscation',
+  }, JOKER_EFFECT_FACTORIES[67]),
+
+  makeJoker({
+    id: 24, name: 'The Good Old Days', type: 'persistent', maxLevel: 3,
+    flavorText: 'OG stories for OG prices',
+    description: '50%/75%/90% off deli candy after school',
+  }, JOKER_EFFECT_FACTORIES[24]),
+
+  makeJoker({
+    id: 55, name: 'Extra Credit', type: 'persistent', maxLevel: 1,
+    flavorText: 'Always doing extra',
+    description: '+1 joker choice after minigames',
   }, JOKER_EFFECT_FACTORIES[55]),
 
   makeJoker({
-    id: 56, name: 'Sixth Sense', subject: 'Computer', type: 'persistent', maxLevel: 1,
+    id: 56, name: 'Sixth Sense', type: 'persistent', maxLevel: 1,
     flavorText: 'I see dead... jokers?',
-    description: 'Hold 6 aura jokers instead of 5',
+    description: '+1 aura slot (hold 6 instead of 5)',
   }, JOKER_EFFECT_FACTORIES[56]),
 ];
-
-// Helper functions for compatibility with old system
-export const getJokersBySubject = (subject: string): StandardizedJoker[] => {
-  return STANDARDIZED_JOKERS.filter((joker) => joker.subject === subject);
-};
-
-export const MATH_JOKERS = getJokersBySubject('Math');
-export const COMPUTER_JOKERS = getJokersBySubject('Computer');
-export const HOME_EC_JOKERS = getJokersBySubject('Home Economics');
-export const ECONOMY_JOKERS = getJokersBySubject('Economy');
-export const ART_JOKERS = getJokersBySubject('Art');
-export const LOGIC_JOKERS = getJokersBySubject('Logic');
-export const GYM_JOKERS = getJokersBySubject('Gym');
-export const RECESS_JOKERS = getJokersBySubject('Recess');
-export const GEOGRAPHY_JOKERS = getJokersBySubject('Geography');
-
-export const ALL_JOKERS = {
-  Math: MATH_JOKERS,
-  Computer: COMPUTER_JOKERS,
-  'Home Economics': HOME_EC_JOKERS,
-  Economy: ECONOMY_JOKERS,
-  Art: ART_JOKERS,
-  Logic: LOGIC_JOKERS,
-  Gym: GYM_JOKERS,
-  Recess: RECESS_JOKERS,
-  Geography: GEOGRAPHY_JOKERS,
-};
 
 // Utility function to process effects by target from a list of jokers
 export function processEffectsByTarget(

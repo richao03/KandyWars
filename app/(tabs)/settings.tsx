@@ -30,6 +30,7 @@ import {
   setTotalCompletions,
   setWonDifficulties,
 } from '../../src/store/slices/scoreboardSlice';
+import { resetTutorial } from '../../src/store/slices/tutorialSlice';
 import {
   clearCachedUserObject,
   updateCachedUserObject,
@@ -39,7 +40,6 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import { resetFirebaseSession } from '../components/SugarWarsTitleScreen';
 import TextWithEmojis from '../components/TextWithEmojis';
-import { resetTutorial } from '../../src/store/slices/tutorialSlice';
 
 function Settings() {
   const { resetGame, jumpToPeriod } = useGame();
@@ -100,7 +100,6 @@ function Settings() {
       title: 'Restart Game',
       message:
         'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
-      emoji: 'refresh',
       confirmText: 'Restart',
       cancelText: 'Cancel',
       onConfirm: async () => {
@@ -725,9 +724,7 @@ function Settings() {
                     );
                   }}
                 >
-                  <Text style={styles.debugButtonText}>
-                    Reset Tutorial
-                  </Text>
+                  <Text style={styles.debugButtonText}>Reset Tutorial</Text>
                 </TouchableOpacity>
               </PixelBorder>
               <View style={{ height: 8 }} />
@@ -741,9 +738,7 @@ function Settings() {
                   style={styles.debugButton}
                   onPress={() => router.push('/debug-minigames' as any)}
                 >
-                  <Text style={styles.debugButtonText}>
-                    🎮 Minigame Picker
-                  </Text>
+                  <Text style={styles.debugButtonText}>🎮 Minigame Picker</Text>
                 </TouchableOpacity>
               </PixelBorder>
             </View>

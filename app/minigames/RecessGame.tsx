@@ -991,7 +991,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="recess"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -1102,7 +1101,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#4A90C1',
             backgroundColor: '#87CEEB',

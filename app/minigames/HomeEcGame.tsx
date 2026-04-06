@@ -513,7 +513,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="homeec"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -645,7 +644,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#6c757d',
             backgroundColor: '#1c1f26',

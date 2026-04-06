@@ -477,7 +477,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="gym"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -601,7 +600,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#ef4444',
             backgroundColor: '#1a2332',

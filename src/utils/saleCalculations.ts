@@ -27,6 +27,8 @@ interface SaleCalculationParams {
   uniqueLocationsToday?: number;
   period?: number;
   periodsPerDay?: number;
+  bulkEmpireStacks?: number; // Bulk Empire: number of permanent +0.5x stacks earned
+  inventory?: { name: string; quantity: number }[]; // Current inventory for Variety Pack check
 }
 
 interface SaleCalculationResult {
@@ -67,6 +69,8 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     uniqueLocationsToday = 0,
     period = 1,
     periodsPerDay = 8,
+    bulkEmpireStacks = 0,
+    inventory = [],
   } = params;
 
   const bonusBreakdown: Array<{
@@ -131,20 +135,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Early Bird — first sale of day profit boost
-      if (effect.target === 'first_sale_boost') {
-        if (hasEarlySaleToday === false) {
-          profitBoost += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-            flatBonus: totalProfit * (effect.amount - 1),
-          });
-        }
-      }
-
-      // Bulk Discount — quantity threshold
+      // Bulk Discount — quantity threshold (stays in profit boost)
       if (effect.target === 'bulk_sale_boost' && effect.conditions?.bulkThreshold) {
         if (quantity >= effect.conditions.bulkThreshold) {
           profitBoost += (effect.amount - 1);
@@ -156,31 +147,42 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
           });
         }
       }
+    }
+  }
 
-      // Underdog / Broke and Hungry — cash below threshold
-      if (effect.target === 'cash_under_boost' && effect.conditions?.cashBelow) {
-        if (currentCash < effect.conditions.cashBelow) {
-          profitBoost += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-            flatBonus: totalProfit * (effect.amount - 1),
-          });
+  // Combo Platter — bonus when both candy types are covered by owned type-multiplier jokers
+  if (hasJokerById(jokers, JOKER_IDS.COMBO_PLATTER) && candyTypes.length === 2) {
+    // Check if each candy type has a matching type_multiplier joker
+    const coveredTypes = new Set<string>();
+    for (const joker of jokers) {
+      const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
+      if (jokerId === JOKER_IDS.COMBO_PLATTER) continue; // don't count self
+      const level = joker.level ?? 1;
+      const effects = getJokerEffectsAtLevel(jokerId, level);
+      for (const effect of effects) {
+        if (effect.target === 'type_multiplier' && effect.conditions?.candyType) {
+          if (candyTypes.includes(effect.conditions.candyType)) {
+            coveredTypes.add(effect.conditions.candyType);
+          }
         }
       }
-
-      // Penny Pincher — low profit per unit
-      if (effect.target === 'low_profit_boost' && effect.conditions?.maxProfitPerUnit) {
-        if (profitPerUnit <= effect.conditions.maxProfitPerUnit) {
-          profitBoost += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-            flatBonus: totalProfit * (effect.amount - 1),
-          });
-        }
+    }
+    if (coveredTypes.size >= 2) {
+      const comboJoker = jokers.find((j) => {
+        const id = typeof j.id === 'string' ? parseInt(j.id) : j.id;
+        return id === JOKER_IDS.COMBO_PLATTER;
+      });
+      const comboLevel = comboJoker?.level ?? 1;
+      const comboEffects = getJokerEffectsAtLevel(JOKER_IDS.COMBO_PLATTER, comboLevel);
+      const comboEffect = comboEffects.find((e) => e.target === 'combo_platter_boost');
+      if (comboEffect) {
+        profitBoost += comboEffect.amount;
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(JOKER_IDS.COMBO_PLATTER),
+          name: _getJokerName(JOKER_IDS.COMBO_PLATTER),
+          multiplier: 1 + comboEffect.amount,
+          flatBonus: totalProfit * comboEffect.amount,
+        });
       }
     }
   }
@@ -225,18 +227,6 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Size multipliers
-      if (effect.target === 'size_multiplier' && effect.conditions?.candySize) {
-        if (candySize === effect.conditions.candySize) {
-          multiplier += (effect.amount - 1); // 1.5x adds 0.5
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-          });
-        }
-      }
-
       // Conditional multipliers (Even Stevens, Odd Todd, Golden Hour)
       if (effect.target === 'conditional_multiplier') {
         let conditionMet = false;
@@ -264,26 +254,90 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
 
       // Pursuasion — one-time, stacks additively with other multipliers
       if (effect.target === 'next_sale_multiplier') {
-        multiplier += (effect.amount - 1); // 2x adds 1.0
+        multiplier += (effect.amount - 1);
         bonusBreakdown.push({
           emoji: _getJokerEmoji(jokerId),
           name: _getJokerName(jokerId),
           multiplier: effect.amount,
         });
       }
+
+      // Early Bird — first sale of day multiplier
+      if (effect.target === 'first_sale_boost') {
+        if (hasEarlySaleToday === false) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Underdog / Broke and Hungry — cash below threshold multiplier
+      if (effect.target === 'cash_under_boost' && effect.conditions?.cashBelow) {
+        if (currentCash < effect.conditions.cashBelow) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Flip Artist — 3x+ markup multiplier
+      if (effect.target === 'flip_artist_boost') {
+        if (purchasePrice > 0 && basePrice / purchasePrice >= 3) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Variety Pack — 3+ candy types in inventory multiplier
+      if (effect.target === 'variety_pack_boost') {
+        const typesInInventory = new Set<string>();
+        for (const item of inventory) {
+          const def = getCandyDefinition(item.name);
+          def?.types.forEach((t) => typesInInventory.add(t));
+        }
+        if (typesInInventory.size >= 3) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
     }
+  }
+
+  // Bulk Empire — permanent +0.5x per stack earned from high daily volume
+  if (hasJokerById(jokers, JOKER_IDS.BULK_EMPIRE) && bulkEmpireStacks > 0) {
+    const bulkBonus = bulkEmpireStacks * 0.5;
+    multiplier += bulkBonus;
+    bonusBreakdown.push({
+      emoji: _getJokerEmoji(JOKER_IDS.BULK_EMPIRE),
+      name: _getJokerName(JOKER_IDS.BULK_EMPIRE),
+      multiplier: 1 + bulkBonus,
+    });
   }
 
   // === STEP 4: Apply Vacuum Sealer penalty to multiplier ===
   let vacuumSealerPenalty = 1;
   if (hasJokerById(jokers, JOKER_IDS.VACUUM_SEALER)) {
     // -3 to multiplier (min 1x — always get at least base)
-    multiplier = Math.max(1, multiplier - 3);
+    multiplier = Math.max(1, multiplier - 2);
     vacuumSealerPenalty = 0; // marker for display
     bonusBreakdown.push({
       emoji: '📦',
       name: 'Vacuum Sealer',
-      multiplier: -3,
+      multiplier: -2,
     });
   }
 
@@ -310,9 +364,9 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
 // Emoji mapping for joker IDs
 function _getJokerEmoji(id: number): string {
   const emojiMap: Record<number, string> = {
-    [JOKER_IDS.MEDIAN_FORMULA]: '📐',
-    [JOKER_IDS.MICRO_CHIP]: '🔬',
-    [JOKER_IDS.SUPER_SIZE_ME]: '🍔',
+    [JOKER_IDS.FLIP_ARTIST]: '🔄',
+    [JOKER_IDS.COMBO_PLATTER]: '🍱',
+    [JOKER_IDS.BULK_EMPIRE]: '👑',
     [JOKER_IDS.COCOA_FUTURES]: '🍫',
     [JOKER_IDS.BEAR_MARKET]: '🐻',
     [JOKER_IDS.HARD_KNOCKS]: '💎',
@@ -327,7 +381,7 @@ function _getJokerEmoji(id: number): string {
     [JOKER_IDS.EARLY_BIRD]: '🌅',
     [JOKER_IDS.BULK_DISCOUNT]: '📦',
     [JOKER_IDS.UNDERDOG]: '💪',
-    [JOKER_IDS.PENNY_PINCHER]: '🪙',
+    [JOKER_IDS.VARIETY_PACK]: '🎨',
     [JOKER_IDS.BROKE_AND_HUNGRY]: '🔥',
   };
   return emojiMap[id] || '🃏';
@@ -335,9 +389,9 @@ function _getJokerEmoji(id: number): string {
 
 function _getJokerName(id: number): string {
   const nameMap: Record<number, string> = {
-    [JOKER_IDS.MEDIAN_FORMULA]: 'Median Formula',
-    [JOKER_IDS.MICRO_CHIP]: 'Micro Chip',
-    [JOKER_IDS.SUPER_SIZE_ME]: 'Super Size Me',
+    [JOKER_IDS.FLIP_ARTIST]: 'Flip Artist',
+    [JOKER_IDS.COMBO_PLATTER]: 'Combo Platter',
+    [JOKER_IDS.BULK_EMPIRE]: 'Bulk Empire',
     [JOKER_IDS.COCOA_FUTURES]: 'Cocoa Futures',
     [JOKER_IDS.BEAR_MARKET]: 'Bear Market',
     [JOKER_IDS.HARD_KNOCKS]: 'Hard Knocks',
@@ -352,7 +406,7 @@ function _getJokerName(id: number): string {
     [JOKER_IDS.EARLY_BIRD]: 'Early Bird',
     [JOKER_IDS.BULK_DISCOUNT]: 'Bulk Discount',
     [JOKER_IDS.UNDERDOG]: 'Underdog',
-    [JOKER_IDS.PENNY_PINCHER]: 'Penny Pincher',
+    [JOKER_IDS.VARIETY_PACK]: 'Variety Pack',
     [JOKER_IDS.BROKE_AND_HUNGRY]: 'Broke and Hungry',
   };
   return nameMap[id] || 'Joker';

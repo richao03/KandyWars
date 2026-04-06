@@ -465,7 +465,6 @@ export default function NimGame({ onComplete }: NimGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="gym"
-        subject="All"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -587,7 +586,6 @@ export default function NimGame({ onComplete }: NimGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#8B7355',
             backgroundColor: '#d4c5a9',

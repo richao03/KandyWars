@@ -260,10 +260,9 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
       }
     }
 
-    // Handle the transaction - stashMoney handles deposit bonus internally
     const success =
       mode === 'deposit'
-        ? stashMoney(amount, jokers) // Pass jokers to handle deposit bonus
+        ? stashMoney(amount)
         : withdrawFromStash(amount);
 
     if (success) {

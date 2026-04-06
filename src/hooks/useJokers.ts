@@ -152,12 +152,6 @@ export const useJokers = () => {
     return jokers.some(j => j.id === jokerId.toString());
   }, [jokers]);
 
-  const getJokersBySubject = useCallback((subject: string) => {
-    return jokers.filter(joker =>
-      joker.tier === subject || joker.name.toLowerCase().includes(subject.toLowerCase())
-    );
-  }, [jokers]);
-
   const activateJoker = useCallback(async (
     jokerId: number,
     candyType?: string,
@@ -242,7 +236,6 @@ export const useJokers = () => {
     canAddPersistentJoker,
     isJokerPersistent: isJokerPersistentCheck,
     hasJoker,
-    getJokersBySubject,
     activateJoker,
     clearActiveEffect,
     reorderJokers,

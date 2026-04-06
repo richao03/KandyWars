@@ -507,7 +507,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
         theme="candy"
-        subject="All"
         onComplete={onComplete}
         rewardTier={jokerRewardTier as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -616,7 +615,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           visible={showAvailableJokers}
           onClose={() => setShowAvailableJokers(false)}
           jokers={STANDARDIZED_JOKERS}
-          subject="All"
           themeColors={{
             borderColor: '#f5f5dc',
             backgroundColor: '#0d2818',
