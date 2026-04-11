@@ -170,7 +170,7 @@ const gameSlice = createSlice({
       const totalCompletions = state.totalCompletions;
       const isInitialized = state.isInitialized; // Preserve so "Continue" button stays enabled
       const gameResetSignal = state.gameResetSignal + 1; // Increment to signal cleanup
-      console.log(
+      if (__DEV__) console.log(
         `🔄 Game reset signal: ${gameResetSignal} - This will trigger zombie cleanup`
       );
       return {
@@ -184,7 +184,7 @@ const gameSlice = createSlice({
       // Full reset including isInitialized - used after completing a game
       const totalCompletions = state.totalCompletions;
       const gameResetSignal = state.gameResetSignal + 1;
-      console.log(
+      if (__DEV__) console.log(
         `🔄 Full game reset signal: ${gameResetSignal} - Clearing isInitialized`
       );
       return {

@@ -18,17 +18,17 @@ const localAnalyticsSlice = createSlice({
     trackJokerObtained: (state, action: PayloadAction<string>) => {
       const jokerName = action.payload;
       state.jokersObtained[jokerName] = (state.jokersObtained[jokerName] || 0) + 1;
-      console.log('📊 Local: Joker obtained -', jokerName, 'Total:', state.jokersObtained[jokerName]);
+      if (__DEV__) console.log('📊 Local: Joker obtained -', jokerName, 'Total:', state.jokersObtained[jokerName]);
     },
     trackMinigamePlayed: (state, action: PayloadAction<string>) => {
       const minigameName = action.payload;
       state.minigamesPlayed[minigameName] = (state.minigamesPlayed[minigameName] || 0) + 1;
-      console.log('📊 Local: Minigame played -', minigameName, 'Total:', state.minigamesPlayed[minigameName]);
+      if (__DEV__) console.log('📊 Local: Minigame played -', minigameName, 'Total:', state.minigamesPlayed[minigameName]);
     },
     resetLocalAnalytics: (state) => {
       state.jokersObtained = {};
       state.minigamesPlayed = {};
-      console.log('📊 Local analytics reset');
+      if (__DEV__) console.log('📊 Local analytics reset');
     },
   },
   extraReducers: (builder) => {

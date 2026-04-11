@@ -42,7 +42,7 @@ const minigameTrackingSlice = createSlice({
       });
     },
     initializeFromUserObject: (state, action: PayloadAction<string[]>) => {
-      console.log('🎮 MINIGAME: Initializing from Firebase user object:', action.payload);
+      if (__DEV__) console.log('🎮 MINIGAME: Initializing from Firebase user object:', action.payload);
       // Initialize playedMinigames from Firebase data
       // Use Set to merge and deduplicate local + Firebase data
       const mergedMinigames = new Set([...state.playedMinigames, ...action.payload]);
@@ -56,7 +56,7 @@ const minigameTrackingSlice = createSlice({
         }
       });
 
-      console.log('🎮 MINIGAME: Merged played minigames:', state.playedMinigames);
+      if (__DEV__) console.log('🎮 MINIGAME: Merged played minigames:', state.playedMinigames);
     },
     markMinigamePlayed: (state, action: PayloadAction<MinigameType>) => {
       const minigame = action.payload;
@@ -74,7 +74,7 @@ const minigameTrackingSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(resetGame, (state) => {
       // Preserve playedMinigames across game resets (it's progress, not session data)
-      console.log('🎮 MINIGAME: resetGame called - preserving played minigames');
+      if (__DEV__) console.log('🎮 MINIGAME: resetGame called - preserving played minigames');
       const preservedPlayedMinigames = state.playedMinigames;
       return {
         ...initialState,
@@ -99,8 +99,10 @@ export const selectPlayedMinigames = (state: { minigameTracking: MinigameTrackin
 export const selectMinigameCompletions = (state: { minigameTracking: MinigameTrackingState }) =>
   state.minigameTracking.minigameCompletions;
 
-export const selectHasPlayedAllMinigames = (state: { minigameTracking: MinigameTrackingState }) =>
-  ALL_MINIGAMES.every(minigame => state.minigameTracking.playedMinigames.includes(minigame));
+export const selectHasPlayedAllMinigames = createSelector(
+  [selectPlayedMinigames],
+  (playedMinigames) => ALL_MINIGAMES.every(minigame => playedMinigames.includes(minigame))
+);
 
 export const selectMinigameCompletion = (minigame: MinigameType) =>
   (state: { minigameTracking: MinigameTrackingState }) =>

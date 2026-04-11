@@ -173,15 +173,17 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
       candyBOpacity.value = 1;
 
       // Step 3: Load next candy into candyA and show it
-      console.log(
-        '🍬 Swipe - current:',
-        currentCandy,
-        'next preview:',
-        nextCandy
-      );
+      if (__DEV__) {
+        console.log(
+          '🍬 Swipe - current:',
+          currentCandy,
+          'next preview:',
+          nextCandy
+        );
+      }
       setCandyA(nextCandy);
       const nextGen = generateCandy();
-      console.log('🍬 New next candy generated:', nextGen);
+      if (__DEV__) console.log('🍬 New next candy generated:', nextGen);
       setNextCandy(nextGen);
       candyAOpacity.value = withTiming(1, { duration: 100 });
 
@@ -237,14 +239,14 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                 clearTimeout(modalTimeoutRef.current);
               }
               modalTimeoutRef.current = setTimeout(() => {
-                console.log(`Level ${level} complete! Showing modal...`);
+                if (__DEV__) console.log(`Level ${level} complete! Showing modal...`);
                 SoundEffects.playCongratsSound();
                 showModal(
                   `Level ${level} Complete!`,
                   `Ready for Level ${level + 1}?`,
                   '🎉',
                   () => {
-                    console.log(`Starting level ${level + 1}...`);
+                    if (__DEV__) console.log(`Starting level ${level + 1}...`);
                     levelCompleteRef.current = false; // Re-enable swipes for next level
                     setLevel(level + 1);
                     initializeLevel(level + 1);
@@ -256,14 +258,14 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                 clearTimeout(modalTimeoutRef.current);
               }
               modalTimeoutRef.current = setTimeout(() => {
-                console.log('All levels complete! Showing final modal...');
+                if (__DEV__) console.log('All levels complete! Showing final modal...');
                 SoundEffects.playCongratsSound();
                 showModal(
                   'All Levels Complete!',
                   'Amazing work, Master Chef!',
                   '🏆',
                   () => {
-                    console.log('Going to joker selection...');
+                    if (__DEV__) console.log('Going to joker selection...');
                     setGameState('jokerSelection');
                   }
                 );
@@ -408,7 +410,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     const currentCompletedLevel = completedLevelRef.current; // Use ref to get current value
     if (currentCompletedLevel > 0) {
       // Player completed at least one level, award jokers based on completion
-      console.log(`Game ended after completing level ${currentCompletedLevel}`);
+      if (__DEV__) console.log(`Game ended after completing level ${currentCompletedLevel}`);
       const jokerCount = currentCompletedLevel;
       const jokerText = jokerCount === 1 ? '1 joker' : `${jokerCount} jokers`;
 

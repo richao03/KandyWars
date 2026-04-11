@@ -21,10 +21,10 @@ export default function HistoryGameScreen() {
     // This ensures the state is updated before Market re-renders
     if (minigameContext === 'after-school') {
       markStudiedTonight();
-      console.log('After-school study session finished.');
+      if (__DEV__) console.log('After-school study session finished.');
     } else if (minigameContext === 'lunch') {
       markLunchMinigamePlayed();
-      console.log('Lunch minigame finished.');
+      if (__DEV__) console.log('Lunch minigame finished.');
     }
 
     // Clear context

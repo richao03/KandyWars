@@ -1,4 +1,6 @@
 import { PayloadAction, createSelector, createSlice } from '@reduxjs/toolkit';
+import seedrandom from 'seedrandom';
+import { STANDARDIZED_JOKERS } from '../../utils/jokerEffectEngine';
 import { resetGame } from './gameSlice';
 
 export type MerchantItemType =
@@ -33,11 +35,23 @@ export interface ActiveMerchantEffect {
   count?: number; // For consumables (how many purchased this visit)
 }
 
+export interface DailyJoker {
+  jokerId: number;
+  jokerName: string;
+  jokerDescription: string;
+  price: number;
+  generatedForDay: number; // Track which day this was generated for
+  purchased: boolean; // Whether the player already bought it today
+}
+
 interface MerchantState {
   // Per-run state (resets on game reset)
   ownedLevels: Record<string, number>; // itemId -> current level owned
   purchaseCountsThisVisit: Record<string, number>; // itemId -> times purchased this merchant visit
   activeEffects: ActiveMerchantEffect[]; // Effects active for current run
+
+  // Daily joker
+  dailyJoker: DailyJoker | null;
 
   // UI state
   merchantAvailable: boolean; // Whether merchant spawned this period
@@ -124,6 +138,7 @@ const initialState: MerchantState = {
   ownedLevels: {},
   purchaseCountsThisVisit: {},
   activeEffects: [],
+  dailyJoker: null,
   merchantAvailable: false,
   hasVisitedMerchant: false,
 };
@@ -223,6 +238,52 @@ const merchantSlice = createSlice({
       state.activeEffects = [];
     },
 
+    // Generate the daily joker based on seed + day for determinism
+    generateDailyJoker: (
+      state,
+      action: PayloadAction<{ seed: string; day: number; ownedJokerIds: string[] }>
+    ) => {
+      const { seed, day, ownedJokerIds } = action.payload;
+
+      // If already generated for this day, skip
+      if (state.dailyJoker && state.dailyJoker.generatedForDay === day) {
+        return;
+      }
+
+      // Use seeded RNG for deterministic selection
+      const rng = seedrandom(`${seed}-daily-joker-${day}`);
+      const jokerIndex = Math.floor(rng() * STANDARDIZED_JOKERS.length);
+      const selectedJoker = STANDARDIZED_JOKERS[jokerIndex];
+
+      // Determine price based on whether player owns it and current level
+      const ownedId = ownedJokerIds.find(
+        (id) => id === selectedJoker.id.toString()
+      );
+      let price = 5000; // Base price for new or L1->L2
+
+      if (ownedId) {
+        // Need to check level from joker state - price is determined in the UI/selector
+        // Default to base price; actual price logic is in the selector
+        price = 5000;
+      }
+
+      state.dailyJoker = {
+        jokerId: selectedJoker.id,
+        jokerName: selectedJoker.name,
+        jokerDescription: selectedJoker.description,
+        price,
+        generatedForDay: day,
+        purchased: false,
+      };
+    },
+
+    // Mark the daily joker as purchased
+    markDailyJokerPurchased: (state) => {
+      if (state.dailyJoker) {
+        state.dailyJoker.purchased = true;
+      }
+    },
+
     // Reset merchant state for new period
     resetMerchantForPeriod: (state) => {
       state.merchantAvailable = false;
@@ -236,6 +297,7 @@ const merchantSlice = createSlice({
       state.ownedLevels = {};
       state.activeEffects = [];
       state.purchaseCountsThisVisit = {};
+      state.dailyJoker = null;
       state.merchantAvailable = false;
       state.hasVisitedMerchant = false;
     });
@@ -250,6 +312,8 @@ export const {
   consumeEffect,
   clearActiveEffects,
   resetMerchantForPeriod,
+  generateDailyJoker,
+  markDailyJokerPurchased,
 } = merchantSlice.actions;
 
 // Selectors
@@ -330,5 +394,24 @@ export const selectActiveEffectValue =
     if (!effect) return 0;
     return effect.level || effect.count || 0;
   };
+
+// Daily joker selectors
+export const selectDailyJoker = (state: { merchant: MerchantState }) =>
+  state.merchant.dailyJoker;
+
+// Compute the daily joker price based on owned joker level
+export const selectDailyJokerPrice = createSelector(
+  [
+    (state: { merchant: MerchantState }) => state.merchant.dailyJoker,
+    (_state: any, ownedLevel: number) => ownedLevel,
+  ],
+  (dailyJoker, ownedLevel) => {
+    if (!dailyJoker) return 0;
+    if (ownedLevel === 0) return 5000; // New joker
+    if (ownedLevel === 1) return 5000; // L1 -> L2
+    if (ownedLevel === 2) return 30000; // L2 -> L3
+    return 0; // Already L3, can't buy
+  }
+);
 
 export default merchantSlice.reducer;

@@ -30,7 +30,6 @@ interface JokerCardProps {
   joker: {
     id: number;
     name: string;
-    subject?: string;
     type: 'one-time' | 'persistent';
     flavorText: string;
     description: string;
@@ -44,6 +43,8 @@ interface JokerCardProps {
   showOwned?: boolean;
   disableActivation?: boolean;
   debugMode?: boolean;
+  /** Number of covered candy types (for Combo Platter / Triple Threat synergy badge) */
+  coveredTypeCount?: number;
   onShowConfirmation?: (
     title: string,
     message: string,
@@ -68,6 +69,7 @@ function JokerCard({
   showOwned,
   disableActivation = false,
   debugMode = false,
+  coveredTypeCount,
   onShowConfirmation,
   onShowCandySelector,
   onTriggerEvent,
@@ -597,6 +599,22 @@ function JokerCard({
             </Text>
           </View>
 
+          {/* Synergy Badge for Combo Platter / Triple Threat */}
+          {coveredTypeCount !== undefined && joker.id === JOKER_IDS.COMBO_PLATTER && (
+            <View style={[styles.synergyBadge, coveredTypeCount >= 2 ? styles.synergyReady : styles.synergyPending]}>
+              <Text style={[styles.synergyText, coveredTypeCount >= 2 && styles.synergyTextReady]}>
+                {coveredTypeCount >= 2 ? `${coveredTypeCount}/2 types \u2713` : `${coveredTypeCount}/2 types needed`}
+              </Text>
+            </View>
+          )}
+          {coveredTypeCount !== undefined && joker.id === JOKER_IDS.TRIPLE_THREAT && (
+            <View style={[styles.synergyBadge, coveredTypeCount >= 3 ? styles.synergyReady : styles.synergyPending]}>
+              <Text style={[styles.synergyText, coveredTypeCount >= 3 && styles.synergyTextReady]}>
+                {coveredTypeCount >= 3 ? `${coveredTypeCount}/3 types \u2713` : `${coveredTypeCount}/3 types needed`}
+              </Text>
+            </View>
+          )}
+
           {/* Footer Section */}
           <View style={styles.footerSection}>
             <Text style={styles.jokerFlavorText}>{flavorText}</Text>
@@ -1010,6 +1028,33 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     opacity: 0.8,
     marginTop: 2,
+  },
+  synergyBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  synergyReady: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    borderWidth: 1,
+    borderColor: '#22c55e',
+  },
+  synergyPending: {
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    borderWidth: 1,
+    borderColor: '#d4af37',
+  },
+  synergyText: {
+    fontSize: 8,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '700',
+    color: '#d4af37',
+    letterSpacing: 0.3,
+  },
+  synergyTextReady: {
+    color: '#22c55e',
   },
 });
 

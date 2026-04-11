@@ -6,6 +6,7 @@ import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
 import { getJokerEffectsAtLevel } from '../utils/jokerEffectEngine';
+import { useToast } from '../context/ToastContext';
 
 /**
  * Farmers Carry Hook
@@ -25,6 +26,7 @@ export const useFarmersCarry = () => {
   const { getTotalInventoryCount } = useInventory();
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
+  const { showToast } = useToast();
 
   // Check and apply Farmers Carry bonus when period changes
   useEffect(() => {
@@ -54,6 +56,7 @@ export const useFarmersCarry = () => {
     // Apply bonus: inventory count × rate
     const bonusAmount = inventoryCount * perCandyRate;
     addMoney(bonusAmount);
+    showToast(`Farmers Carry +$${bonusAmount}`);
 
     // Mark this period as having received the bonus
     dispatch(markFarmersCarryBonusApplied(periodCount));
@@ -70,6 +73,7 @@ export const useFarmersCarry = () => {
     getTotalInventoryCount,
     addMoney,
     dispatch,
+    showToast,
   ]);
 
   return {};

@@ -1,5 +1,5 @@
 // Centralized Joker Effect System
-// 40 jokers with level support (1-3)
+// 73 jokers with level support (1-3)
 
 import { CandyTypeName, CandySize } from '../types/candy';
 import { formatNumber } from './priceUtils';
@@ -35,7 +35,7 @@ export type EffectTarget =
   | 'type_multiplier'        // multiplier targeting a candy type
   | 'flip_artist_boost'      // Flip Artist — bonus when selling at 3x+ markup over purchase price
   | 'combo_platter_boost'    // Combo Platter — bonus when both candy types covered by owned jokers
-  | 'bulk_empire_boost'      // Bulk Empire — permanent stacking multiplier for high daily volume
+  | 'triple_threat_boost'    // Triple Threat — bonus when 3+ candy types covered by type-multiplier jokers
   | 'variety_pack_boost'     // Variety Pack — bonus when 3+ candy types in inventory
   | 'conditional_multiplier' // multiplier with special conditions (even/odd inv, perfect change)
   | 'inventory_double_with_penalty' // Vacuum Sealer special
@@ -46,6 +46,33 @@ export type EffectTarget =
   | 'variety_pack_boost'           // Variety Pack — 3+ candy types in inventory
   | 'extra_joker_choice'           // Extra Credit — +1 joker choice after minigame
   | 'extra_aura_slot'              // Sixth Sense — +1 persistent joker slot
+  | 'sugar_rush_penalty'           // Sugar Rush — lose % cash at end of day
+  | 'loan_shark_income'            // Loan Shark — daily income with penalty
+  | 'glass_cannon_boost'           // Glass Cannon — huge one-time multiplier, destroys a joker
+  | 'contraband_boost'             // Contraband — high multiplier with confiscation risk
+  | 'all_in_boost'                 // All In — big multiplier when cash is low
+  | 'hot_potato_penalty'           // Hot Potato — random candy loses value per period
+  | 'compound_interest_boost'      // Compound Interest — scaling multiplier over days
+  | 'reputation_boost'             // Reputation — multiplier per unique candy type sold
+  | 'street_smarts_boost'          // Street Smarts — bonus per event survived
+  | 'size_multiplier'              // Size-based multiplier (small/medium/big)
+  | 'clearance_sale_boost'         // Clearance Sale — permanent multiplier per loss sale
+  | 'price_manipulation'           // Market Crash / Inflation — temporary price changes
+  | 'found_money_multiplier'       // Lucky Charm — multiply found money
+  | 'event_conversion'             // Bully Bait — convert bad events to good
+  | 'event_early_reveal'           // Teacher's Spy — reveal events early
+  | 'event_positive_chance'        // Class Clown — increase positive event chance
+  | 'collector_boost'              // Collector — bonus per unique joker owned
+  | 'minimalist_boost'             // Minimalist — big bonus if exactly 3 jokers
+  | 'lucky_seven_boost'            // Lucky 7 — bonus when selling exactly 7 candy
+  | 'night_owl_boost'              // Night Owl — bonus in last period
+  | 'tax_collector_boost'          // Tax Collector — % of sale as bonus
+  | 'last_stand_boost'             // Last Stand — huge bonus when selling < 5 candy
+  | 'momentum_boost'               // Momentum — bonus per consecutive sale period
+  | 'diversifier_boost'            // Diversifier — bonus when selling 3+ types same period
+  | 'peak_hours_boost'             // Peak Hours — bonus during periods 3-5
+  | 'patience_pays_boost'          // Patience Pays — bonus when no sale previous period
+  | 'spare_change_income'          // Spare Change — income per empty slot per period
 
 export type EffectOperation =
   | 'add'
@@ -279,8 +306,8 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
       case 'combo_platter_boost':
         parts.push(`+${e.amount}x bonus when both candy types covered by your jokers`);
         break;
-      case 'bulk_empire_boost':
-        parts.push(`Sell ${e.amount}+ candies/day for permanent +0.5x multiplier`);
+      case 'triple_threat_boost':
+        parts.push(`+${e.amount}x bonus when 3+ candy types covered by your jokers`);
         break;
       case 'type_multiplier':
         parts.push(`${e.amount}x multiplier on${type} candy profits`);
@@ -346,6 +373,102 @@ export function getJokerDescription(jokerId: number, level: number): string | nu
       }
       case 'empty_slot_daily_bonus':
         parts.push(`$${e.amount} per empty slot at end of day`);
+        break;
+      case 'sugar_rush_penalty': {
+        const pct = Math.round(e.amount * 100);
+        parts.push(`Lose ${pct}% cash at end of day`);
+        break;
+      }
+      case 'loan_shark_income':
+        if (e.operation === 'add')
+          parts.push(`+$${formatNumber(e.amount)} daily income`);
+        else
+          parts.push(`Owe $${formatNumber(Math.abs(e.amount))} at end of day`);
+        break;
+      case 'glass_cannon_boost':
+        parts.push(`${e.amount}x next sale, destroys a random joker`);
+        break;
+      case 'contraband_boost':
+        parts.push(`${e.amount}x sell multiplier, confiscation takes 100%`);
+        break;
+      case 'all_in_boost':
+        parts.push(`${e.amount}x profit when cash < $${formatNumber(e.conditions?.cashBelow ?? 500)}`);
+        break;
+      case 'hot_potato_penalty':
+        parts.push(`Random candy loses 50% value per period`);
+        break;
+      case 'compound_interest_boost':
+        parts.push(`${e.amount}x multiplier (grows each day)`);
+        break;
+      case 'reputation_boost':
+        parts.push(`+${e.amount}x per unique candy type sold`);
+        break;
+      case 'street_smarts_boost': {
+        const pct = Math.round(e.amount * 100);
+        parts.push(`+${pct}% per event survived`);
+        break;
+      }
+      case 'size_multiplier':
+        parts.push(`+${e.amount}x on ${e.conditions?.candySize ?? ''} candy`);
+        break;
+      case 'clearance_sale_boost': {
+        const pct = Math.round(e.amount * 100);
+        parts.push(`+${pct}% permanent multiplier per loss sale`);
+        break;
+      }
+      case 'price_manipulation':
+        parts.push(`All prices x${e.amount} for 1 period`);
+        break;
+      case 'found_money_multiplier':
+        parts.push(`${e.amount}x found money`);
+        break;
+      case 'event_conversion':
+        parts.push(`Convert bully events to +$${formatNumber(e.amount)} found money`);
+        break;
+      case 'event_early_reveal':
+        parts.push(`Reveal events ${e.amount} periods early`);
+        break;
+      case 'event_positive_chance': {
+        const pct = Math.round(e.amount * 100);
+        parts.push(`${pct}% chance events are positive`);
+        break;
+      }
+      case 'collector_boost':
+        parts.push(`+${e.amount}x per unique joker owned`);
+        break;
+      case 'minimalist_boost':
+        parts.push(`${e.amount}x if exactly 3 jokers owned`);
+        break;
+      case 'lucky_seven_boost':
+        parts.push(`${e.amount}x if selling exactly 7 candy`);
+        break;
+      case 'night_owl_boost':
+        parts.push(`${e.amount}x in last period of day`);
+        break;
+      case 'tax_collector_boost': {
+        const pct = Math.round(e.amount * 100);
+        parts.push(`+${pct}% of sale as bonus`);
+        break;
+      }
+      case 'last_stand_boost':
+        parts.push(`${e.amount}x if selling < 5 candy`);
+        break;
+      case 'momentum_boost':
+        parts.push(`+${e.amount}x per consecutive sale period`);
+        break;
+      case 'diversifier_boost':
+        parts.push(`${e.amount}x when selling 3+ types same period`);
+        break;
+      case 'peak_hours_boost':
+        parts.push(`${e.amount}x during periods 3-5`);
+        break;
+      case 'patience_pays_boost': {
+        const pct = Math.round((e.amount - 1) * 100);
+        parts.push(`+${pct}% when no sale previous period`);
+        break;
+      }
+      case 'spare_change_income':
+        parts.push(`$${e.amount} per empty slot per period`);
         break;
       default:
         return null; // Unknown target — fall back to static description
@@ -458,11 +581,11 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     duration: 'persistent',
   }],
 
-  // 18: Bulk Empire — permanent +0.5x for every 50/35/20 candies sold per day (stacks across days)
+  // 18: Triple Threat — +2x/+3x/+4x when 3+ candy types covered by type-multiplier jokers
   18: (lv) => [{
-    target: 'bulk_empire_boost',
+    target: 'triple_threat_boost',
     operation: 'add',
-    amount: levelScale(50, 35, 20, lv), // threshold: sell this many per day to earn +0.5x permanent
+    amount: levelScale(2, 3, 4, lv),
     duration: 'persistent',
   }],
 
@@ -718,6 +841,312 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
     amount: 1,
     duration: 'persistent',
   }],
+
+  // === TRADEOFF JOKERS ===
+
+  // 57: Sugar Rush — 2x/3x/4x sell multiplier, lose 10%/15%/20% cash at end of day
+  57: (lv) => [
+    {
+      target: 'sell_multiplier',
+      operation: 'multiply',
+      amount: levelScale(2, 3, 4, lv),
+      duration: 'persistent',
+    },
+    {
+      target: 'sugar_rush_penalty',
+      operation: 'multiply',
+      amount: levelScale(0.10, 0.15, 0.20, lv),
+      duration: 'persistent',
+    },
+  ],
+
+  // 58: Loan Shark — $5k/$8k/$12k daily income, owe $6k/$9.5k/$14k at end of day
+  58: (lv) => [
+    {
+      target: 'loan_shark_income',
+      operation: 'add',
+      amount: levelScale(5000, 8000, 12000, lv),
+      duration: 'persistent',
+    },
+    {
+      target: 'loan_shark_income',
+      operation: 'multiply',
+      amount: levelScale(-6000, -9500, -14000, lv),
+      duration: 'persistent',
+    },
+  ],
+
+  // 59: Glass Cannon — 5x/7x/10x next sale (one-time), destroys a random joker
+  59: (lv) => [
+    {
+      target: 'glass_cannon_boost',
+      operation: 'multiply',
+      amount: levelScale(5, 7, 10, lv),
+      duration: 'one-time',
+    },
+  ],
+
+  // 60: Contraband — 2x/3x/4x sell multiplier, confiscation risk
+  60: (lv) => [{
+    target: 'contraband_boost',
+    operation: 'multiply',
+    amount: levelScale(2, 3, 4, lv),
+    duration: 'persistent',
+  }],
+
+  // 61: All In — 4x/6x/8x when cash < $500
+  61: (lv) => [{
+    target: 'all_in_boost',
+    operation: 'multiply',
+    amount: levelScale(4, 6, 8, lv),
+    duration: 'persistent',
+    conditions: { cashBelow: 500 },
+  }],
+
+  // 62: Hot Potato — 2x/2.5x/3x sell multiplier, random candy loses 50% value per period
+  62: (lv) => [
+    {
+      target: 'sell_multiplier',
+      operation: 'multiply',
+      amount: levelScale(2, 2.5, 3, lv),
+      duration: 'persistent',
+    },
+    {
+      target: 'hot_potato_penalty',
+      operation: 'enable',
+      amount: 1,
+      duration: 'persistent',
+    },
+  ],
+
+  // === SCALING JOKERS ===
+
+  // 63: Compound Interest — starts 1.2x/1.4x/1.6x, gains +0.2/+0.3/+0.4 per day, cap 3/4/5
+  63: (lv) => [{
+    target: 'compound_interest_boost',
+    operation: 'multiply',
+    amount: levelScale(1.2, 1.4, 1.6, lv),
+    duration: 'persistent',
+  }],
+
+  // 64: Reputation — +0.2x/+0.3x/+0.4x per unique candy type sold, max 3/4.5/6
+  64: (lv) => [{
+    target: 'reputation_boost',
+    operation: 'add',
+    amount: levelScale(0.2, 0.3, 0.4, lv),
+    duration: 'persistent',
+  }],
+
+  // 65: Street Smarts — +10%/+15%/+20% per event survived
+  65: (lv) => [{
+    target: 'street_smarts_boost',
+    operation: 'add',
+    amount: levelScale(0.10, 0.15, 0.20, lv),
+    duration: 'persistent',
+  }],
+
+  // === CANDY-SPECIFIC JOKERS ===
+
+  // 70: Mint Condition — +1x/+1.5x/+2x size multiplier on small candy
+  70: (lv) => [{
+    target: 'size_multiplier',
+    operation: 'add',
+    amount: levelScale(1, 1.5, 2, lv),
+    duration: 'persistent',
+    conditions: { candySize: 'small' },
+  }],
+
+  // 71: King Size — +1x/+1.5x/+2x size multiplier on big candy
+  71: (lv) => [{
+    target: 'size_multiplier',
+    operation: 'add',
+    amount: levelScale(1, 1.5, 2, lv),
+    duration: 'persistent',
+    conditions: { candySize: 'big' },
+  }],
+
+  // 72: Medium Rare — +1x/+1.5x/+2x size multiplier on medium candy
+  72: (lv) => [{
+    target: 'size_multiplier',
+    operation: 'add',
+    amount: levelScale(1, 1.5, 2, lv),
+    duration: 'persistent',
+    conditions: { candySize: 'medium' },
+  }],
+
+  // 73: Clearance Sale — +10%/+15%/+20% permanent multiplier per loss sale
+  73: (lv) => [{
+    target: 'clearance_sale_boost',
+    operation: 'add',
+    amount: levelScale(0.10, 0.15, 0.20, lv),
+    duration: 'persistent',
+  }],
+
+  // === ECONOMY JOKERS ===
+
+  // 74: Piggy Bank Pro — 15%/20%/25% stash interest
+  74: (lv) => [{
+    target: 'stash_interest',
+    operation: 'multiply',
+    amount: levelScale(1.15, 1.20, 1.25, lv),
+    duration: 'persistent',
+  }],
+
+  // 75: Market Crash — all prices x0.5/x0.4/x0.3 for 1 period
+  75: (lv) => [{
+    target: 'price_manipulation',
+    operation: 'multiply',
+    amount: levelScale(0.5, 0.4, 0.3, lv),
+    duration: 'one-time',
+  }],
+
+  // 76: Inflation — all prices x2/x3/x4 for 1 period
+  76: (lv) => [{
+    target: 'price_manipulation',
+    operation: 'multiply',
+    amount: levelScale(2, 3, 4, lv),
+    duration: 'one-time',
+  }],
+
+  // === SOCIAL/EVENT JOKERS ===
+
+  // 77: Lucky Charm — found money multiplier 3x/4x/5x
+  77: (lv) => [{
+    target: 'found_money_multiplier',
+    operation: 'multiply',
+    amount: levelScale(3, 4, 5, lv),
+    duration: 'persistent',
+  }],
+
+  // 78: Bully Bait — convert bully event to found money +$500/+$1000/+$2000
+  78: (lv) => [{
+    target: 'event_conversion',
+    operation: 'convert',
+    amount: levelScale(500, 1000, 2000, lv),
+    duration: 'persistent',
+  }],
+
+  // 79: Teacher's Spy — event early reveal 2/3/4 periods early
+  79: (lv) => [{
+    target: 'event_early_reveal',
+    operation: 'add',
+    amount: levelScale(2, 3, 4, lv),
+    duration: 'persistent',
+  }],
+
+  // 80: Class Clown — positive event chance 50%/65%/80%
+  80: (lv) => [{
+    target: 'event_positive_chance',
+    operation: 'set',
+    amount: levelScale(0.50, 0.65, 0.80, lv),
+    duration: 'persistent',
+  }],
+
+  // 81: Detention Dodge — event immunity for 1/2/3 days (one-time)
+  81: (lv) => [{
+    target: 'event_immunity',
+    operation: 'enable',
+    amount: levelScale(1, 2, 3, lv),
+    duration: 'one-time',
+  }],
+
+  // === COMBO/META JOKERS ===
+
+  // 82: Collector — +0.3x/+0.5x/+0.7x per unique joker owned
+  82: (lv) => [{
+    target: 'collector_boost',
+    operation: 'add',
+    amount: levelScale(0.3, 0.5, 0.7, lv),
+    duration: 'persistent',
+  }],
+
+  // 83: Minimalist — 3x/5x/8x if exactly 3 jokers owned
+  83: (lv) => [{
+    target: 'minimalist_boost',
+    operation: 'multiply',
+    amount: levelScale(3, 5, 8, lv),
+    duration: 'persistent',
+  }],
+
+  // 84: Lucky 7 — 7x/10x/15x if selling exactly 7 candy
+  84: (lv) => [{
+    target: 'lucky_seven_boost',
+    operation: 'multiply',
+    amount: levelScale(7, 10, 15, lv),
+    duration: 'persistent',
+  }],
+
+  // 85: Night Owl — 3x/4x/5x in last period of day
+  85: (lv) => [{
+    target: 'night_owl_boost',
+    operation: 'multiply',
+    amount: levelScale(3, 4, 5, lv),
+    duration: 'persistent',
+  }],
+
+  // 86: Penny Pincher — 10%/15%/20% of stash to allowance, min $50/$100/$200
+  86: (lv) => [{
+    target: 'stash_allowance_bonus',
+    operation: 'multiply',
+    amount: levelScale(0.10, 0.15, 0.20, lv),
+    duration: 'persistent',
+  }],
+
+  // 87: Tax Collector — 5%/8%/12% of sale as bonus
+  87: (lv) => [{
+    target: 'tax_collector_boost',
+    operation: 'multiply',
+    amount: levelScale(0.05, 0.08, 0.12, lv),
+    duration: 'persistent',
+  }],
+
+  // 88: Last Stand — 10x/15x/20x if selling < 5 candy
+  88: (lv) => [{
+    target: 'last_stand_boost',
+    operation: 'multiply',
+    amount: levelScale(10, 15, 20, lv),
+    duration: 'persistent',
+  }],
+
+  // 89: Momentum — +0.3x/+0.5x/+0.8x per consecutive sale period
+  89: (lv) => [{
+    target: 'momentum_boost',
+    operation: 'add',
+    amount: levelScale(0.3, 0.5, 0.8, lv),
+    duration: 'persistent',
+  }],
+
+  // 90: Diversifier — 2x/3x/4x when selling 3+ types same period
+  90: (lv) => [{
+    target: 'diversifier_boost',
+    operation: 'multiply',
+    amount: levelScale(2, 3, 4, lv),
+    duration: 'persistent',
+  }],
+
+  // 91: Peak Hours — 2x/3x/4x during periods 3-5
+  91: (lv) => [{
+    target: 'peak_hours_boost',
+    operation: 'multiply',
+    amount: levelScale(2, 3, 4, lv),
+    duration: 'persistent',
+  }],
+
+  // 92: Patience Pays — +50%/+75%/+100% when no sale previous period
+  92: (lv) => [{
+    target: 'patience_pays_boost',
+    operation: 'multiply',
+    amount: levelScale(1.5, 1.75, 2.0, lv),
+    duration: 'persistent',
+  }],
+
+  // 93: Spare Change — $5/$10/$20 per empty slot per period
+  93: (lv) => [{
+    target: 'spare_change_income',
+    operation: 'add',
+    amount: levelScale(5, 10, 20, lv),
+    duration: 'persistent',
+  }],
 };
 
 // Predefined standardized jokers with the new system
@@ -821,9 +1250,9 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
   }, JOKER_EFFECT_FACTORIES[50]),
 
   makeJoker({
-    id: 18, name: 'Bulk Empire', type: 'persistent', maxLevel: 3,
-    flavorText: 'Move product, build an empire',
-    description: '[xMult] +0.5 permanent per 50/35/20 candies sold daily',
+    id: 18, name: 'Triple Threat', type: 'persistent', maxLevel: 3,
+    flavorText: 'Three types, one massive payday',
+    description: '[xMult] +2/+3/+4 when 3+ candy types covered by your jokers',
   }, JOKER_EFFECT_FACTORIES[18]),
 
   makeJoker({
@@ -962,6 +1391,210 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
     flavorText: 'I see dead... jokers?',
     description: '+1 aura slot (hold 6 instead of 5)',
   }, JOKER_EFFECT_FACTORIES[56]),
+
+  // === TRADEOFF ===
+  makeJoker({
+    id: 57, name: 'Sugar Rush', type: 'persistent', maxLevel: 3,
+    flavorText: 'Fast money, fast crash',
+    description: '[xMult] 2x/3x/4x sell multiplier, lose 10%/15%/20% cash at end of day',
+  }, JOKER_EFFECT_FACTORIES[57]),
+
+  makeJoker({
+    id: 58, name: 'Loan Shark', type: 'persistent', maxLevel: 3,
+    flavorText: 'Borrow now, pay later... with interest',
+    description: '$5k/$8k/$12k daily income, owe $6k/$9.5k/$14k at end of day',
+  }, JOKER_EFFECT_FACTORIES[58]),
+
+  makeJoker({
+    id: 59, name: 'Glass Cannon', type: 'one-time', maxLevel: 3,
+    flavorText: 'One shot, one kill... one less joker',
+    description: '[xMult] 5x/7x/10x next sale, destroys a random joker',
+  }, JOKER_EFFECT_FACTORIES[59]),
+
+  makeJoker({
+    id: 60, name: 'Contraband', type: 'persistent', maxLevel: 3,
+    flavorText: 'High risk, high reward... if you can keep it',
+    description: '[xMult] 2x/3x/4x sell multiplier, confiscation takes 100%',
+  }, JOKER_EFFECT_FACTORIES[60]),
+
+  makeJoker({
+    id: 61, name: 'All In', type: 'persistent', maxLevel: 3,
+    flavorText: 'Nothing left to lose',
+    description: '[xMult] 4x/6x/8x when cash < $500',
+  }, JOKER_EFFECT_FACTORIES[61]),
+
+  makeJoker({
+    id: 62, name: 'Hot Potato', type: 'persistent', maxLevel: 3,
+    flavorText: 'Sell fast or watch it melt',
+    description: '[xMult] 2x/2.5x/3x sell multiplier, random candy loses 50% value per period',
+  }, JOKER_EFFECT_FACTORIES[62]),
+
+  // === SCALING ===
+  makeJoker({
+    id: 63, name: 'Compound Interest', type: 'persistent', maxLevel: 3,
+    flavorText: 'Money makes money makes money',
+    description: '[xMult] Starts 1.2x/1.4x/1.6x, +0.2/+0.3/+0.4 per day, cap 3/4/5',
+  }, JOKER_EFFECT_FACTORIES[63]),
+
+  makeJoker({
+    id: 64, name: 'Reputation', type: 'persistent', maxLevel: 3,
+    flavorText: 'Word gets around when you sell the good stuff',
+    description: '[xMult] +0.2x/+0.3x/+0.4x per unique candy type sold, max 3/4.5/6',
+  }, JOKER_EFFECT_FACTORIES[64]),
+
+  makeJoker({
+    id: 65, name: 'Street Smarts', type: 'persistent', maxLevel: 3,
+    flavorText: 'What doesn\'t take your candy makes you stronger',
+    description: '[xMult] +10%/+15%/+20% per event survived',
+  }, JOKER_EFFECT_FACTORIES[65]),
+
+  // === CANDY-SPECIFIC ===
+  makeJoker({
+    id: 70, name: 'Mint Condition', type: 'persistent', maxLevel: 3,
+    flavorText: 'Small but mighty',
+    description: '[xMult] +1/+1.5/+2 on small candy',
+  }, JOKER_EFFECT_FACTORIES[70]),
+
+  makeJoker({
+    id: 71, name: 'King Size', type: 'persistent', maxLevel: 3,
+    flavorText: 'Go big or go home',
+    description: '[xMult] +1/+1.5/+2 on big candy',
+  }, JOKER_EFFECT_FACTORIES[71]),
+
+  makeJoker({
+    id: 72, name: 'Medium Rare', type: 'persistent', maxLevel: 3,
+    flavorText: 'Not too big, not too small, just right',
+    description: '[xMult] +1/+1.5/+2 on medium candy',
+  }, JOKER_EFFECT_FACTORIES[72]),
+
+  makeJoker({
+    id: 73, name: 'Clearance Sale', type: 'persistent', maxLevel: 3,
+    flavorText: 'Every loss is an investment in future gains',
+    description: '[xMult] +10%/+15%/+20% permanent multiplier per loss sale',
+  }, JOKER_EFFECT_FACTORIES[73]),
+
+  // === ECONOMY ===
+  makeJoker({
+    id: 74, name: 'Piggy Bank Pro', type: 'persistent', maxLevel: 3,
+    flavorText: 'Your piggy bank went to business school',
+    description: '15%/20%/25% daily stash interest',
+  }, JOKER_EFFECT_FACTORIES[74]),
+
+  makeJoker({
+    id: 75, name: 'Market Crash', type: 'one-time', maxLevel: 3,
+    flavorText: 'Buy the dip!',
+    description: 'All prices x0.5/x0.4/x0.3 for 1 period',
+  }, JOKER_EFFECT_FACTORIES[75]),
+
+  makeJoker({
+    id: 76, name: 'Inflation', type: 'one-time', maxLevel: 3,
+    flavorText: 'Everything costs more, but sells for more too',
+    description: 'All prices x2/x3/x4 for 1 period',
+  }, JOKER_EFFECT_FACTORIES[76]),
+
+  // === SOCIAL/EVENT ===
+  makeJoker({
+    id: 77, name: 'Lucky Charm', type: 'persistent', maxLevel: 3,
+    flavorText: 'Fortune favors the prepared',
+    description: '3x/4x/5x found money multiplier',
+  }, JOKER_EFFECT_FACTORIES[77]),
+
+  makeJoker({
+    id: 78, name: 'Bully Bait', type: 'persistent', maxLevel: 3,
+    flavorText: 'Turn their threats into your treats',
+    description: 'Convert bully events to +$500/+$1k/+$2k found money',
+  }, JOKER_EFFECT_FACTORIES[78]),
+
+  makeJoker({
+    id: 79, name: "Teacher's Spy", type: 'persistent', maxLevel: 3,
+    flavorText: 'A little bird told me what\'s coming',
+    description: 'Reveal events 2/3/4 periods early',
+  }, JOKER_EFFECT_FACTORIES[79]),
+
+  makeJoker({
+    id: 80, name: 'Class Clown', type: 'persistent', maxLevel: 3,
+    flavorText: 'Everyone loves a good laugh',
+    description: '50%/65%/80% chance events are positive',
+  }, JOKER_EFFECT_FACTORIES[80]),
+
+  makeJoker({
+    id: 81, name: 'Detention Dodge', type: 'one-time', maxLevel: 3,
+    flavorText: 'Can\'t catch me if I\'m not here',
+    description: 'Event immunity for 1/2/3 days',
+  }, JOKER_EFFECT_FACTORIES[81]),
+
+  // === COMBO/META ===
+  makeJoker({
+    id: 82, name: 'Collector', type: 'persistent', maxLevel: 3,
+    flavorText: 'Gotta catch em all',
+    description: '[xMult] +0.3/+0.5/+0.7 per unique joker owned',
+  }, JOKER_EFFECT_FACTORIES[82]),
+
+  makeJoker({
+    id: 83, name: 'Minimalist', type: 'persistent', maxLevel: 3,
+    flavorText: 'Less is more... way more',
+    description: '[xMult] 3x/5x/8x if exactly 3 jokers owned',
+  }, JOKER_EFFECT_FACTORIES[83]),
+
+  makeJoker({
+    id: 84, name: 'Lucky 7', type: 'persistent', maxLevel: 3,
+    flavorText: 'Seven is the magic number',
+    description: '[xMult] 7x/10x/15x if selling exactly 7 candy',
+  }, JOKER_EFFECT_FACTORIES[84]),
+
+  makeJoker({
+    id: 85, name: 'Night Owl', type: 'persistent', maxLevel: 3,
+    flavorText: 'The best deals happen after dark',
+    description: '[xMult] 3x/4x/5x in last period of day',
+  }, JOKER_EFFECT_FACTORIES[85]),
+
+  makeJoker({
+    id: 86, name: 'Penny Pincher', type: 'persistent', maxLevel: 3,
+    flavorText: 'A penny saved is a penny earned twice',
+    description: '10%/15%/20% of stash to allowance, min $50/$100/$200',
+  }, JOKER_EFFECT_FACTORIES[86]),
+
+  makeJoker({
+    id: 87, name: 'Tax Collector', type: 'persistent', maxLevel: 3,
+    flavorText: 'Uncle Sam wants his cut... and so do you',
+    description: '[xMult] 5%/8%/12% of sale as bonus',
+  }, JOKER_EFFECT_FACTORIES[87]),
+
+  makeJoker({
+    id: 88, name: 'Last Stand', type: 'persistent', maxLevel: 3,
+    flavorText: 'When all hope seems lost, profits soar',
+    description: '[xMult] 10x/15x/20x if selling < 5 candy',
+  }, JOKER_EFFECT_FACTORIES[88]),
+
+  makeJoker({
+    id: 89, name: 'Momentum', type: 'persistent', maxLevel: 3,
+    flavorText: 'Keep the sales rolling',
+    description: '[xMult] +0.3/+0.5/+0.8 per consecutive sale period',
+  }, JOKER_EFFECT_FACTORIES[89]),
+
+  makeJoker({
+    id: 90, name: 'Diversifier', type: 'persistent', maxLevel: 3,
+    flavorText: 'Never put all your candy in one basket',
+    description: '[xMult] 2x/3x/4x when selling 3+ types same period',
+  }, JOKER_EFFECT_FACTORIES[90]),
+
+  makeJoker({
+    id: 91, name: 'Peak Hours', type: 'persistent', maxLevel: 3,
+    flavorText: 'Timing is everything in this business',
+    description: '[xMult] 2x/3x/4x during periods 3-5',
+  }, JOKER_EFFECT_FACTORIES[91]),
+
+  makeJoker({
+    id: 92, name: 'Patience Pays', type: 'persistent', maxLevel: 3,
+    flavorText: 'Good things come to those who wait',
+    description: '[xMult] +50%/+75%/+100% when no sale previous period',
+  }, JOKER_EFFECT_FACTORIES[92]),
+
+  makeJoker({
+    id: 93, name: 'Spare Change', type: 'persistent', maxLevel: 3,
+    flavorText: 'Empty pockets still jingle',
+    description: '$5/$10/$20 per empty slot per period',
+  }, JOKER_EFFECT_FACTORIES[93]),
 ];
 
 // Utility function to process effects by target from a list of jokers

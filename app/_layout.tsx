@@ -9,6 +9,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { persistor, store } from '../src/store/store';
 import GameEffectsManager from './components/GameEffectsManager';
 import { AdVisibilityProvider } from '../src/context/AdVisibilityContext';
+import { ToastProvider } from '../src/context/ToastContext';
 import { initializeAudioMode } from '../src/utils/audioConfig';
 import Constants from 'expo-constants';
 
@@ -91,6 +92,7 @@ export default function RootLayout() {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <GameEffectsManager />
+        <ToastProvider>
         <AdVisibilityProvider>
           <SafeAreaProvider>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
@@ -185,6 +187,7 @@ export default function RootLayout() {
             </SafeAreaView>
           </SafeAreaProvider>
         </AdVisibilityProvider>
+        </ToastProvider>
       </PersistGate>
     </Provider>
   );

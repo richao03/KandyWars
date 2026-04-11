@@ -27,8 +27,15 @@ interface SaleCalculationParams {
   uniqueLocationsToday?: number;
   period?: number;
   periodsPerDay?: number;
-  bulkEmpireStacks?: number; // Bulk Empire: number of permanent +0.5x stacks earned
+  bulkEmpireStacks?: number; // Legacy field (unused, kept for compatibility)
   inventory?: { name: string; quantity: number }[]; // Current inventory for Variety Pack check
+  didSellPreviousPeriod?: boolean; // For Patience Pays
+  ownedJokerCount?: number; // For Collector
+  uniqueTypesSoldThisPeriod?: number; // For Diversifier
+  clearanceSaleStacks?: number; // For Clearance Sale — how many loss sales so far
+  compoundInterestDays?: number; // For Compound Interest — days held
+  reputationTypesSold?: number; // For Reputation — unique candy types sold ever
+  streetSmartsEventsSurvived?: number; // For Street Smarts — events survived count
 }
 
 interface SaleCalculationResult {
@@ -71,6 +78,13 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     periodsPerDay = 8,
     bulkEmpireStacks = 0,
     inventory = [],
+    didSellPreviousPeriod = true,
+    ownedJokerCount = 0,
+    uniqueTypesSoldThisPeriod = 0,
+    clearanceSaleStacks = 0,
+    compoundInterestDays = 0,
+    reputationTypesSold = 0,
+    streetSmartsEventsSurvived = 0,
   } = params;
 
   const bonusBreakdown: Array<{
@@ -146,6 +160,17 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
             flatBonus: totalProfit * (effect.amount - 1),
           });
         }
+      }
+
+      // Tax Collector — % of sale as bonus (adds to profit boost)
+      if (effect.target === 'tax_collector_boost') {
+        profitBoost += effect.amount; // 5%/8%/12% added to profit boost
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(jokerId),
+          name: _getJokerName(jokerId),
+          multiplier: 1,
+          flatBonus: totalProfit * effect.amount,
+        });
       }
     }
   }
@@ -314,18 +339,258 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
           });
         }
       }
+
+      // Size multipliers — Mint Condition (small), King Size (big), Medium Rare (medium)
+      if (effect.target === 'size_multiplier' && effect.conditions?.candySize) {
+        if (candySize === effect.conditions.candySize) {
+          multiplier += effect.amount; // +1/+1.5/+2 adds directly to multiplier
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + effect.amount,
+          });
+        }
+      }
+
+      // Sell multiplier — Sugar Rush, Hot Potato
+      if (effect.target === 'sell_multiplier') {
+        multiplier += (effect.amount - 1);
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(jokerId),
+          name: _getJokerName(jokerId),
+          multiplier: effect.amount,
+        });
+      }
+
+      // Glass Cannon — huge one-time multiplier
+      if (effect.target === 'glass_cannon_boost') {
+        multiplier += (effect.amount - 1);
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(jokerId),
+          name: _getJokerName(jokerId),
+          multiplier: effect.amount,
+        });
+      }
+
+      // Contraband — high multiplier with confiscation risk
+      if (effect.target === 'contraband_boost') {
+        multiplier += (effect.amount - 1);
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(jokerId),
+          name: _getJokerName(jokerId),
+          multiplier: effect.amount,
+        });
+      }
+
+      // All In — big multiplier when cash < threshold
+      if (effect.target === 'all_in_boost' && effect.conditions?.cashBelow) {
+        if (currentCash < effect.conditions.cashBelow) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Lucky 7 — bonus when selling exactly 7 candy
+      if (effect.target === 'lucky_seven_boost') {
+        if (quantity === 7) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Night Owl — bonus in last period of day
+      if (effect.target === 'night_owl_boost') {
+        if (period >= periodsPerDay - 1) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Last Stand — huge bonus when selling < 5 candy
+      if (effect.target === 'last_stand_boost') {
+        if (quantity < 5) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Momentum — bonus per consecutive sale period
+      if (effect.target === 'momentum_boost') {
+        if (consecutivePeriodSales > 0) {
+          const momentumBonus = effect.amount * consecutivePeriodSales;
+          multiplier += momentumBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + momentumBonus,
+          });
+        }
+      }
+
+      // Diversifier — bonus when selling 3+ types same period
+      if (effect.target === 'diversifier_boost') {
+        if (uniqueTypesSoldThisPeriod >= 3) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Peak Hours — bonus during periods 3-5
+      if (effect.target === 'peak_hours_boost') {
+        if (period >= 3 && period <= 5) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Patience Pays — bonus when no sale previous period
+      if (effect.target === 'patience_pays_boost') {
+        if (!didSellPreviousPeriod) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Collector — bonus per unique joker owned
+      if (effect.target === 'collector_boost') {
+        if (ownedJokerCount > 0) {
+          const collectorBonus = effect.amount * ownedJokerCount;
+          multiplier += collectorBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + collectorBonus,
+          });
+        }
+      }
+
+      // Minimalist — big bonus if exactly 3 jokers owned
+      if (effect.target === 'minimalist_boost') {
+        if (ownedJokerCount === 3) {
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Clearance Sale — permanent multiplier per loss sale
+      if (effect.target === 'clearance_sale_boost') {
+        if (clearanceSaleStacks > 0) {
+          const clearanceBonus = effect.amount * clearanceSaleStacks;
+          multiplier += clearanceBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + clearanceBonus,
+          });
+        }
+      }
+
+      // Compound Interest — scaling multiplier over days
+      if (effect.target === 'compound_interest_boost') {
+        if (compoundInterestDays > 0) {
+          // Base amount scales with days held (already includes base from factory)
+          multiplier += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+          });
+        }
+      }
+
+      // Reputation — multiplier per unique candy type sold
+      if (effect.target === 'reputation_boost') {
+        if (reputationTypesSold > 0) {
+          const reputationBonus = effect.amount * reputationTypesSold;
+          multiplier += reputationBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + reputationBonus,
+          });
+        }
+      }
+
+      // Street Smarts — bonus per event survived
+      if (effect.target === 'street_smarts_boost') {
+        if (streetSmartsEventsSurvived > 0) {
+          const streetSmartsBonus = effect.amount * streetSmartsEventsSurvived;
+          multiplier += streetSmartsBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + streetSmartsBonus,
+          });
+        }
+      }
     }
   }
 
-  // Bulk Empire — permanent +0.5x per stack earned from high daily volume
-  if (hasJokerById(jokers, JOKER_IDS.BULK_EMPIRE) && bulkEmpireStacks > 0) {
-    const bulkBonus = bulkEmpireStacks * 0.5;
-    multiplier += bulkBonus;
-    bonusBreakdown.push({
-      emoji: _getJokerEmoji(JOKER_IDS.BULK_EMPIRE),
-      name: _getJokerName(JOKER_IDS.BULK_EMPIRE),
-      multiplier: 1 + bulkBonus,
-    });
+  // Triple Threat — bonus when 3+ candy types covered by owned type-multiplier jokers
+  if (hasJokerById(jokers, JOKER_IDS.TRIPLE_THREAT) && candyTypes.length >= 1) {
+    const coveredTypes = new Set<string>();
+    for (const joker of jokers) {
+      const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
+      if (jokerId === JOKER_IDS.TRIPLE_THREAT) continue; // don't count self
+      const level = joker.level ?? 1;
+      const effects = getJokerEffectsAtLevel(jokerId, level);
+      for (const effect of effects) {
+        if (effect.target === 'type_multiplier' && effect.conditions?.candyType) {
+          if (candyTypes.includes(effect.conditions.candyType)) {
+            coveredTypes.add(effect.conditions.candyType);
+          }
+        }
+      }
+    }
+    if (coveredTypes.size >= 3) {
+      const ttJoker = jokers.find((j: any) => {
+        const id = typeof j.id === 'string' ? parseInt(j.id) : j.id;
+        return id === JOKER_IDS.TRIPLE_THREAT;
+      });
+      const ttLevel = ttJoker?.level ?? 1;
+      const ttEffects = getJokerEffectsAtLevel(JOKER_IDS.TRIPLE_THREAT, ttLevel);
+      const ttEffect = ttEffects.find((e: any) => e.target === 'triple_threat_boost');
+      if (ttEffect) {
+        multiplier += ttEffect.amount;
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(JOKER_IDS.TRIPLE_THREAT),
+          name: _getJokerName(JOKER_IDS.TRIPLE_THREAT),
+          multiplier: 1 + ttEffect.amount,
+        });
+      }
+    }
   }
 
   // === STEP 4: Apply Vacuum Sealer penalty to multiplier ===
@@ -366,7 +631,7 @@ function _getJokerEmoji(id: number): string {
   const emojiMap: Record<number, string> = {
     [JOKER_IDS.FLIP_ARTIST]: '🔄',
     [JOKER_IDS.COMBO_PLATTER]: '🍱',
-    [JOKER_IDS.BULK_EMPIRE]: '👑',
+    [JOKER_IDS.TRIPLE_THREAT]: '🎯',
     [JOKER_IDS.COCOA_FUTURES]: '🍫',
     [JOKER_IDS.BEAR_MARKET]: '🐻',
     [JOKER_IDS.HARD_KNOCKS]: '💎',
@@ -383,6 +648,28 @@ function _getJokerEmoji(id: number): string {
     [JOKER_IDS.UNDERDOG]: '💪',
     [JOKER_IDS.VARIETY_PACK]: '🎨',
     [JOKER_IDS.BROKE_AND_HUNGRY]: '🔥',
+    [JOKER_IDS.SUGAR_RUSH]: '🍬',
+    [JOKER_IDS.GLASS_CANNON]: '💥',
+    [JOKER_IDS.CONTRABAND]: '🚫',
+    [JOKER_IDS.ALL_IN]: '🎰',
+    [JOKER_IDS.HOT_POTATO]: '🥔',
+    [JOKER_IDS.COMPOUND_INTEREST]: '📈',
+    [JOKER_IDS.REPUTATION]: '⭐',
+    [JOKER_IDS.STREET_SMARTS]: '🧠',
+    [JOKER_IDS.MINT_CONDITION]: '🌿',
+    [JOKER_IDS.KING_SIZE]: '👑',
+    [JOKER_IDS.MEDIUM_RARE]: '🥩',
+    [JOKER_IDS.CLEARANCE_SALE]: '🏷️',
+    [JOKER_IDS.LUCKY_7]: '🎰',
+    [JOKER_IDS.NIGHT_OWL]: '🦉',
+    [JOKER_IDS.TAX_COLLECTOR]: '💰',
+    [JOKER_IDS.LAST_STAND]: '🛡️',
+    [JOKER_IDS.MOMENTUM]: '🚀',
+    [JOKER_IDS.DIVERSIFIER]: '🌈',
+    [JOKER_IDS.PEAK_HOURS]: '⏰',
+    [JOKER_IDS.PATIENCE_PAYS]: '🧘',
+    [JOKER_IDS.COLLECTOR]: '🗂️',
+    [JOKER_IDS.MINIMALIST]: '✨',
   };
   return emojiMap[id] || '🃏';
 }
@@ -391,7 +678,7 @@ function _getJokerName(id: number): string {
   const nameMap: Record<number, string> = {
     [JOKER_IDS.FLIP_ARTIST]: 'Flip Artist',
     [JOKER_IDS.COMBO_PLATTER]: 'Combo Platter',
-    [JOKER_IDS.BULK_EMPIRE]: 'Bulk Empire',
+    [JOKER_IDS.TRIPLE_THREAT]: 'Triple Threat',
     [JOKER_IDS.COCOA_FUTURES]: 'Cocoa Futures',
     [JOKER_IDS.BEAR_MARKET]: 'Bear Market',
     [JOKER_IDS.HARD_KNOCKS]: 'Hard Knocks',
@@ -408,6 +695,28 @@ function _getJokerName(id: number): string {
     [JOKER_IDS.UNDERDOG]: 'Underdog',
     [JOKER_IDS.VARIETY_PACK]: 'Variety Pack',
     [JOKER_IDS.BROKE_AND_HUNGRY]: 'Broke and Hungry',
+    [JOKER_IDS.SUGAR_RUSH]: 'Sugar Rush',
+    [JOKER_IDS.GLASS_CANNON]: 'Glass Cannon',
+    [JOKER_IDS.CONTRABAND]: 'Contraband',
+    [JOKER_IDS.ALL_IN]: 'All In',
+    [JOKER_IDS.HOT_POTATO]: 'Hot Potato',
+    [JOKER_IDS.COMPOUND_INTEREST]: 'Compound Interest',
+    [JOKER_IDS.REPUTATION]: 'Reputation',
+    [JOKER_IDS.STREET_SMARTS]: 'Street Smarts',
+    [JOKER_IDS.MINT_CONDITION]: 'Mint Condition',
+    [JOKER_IDS.KING_SIZE]: 'King Size',
+    [JOKER_IDS.MEDIUM_RARE]: 'Medium Rare',
+    [JOKER_IDS.CLEARANCE_SALE]: 'Clearance Sale',
+    [JOKER_IDS.LUCKY_7]: 'Lucky 7',
+    [JOKER_IDS.NIGHT_OWL]: 'Night Owl',
+    [JOKER_IDS.TAX_COLLECTOR]: 'Tax Collector',
+    [JOKER_IDS.LAST_STAND]: 'Last Stand',
+    [JOKER_IDS.MOMENTUM]: 'Momentum',
+    [JOKER_IDS.DIVERSIFIER]: 'Diversifier',
+    [JOKER_IDS.PEAK_HOURS]: 'Peak Hours',
+    [JOKER_IDS.PATIENCE_PAYS]: 'Patience Pays',
+    [JOKER_IDS.COLLECTOR]: 'Collector',
+    [JOKER_IDS.MINIMALIST]: 'Minimalist',
   };
   return nameMap[id] || 'Joker';
 }

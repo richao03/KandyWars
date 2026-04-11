@@ -25,7 +25,7 @@ const GameModal = React.memo(function GameModal({
   dismissible = false,
   showCancelButton = false
 }: GameModalProps) {
-  console.log('🎮 GameModal: Rendering with visible =', visible, 'title =', title);
+  if (__DEV__) console.log('🎮 GameModal: Rendering with visible =', visible, 'title =', title);
 
   const handleConfirm = () => {
     if (onConfirm) {
@@ -65,7 +65,7 @@ export function useGameModal() {
   });
 
   const showModal = React.useCallback((title: string, message: string, emoji = '🎮', onConfirm?: () => void, dismissible = false, showCancelButton = false) => {
-    console.log('🎮 GameModal: showModal called with:', { title, message, emoji, dismissible, showCancelButton });
+    if (__DEV__) console.log('🎮 GameModal: showModal called with:', { title, message, emoji, dismissible, showCancelButton });
     setModal({ visible: true, title, message, emoji, onConfirm, dismissible, showCancelButton });
   }, []);
 

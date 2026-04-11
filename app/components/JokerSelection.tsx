@@ -51,6 +51,7 @@ interface JokerSelectionProps {
   onComplete: () => void;
   rewardTier?: 1 | 2 | 3;
   completionLevel?: 1 | 2 | 3;
+  headerText?: string;
 }
 
 export default function JokerSelection({
@@ -59,6 +60,7 @@ export default function JokerSelection({
   onComplete,
   rewardTier = 3,
   completionLevel = 3,
+  headerText,
 }: JokerSelectionProps) {
   const [availableJokers, setAvailableJokers] = useState<StandardizedJoker[]>(
     []
@@ -144,7 +146,6 @@ export default function JokerSelection({
       id: joker.id,
       name: joker.name,
       description: joker.description,
-      theme: theme,
       type: isOneTime ? 'one-time' : 'persistent',
       effect: '',
       effects: joker.effects,
@@ -268,7 +269,12 @@ export default function JokerSelection({
       .join(', ');
   };
 
-  const SELL_PRICE = 100;
+  // Sell price scales by joker level
+  const getJokerSellPrice = (level: number) => {
+    if (level >= 3) return 15000;
+    if (level >= 2) return 5000;
+    return 500;
+  };
 
   // Sellable jokers: currently active jokers (not locked)
   const sellableJokers = useMemo(() => {
@@ -288,9 +294,9 @@ export default function JokerSelection({
       });
   }, [activeJokers, lockedJokerIds]);
 
-  const handleSellJoker = (jokerId: string | number) => {
+  const handleSellJoker = (jokerId: string | number, level: number = 1) => {
     removeJoker(jokerId);
-    dispatch(addBalance(SELL_PRICE));
+    dispatch(addBalance(getJokerSellPrice(level)));
     SoundEffects.playRandomPop();
   };
 
@@ -709,7 +715,7 @@ export default function JokerSelection({
               { marginBottom: 0 },
             ]}
           >
-            Sell a joker for ${SELL_PRICE}
+            Tap a joker to sell it. Price depends on level.
           </Text>
         </View>
 
@@ -731,7 +737,7 @@ export default function JokerSelection({
                 return (
                   <PressableButton
                     key={joker.id.toString()}
-                    onPress={() => handleSellJoker(joker.id)}
+                    onPress={() => handleSellJoker(joker.id, joker.level)}
                     shadowOpacity={0}
                     elevation={0}
                     style={{ backgroundColor: 'transparent' }}
@@ -798,11 +804,13 @@ export default function JokerSelection({
             { marginBottom: 4 },
           ]}
         >
-          {completionLevel === 1
-            ? 'You completed Level 1!'
-            : completionLevel === 2
-              ? 'You completed Level 2!'
-              : 'You mastered all 3 levels!'}
+          {headerText
+            ? headerText
+            : completionLevel === 1
+              ? 'You completed Level 1!'
+              : completionLevel === 2
+                ? 'You completed Level 2!'
+                : 'You mastered all 3 levels!'}
         </Text>
         <Text style={[styles.slotCounter, themeStyles.subtitle]}>
           Aura Slots: {persistentJokerCount}/{maxPersistentSlots}

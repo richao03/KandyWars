@@ -237,13 +237,13 @@ describe('Specific Joker Implementations', () => {
   describe('Joker ID Constants Integration', () => {
     it('should have all implemented jokers defined in JOKER_IDS', () => {
       expect(JOKER_IDS.MARKET_MANIPULATION).toBeDefined();
-      expect(JOKER_IDS.THE_BIG_SHORT).toBeDefined();
       expect(JOKER_IDS.BEAR_MARKET).toBeDefined();
-      expect(JOKER_IDS.MICRO_CHIP).toBeDefined();
+      expect(JOKER_IDS.COMBO_PLATTER).toBeDefined();
       expect(JOKER_IDS.COCOA_FUTURES).toBeDefined();
       expect(JOKER_IDS.HOME_MADE).toBeDefined();
       expect(JOKER_IDS.THE_GOOD_OLD_DAYS).toBeDefined();
       expect(JOKER_IDS.SOUR_LOGIC).toBeDefined();
+      expect(JOKER_IDS.SAFE_HOUSE).toBeDefined();
     });
 
     it('should have unique IDs for all jokers', () => {

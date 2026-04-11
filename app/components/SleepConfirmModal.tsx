@@ -58,7 +58,7 @@ export default function SleepConfirmModal({
             <View style={styles.checklist}>
               <Text style={styles.checklistItem}>• Sold all your candy?</Text>
               <Text style={styles.checklistItem}>• Stashed your money?</Text>
-              <Text style={styles.checklistItem}>• Studied your subjects?</Text>
+              <Text style={styles.checklistItem}>• Played your minigame?</Text>
               <Text style={styles.checklistItem}>• Visited the deli?</Text>
             </View>
           </PixelBorder>

@@ -94,7 +94,7 @@ function Settings() {
   };
 
   const handleRestartGame = () => {
-    console.log('🔄 Restart button clicked');
+    if (__DEV__) console.log('🔄 Restart button clicked');
     setConfirmModal({
       visible: true,
       title: 'Restart Game',
@@ -103,10 +103,12 @@ function Settings() {
       confirmText: 'Restart',
       cancelText: 'Cancel',
       onConfirm: async () => {
-        console.log(
-          '✅ Restart confirmed, restarting with current difficulty:',
-          currentDifficulty
-        );
+        if (__DEV__) {
+          console.log(
+            '✅ Restart confirmed, restarting with current difficulty:',
+            currentDifficulty
+          );
+        }
         // Don't reset modal yet - keep it visible during restart
         setIsRestarting(true);
 
@@ -127,11 +129,13 @@ function Settings() {
           // Generate game data using the seed
           const gameData = generateSeededGameData(newSeed, 40);
           setGameData(gameData);
-          console.log(
-            '🎲 Generated game data with 40 periods:',
-            gameData.periodEvents.length,
-            'events'
-          );
+          if (__DEV__) {
+            console.log(
+              '🎲 Generated game data with 40 periods:',
+              gameData.periodEvents.length,
+              'events'
+            );
+          }
 
           // Reset wallet completely (don't initialize with difficulty yet - let title screen handle it)
           resetWallet();
@@ -171,14 +175,14 @@ function Settings() {
         }
       },
       onCancel: () => {
-        console.log('❌ Restart canceled');
+        if (__DEV__) console.log('❌ Restart canceled');
         resetConfirmModal();
       },
     });
   };
 
   const handleReturnToTitleScreen = () => {
-    console.log('🏠 Return to Title Screen button clicked');
+    if (__DEV__) console.log('🏠 Return to Title Screen button clicked');
     setConfirmModal({
       visible: true,
       title: 'Return to Title Screen',
@@ -187,14 +191,14 @@ function Settings() {
       confirmText: 'Return',
       cancelText: 'Cancel',
       onConfirm: () => {
-        console.log('✅ Return to title screen confirmed');
+        if (__DEV__) console.log('✅ Return to title screen confirmed');
         // Navigate to title screen first
         router.replace('/title-screen');
         // Reset modal after navigation
         setTimeout(() => resetConfirmModal(), 100);
       },
       onCancel: () => {
-        console.log('❌ Return to title screen canceled');
+        if (__DEV__) console.log('❌ Return to title screen canceled');
         resetConfirmModal();
       },
     });
@@ -234,7 +238,7 @@ function Settings() {
     try {
       // Update Redux cache with new player name
       dispatch(updateCachedUserObject({ playerName: trimmedName }));
-      console.log('✅ Player name updated in Redux:', trimmedName);
+      if (__DEV__) console.log('✅ Player name updated in Redux:', trimmedName);
 
       // Get updated user object from Redux and sync to service cache
       const updatedUser = cachedUser
@@ -242,16 +246,18 @@ function Settings() {
         : null;
       if (updatedUser) {
         scoreboardService.setCachedUserObject(updatedUser);
-        console.log('✅ Player name synced to service cache:', updatedUser);
+        if (__DEV__) console.log('✅ Player name synced to service cache:', updatedUser);
 
         // Also ensure scoreboard slice is in sync with userObject
         dispatch(setWonDifficulties(updatedUser.difficultyWon));
         dispatch(setTotalCompletions(updatedUser.totalWinCount));
-        console.log(
-          '✅ Scoreboard slice synced:',
-          updatedUser.difficultyWon,
-          updatedUser.totalWinCount
-        );
+        if (__DEV__) {
+          console.log(
+            '✅ Scoreboard slice synced:',
+            updatedUser.difficultyWon,
+            updatedUser.totalWinCount
+          );
+        }
       }
 
       // Also update wallet context for backward compatibility
@@ -289,7 +295,7 @@ function Settings() {
       confirmText: 'DELETE EVERYTHING',
       cancelText: 'Cancel',
       onConfirm: async () => {
-        console.log('🗑️ Clearing all data...');
+        if (__DEV__) console.log('🗑️ Clearing all data...');
         resetConfirmModal();
         setIsRestarting(true);
 
@@ -299,11 +305,11 @@ function Settings() {
           const currentPlayerName = walletContext?.playerName;
 
           // Delete user document from Firebase
-          console.log('🗑️ Deleting user document from Firebase...');
+          if (__DEV__) console.log('🗑️ Deleting user document from Firebase...');
           try {
             await scoreboardService.initializeAuth();
             await scoreboardService.deleteUserObject();
-            console.log('✅ User document deleted from Firebase');
+            if (__DEV__) console.log('✅ User document deleted from Firebase');
           } catch (error) {
             console.error(
               '❌ Failed to delete user document from Firebase:',
@@ -313,10 +319,12 @@ function Settings() {
 
           // Clear the Firebase name association if we have a player ID
           if (currentPlayerId && currentPlayerName) {
-            console.log(
-              '🗑️ Clearing Firebase name association for:',
-              currentPlayerId
-            );
+            if (__DEV__) {
+              console.log(
+                '🗑️ Clearing Firebase name association for:',
+                currentPlayerId
+              );
+            }
             try {
               await nameValidationService.clearPlayerName(
                 currentPlayerId,
@@ -332,7 +340,7 @@ function Settings() {
           dispatch(clearCachedUserObject());
           dispatch(setWonDifficulties([]));
           dispatch(setTotalCompletions(0));
-          console.log('✅ All Redux slices reset in memory');
+          if (__DEV__) console.log('✅ All Redux slices reset in memory');
 
           // STEP 2: Reset all game contexts
           dispatch(fullResetGame()); // Use fullResetGame to clear isInitialized
@@ -341,16 +349,16 @@ function Settings() {
           resetJokers();
           resetFlavorText();
           resetPlaythrough();
-          console.log('✅ All game contexts reset');
+          if (__DEV__) console.log('✅ All game contexts reset');
 
           // STEP 3: Clear service cache and Firebase session
           scoreboardService.clearUserObjectCache();
           resetFirebaseSession(); // Reset session flag so Firebase re-initializes
-          console.log('✅ Service cache and Firebase session cleared');
+          if (__DEV__) console.log('✅ Service cache and Firebase session cleared');
 
           // STEP 4: Clear ALL AsyncStorage data
           const allKeys = await AsyncStorage.getAllKeys();
-          console.log('🗑️ Found keys to clear:', allKeys);
+          if (__DEV__) console.log('🗑️ Found keys to clear:', allKeys);
           await AsyncStorage.multiRemove(allKeys);
 
           // Clear AsyncStorage again with specific keys to make sure
@@ -368,7 +376,7 @@ function Settings() {
           ];
 
           await AsyncStorage.multiRemove(specificKeys);
-          console.log('✅ AsyncStorage cleared');
+          if (__DEV__) console.log('✅ AsyncStorage cleared');
 
           // Generate new seed
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -377,18 +385,20 @@ function Settings() {
           // Generate game data using the seed
           const gameData = generateSeededGameData(newSeed, 40);
           setGameData(gameData);
-          console.log(
-            '🎲 Generated game data with 40 periods:',
-            gameData.periodEvents.length,
-            'events'
-          );
+          if (__DEV__) {
+            console.log(
+              '🎲 Generated game data with 40 periods:',
+              gameData.periodEvents.length,
+              'events'
+            );
+          }
 
-          console.log('✅ All data cleared successfully');
+          if (__DEV__) console.log('✅ All data cleared successfully');
 
           // Add a delay to ensure all operations complete
           await new Promise((resolve) => setTimeout(resolve, 500));
 
-          console.log('✅ Navigating to root as new player');
+          if (__DEV__) console.log('✅ Navigating to root as new player');
 
           // Navigate to root which should show the title screen
           router.replace('/');
@@ -399,7 +409,7 @@ function Settings() {
         }
       },
       onCancel: () => {
-        console.log('❌ Clear all data canceled');
+        if (__DEV__) console.log('❌ Clear all data canceled');
         resetConfirmModal();
       },
     });
@@ -689,11 +699,13 @@ function Settings() {
                 <TouchableOpacity
                   style={styles.debugButton}
                   onPress={() => {
-                    console.log(
-                      '🔧 DEBUG: Getting total completions from cache...'
-                    );
+                    if (__DEV__) {
+                      console.log(
+                        '🔧 DEBUG: Getting total completions from cache...'
+                      );
+                    }
                     const total = scoreboardService.getTotalWinCount();
-                    console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
+                    if (__DEV__) console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
                     Alert.alert(
                       'Total Win Count',
                       `You have won ${total} game(s)`,

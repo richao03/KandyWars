@@ -395,9 +395,9 @@ export default function StoryScreen() {
 
   // Initialize with a small delay to prevent flash
   useEffect(() => {
-    console.log('🎬 StoryScreen: Initializing...');
+    if (__DEV__) console.log('🎬 StoryScreen: Initializing...');
     const initTimer = setTimeout(() => {
-      console.log('🎬 StoryScreen: Setting isReady to true');
+      if (__DEV__) console.log('🎬 StoryScreen: Setting isReady to true');
       setIsReady(true);
     }, 100);
     return () => clearTimeout(initTimer);
@@ -405,7 +405,7 @@ export default function StoryScreen() {
 
   // Play minigame music for story screen
   useEffect(() => {
-    console.log('🎵 StoryScreen: Setting minigame music');
+    if (__DEV__) console.log('🎵 StoryScreen: Setting minigame music');
     MusicController.setTrack('minigame');
 
     // No cleanup needed - next view will set its own music

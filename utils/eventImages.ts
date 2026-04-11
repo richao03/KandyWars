@@ -152,13 +152,15 @@ export const EMOJI_TO_IMAGE_MAP = {
 } as const;
 
 // Debug logging to verify stable loading
-console.log('🖼️ Image Registry - Stable References Loaded');
-console.log('📊 Event Images:', Object.keys(EVENT_IMAGES));
-console.log('🖼️ Background Images:', Object.keys(BACKGROUND_IMAGES));
-console.log('🐕 Dog Images:', Object.keys(DOG_IMAGES));
-console.log('🎮 Game Images:', Object.keys(GAME_IMAGES));
+if (__DEV__) {
+  console.log('🖼️ Image Registry - Stable References Loaded');
+  console.log('📊 Event Images:', Object.keys(EVENT_IMAGES));
+  console.log('🖼️ Background Images:', Object.keys(BACKGROUND_IMAGES));
+  console.log('🐕 Dog Images:', Object.keys(DOG_IMAGES));
+  console.log('🎮 Game Images:', Object.keys(GAME_IMAGES));
 
-// Debug specific image values
-console.log('🔍 titleScreen image value:', BACKGROUND_IMAGES.titleScreen);
-console.log('🔍 school image value:', BACKGROUND_IMAGES.school);
-console.log('👀 Emoji Images:', Object.keys(EMOJI_IMAGES));
+  // Debug specific image values
+  console.log('🔍 titleScreen image value:', BACKGROUND_IMAGES.titleScreen);
+  console.log('🔍 school image value:', BACKGROUND_IMAGES.school);
+  console.log('👀 Emoji Images:', Object.keys(EMOJI_IMAGES));
+}

@@ -21,10 +21,10 @@ let db: any;
 // Initialize Firebase once
 const initializeDB = () => {
   if (!db) {
-    console.log('🏷️ NameValidationService: Initializing Firebase...');
+    if (__DEV__) console.log('🏷️ NameValidationService: Initializing Firebase...');
     const { db: firestore } = initializeFirebase();
     db = firestore;
-    console.log('🏷️ NameValidationService: Firebase initialized, db:', !!db);
+    if (__DEV__) console.log('🏷️ NameValidationService: Firebase initialized, db:', !!db);
   }
   return db;
 };
@@ -43,10 +43,10 @@ class NameValidationService {
     if (this.isInitialized) return;
 
     try {
-      console.log('🏷️ NameValidationService: Starting initialization...');
+      if (__DEV__) console.log('🏷️ NameValidationService: Starting initialization...');
       initializeDB();
       this.isInitialized = true;
-      console.log('✅ NameValidationService: Initialization complete');
+      if (__DEV__) console.log('✅ NameValidationService: Initialization complete');
     } catch (error) {
       console.error('❌ NameValidationService: Failed to initialize:', error);
       console.error(
@@ -118,7 +118,7 @@ class NameValidationService {
       // First check if name is available
       const isAvailable = await this.isNameAvailable(trimmedName, playerId);
       if (!isAvailable) {
-        console.log('🏷️ Name not available:', trimmedName);
+        if (__DEV__) console.log('🏷️ Name not available:', trimmedName);
         return false;
       }
 
@@ -133,7 +133,7 @@ class NameValidationService {
       };
 
       const docRef = await addDoc(collection(db, 'player_names'), nameRecord);
-      console.log(
+      if (__DEV__) console.log(
         '✅ Name reserved successfully:',
         trimmedName,
         'for player:',
@@ -173,7 +173,7 @@ class NameValidationService {
       await Promise.all(deletePromises);
 
       if (querySnapshot.docs.length > 0) {
-        console.log(
+        if (__DEV__) console.log(
           '✅ Released',
           querySnapshot.docs.length,
           'name(s) for player:',
@@ -209,7 +209,7 @@ class NameValidationService {
       // Check if new name is available
       const isAvailable = await this.isNameAvailable(trimmedNewName, playerId);
       if (!isAvailable) {
-        console.log('🏷️ New name not available:', trimmedNewName);
+        if (__DEV__) console.log('🏷️ New name not available:', trimmedNewName);
         return false;
       }
 
@@ -226,14 +226,14 @@ class NameValidationService {
    */
   async getPlayerName(playerId: string): Promise<string | null> {
     if (!this.isInitialized) {
-      console.log(
+      if (__DEV__) console.log(
         '🏷️ NameValidationService: Initializing before getPlayerName...'
       );
       await this.initialize();
     }
 
     try {
-      console.log(
+      if (__DEV__) console.log(
         '🏷️ NameValidationService: Querying Firebase for player ID:',
         playerId
       );
@@ -243,9 +243,9 @@ class NameValidationService {
         where('playerId', '==', playerId)
       );
 
-      console.log('🏷️ NameValidationService: Executing Firebase query...');
+      if (__DEV__) console.log('🏷️ NameValidationService: Executing Firebase query...');
       const querySnapshot = await getDocs(q);
-      console.log(
+      if (__DEV__) console.log(
         '🏷️ NameValidationService: Query completed. Empty:',
         querySnapshot.empty,
         'Size:',
@@ -256,16 +256,16 @@ class NameValidationService {
         // Return the first (should be only) name for this player
         const doc = querySnapshot.docs[0];
         const playerData = doc.data();
-        console.log('🏷️ NameValidationService: Found player data:', playerData);
+        if (__DEV__) console.log('🏷️ NameValidationService: Found player data:', playerData);
         const playerName = playerData.playerName;
-        console.log(
+        if (__DEV__) console.log(
           '🏷️ NameValidationService: Returning player name:',
           playerName
         );
         return playerName;
       }
 
-      console.log(
+      if (__DEV__) console.log(
         '🏷️ NameValidationService: No documents found for player ID:',
         playerId
       );
@@ -296,17 +296,21 @@ class NameValidationService {
     playerName: string
   ): Promise<boolean> {
     if (!this.isInitialized) {
-      console.log(
-        '🏷️ NameValidationService: Initializing before clearPlayerName...'
-      );
+      if (__DEV__) {
+        console.log(
+          '🏷️ NameValidationService: Initializing before clearPlayerName...'
+        );
+      }
       await this.initialize();
     }
 
     try {
-      console.log(
-        '🏷️ NameValidationService: Clearing ALL names for player:',
-        playerId
-      );
+      if (__DEV__) {
+        console.log(
+          '🏷️ NameValidationService: Clearing ALL names for player:',
+          playerId
+        );
+      }
 
       // Find ALL documents for this player ID (not just matching name)
       const q = query(
@@ -315,33 +319,41 @@ class NameValidationService {
       );
 
       const querySnapshot = await getDocs(q);
-      console.log(
-        '🏷️ NameValidationService: Found',
-        querySnapshot.size,
-        'documents to delete'
-      );
+      if (__DEV__) {
+        console.log(
+          '🏷️ NameValidationService: Found',
+          querySnapshot.size,
+          'documents to delete'
+        );
+      }
 
       if (!querySnapshot.empty) {
         // Delete ALL documents for this player
         for (const docSnapshot of querySnapshot.docs) {
-          console.log(
-            '🏷️ NameValidationService: Deleting document:',
-            docSnapshot.id,
-            'with data:',
-            docSnapshot.data()
-          );
+          if (__DEV__) {
+            console.log(
+              '🏷️ NameValidationService: Deleting document:',
+              docSnapshot.id,
+              'with data:',
+              docSnapshot.data()
+            );
+          }
           await deleteDoc(doc(db, 'player_names', docSnapshot.id));
         }
-        console.log(
-          '✅ NameValidationService: All player names cleared successfully'
-        );
+        if (__DEV__) {
+          console.log(
+            '✅ NameValidationService: All player names cleared successfully'
+          );
+        }
         return true;
       }
 
-      console.log(
-        '⚠️ NameValidationService: No names found to clear for player:',
-        playerId
-      );
+      if (__DEV__) {
+        console.log(
+          '⚠️ NameValidationService: No names found to clear for player:',
+          playerId
+        );
+      }
       return false;
     } catch (error) {
       console.error(

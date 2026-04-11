@@ -29,23 +29,29 @@ export default function DifficultySelectionModal({
   // Sync with Redux when modal opens
   useEffect(() => {
     if (visible) {
-      console.log(
-        '🏆 DifficultyModal: Loading won difficulties from Redux:',
-        wonDifficultiesFromRedux
-      );
+      if (__DEV__) {
+        console.log(
+          '🏆 DifficultyModal: Loading won difficulties from Redux:',
+          wonDifficultiesFromRedux
+        );
+      }
       setWonDifficulties(wonDifficultiesFromRedux);
 
       // Also check cache (already loaded at app start)
       const checkCachedWonDifficulties = () => {
         const won = scoreboardService.getWonDifficulties();
-        console.log(
-          '🏆 DifficultyModal: Got won difficulties from cache:',
-          won
-        );
-        if (JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)) {
+        if (__DEV__) {
           console.log(
-            '🏆 DifficultyModal: Cache data differs from Redux, updating...'
+            '🏆 DifficultyModal: Got won difficulties from cache:',
+            won
           );
+        }
+        if (JSON.stringify(won) !== JSON.stringify(wonDifficultiesFromRedux)) {
+          if (__DEV__) {
+            console.log(
+              '🏆 DifficultyModal: Cache data differs from Redux, updating...'
+            );
+          }
           setWonDifficulties(won);
         }
       };

@@ -50,7 +50,8 @@
       "Bash(cd /Users/Richao/KandyWarz/candyWarz/assets/images/emojis && mv cent.png not-used-cent.png && mv grinder.png not-used-grinder.png && mv bounceback.png not-used-bounceback.png && mv beast.png not-used-beast.png && mv hopscotch.png not-used-hopscotch.png && mv swingset.png not-used-swingset.png)",
       "Bash(cd /Users/Richao/KandyWarz/candyWarz/assets/images/emojis && mv cooking.png not-used-cooking.png 2>/dev/null; echo \"done\")",
       "Bash(find /Users/Richao/KandyWarz/candyWarz/app -type f \\\\\\(-name *gym* -o -name *route* -o -name *index* \\\\\\))",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(npx jest:*)"
     ],
     "deny": [],
     "ask": []

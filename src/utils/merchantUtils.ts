@@ -19,7 +19,7 @@ export class MerchantUtils {
     const bonus = hollowedTextbook.level * 10;
     const finalCapacity = baseCapacity + bonus;
 
-    console.log(
+    if (__DEV__) console.log(
       `📚 Merchant - Hollowed Textbook Lvl ${hollowedTextbook.level}: Base capacity ${baseCapacity} + ${bonus} = ${finalCapacity}`
     );
 
@@ -41,7 +41,7 @@ export class MerchantUtils {
     const bonusPercentage = streetCred.level * 10;
     const finalPrice = applyPercentageBonus(basePrice, bonusPercentage);
 
-    console.log(
+    if (__DEV__) console.log(
       `💰 Merchant - Street Cred Lvl ${streetCred.level}: Base price $${basePrice.toFixed(2)} + ${bonusPercentage}% = $${finalPrice.toFixed(2)}`
     );
 
@@ -66,7 +66,7 @@ export class MerchantUtils {
     const multiplier = Math.pow(2, fakeReportCard.level);
     const finalAllowance = applyMultiplier(baseAllowance, multiplier);
 
-    console.log(
+    if (__DEV__) console.log(
       `📝 Merchant - Fake Report Card Lvl ${fakeReportCard.level}: Base allowance $${baseAllowance.toFixed(2)} × ${multiplier}x = $${finalAllowance.toFixed(2)}`
     );
 
@@ -91,7 +91,7 @@ export class MerchantUtils {
     const multiplier = multipliers[metalDetector.level - 1] || 1;
     const finalAmount = applyMultiplier(baseAmount, multiplier);
 
-    console.log(
+    if (__DEV__) console.log(
       `🔍 Merchant - Metal Detector Lvl ${metalDetector.level}: Base amount $${baseAmount.toFixed(2)} × ${multiplier} = $${finalAmount.toFixed(2)}`
     );
 
@@ -116,7 +116,7 @@ export class MerchantUtils {
     const result = Math.random() < chance;
 
     if (result) {
-      console.log(
+      if (__DEV__) console.log(
         `🪙 Merchant - Lucky Coin Lvl ${doubleSidedCoin.level}: Converting negative event (${chance * 100}% chance)`
       );
     }

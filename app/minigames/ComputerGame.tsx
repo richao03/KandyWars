@@ -212,36 +212,40 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   }, [gameState]);
 
   const handleCardPress = (cardId: string) => {
-    console.log('🎮 CARD CLICKED:', cardId.slice(0, 10), {
-      isGameActive,
-      showingAllCards,
-      isCheckingRef: isCheckingRef.current,
-      flippedCardsRef: flippedCardsRef.current.length,
-      flippedCardsRefIds: flippedCardsRef.current.map(id => id.slice(0, 10)),
-    });
+    if (__DEV__) {
+      console.log('🎮 CARD CLICKED:', cardId.slice(0, 10), {
+        isGameActive,
+        showingAllCards,
+        isCheckingRef: isCheckingRef.current,
+        flippedCardsRef: flippedCardsRef.current.length,
+        flippedCardsRefIds: flippedCardsRef.current.map(id => id.slice(0, 10)),
+      });
+    }
 
     // Check isChecking ref synchronously FIRST to block all input during transitions
     if (!isGameActive || showingAllCards || isCheckingRef.current) {
-      console.log('❌ BLOCKED: Game state check failed');
+      if (__DEV__) console.log('❌ BLOCKED: Game state check failed');
       return;
     }
 
     const card = cards.find((c) => c.id === cardId);
 
-    console.log('🔍 Card state:', {
-      cardExists: !!card,
-      cardIsFlipped: card?.isFlipped,
-      cardIsMatched: card?.isMatched,
-      alreadyInRef: flippedCardsRef.current.includes(cardId),
-      refLength: flippedCardsRef.current.length,
-    });
+    if (__DEV__) {
+      console.log('🔍 Card state:', {
+        cardExists: !!card,
+        cardIsFlipped: card?.isFlipped,
+        cardIsMatched: card?.isMatched,
+        alreadyInRef: flippedCardsRef.current.includes(cardId),
+        refLength: flippedCardsRef.current.length,
+      });
+    }
 
     // Use ref for synchronous check to prevent race conditions from rapid clicks
     // Check if card is already being flipped (in the ref) to prevent double-flipping
     if (!card || card.isFlipped || card.isMatched ||
         flippedCardsRef.current.includes(cardId) ||
         flippedCardsRef.current.length >= 2) {
-      console.log('❌ BLOCKED: Card state check failed');
+      if (__DEV__) console.log('❌ BLOCKED: Card state check failed');
       return;
     }
 
@@ -249,7 +253,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     const newFlippedCards = [...flippedCardsRef.current, cardId];
     flippedCardsRef.current = newFlippedCards;
 
-    console.log('✅ FLIP ACCEPTED! Ref updated to:', newFlippedCards.length, 'cards:', newFlippedCards.map(id => id.slice(0, 10)));
+    if (__DEV__) console.log('✅ FLIP ACCEPTED! Ref updated to:', newFlippedCards.length, 'cards:', newFlippedCards.map(id => id.slice(0, 10)));
 
     // Update state immediately (before sounds/haptics)
     setFlippedCards(newFlippedCards);
@@ -262,7 +266,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (newFlippedCards.length === 2) {
-      console.log('🔒 LOCKING INPUT - 2 cards flipped');
+      if (__DEV__) console.log('🔒 LOCKING INPUT - 2 cards flipped');
       // Block all input immediately when 2 cards are flipped (update ref AND state)
       isCheckingRef.current = true;
       setIsChecking(true);
@@ -277,7 +281,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         SoundEffects.playCongratsSound();
 
         // Clear ref and state immediately
-        console.log('✅ MATCH FOUND! Clearing flipped cards ref');
+        if (__DEV__) console.log('✅ MATCH FOUND! Clearing flipped cards ref');
         flippedCardsRef.current = [];
         setFlippedCards([]);
 
@@ -292,14 +296,14 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
         // Re-enable input after delay (update both ref and state)
         setTimeout(() => {
-          console.log('🔓 UNLOCKING INPUT after match');
+          if (__DEV__) console.log('🔓 UNLOCKING INPUT after match');
           isCheckingRef.current = false;
           setIsChecking(false);
         }, 200);
         // Win condition check is now handled by useEffect
       } else {
         // No match - increment turns only for wrong guesses
-        console.log('❌ NO MATCH! Clearing flipped cards ref');
+        if (__DEV__) console.log('❌ NO MATCH! Clearing flipped cards ref');
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         SoundEffects.playWrongAnswerSound();
         // isChecking is already true from above
@@ -311,7 +315,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
         // Short delay to let player see the cards before flipping back
         setTimeout(() => {
-          console.log('🔓 UNLOCKING INPUT after wrong guess');
+          if (__DEV__) console.log('🔓 UNLOCKING INPUT after wrong guess');
           setCards((prev) =>
             prev.map((c) =>
               c.id === firstCardId || c.id === secondCardId
@@ -425,9 +429,11 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   };
 
   const handleJokerChoice = (jokerId: number) => {
-    console.log(
-      `Selected computer joker: ${STANDARDIZED_JOKERS.find((j) => j.id === jokerId)?.name}`
-    );
+    if (__DEV__) {
+      console.log(
+        `Selected computer joker: ${STANDARDIZED_JOKERS.find((j) => j.id === jokerId)?.name}`
+      );
+    }
     onComplete();
   };
 

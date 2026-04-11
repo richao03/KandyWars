@@ -30,6 +30,8 @@ const SIZE_COLORS: Record<string, string> = {
   big: '#F59E0B',
 };
 
+const SHADOW_OFFSET = { width: 0, height: 3 };
+
 interface CandyListItemProps {
   item: CandyForMarket;
   index: number;
@@ -81,7 +83,7 @@ const CandyListItem = React.memo(function CandyListItem({
       <PressableButton
         onPress={() => onPress(index)}
         shadowColor="#d4a574"
-        shadowOffset={{ width: 0, height: 3 }}
+        shadowOffset={SHADOW_OFFSET}
         shadowOpacity={0.4}
         shadowRadius={4}
         elevation={6}

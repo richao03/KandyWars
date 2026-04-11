@@ -13,11 +13,10 @@ const SEED = 'test-seed-42';
 const TOTAL_PERIODS = 40;
 
 // Pre-compute base price info for validation
-const candyBasePrices: Record<string, { baseMax: number; maxSpikePrice: number; floorPrice: number; size: string }> = {};
+const candyBasePrices: Record<string, { baseMin: number; baseMax: number; floorPrice: number; size: string }> = {};
 CANDY_REGISTRY.forEach((candy) => {
-  const maxSpikePrice = candy.baseMax * 14;
-  const floorPrice = Math.max(maxSpikePrice * 0.03, 0.01);
-  candyBasePrices[candy.name] = { baseMax: candy.baseMax, maxSpikePrice, floorPrice, size: candy.size };
+  const floorPrice = candy.baseMin * 0.5;
+  candyBasePrices[candy.name] = { baseMin: candy.baseMin, baseMax: candy.baseMax, floorPrice, size: candy.size };
 });
 
 describe('Price Generation', () => {
@@ -47,8 +46,8 @@ describe('Price Generation', () => {
 
       // Normalize by tier to compare across sizes
       const info = candyBasePrices[candy];
-      day1Ratios.push(day1Avg / info.maxSpikePrice);
-      day5Ratios.push(day5Avg / info.maxSpikePrice);
+      day1Ratios.push(day1Avg / info.baseMax);
+      day5Ratios.push(day5Avg / info.baseMax);
     });
 
     const avgDay1Ratio = day1Ratios.reduce((a, b) => a + b, 0) / day1Ratios.length;
@@ -76,7 +75,7 @@ describe('Price Generation', () => {
     });
   });
 
-  it('should have trend clusters — consecutive same-direction moves above random baseline', () => {
+  it('should have price variation — not all same-direction moves', () => {
     let totalPairs = 0;
     let sameDirectionPairs = 0;
 
@@ -93,16 +92,20 @@ describe('Price Generation', () => {
       }
     });
 
-    // With trend clusters, same-direction ratio should be > 50% (random baseline)
+    // Prices are random per period, so ratio should be > 0 but not 100%
     const ratio = sameDirectionPairs / totalPairs;
-    expect(ratio).toBeGreaterThan(0.5);
+    expect(ratio).toBeGreaterThan(0);
+    expect(ratio).toBeLessThan(1);
   });
 
-  it('should not exceed ceiling (baseMax * 14) for any candy', () => {
+  it('should not exceed a reasonable ceiling for any candy', () => {
     Object.entries(gameData.candyPrices).forEach(([candy, prices]) => {
       const info = candyBasePrices[candy];
+      // periodMax = max(baseMax * dayScale, periodMin * 5) where periodMin = baseMin * dayScale
+      // Worst case: baseMin * 1.0 * 5 = baseMin * 5 (can exceed baseMax for some candies)
+      const maxReasonable = Math.max(info.baseMax, info.baseMin * 5) * 1.1;
       prices.forEach((price) => {
-        expect(price).toBeLessThanOrEqual(info.maxSpikePrice);
+        expect(price).toBeLessThanOrEqual(maxReasonable);
       });
     });
   });

@@ -69,7 +69,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'junior_genius');
 
       expect(pass?.name).toBe('Junior Genius');
-      expect(pass?.rarity).toBe('rare');
+      expect(pass?.rarity).toBe('magical');
       expect(pass?.unlockRequirement).toBe('Win the game with $100,000+ profit');
       expect(pass?.effects[0].type).toBe('allowance_bonus');
       expect(pass?.effects[0].value).toBe(1000);
@@ -94,7 +94,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'senior_executive');
 
       expect(pass?.name).toBe('Senior Executive');
-      expect(pass?.rarity).toBe('epic');
+      expect(pass?.rarity).toBe('rare');
       expect(pass?.effects).toHaveLength(2);
 
       const saleEffect = pass?.effects.find((e) => e.type === 'sale_price_bonus');
@@ -125,7 +125,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'valedictorian_vendor');
 
       expect(pass?.name).toBe('Valedictorian Vendor');
-      expect(pass?.rarity).toBe('epic');
+      expect(pass?.rarity).toBe('magical');
       expect(pass?.unlockRequirement).toBe('Play every single minigame at least once');
       expect(pass?.effects[0].type).toBe('joker_bonus');
       expect(pass?.effects[0].value).toBe(1);
@@ -141,7 +141,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'forged_pass');
 
       expect(pass?.name).toBe('Forged Pass');
-      expect(pass?.rarity).toBe('epic');
+      expect(pass?.rarity).toBe('rare');
       expect(pass?.effects[0].type).toBe('special');
       expect(pass?.effects[0].value).toBe(1);
       expect(pass?.effects[0].description).toContain('reroll');
@@ -157,7 +157,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'minimalist_master');
 
       expect(pass?.name).toBe('Minimalist Master');
-      expect(pass?.rarity).toBe('epic');
+      expect(pass?.rarity).toBe('legendary');
       expect(pass?.unlockRequirement).toBe('Win without using any jokers');
       expect(pass?.effects[0].type).toBe('sale_price_bonus');
       expect(pass?.effects[0].value).toBe(30);
@@ -195,7 +195,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'finance_club');
 
       expect(pass?.name).toBe('Finance Club');
-      expect(pass?.rarity).toBe('epic');
+      expect(pass?.rarity).toBe('rare');
       expect(pass?.unlockRequirement).toBe('Win the game with $35,000+ in the piggy bank');
       expect(pass?.effects[0].type).toBe('special');
       expect(pass?.effects[0].value).toBe(10);
@@ -213,7 +213,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'candy_kingpin');
 
       expect(pass?.name).toBe('Candy Kingpin');
-      expect(pass?.rarity).toBe('legendary');
+      expect(pass?.rarity).toBe('epic');
       expect(pass?.unlockRequirement).toBe('Win the game 10 times');
       expect(pass?.effects).toHaveLength(2);
 
@@ -268,7 +268,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       expect(pass?.rarity).toBe('legendary');
       expect(pass?.unlockRequirement).toBe('Win the game on difficulty level 6');
       expect(pass?.effects[0].type).toBe('allowance_bonus');
-      expect(pass?.effects[0].value).toBe(100);
+      expect(pass?.effects[0].value).toBe(1000);
     });
   });
 
@@ -464,7 +464,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
         expect(pass.description).toBeDefined();
         expect(pass.unlockRequirement).toBeDefined();
         expect(pass.effects).toBeDefined();
-        expect(pass.rarity).toMatch(/^(common|rare|epic|legendary)$/);
+        expect(pass.rarity).toMatch(/^(common|magical|rare|epic|legendary)$/);
         expect(pass.effects.length).toBeGreaterThan(0);
       });
     });
@@ -502,7 +502,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const allPasses = selectAllHallPasses(store.getState());
 
       console.log(`Total hall passes: ${allPasses.length}`);
-      expect(allPasses.length).toBe(12); // Exactly 12 hall passes
+      expect(allPasses.length).toBe(17); // Exactly 17 hall passes
     });
 
     it('should have proper rarity distribution', () => {
@@ -511,10 +511,10 @@ describe('All Hall Passes - Comprehensive Tests', () => {
 
       const rarities = allPasses.reduce(
         (acc, pass) => {
-          acc[pass.rarity]++;
+          acc[pass.rarity] = (acc[pass.rarity] || 0) + 1;
           return acc;
         },
-        { common: 0, rare: 0, epic: 0, legendary: 0 }
+        { common: 0, magical: 0, rare: 0, epic: 0, legendary: 0 } as Record<string, number>
       );
 
       console.log('Rarity distribution:', rarities);

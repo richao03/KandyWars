@@ -16,10 +16,41 @@ import {
 import { recordConfiscation } from '../store/slices/dailyStatsSlice';
 import { selectActiveEffects, consumeEffect } from '../store/slices/merchantSlice';
 import { removeJoker } from '../store/slices/jokerSlice';
+import { selectPeriodCount } from '../store/slices/gameSlice';
+import { STANDARDIZED_JOKERS } from '../utils/jokerEffectEngine';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
 import { MerchantUtils } from '../utils/merchantUtils';
+
+/**
+ * Deterministic hash function for seeded random from an event ID string.
+ * Returns a number between 0 and 1.
+ */
+function seededRandom(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Normalize to 0-1 range
+  return Math.abs((Math.sin(hash) * 10000) % 1);
+}
+
+/**
+ * Deterministic shuffle using a seed string.
+ * Returns a new shuffled array without mutating the original.
+ */
+function seededShuffle<T>(array: T[], seed: string): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const r = seededRandom(seed + '_shuffle_' + i);
+    const j = Math.floor(r * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 export const useEventHandler = () => {
   const dispatch = useAppDispatch();
@@ -33,6 +64,7 @@ export const useEventHandler = () => {
   const { jokers } = useJokers();
   const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
   const merchantEffects = useAppSelector(selectActiveEffects);
+  const periodCount = useAppSelector(selectPeriodCount);
 
   const handleEvent = useCallback(
     (eventData: any) => {
@@ -164,6 +196,68 @@ export const useEventHandler = () => {
         }
       }
 
+      // === Detention Discovery: consolation joker drop after surviving negative events ===
+      const wasActuallyHurt =
+        (eventData.effect === 'LOSE_MONEY' &&
+          !processedEventData.protectedByMedievalShield &&
+          !processedEventData.protectedByBodyguard &&
+          !processedEventData.bullyHasMercy) ||
+        (eventData.effect === 'STASH_LOCKED' &&
+          !processedEventData.protectedByCandyVault &&
+          !processedEventData.protectedByHallMonitorBribe);
+
+      // Don't trigger on the very first period of the game (let player learn the system)
+      const isFirstEvent = periodCount <= 1;
+
+      console.log('🎲 DETENTION PRE-CHECK:', {
+        effect: eventData.effect,
+        wasActuallyHurt,
+        isFirstEvent,
+        periodCount,
+        protectedByShield: processedEventData.protectedByMedievalShield,
+        protectedByBodyguard: processedEventData.protectedByBodyguard,
+        bullyHasMercy: processedEventData.bullyHasMercy,
+        protectedByCandyVault: processedEventData.protectedByCandyVault,
+        protectedByBribe: processedEventData.protectedByHallMonitorBribe,
+      });
+
+      if (wasActuallyHurt && !isFirstEvent) {
+        // Determine severity: "particularly bad" = lost > $500 or full confiscation
+        const isSevere =
+          (processedEventData.amountStolen && processedEventData.amountStolen > 500) ||
+          (eventData.effect === 'STASH_LOCKED' && !processedEventData.reducedByTeachersPet);
+
+        const dropChance = isSevere ? 0.35 : 0.25;
+
+        // Deterministic roll based on event ID
+        const roll = seededRandom(eventId + '_detention');
+
+        if (__DEV__) {
+          console.log(`🎲 DETENTION: Roll ${roll.toFixed(3)} vs chance ${dropChance} (severe: ${isSevere})`);
+        }
+
+        if (roll < dropChance) {
+          // Find jokers the player doesn't already own
+          const ownedIds = new Set(jokers.map((j) => j.id.toString()));
+          const unownedJokers = STANDARDIZED_JOKERS.filter(
+            (sj) => !ownedIds.has(sj.id.toString())
+          );
+
+          if (unownedJokers.length > 0) {
+            // Pick up to 2 random unowned jokers using deterministic shuffle
+            const shuffled = seededShuffle(unownedJokers, eventId + '_joker_pick');
+            const choices = shuffled.slice(0, Math.min(2, unownedJokers.length));
+
+            processedEventData.hasJokerDrop = true;
+            processedEventData.detentionJokerChoices = choices;
+
+            if (__DEV__) {
+              console.log('🎁 DETENTION: Joker drop! Choices:', choices.map((c: any) => c.name));
+            }
+          }
+        }
+      }
+
       if (__DEV__) {
         console.log(
           '🔄 EVENT: About to store in Redux - backgroundImage ID:',
@@ -173,7 +267,7 @@ export const useEventHandler = () => {
       dispatch(setCurrentEvent(processedEventData));
       if (__DEV__) console.log('🔄 EVENT: Stored in Redux successfully');
     },
-    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds, merchantEffects]
+    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds, merchantEffects, periodCount]
   );
 
   const clearEvent = useCallback(() => {

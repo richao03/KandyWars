@@ -125,7 +125,7 @@ export const useFlavorText = () => {
         return;
       }
       const randomText = texts[Math.floor(Math.random() * texts.length)];
-      console.log(`🎭 [FlavorText] Setting event: ${event}, text: "${randomText}"`);
+      if (__DEV__) console.log(`🎭 [FlavorText] Setting event: ${event}, text: "${randomText}"`);
       dispatch(setFlavorEvent({ event, text: randomText }));
     },
     [dispatch]

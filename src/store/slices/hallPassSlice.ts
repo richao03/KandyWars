@@ -68,7 +68,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'valedictorian_vendor',
     name: 'Valedictorian Vendor',
-    description: 'Academic excellence across all subjects.',
+    description: 'Academic excellence across all minigames.',
     unlockRequirement: 'Play every single minigame at least once',
     effects: [
       {
@@ -318,15 +318,17 @@ const hallPassSlice = createSlice({
   initialState,
   reducers: {
     initializeHallPasses: (state) => {
-      console.log('🎓 REDUCER: initializeHallPasses called');
-      console.log(
-        '🎓 REDUCER: Current unlockedPassIds:',
-        state.unlockedPassIds
-      );
-      console.log(
-        '🎓 REDUCER: Current newlyUnlockedPassIds:',
-        state.newlyUnlockedPassIds
-      );
+      if (__DEV__) {
+        console.log('🎓 REDUCER: initializeHallPasses called');
+        console.log(
+          '🎓 REDUCER: Current unlockedPassIds:',
+          state.unlockedPassIds
+        );
+        console.log(
+          '🎓 REDUCER: Current newlyUnlockedPassIds:',
+          state.newlyUnlockedPassIds
+        );
+      }
 
       state.isLoaded = true;
 
@@ -355,7 +357,7 @@ const hallPassSlice = createSlice({
           ?.unlockedAt,
       }));
 
-      console.log(
+      if (__DEV__) console.log(
         '🎓 REDUCER: After initialization, availablePasses unlocked status:',
         state.availablePasses.map((p) => ({
           id: p.id,
@@ -369,15 +371,17 @@ const hallPassSlice = createSlice({
     ) => {
       const { passId, timestamp = new Date().toISOString() } = action.payload;
 
-      console.log(`🎓 REDUCER: unlockHallPass called for passId: ${passId}`);
-      console.log(
-        `🎓 REDUCER: Current unlockedPassIds before:`,
-        state.unlockedPassIds
-      );
+      if (__DEV__) {
+        console.log(`🎓 REDUCER: unlockHallPass called for passId: ${passId}`);
+        console.log(
+          `🎓 REDUCER: Current unlockedPassIds before:`,
+          state.unlockedPassIds
+        );
+      }
 
       if (!state.unlockedPassIds.includes(passId)) {
         state.unlockedPassIds.push(passId);
-        console.log(`🎓 REDUCER: Added ${passId} to unlockedPassIds`);
+        if (__DEV__) console.log(`🎓 REDUCER: Added ${passId} to unlockedPassIds`);
         // Track as newly unlocked in this playthrough
         // Initialize newlyUnlockedPassIds if it doesn't exist (backwards compatibility)
         if (!state.newlyUnlockedPassIds) {
@@ -385,10 +389,10 @@ const hallPassSlice = createSlice({
         }
         if (!state.newlyUnlockedPassIds.includes(passId)) {
           state.newlyUnlockedPassIds.push(passId);
-          console.log(`🎓 REDUCER: Added ${passId} to newlyUnlockedPassIds`);
+          if (__DEV__) console.log(`🎓 REDUCER: Added ${passId} to newlyUnlockedPassIds`);
         }
       } else {
-        console.log(`🎓 REDUCER: ${passId} already in unlockedPassIds`);
+        if (__DEV__) console.log(`🎓 REDUCER: ${passId} already in unlockedPassIds`);
       }
 
       const passIndex = state.availablePasses.findIndex(
@@ -397,16 +401,16 @@ const hallPassSlice = createSlice({
       if (passIndex !== -1) {
         state.availablePasses[passIndex].isUnlocked = true;
         state.availablePasses[passIndex].unlockedAt = timestamp;
-        console.log(
+        if (__DEV__) console.log(
           `🎓 REDUCER: Updated availablePasses[${passIndex}] isUnlocked to true`
         );
       } else {
-        console.log(
+        if (__DEV__) console.log(
           `🎓 REDUCER: WARNING - Could not find passId ${passId} in availablePasses`
         );
       }
 
-      console.log(
+      if (__DEV__) console.log(
         `🎓 REDUCER: Current unlockedPassIds after:`,
         state.unlockedPassIds
       );
@@ -414,7 +418,7 @@ const hallPassSlice = createSlice({
     // Batch sync multiple passes from Firebase at once (prevents multiple re-renders)
     syncHallPassesFromFirebase: (state, action: PayloadAction<string[]>) => {
       const passIds = action.payload;
-      console.log(
+      if (__DEV__) console.log(
         `🎓 REDUCER: syncHallPassesFromFirebase called with ${passIds.length} passes`
       );
 
@@ -439,26 +443,28 @@ const hallPassSlice = createSlice({
         }
       });
 
-      if (newlyAdded > 0) {
-        console.log(
-          `🎓 REDUCER: Synced ${newlyAdded} new passes, ${passIds.length - newlyAdded} already unlocked`
-        );
-      } else {
-        console.log(
-          `🎓 REDUCER: All ${passIds.length} passes were already unlocked`
-        );
+      if (__DEV__) {
+        if (newlyAdded > 0) {
+          console.log(
+            `🎓 REDUCER: Synced ${newlyAdded} new passes, ${passIds.length - newlyAdded} already unlocked`
+          );
+        } else {
+          console.log(
+            `🎓 REDUCER: All ${passIds.length} passes were already unlocked`
+          );
+        }
       }
     },
     selectHallPass: (state, action: PayloadAction<string>) => {
       const passId = action.payload;
-      console.log(`🎖️ REDUCER: selectHallPass called for passId: ${passId}`);
+      if (__DEV__) console.log(`🎖️ REDUCER: selectHallPass called for passId: ${passId}`);
 
       // Initialize selectedPassIds if it doesn't exist (backwards compatibility)
       if (!state.selectedPassIds) {
         state.selectedPassIds = [];
       }
 
-      console.log(
+      if (__DEV__) console.log(
         `🎖️ REDUCER: Current selectedPassIds:`,
         state.selectedPassIds
       );
@@ -480,7 +486,7 @@ const hallPassSlice = createSlice({
             state.selectedPassIds = state.selectedPassIds.filter(
               (id) => id !== otherId
             );
-            console.log(
+            if (__DEV__) console.log(
               `⚠️ REDUCER: Auto-deselected ${otherId} because it's mutually exclusive with ${passId}`
             );
           }
@@ -492,12 +498,12 @@ const hallPassSlice = createSlice({
         state.selectedPassIds = state.selectedPassIds.filter(
           (id) => id !== passId
         );
-        console.log(`🎖️ REDUCER: Removed ${passId} from selection`);
+        if (__DEV__) console.log(`🎖️ REDUCER: Removed ${passId} from selection`);
       } else {
         state.selectedPassIds.push(passId);
-        console.log(`🎖️ REDUCER: Added ${passId} to selection`);
+        if (__DEV__) console.log(`🎖️ REDUCER: Added ${passId} to selection`);
       }
-      console.log(`🎖️ REDUCER: New selectedPassIds:`, state.selectedPassIds);
+      if (__DEV__) console.log(`🎖️ REDUCER: New selectedPassIds:`, state.selectedPassIds);
     },
     resetHallPassSelection: (state) => {
       state.selectedPassIds = [];
@@ -509,17 +515,19 @@ const hallPassSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(resetGame, (state) => {
-      console.log(
-        '🎓 REDUCER: resetGame called - preserving unlocked hall passes AND selected passes'
-      );
-      console.log(
-        '🎓 REDUCER: Unlocked passes before reset:',
-        state.unlockedPassIds
-      );
-      console.log(
-        '🎓 REDUCER: Selected passes before reset:',
-        state.selectedPassIds
-      );
+      if (__DEV__) {
+        console.log(
+          '🎓 REDUCER: resetGame called - preserving unlocked hall passes AND selected passes'
+        );
+        console.log(
+          '🎓 REDUCER: Unlocked passes before reset:',
+          state.unlockedPassIds
+        );
+        console.log(
+          '🎓 REDUCER: Selected passes before reset:',
+          state.selectedPassIds
+        );
+      }
 
       // Preserve both unlocked AND selected hall passes across game resets
       // The player intentionally selected these passes before starting the game
@@ -527,14 +535,16 @@ const hallPassSlice = createSlice({
       state.newlyUnlockedPassIds = [];
       // DO NOT clear selectedPassIds - preserve player's selection for the new game
 
-      console.log(
-        '🎓 REDUCER: Unlocked passes after reset (preserved):',
-        state.unlockedPassIds
-      );
-      console.log(
-        '🎓 REDUCER: Selected passes after reset (preserved):',
-        state.selectedPassIds
-      );
+      if (__DEV__) {
+        console.log(
+          '🎓 REDUCER: Unlocked passes after reset (preserved):',
+          state.unlockedPassIds
+        );
+        console.log(
+          '🎓 REDUCER: Selected passes after reset (preserved):',
+          state.selectedPassIds
+        );
+      }
     });
   },
 });

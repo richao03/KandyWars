@@ -16,6 +16,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^react-native$': 'react-native-web',
+    '\\.(m4a|mp3|wav|ogg|png|jpg|jpeg|gif|svg)$': '<rootDir>/src/__tests__/utils/fileMock.js',
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

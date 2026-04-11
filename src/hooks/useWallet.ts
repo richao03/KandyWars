@@ -27,6 +27,7 @@ import { selectActiveEffects } from '../store/slices/merchantSlice';
 import { HallPassUtils } from '../utils/hallPassUtils';
 import { MerchantUtils } from '../utils/merchantUtils';
 import { processEffectsByTarget } from '../utils/jokerEffectEngine';
+import { useToast } from '../context/ToastContext';
 
 export const useWallet = () => {
   const dispatch = useAppDispatch();
@@ -44,6 +45,7 @@ export const useWallet = () => {
   const dailyStats = useAppSelector(state => state.dailyStats.dailyStats);
   const currentDayStats = useAppSelector(state => state.dailyStats.currentDayStats);
   const merchantEffects = useAppSelector(selectActiveEffects);
+  const { showToast } = useToast();
 
   const spend = useCallback((amount: number): boolean => {
     if (balance >= amount) {
@@ -160,6 +162,7 @@ export const useWallet = () => {
         if (stashedAmount > 0) {
           const bonus = Math.round(stashedAmount * effect.amount);
           finalAllowance += bonus;
+          showToast(`Deposit Bonus +$${bonus}`);
           if (__DEV__) console.log(`💰 Deposit Bonus: ${Math.round(effect.amount * 100)}% of $${stashedAmount} stash → +$${bonus} allowance`);
         }
       }
@@ -167,7 +170,7 @@ export const useWallet = () => {
 
     dispatch(addBalance(finalAllowance));
     return finalAllowance;
-  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects, stashedAmount]);
+  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects, stashedAmount, showToast]);
 
   const stashMoneyAction = useCallback((amount: number): boolean => {
     const epsilon = 0.001;

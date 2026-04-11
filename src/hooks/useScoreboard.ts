@@ -40,16 +40,16 @@ export const useScoreboard = () => {
 
   const trackGameCompleted = useCallback(async (): Promise<void> => {
     // This would integrate with your Firebase scoreboard service
-    console.log('Game completion tracked via Redux');
+    if (__DEV__) console.log('Game completion tracked via Redux');
   }, []);
 
   const trackMinigamePlayedAction = useCallback((minigameType: string): void => {
-    console.log(`📊 Local: Tracking minigame played - ${minigameType}`);
+    if (__DEV__) console.log(`📊 Local: Tracking minigame played - ${minigameType}`);
     dispatch(trackMinigamePlayed(minigameType));
   }, [dispatch]);
 
   const trackDayEnded = useCallback(async (periodsCount: number): Promise<void> => {
-    console.log(`Day ended with ${periodsCount} periods`);
+    if (__DEV__) console.log(`Day ended with ${periodsCount} periods`);
   }, []);
 
   const reset = useCallback(() => {

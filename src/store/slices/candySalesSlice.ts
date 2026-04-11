@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
 
 interface SaleRecord {
   candyId: string;
@@ -110,8 +110,14 @@ export const {
 export default candySalesSlice.reducer;
 
 // Selectors
-export const selectSalesByPeriod = (state: { candySales: CandySalesState }, period: number) =>
-  state.candySales.sales.filter(sale => sale.period === period);
+export const selectSalesByPeriod = (period: number) =>
+  createSelector(
+    [(state: { candySales: CandySalesState }) => state.candySales.sales],
+    (sales) => sales.filter(sale => sale.period === period)
+  );
 
-export const selectRevenueByPeriod = (state: { candySales: CandySalesState }, period: number) =>
-  selectSalesByPeriod(state, period).reduce((sum, sale) => sum + sale.total, 0);
+export const selectRevenueByPeriod = (period: number) =>
+  createSelector(
+    [selectSalesByPeriod(period)],
+    (periodSales) => periodSales.reduce((sum, sale) => sum + sale.total, 0)
+  );

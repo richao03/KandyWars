@@ -14,6 +14,26 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+// Mock expo-audio
+jest.mock('expo-audio', () => ({
+  createAudioPlayer: jest.fn(() => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    stop: jest.fn(),
+    setVolume: jest.fn(),
+  })),
+  PermissionStatus: { GRANTED: 'granted' },
+}));
+
+// Mock expo-haptics
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  selectionAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
 // Mock expo-router
 jest.mock('expo-router', () => ({
   router: {
@@ -30,6 +50,9 @@ jest.mock('expo-router', () => ({
 
 // Silence the warning: Animated: `useNativeDriver` is not supported
 // jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+
+// Define __DEV__ for React Native compatibility
+global.__DEV__ = true;
 
 // Global test timeout
 jest.setTimeout(10000);

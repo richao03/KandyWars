@@ -11,7 +11,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS, findJokerById, hasJokerById } from '../../src/constants/jokerIds';
 import { getJokerEffectsAtLevel } from '../../src/utils/jokerEffectEngine';
@@ -36,7 +36,6 @@ import {
   selectBigCandiesUnlocked,
   unlockMediumCandies,
   unlockBigCandies,
-  addBulkEmpireSales,
   selectBulkEmpireStacks,
 } from '../../src/store/slices/gameSlice';
 import { spendBalance, selectDifficultyLevel } from '../../src/store/slices/walletSlice';
@@ -57,6 +56,19 @@ import { MerchantUtils } from '../../src/utils/merchantUtils';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import { calculateSaleTotal } from '../../src/utils/saleCalculations';
+import { useHustle } from '../../src/hooks/useHustle';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import seedrandom from 'seedrandom';
+import {
+  generateQuest,
+  completeQuest,
+  clearActiveQuest,
+  failQuest,
+  selectActiveQuest,
+  selectIsQuestActive,
+} from '../../src/store/slices/questSlice';
+import { setCurrentEvent } from '../../src/store/slices/eventHandlerSlice';
+import { ScrollView } from 'react-native';
 import ConfirmationModal from '../components/ConfirmationModal';
 import FirstTimeHint from '../components/FirstTimeHint';
 import EventModal from '../components/EventModal';
@@ -70,6 +82,106 @@ import { Candy } from '../types';
 import { CANDY_REGISTRY } from '../../src/constants/candyRegistry';
 import { CandySize } from '../../src/types/candy';
 
+// Debug panel for testing joker acquisition channels (DEV only)
+function DebugJokerPanel({
+  dispatch,
+  seed,
+  day,
+  period,
+  periodsPerDay,
+  generateHustlesAction,
+  setShowHustleJokerSelection,
+  setShowQuestJokerSelection,
+  setQuestJokerChoices,
+  generateQuest: generateQuestAction,
+  unlockedCandies,
+  jokers,
+}: any) {
+  const [visible, setVisible] = React.useState(false);
+
+  if (!visible) {
+    return (
+      <TouchableOpacity
+        style={{ position: 'absolute', top: 50, right: 10, backgroundColor: '#ff0', borderRadius: 4, padding: 4, zIndex: 999 }}
+        onPress={() => setVisible(true)}
+      >
+        <Text style={{ fontSize: 10, fontWeight: 'bold' }}>DBG</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={{ position: 'absolute', top: 40, right: 5, width: 180, backgroundColor: '#1a1a2e', borderRadius: 8, padding: 8, zIndex: 999, borderWidth: 1, borderColor: '#fbbf24' }}>
+      <TouchableOpacity onPress={() => setVisible(false)} style={{ alignSelf: 'flex-end', marginBottom: 4 }}>
+        <Text style={{ color: '#fbbf24', fontSize: 12, fontWeight: 'bold' }}>X</Text>
+      </TouchableOpacity>
+      <Text style={{ color: '#fbbf24', fontSize: 11, fontWeight: 'bold', marginBottom: 6 }}>Joker Debug</Text>
+
+      {/* 1. Trigger Hustle Joker Selection */}
+      <TouchableOpacity
+        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        onPress={() => {
+          generateHustlesAction(seed, day, periodsPerDay);
+          setShowHustleJokerSelection(true);
+        }}
+      >
+        <Text style={{ color: '#fff', fontSize: 10 }}>Hustle Joker</Text>
+      </TouchableOpacity>
+
+      {/* 2. Trigger Quest Joker Selection */}
+      <TouchableOpacity
+        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        onPress={() => {
+          const ownedIds = new Set(jokers.map((j: any) => j.id?.toString()));
+          const unowned = STANDARDIZED_JOKERS.filter((sj) => !ownedIds.has(sj.id.toString()));
+          const choices = unowned.slice(0, 2);
+          if (choices.length > 0) {
+            setQuestJokerChoices(choices);
+            setShowQuestJokerSelection(true);
+          }
+        }}
+      >
+        <Text style={{ color: '#fff', fontSize: 10 }}>Quest Joker</Text>
+      </TouchableOpacity>
+
+      {/* 3. Trigger Detention Discovery (fake bully event) */}
+      <TouchableOpacity
+        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        onPress={() => {
+          setVisible(false); // Close debug panel so EventModal is visible
+          setTimeout(() => {
+            dispatch(setCurrentEvent({
+              id: `debug-bully-${Date.now()}`,
+              effect: 'LOSE_MONEY',
+              category: 'bad',
+              title: 'Bullied! (Debug)',
+              description: 'A bully stole your lunch money!',
+              backgroundImage: 'bully',
+              dollarAmount: 100,
+              hasJokerDrop: true,
+              detentionJokerChoices: STANDARDIZED_JOKERS.filter(
+                (sj) => !jokers.some((j: any) => j.id?.toString() === sj.id.toString())
+              ).slice(0, 2),
+            }));
+          }, 100);
+        }}
+      >
+        <Text style={{ color: '#fff', fontSize: 10 }}>Detention Drop</Text>
+      </TouchableOpacity>
+
+      {/* 4. Trigger Merchant (navigate) */}
+      <TouchableOpacity
+        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        onPress={() => router.push('/merchant-shop')}
+      >
+        <Text style={{ color: '#fff', fontSize: 10 }}>Merchant Shop</Text>
+      </TouchableOpacity>
+
+      <Text style={{ color: '#888', fontSize: 8, marginTop: 2 }}>Day {day} P{period} | {jokers.length} jokers</Text>
+    </View>
+  );
+}
+
 // Lazy load modals that are shown less frequently
 const DayStatsModal = lazy(() => import('../components/DayStatsModal'));
 const SchoolsOutModal = lazy(() => import('../components/SchoolsOutModal'));
@@ -77,6 +189,7 @@ const SleepConfirmModal = lazy(() => import('../components/SleepConfirmModal'));
 const StashMoneyModal = lazy(() => import('../components/StashMoneyModal'));
 const InventoryModal = lazy(() => import('../components/InventoryModal'));
 const LocationModal = lazy(() => import('../components/LocationModal'));
+const JokerSelection = lazy(() => import('../components/JokerSelection'));
 
 type CandyForMarket = Candy & {
   cost: number;
@@ -97,7 +210,7 @@ function Market(props) {
   const isFocused = useIsFocused();
 
   // Get periods per day based on hall pass selection (6 for Time Crunch, 8 otherwise)
-  const periodsPerDay = useAppSelector((state) => getPeriodsPerDay(state));
+  const periodsPerDay = useAppSelector(getPeriodsPerDay);
 
   // Candy size unlock state
   const mediumUnlocked = useAppSelector(selectMediumCandiesUnlocked);
@@ -255,6 +368,23 @@ function Market(props) {
   // Get merchant effects
   const merchantEffects = useAppSelector(selectActiveEffects);
 
+  // Hustle system
+  const {
+    activeHustles,
+    generateHustles: generateHustlesAction,
+    completeHustle: completeHustleAction,
+    getHustleForLocation,
+    getHustleRumors,
+  } = useHustle();
+  const [showHustleJokerSelection, setShowHustleJokerSelection] = useState(false);
+  const [hustleNotEnoughCandy, setHustleNotEnoughCandy] = useState<string | null>(null);
+
+  // Student Delivery Quest system
+  const activeQuest = useAppSelector(selectActiveQuest);
+  const isQuestActive = useAppSelector(selectIsQuestActive);
+  const [showQuestJokerSelection, setShowQuestJokerSelection] = useState(false);
+  const [questJokerChoices, setQuestJokerChoices] = useState<any[]>([]);
+
   // Initialize computed joker effects system
   useComputedJokerEffects();
 
@@ -302,6 +432,55 @@ function Market(props) {
     }
   }, [currentLocation, periodCount]);
 
+  // Generate hustles when day changes
+  const lastHustleDayRef = useRef<number>(-1);
+  useEffect(() => {
+    if (seed && day > 0 && day !== lastHustleDayRef.current) {
+      lastHustleDayRef.current = day;
+      generateHustlesAction(seed, day, periodsPerDay);
+      if (__DEV__) console.log(`🤝 HUSTLE: Generated hustles for day ${day}`);
+    }
+  }, [seed, day, periodsPerDay, generateHustlesAction]);
+
+  // Show hustle "not enough candy" message in scroller
+  useEffect(() => {
+    if (hustleNotEnoughCandy) {
+      setHint(hustleNotEnoughCandy);
+    }
+  }, [hustleNotEnoughCandy, setHint]);
+
+  // Generate quests on Day 2 and Day 4 (period 1)
+  const lastQuestDayRef = useRef<number>(-1);
+  useEffect(() => {
+    if (seed && day > 0 && period === 1 && day !== lastQuestDayRef.current) {
+      lastQuestDayRef.current = day;
+      const unlockedCandies = CANDY_REGISTRY
+        .filter((c) => {
+          if (c.size === 'medium' && !mediumUnlocked) return false;
+          if (c.size === 'big' && !bigUnlocked) return false;
+          return true;
+        })
+        .map((c) => c.name);
+      dispatch(generateQuest({ seed, day, unlockedCandies }));
+      if (__DEV__) console.log(`📦 QUEST: Attempted quest generation for day ${day}`);
+    }
+  }, [seed, day, period, dispatch, mediumUnlocked, bigUnlocked]);
+
+  // Check quest failure when period passes the target
+  useEffect(() => {
+    if (activeQuest && !activeQuest.completed && day === activeQuest.day) {
+      if (period > activeQuest.targetPeriod) {
+        dispatch(failQuest());
+        setHint('The student found another supplier...');
+        if (__DEV__) console.log('📦 QUEST: Failed - target period passed');
+      }
+    }
+    if (activeQuest && !activeQuest.completed && day > activeQuest.day) {
+      dispatch(failQuest());
+      if (__DEV__) console.log('📦 QUEST: Failed - day changed');
+    }
+  }, [activeQuest, day, period, dispatch, setHint]);
+
   // Track the last event period to prevent duplicate triggers
   const lastEventPeriodRef = useRef<number>(-1);
   const lastHintPeriodRef = useRef<number>(-1);
@@ -335,9 +514,28 @@ function Market(props) {
         (e) => e.period === periodCount + 2
       );
 
+      // Collect hustle rumors for display
+      const hustleRumors = getHustleRumors();
+
+      // Build quest hint if active
+      const questHint = activeQuest && !activeQuest.completed && day === activeQuest.day
+        ? `A student needs you to hold ${activeQuest.quantity} ${activeQuest.candyName} until period ${activeQuest.targetPeriod}. Sell them then for a reward!`
+        : null;
+
+      // Combine all rumors/hints
+      const allRumors = [...hustleRumors];
+      if (questHint) allRumors.push(questHint);
+
       // Use the already-calculated period instead of recalculating
       if (period === 0) {
         setEvent('NEW_DAY');
+        // Show rumors at start of day if any
+        if (allRumors.length > 0) {
+          // Delay slightly so NEW_DAY text shows first, then hint overrides
+          setTimeout(() => {
+            setHint(allRumors.join('  ---  '));
+          }, 3000);
+        }
       } else if (currentEvent) {
         // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
         // Minor events: PRICE_SPIKE, PRICE_DROP - show flavor text only
@@ -384,6 +582,9 @@ function Market(props) {
               .filter((h) => h)
               .join('\n\n');
             setHint(allHints);
+          } else if (allRumors.length > 0) {
+            // Show rumors when no event hints pass the roll
+            setHint(allRumors.join('  ---  '));
           } else {
 
             // Show period-specific flavor text instead of hint
@@ -401,6 +602,9 @@ function Market(props) {
             }
           }
         }
+      } else if (allRumors.length > 0) {
+        // Show rumors when no events at all
+        setHint(allRumors.join('  ---  '));
       } else {
         // Period-specific flavor text based on time of day
         if (period <= 2) {
@@ -431,6 +635,9 @@ function Market(props) {
     activeEffects,
     period,
     periodsPerDay,
+    getHustleRumors,
+    activeQuest,
+    day,
   ]);
 
   const [candies, setCandies] = useState<CandyForMarket[]>([]);
@@ -651,20 +858,24 @@ function Market(props) {
   const locationHistoryRef = useRef(locationHistory);
   const bulkEmpireStacks = useAppSelector(selectBulkEmpireStacks);
   const bulkEmpireStacksRef = useRef(bulkEmpireStacks);
+  const activeQuestRef = useRef(activeQuest);
 
-  useEffect(() => { candiesRef.current = candies; }, [candies]);
-  useEffect(() => { balanceRef.current = balance; }, [balance]);
-  useEffect(() => { inventoryRef.current = inventory; }, [inventory]);
-  useEffect(() => { jokersRef.current = jokers; }, [jokers]);
-  useEffect(() => { activeEffectsRef.current = activeEffects; }, [activeEffects]);
-  useEffect(() => { merchantEffectsRef.current = merchantEffects; }, [merchantEffects]);
-  useEffect(() => { hallPassModifiersRef.current = hallPassModifiers; }, [hallPassModifiers]);
-  useEffect(() => { hasEarlySaleTodayRef.current = hasEarlySaleToday; }, [hasEarlySaleToday]);
-  useEffect(() => { periodsPerDayRef.current = periodsPerDay; }, [periodsPerDay]);
-  useEffect(() => { periodCountRef.current = periodCount; }, [periodCount]);
-  useEffect(() => { totalCandiesSoldRef.current = totalCandiesSold; }, [totalCandiesSold]);
-  useEffect(() => { locationHistoryRef.current = locationHistory; }, [locationHistory]);
-  useEffect(() => { bulkEmpireStacksRef.current = bulkEmpireStacks; }, [bulkEmpireStacks]);
+  useEffect(() => {
+    candiesRef.current = candies;
+    balanceRef.current = balance;
+    inventoryRef.current = inventory;
+    jokersRef.current = jokers;
+    activeEffectsRef.current = activeEffects;
+    merchantEffectsRef.current = merchantEffects;
+    hallPassModifiersRef.current = hallPassModifiers;
+    hasEarlySaleTodayRef.current = hasEarlySaleToday;
+    periodsPerDayRef.current = periodsPerDay;
+    periodCountRef.current = periodCount;
+    totalCandiesSoldRef.current = totalCandiesSold;
+    locationHistoryRef.current = locationHistory;
+    bulkEmpireStacksRef.current = bulkEmpireStacks;
+    activeQuestRef.current = activeQuest;
+  }, [candies, balance, inventory, jokers, activeEffects, merchantEffects, hallPassModifiers, hasEarlySaleToday, periodsPerDay, periodCount, totalCandiesSold, locationHistory, bulkEmpireStacks, activeQuest]);
 
   const handleTransaction = useCallback(
     (candyIndex: number, quantity: number, mode: 'buy' | 'sell') => {
@@ -833,16 +1044,7 @@ function Market(props) {
         addCandySold(quantity); // Track daily candy sales
         recordDailyStatsSale(candy.name, quantity, totalGain, currentPeriodCount);
 
-        // Track Bulk Empire daily sales if player has the joker
-        if (hasJokerById(currentJokers, JOKER_IDS.BULK_EMPIRE)) {
-          const beLevel = currentJokers.find((j: any) => {
-            const id = typeof j.id === 'string' ? parseInt(j.id) : j.id;
-            return id === JOKER_IDS.BULK_EMPIRE;
-          })?.level ?? 1;
-          const beEffects = getJokerEffectsAtLevel(JOKER_IDS.BULK_EMPIRE, beLevel);
-          const threshold = beEffects[0]?.amount ?? 50;
-          dispatch(addBulkEmpireSales({ quantity, threshold, day: currentDay }));
-        }
+        // Triple Threat (ID 18) — no daily sales tracking needed (handled in saleCalculations)
 
         // Track sale for period-based hall pass unlocks (Time Crunch, Final Exam)
         // IMPORTANT: Pass finalProfit (profit after all bonuses/penalties) not revenue for accurate tracking
@@ -867,6 +1069,39 @@ function Market(props) {
               : { ...c, quantityOwned: c.quantityOwned - quantity }
           )
         );
+
+        // Check Student Delivery Quest completion
+        const questRef = activeQuestRef.current;
+        if (
+          questRef &&
+          !questRef.completed &&
+          candy.name === questRef.candyName &&
+          currentDay === questRef.day &&
+          currentPeriodInDay === questRef.targetPeriod &&
+          quantity >= questRef.quantity
+        ) {
+          dispatch(completeQuest());
+          // Generate 2 random joker choices for the reward (seeded)
+          const questRng = seedrandom(`${questRef.id}-reward`);
+          const ownedIds = new Set(jokersRef.current.map((j: any) => j.id.toString()));
+          const unowned = STANDARDIZED_JOKERS.filter((sj) => !ownedIds.has(sj.id.toString()));
+          if (unowned.length > 0) {
+            // Shuffle unowned jokers deterministically
+            const shuffled = [...unowned];
+            for (let si = shuffled.length - 1; si > 0; si--) {
+              const sj = Math.floor(questRng() * (si + 1));
+              [shuffled[si], shuffled[sj]] = [shuffled[sj], shuffled[si]];
+            }
+            setQuestJokerChoices(shuffled.slice(0, Math.min(2, shuffled.length)));
+            setShowQuestJokerSelection(true);
+            SoundEffects.playPositiveSound();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (__DEV__) console.log('📦 QUEST: Completed! Showing joker reward');
+          } else {
+            dispatch(clearActiveQuest());
+            if (__DEV__) console.log('📦 QUEST: Completed but no unowned jokers available');
+          }
+        }
       }
 
       closeModal();
@@ -949,6 +1184,36 @@ function Market(props) {
           dispatch(resetDailyStats());
         }
 
+        // Check for Hallway Hustle at the new location+period
+        const newPeriodInDay = (newPeriodCount % periodsPerDay) + 1;
+        const matchingHustle = getHustleForLocation(location, newPeriodInDay);
+        if (matchingHustle) {
+          // Check if player has enough candy
+          const candyInInventory = inventory.find(
+            (item) => item.name === matchingHustle.candyName || item.id === matchingHustle.candyName
+          );
+          const ownedQty = candyInInventory?.quantity ?? 0;
+
+          if (ownedQty >= matchingHustle.quantity) {
+            // Take the candy and show joker selection
+            removeFromInventory(matchingHustle.candyName, matchingHustle.quantity);
+            completeHustleAction(matchingHustle.id);
+            if (__DEV__) console.log(`🤝 HUSTLE: Completed! Took ${matchingHustle.quantity} ${matchingHustle.candyName}`);
+            // Show joker selection after a brief delay for loading state to clear
+            setTimeout(() => {
+              setShowHustleJokerSelection(true);
+            }, 500);
+          } else {
+            // Not enough candy — show notification
+            setHustleNotEnoughCandy(
+              `A kid here wants ${matchingHustle.quantity} ${matchingHustle.candyName}, but you only have ${ownedQty}...`
+            );
+            if (__DEV__) console.log(`🤝 HUSTLE: Not enough candy. Need ${matchingHustle.quantity} ${matchingHustle.candyName}, have ${ownedQty}`);
+            // Clear the message after 4 seconds
+            setTimeout(() => setHustleNotEnoughCandy(null), 4000);
+          }
+        }
+
         // Reset loading state after a short delay
         setTimeout(() => {
           setLocalPricesUpdating(false);
@@ -967,6 +1232,10 @@ function Market(props) {
       day,
       periodsPerDay,
       tutorialStep,
+      getHustleForLocation,
+      inventory,
+      removeFromInventory,
+      completeHustleAction,
     ]
   );
 
@@ -1202,7 +1471,7 @@ function Market(props) {
       {showLunchMinigames && (
         <FirstTimeHint
           hintKey="lunch_minigame"
-          message="It's lunch! Pick a subject to study. Win the minigame to earn a Joker that boosts your profits."
+          message="It's lunch! Play a minigame to earn a Joker that boosts your profits."
         />
       )}
       <MarketContent {...marketProps} />
@@ -1358,8 +1627,86 @@ function Market(props) {
         </Suspense>
       )}
 
+      {/* Hallway Hustle Joker Selection */}
+      {showHustleJokerSelection && (
+        <TouchableOpacity
+          style={styles.hustleJokerOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            // Safety dismiss if overlay is stuck
+            if (__DEV__) console.log('🤝 HUSTLE: Overlay tapped — dismissing');
+            setShowHustleJokerSelection(false);
+          }}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ flex: 1 }}>
+            <Suspense fallback={<View />}>
+              <JokerSelection
+                jokers={STANDARDIZED_JOKERS}
+                theme="candy"
+                onComplete={() => {
+                  setShowHustleJokerSelection(false);
+                }}
+                rewardTier={1}
+                completionLevel={2}
+                headerText="Hallway Hustle Reward!"
+              />
+            </Suspense>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* Student Delivery Quest Joker Selection */}
+      {showQuestJokerSelection && questJokerChoices.length > 0 && (
+        <TouchableOpacity
+          style={styles.hustleJokerOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            // Safety dismiss if overlay is stuck
+            if (__DEV__) console.log('📦 QUEST: Overlay tapped — dismissing');
+            setShowQuestJokerSelection(false);
+            setQuestJokerChoices([]);
+            dispatch(clearActiveQuest());
+          }}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ flex: 1 }}>
+            <Suspense fallback={<View />}>
+              <JokerSelection
+                jokers={STANDARDIZED_JOKERS}
+                theme="candy"
+                onComplete={() => {
+                  setShowQuestJokerSelection(false);
+                  setQuestJokerChoices([]);
+                  dispatch(clearActiveQuest());
+                }}
+                rewardTier={1}
+                completionLevel={2}
+                headerText="Delivery Quest Complete!"
+              />
+            </Suspense>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
       {/* EventModal for special events */}
       <EventModal />
+
+      {/* Debug Panel — DEV only */}
+      {__DEV__ && (
+        <DebugJokerPanel
+          dispatch={dispatch}
+          seed={seed}
+          day={day}
+          period={period}
+          periodsPerDay={periodsPerDay}
+          generateHustlesAction={generateHustlesAction}
+          setShowHustleJokerSelection={setShowHustleJokerSelection}
+          setShowQuestJokerSelection={setShowQuestJokerSelection}
+          setQuestJokerChoices={setQuestJokerChoices}
+          generateQuest={generateQuest}
+          unlockedCandies={candies.map((c: any) => c.name)}
+          jokers={jokers}
+        />
+      )}
 
     </View>
   );
@@ -1369,6 +1716,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fefaf5', // Warm off-white paper (fallback)
+  },
+  hustleJokerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
   },
   backgroundImage: {
     flex: 1,

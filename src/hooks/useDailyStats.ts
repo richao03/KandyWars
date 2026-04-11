@@ -68,7 +68,7 @@ export const useDailyStats = () => {
       allowance: acc.allowance + (day.allowance || 0),
     }), { profit: 0, spent: 0, candiesSold: 0, netGain: 0, allowance: 0 });
 
-    console.log('📊 useDailyStats getTotalStats - all days:', allDays, 'result:', result);
+    if (__DEV__) console.log('📊 useDailyStats getTotalStats - all days:', allDays, 'result:', result);
     return result;
   }, [dailyStatsState.dailyStats, dailyStatsState.currentDayStats]);
 
@@ -92,7 +92,7 @@ export const useDailyStats = () => {
 
   const setStartingMoney = useCallback((amount: number) => {
     // This could be stored in a separate field if needed
-    console.log('setStartingMoney called with:', amount);
+    if (__DEV__) console.log('setStartingMoney called with:', amount);
   }, []);
 
   const getStatsByDay = useCallback((day: number) => {

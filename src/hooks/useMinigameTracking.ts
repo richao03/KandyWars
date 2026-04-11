@@ -25,24 +25,24 @@ export const useMinigameTracking = () => {
   useEffect(() => {
     if (!minigameState.isLoaded) {
       if (cachedUserObject?.playedMinigames) {
-        console.log('🎮 Initializing minigame tracking from Firebase cache');
+        if (__DEV__) console.log('🎮 Initializing minigame tracking from Firebase cache');
         dispatch(initializeFromUserObject(cachedUserObject.playedMinigames));
       } else {
-        console.log('🎮 Initializing minigame tracking without Firebase data');
+        if (__DEV__) console.log('🎮 Initializing minigame tracking without Firebase data');
         dispatch(initializeMinigameTracking());
       }
     }
   }, [dispatch, minigameState.isLoaded, cachedUserObject]);
 
   const trackMinigamePlayed = useCallback((minigame: MinigameType) => {
-    console.log(`🎮 Minigame played: ${minigame}`);
+    if (__DEV__) console.log(`🎮 Minigame played: ${minigame}`);
     dispatch(markMinigamePlayed(minigame));
 
     // Update cached user object if the minigame is new
     if (!playedMinigames.includes(minigame) && cachedUserObject) {
       const updatedPlayedMinigames = [...playedMinigames, minigame];
       dispatch(updateCachedUserObject({ playedMinigames: updatedPlayedMinigames }));
-      console.log('📦 Updated cached user object with new minigame:', minigame);
+      if (__DEV__) console.log('📦 Updated cached user object with new minigame:', minigame);
     }
 
     // Log progress
@@ -51,10 +51,10 @@ export const useMinigameTracking = () => {
       played: playedMinigames.includes(minigame) ? minigameProgress.played : minigameProgress.played + 1
     };
 
-    console.log(`📊 Minigame progress: ${newProgress.played}/${newProgress.total} played`);
+    if (__DEV__) console.log(`📊 Minigame progress: ${newProgress.played}/${newProgress.total} played`);
 
     if (newProgress.played === newProgress.total) {
-      console.log('🎉 All minigames completed! Valedictorian Vendor Hall Pass should be unlocked.');
+      if (__DEV__) console.log('🎉 All minigames completed! Valedictorian Vendor Hall Pass should be unlocked.');
     }
   }, [dispatch, minigameProgress, playedMinigames, cachedUserObject]);
 

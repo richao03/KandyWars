@@ -143,9 +143,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     const levelToUse = currentLevel !== undefined ? currentLevel : level;
     const config = getLevelConfig(levelToUse);
     const speed = SCROLL_SPEED * config.speed;
-    console.log(
-      `🎮 MathGame: Starting scroll animation for level ${levelToUse} with speed ${speed}`
-    );
+    if (__DEV__) {
+      console.log(
+        `🎮 MathGame: Starting scroll animation for level ${levelToUse} with speed ${speed}`
+      );
+    }
 
     animationSpeed.value = speed;
     isAnimating.value = true;
@@ -188,7 +190,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
       // Container width is the visible area
       if (absoluteRightEdge >= containerWidth.current) {
-        console.log('🚨 GAME OVER TRIGGERED!');
+        if (__DEV__) console.log('🚨 GAME OVER TRIGGERED!');
         isAnimating.value = false;
         handleGameOver();
       }
@@ -217,9 +219,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     // Warning haptic for game over
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
-    console.log(
-      `💥 MathGame handleGameOver: completedLevel = ${completedLevel}, completedLevelRef = ${completedLevelRef.current}, level = ${level}`
-    );
+    if (__DEV__) {
+      console.log(
+        `💥 MathGame handleGameOver: completedLevel = ${completedLevel}, completedLevelRef = ${completedLevelRef.current}, level = ${level}`
+      );
+    }
 
     // Use ref for immediate access, then fall back to state and level calculation
     let levelsCompleted = Math.max(
@@ -228,9 +232,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
       level - 1
     );
 
-    console.log(
-      `💥 MathGame calculated levelsCompleted = ${levelsCompleted} (matches: ${matchedIndices.length})`
-    );
+    if (__DEV__) {
+      console.log(
+        `💥 MathGame calculated levelsCompleted = ${levelsCompleted} (matches: ${matchedIndices.length})`
+      );
+    }
 
     if (levelsCompleted > 0) {
       // Player completed at least one level, award jokers based on completion
@@ -303,7 +309,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
         // Show completion modal for the set
         // Mark this level as completed
-        console.log(`🎯 MathGame: Setting completedLevel to ${level}`);
+        if (__DEV__) console.log(`🎯 MathGame: Setting completedLevel to ${level}`);
         setCompletedLevel(level);
         setJokerRewardTier(level);
 
@@ -399,9 +405,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     stopScrollAnimation();
     if (timerRef.current) clearInterval(timerRef.current);
 
-    console.log(
-      `⏰ MathGame handleTimeUp: completedLevel = ${completedLevel}, level = ${level}`
-    );
+    if (__DEV__) {
+      console.log(
+        `⏰ MathGame handleTimeUp: completedLevel = ${completedLevel}, level = ${level}`
+      );
+    }
 
     // Use the maximum of completedLevel state or level-1 to handle timing issues
     const levelsCompleted = Math.max(completedLevel, level - 1);
@@ -653,9 +661,11 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
           onLayout={(e) => {
             const width = e.nativeEvent.layout.width;
             containerWidth.current = width;
-            console.log(
-              `📏 Container measured - width: ${width}px, screenWidth: ${screenWidth}px`
-            );
+            if (__DEV__) {
+              console.log(
+                `📏 Container measured - width: ${width}px, screenWidth: ${screenWidth}px`
+              );
+            }
           }}
         >
           <Animated.View style={[styles.scrollingRow, scrollAnimatedStyle]}>

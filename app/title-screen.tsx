@@ -27,13 +27,15 @@ export default function TitleScreenPage() {
     difficulty: 'easy' | 'medium' | 'hard' | number
   ) => {
     try {
-      console.log(
-        '📱 TitleScreen: handleNewGame called with difficulty:',
-        difficulty
-      );
-      console.log(
-        '📱 TitleScreen: Resetting navigation stack and navigating to market...'
-      );
+      if (__DEV__) {
+        console.log(
+          '📱 TitleScreen: handleNewGame called with difficulty:',
+          difficulty
+        );
+        console.log(
+          '📱 TitleScreen: Resetting navigation stack and navigating to market...'
+        );
+      }
 
       // Music will continue playing until market view is reached
 
@@ -45,14 +47,14 @@ export default function TitleScreenPage() {
           routes: [{ name: '(tabs)', params: { screen: 'market' } }],
         })
       );
-      console.log('📱 TitleScreen: Navigation stack reset complete');
+      if (__DEV__) console.log('📱 TitleScreen: Navigation stack reset complete');
     } catch (error) {
       console.error('❌ TitleScreen: Error in handleNewGame:', error);
     }
   };
 
   const handleContinue = () => {
-    console.log(
+    if (__DEV__) console.log(
       '🎮 Continue pressed - periodCount:',
       periodCount,
       'isInitialized:',
@@ -63,7 +65,7 @@ export default function TitleScreenPage() {
 
     // If this is a newly created game (difficulty selected but not started)
     if (isInitialized && periodCount === 0) {
-      console.log('🎮 Continuing newly created game - going to story screen');
+      if (__DEV__) console.log('🎮 Continuing newly created game - going to story screen');
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
@@ -76,7 +78,7 @@ export default function TitleScreenPage() {
     // Navigate to the last active view for games in progress
     const targetScreen =
       lastActiveView === 'after-school' ? 'after-school' : 'market';
-    console.log('🎮 Continuing game in progress - going to', targetScreen);
+    if (__DEV__) console.log('🎮 Continuing game in progress - going to', targetScreen);
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
@@ -91,7 +93,7 @@ export default function TitleScreenPage() {
   };
 
   const handleStudioComplete = () => {
-    console.log('🎬 DEBUG: Studio completed, showing Sugar Wars title screen');
+    if (__DEV__) console.log('🎬 DEBUG: Studio completed, showing Sugar Wars title screen');
     setShowStudioScreen(false);
   };
 

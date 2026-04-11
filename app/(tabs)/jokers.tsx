@@ -12,6 +12,7 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { selectTutorialStep } from '../../src/store/slices/tutorialSlice';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { getCoveredCandyTypes, TYPE_MULTIPLIER_JOKERS } from '../../src/utils/jokerService';
 import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from '../components/FastModal';
 import FirstTimeHint from '../components/FirstTimeHint';
@@ -22,6 +23,16 @@ import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 const CANDY_TYPES = CANDY_NAMES;
+
+// Candy-themed colors for type coverage dots
+const CANDY_TYPE_COLORS: Record<string, string> = {
+  chocolate: '#8B4513',
+  hard_candy: '#dc2626',
+  sour: '#a3e635',
+  chewy: '#ec4899',
+  fruity: '#f97316',
+  gummy: '#22c55e',
+};
 
 function JokersPage() {
   // Always call all hooks first - before any conditional returns
@@ -80,7 +91,7 @@ function JokersPage() {
       debugToggleRef.current = true;
 
       setDebugMode(false);
-      console.log('🐛 Debug mode toggled OFF');
+      if (__DEV__) console.log('🐛 Debug mode toggled OFF');
 
       setTimeout(() => {
         debugToggleRef.current = false;
@@ -90,11 +101,11 @@ function JokersPage() {
 
     const newCount = debugTapCount + 1;
     setDebugTapCount(newCount);
-    console.log('🐛 Debug tap count:', newCount);
+    if (__DEV__) console.log('🐛 Debug tap count:', newCount);
 
     if (newCount >= 5) {
       setDebugMode(true);
-      console.log('🐛 Debug mode ENABLED');
+      if (__DEV__) console.log('🐛 Debug mode ENABLED');
       handleShowConfirmation(
         'Debug Mode Enabled!',
         'Tap any joker in the "All" tab to add it to your inventory.',
@@ -342,7 +353,7 @@ function JokersPage() {
     setCandySelectorModal({ visible: false, joker: null });
   };
 
-  // Remove selectedSubject state - we'll show all subjects as sections
+  // Jokers are shown as a flat pool (no subject grouping)
 
   // Show loading state while data loads - no early returns
   const showLoading =
@@ -381,26 +392,51 @@ function JokersPage() {
 
   const currentJokers = inventoryJokers; // Only used for inventory tab
 
+  // Compute covered candy types for synergy indicators
+  const coveredTypes = useMemo(() => getCoveredCandyTypes(jokers), [jokers]);
+  const coveredTypeCount = coveredTypes.length;
+
+  // Check if player owns Combo Platter or Triple Threat
+  const ownsComboPlatter = useMemo(
+    () => jokers.some((j) => {
+      const jId = typeof j.id === 'string' ? parseInt(j.id as string) : j.id;
+      return jId === JOKER_IDS.COMBO_PLATTER;
+    }),
+    [jokers]
+  );
+  const ownsTripleThreat = useMemo(
+    () => jokers.some((j) => {
+      const jId = typeof j.id === 'string' ? parseInt(j.id as string) : j.id;
+      return jId === JOKER_IDS.TRIPLE_THREAT;
+    }),
+    [jokers]
+  );
+
   // Use consistent daytime styles
   const headerStyles = styles.header;
   const titleStyles = styles.title;
 
   const renderInventoryJokerRow = ({ item }: { item: any[] }) => (
     <View style={{ ...styles.row }}>
-      {item.map((joker, index) => (
-        <View key={joker.id} style={styles.jokerCardContainer}>
-          <JokerCard
-            joker={joker}
-            isAfterSchool={isAfterSchool}
-            isCompact={true}
-            showOwned={false}
-            disableActivation={false}
-            onShowConfirmation={handleShowConfirmation}
-            onShowCandySelector={handleShowCandySelector}
-            onTriggerEvent={triggerEvent}
-          />
-        </View>
-      ))}
+      {item.map((joker, index) => {
+        const jId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
+        const showSynergy = jId === JOKER_IDS.COMBO_PLATTER || jId === JOKER_IDS.TRIPLE_THREAT;
+        return (
+          <View key={joker.id} style={styles.jokerCardContainer}>
+            <JokerCard
+              joker={joker}
+              isAfterSchool={isAfterSchool}
+              isCompact={true}
+              showOwned={false}
+              disableActivation={false}
+              coveredTypeCount={showSynergy ? coveredTypeCount : undefined}
+              onShowConfirmation={handleShowConfirmation}
+              onShowCandySelector={handleShowCandySelector}
+              onTriggerEvent={triggerEvent}
+            />
+          </View>
+        );
+      })}
     </View>
   );
 
@@ -505,6 +541,35 @@ function JokersPage() {
         </View>
       </View>
 
+      {/* Type Coverage Bar — shown when player has type-multiplier, Combo Platter, or Triple Threat jokers */}
+      {activeTab === 'inventory' && jokers.length > 0 && (coveredTypeCount > 0 || ownsComboPlatter || ownsTripleThreat) && (
+        <View style={styles.coverageBar}>
+          <Text style={styles.coverageLabel}>Type Coverage</Text>
+          <View style={styles.coverageDots}>
+            {TYPE_MULTIPLIER_JOKERS.map((entry) => {
+              const isCovered = coveredTypes.includes(entry.candyType);
+              const dotColor = isCovered ? CANDY_TYPE_COLORS[entry.candyType] || '#888' : undefined;
+              return (
+                <View key={entry.candyType} style={styles.coverageDotWrapper}>
+                  <View
+                    style={[
+                      styles.coverageDot,
+                      isCovered
+                        ? { backgroundColor: dotColor, borderColor: dotColor }
+                        : styles.coverageDotEmpty,
+                    ]}
+                  />
+                  <Text style={[styles.coverageDotLabel, isCovered && { color: dotColor }]}>
+                    {entry.candyType === 'hard_candy' ? 'HC' : entry.label.substring(0, 3).toUpperCase()}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+          <Text style={styles.coverageCount}>{coveredTypeCount}/6</Text>
+        </View>
+      )}
+
       {activeTab === 'inventory' ? (
         currentJokers.length > 0 ? (
           <FlatList
@@ -518,7 +583,7 @@ function JokersPage() {
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No jokers in inventory</Text>
             <Text style={styles.emptySubtext}>
-              Study different subjects to earn jokers!
+              Play minigames to earn jokers!
             </Text>
           </View>
         )
@@ -881,6 +946,58 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 8,
     elevation: 10,
+  },
+  coverageBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(212, 175, 55, 0.3)',
+    gap: 8,
+  },
+  coverageLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.gold.medium,
+    fontFamily: 'PixeloidMono',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    opacity: 0.8,
+  },
+  coverageDots: {
+    flexDirection: 'row',
+    flex: 1,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  coverageDotWrapper: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  coverageDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+  },
+  coverageDotEmpty: {
+    backgroundColor: 'transparent',
+    borderColor: '#555',
+  },
+  coverageDotLabel: {
+    fontSize: 7,
+    fontFamily: 'PixeloidMono',
+    fontWeight: '600',
+    color: '#555',
+    letterSpacing: 0.3,
+  },
+  coverageCount: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.gold.medium,
+    fontFamily: 'PixeloidMono',
   },
 });
 

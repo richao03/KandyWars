@@ -39,20 +39,24 @@ interface PiggyBankPageProps {
 }
 
 export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
-  console.log(
-    '🏦 PiggyBankPage rendering, onBack:',
-    onBack ? 'provided' : 'not provided'
-  );
+  if (__DEV__) {
+    console.log(
+      '🏦 PiggyBankPage rendering, onBack:',
+      onBack ? 'provided' : 'not provided'
+    );
+  }
 
   const { balance, stashedAmount, adoptionFee, stashMoney, withdrawFromStash } =
     useWallet();
 
-  console.log(
-    '🏦 PiggyBankPage wallet data - balance:',
-    balance,
-    'stashed:',
-    stashedAmount
-  );
+  if (__DEV__) {
+    console.log(
+      '🏦 PiggyBankPage wallet data - balance:',
+      balance,
+      'stashed:',
+      stashedAmount
+    );
+  }
   const { day, period } = useGame();
   const { setEvent } = useFlavorText();
   const { jokers } = useJokers();
@@ -248,15 +252,19 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
       const epsilon = 0.01; // Small tolerance for floating point comparison
       const isMaxDeposit = Math.abs(amount - balance) < epsilon;
 
-      console.log(
-        `💰 Piggy Bank - amount: ${amount}, balance: ${balance}, diff: ${Math.abs(amount - balance)}, isMaxDeposit: ${isMaxDeposit}`
-      );
+      if (__DEV__) {
+        console.log(
+          `💰 Piggy Bank - amount: ${amount}, balance: ${balance}, diff: ${Math.abs(amount - balance)}, isMaxDeposit: ${isMaxDeposit}`
+        );
+      }
 
       if (isMaxDeposit) {
         dispatch(incrementMaxDeposit());
-        console.log(
-          `🏆 Maximalist: Full wallet deposited! (${formatCurrency(amount)})`
-        );
+        if (__DEV__) {
+          console.log(
+            `🏆 Maximalist: Full wallet deposited! (${formatCurrency(amount)})`
+          );
+        }
       }
     }
 

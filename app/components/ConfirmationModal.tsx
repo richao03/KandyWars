@@ -93,7 +93,7 @@ export default function ConfirmationModal({
       const bonusLines = parts[0]?.split('\n').filter((l) => l.trim()) || [];
       const summaryParts = parts[1]?.split('\n').filter((l) => l.trim()) || [];
 
-      console.log('what is parts', parts);
+      if (__DEV__) console.log('what is parts', parts);
 
       return (
         <View style={styles.messageContainer}>

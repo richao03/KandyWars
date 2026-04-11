@@ -269,9 +269,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
     if (stageToUse === 1) {
       // Stage 1: Show computer choice briefly, then let player choose
-      console.log(
-        `🟢 STAGE 1 LOGIC: Setting up computer preview for stage ${stageToUse}`
-      );
+      if (__DEV__) {
+        console.log(
+          `🟢 STAGE 1 LOGIC: Setting up computer preview for stage ${stageToUse}`
+        );
+      }
       setGameState('computerChoice');
       setShowComputerPreview(true);
 
@@ -282,10 +284,12 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       }, STAGE_TIMINGS.stage1.computerPreviewDuration);
     } else if (stageToUse === 2) {
       // Stage 2: Show hint animation with decoy then real gesture
-      console.log(
-        'Stage 2: Setting up hint animation - current stage is:',
-        stageToUse
-      );
+      if (__DEV__) {
+        console.log(
+          'Stage 2: Setting up hint animation - current stage is:',
+          stageToUse
+        );
+      }
       setGameState('hint');
 
       // Get a decoy gesture (guaranteed different from real gesture)
@@ -306,10 +310,12 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       }, STAGE_TIMINGS.stage2.decoyDuration);
     } else {
       // Stage 3: Show hint with 2 decoys then quick flash of real gesture
-      console.log(
-        'Stage 3: Setting up complex hint animation - current stage is:',
-        stageToUse
-      );
+      if (__DEV__) {
+        console.log(
+          'Stage 3: Setting up complex hint animation - current stage is:',
+          stageToUse
+        );
+      }
       setGameState('hint');
 
       // Get 2 different decoy gestures (both different from real gesture)
@@ -339,9 +345,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   // Start player timeout with round ID tracking
   const startPlayerTimeout = (timeLimit: number) => {
     const roundId = ++currentRoundId.current;
-    console.log(
-      `⏱️ Starting player timeout: ${timeLimit}ms, roundId: ${roundId}`
-    );
+    if (__DEV__) {
+      console.log(
+        `⏱️ Starting player timeout: ${timeLimit}ms, roundId: ${roundId}`
+      );
+    }
 
     // Show and animate timer line
     setShowTimerLine(true);
@@ -349,14 +357,16 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     timerLineWidth.value = withTiming(0, { duration: timeLimit });
 
     playerTimeoutRef.current = setTimeout(() => {
-      console.log('⏰ Player timeout fired:', {
-        roundId,
-        currentRoundId: currentRoundId.current,
-        roundIdMatch: roundId === currentRoundId.current,
-        playerChoice: playerChoiceRef.current,
-        gameState: gameStateRef.current,
-        isProcessingRound: isProcessingRoundRef.current,
-      });
+      if (__DEV__) {
+        console.log('⏰ Player timeout fired:', {
+          roundId,
+          currentRoundId: currentRoundId.current,
+          roundIdMatch: roundId === currentRoundId.current,
+          playerChoice: playerChoiceRef.current,
+          gameState: gameStateRef.current,
+          isProcessingRound: isProcessingRoundRef.current,
+        });
+      }
 
       if (
         roundId === currentRoundId.current &&
@@ -364,26 +374,28 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         gameStateRef.current === 'playing' &&
         !isProcessingRoundRef.current
       ) {
-        console.log('⏰ Player timed out - calling handlePlayerChoice(null)');
+        if (__DEV__) console.log('⏰ Player timed out - calling handlePlayerChoice(null)');
         setShowTimerLine(false);
         handlePlayerChoice(null); // Time out - player loses
       } else {
-        console.log('⏰ Timeout conditions not met - skipping loss');
+        if (__DEV__) console.log('⏰ Timeout conditions not met - skipping loss');
       }
     }, timeLimit);
   };
 
   // Handle player choice
   const handlePlayerChoice = (choice: Gesture | null) => {
-    console.log('🎮 handlePlayerChoice called:', {
-      choice,
-      gameState,
-      gameStateRef: gameStateRef.current,
-      playerChoice,
-      playerChoiceRef: playerChoiceRef.current,
-      isProcessingRound,
-      isProcessingRoundRef: isProcessingRoundRef.current,
-    });
+    if (__DEV__) {
+      console.log('🎮 handlePlayerChoice called:', {
+        choice,
+        gameState,
+        gameStateRef: gameStateRef.current,
+        playerChoice,
+        playerChoiceRef: playerChoiceRef.current,
+        isProcessingRound,
+        isProcessingRoundRef: isProcessingRoundRef.current,
+      });
+    }
 
     // Use refs for timeout calls to get current state
     if (
@@ -391,11 +403,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       playerChoiceRef.current ||
       isProcessingRoundRef.current
     ) {
-      console.log('🎮 Blocking handlePlayerChoice - conditions not met');
+      if (__DEV__) console.log('🎮 Blocking handlePlayerChoice - conditions not met');
       return;
     }
 
-    console.log('🎮 Processing choice:', choice);
+    if (__DEV__) console.log('🎮 Processing choice:', choice);
     if (choice) {
       SoundEffects.playRandomPop();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -420,14 +432,16 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       let isGameOver = false;
       setLosses((currentLosses) => {
         const newLosses = currentLosses + 1;
-        console.log(
-          `Player timed out! Losses: ${newLosses}/4 on stage ${stage}`
-        );
+        if (__DEV__) {
+          console.log(
+            `Player timed out! Losses: ${newLosses}/4 on stage ${stage}`
+          );
+        }
 
         // Check if player has lost 4 times (game over)
         isGameOver = newLosses >= 4;
         if (isGameOver) {
-          console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
+          if (__DEV__) console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
         }
 
         return newLosses;
@@ -436,7 +450,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
       SoundEffects.playWrongAnswerSound();
 
       if (isGameOver) {
-        console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
+        if (__DEV__) console.log(`💀 3 LOSSES! Game over on stage ${stage}`);
       }
 
       // Set game state and continue automatically
@@ -491,13 +505,15 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           gameStateRef.current !== 'levelComplete' &&
           gameStateRef.current !== 'jokerSelection'
         ) {
-          console.log('🔄 Starting next countdown after timeout loss');
+          if (__DEV__) console.log('🔄 Starting next countdown after timeout loss');
           startCountdown(undefined, newRoundsPlayed);
         } else {
-          console.log(
-            '⏹️ Not starting countdown - gameState:',
-            gameStateRef.current
-          );
+          if (__DEV__) {
+            console.log(
+              '⏹️ Not starting countdown - gameState:',
+              gameStateRef.current
+            );
+          }
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
 
@@ -515,17 +531,21 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         setScore((prev) => prev + 10);
         const newWins = wins + 1;
         setWins(newWins);
-        console.log(`✅ Win! Total wins: ${newWins}/3 on stage ${stage}`);
+        if (__DEV__) console.log(`✅ Win! Total wins: ${newWins}/3 on stage ${stage}`);
 
         if (newWins >= 3) {
           shouldCompleteStage = true;
-          console.log(
-            `🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins! shouldCompleteStage=${shouldCompleteStage}`
-          );
+          if (__DEV__) {
+            console.log(
+              `🎉 STAGE COMPLETE! Stage ${stage} done with ${newWins} wins! shouldCompleteStage=${shouldCompleteStage}`
+            );
+          }
         } else {
-          console.log(
-            `✨ Win ${newWins}/3 on stage ${stage} - need ${3 - newWins} more wins`
-          );
+          if (__DEV__) {
+            console.log(
+              `✨ Win ${newWins}/3 on stage ${stage} - need ${3 - newWins} more wins`
+            );
+          }
         }
       } else if (result === 'tie') {
         setScore((prev) => prev + 5);
@@ -534,11 +554,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         SoundEffects.playWrongAnswerSound();
         setLosses((currentLosses) => {
           const newLosses = currentLosses + 1;
-          console.log(`Loss! Losses: ${newLosses}/4 on stage ${stage}`);
+          if (__DEV__) console.log(`Loss! Losses: ${newLosses}/4 on stage ${stage}`);
 
           // Check if player has lost 4 times (game over)
           if (newLosses >= 4) {
-            console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
+            if (__DEV__) console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
             isGameOver = true;
           }
 
@@ -566,18 +586,22 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         // Reset isProcessingRound flag since we're done processing this round
         setIsProcessingRound(false);
         isProcessingRoundRef.current = false;
-        console.log(
-          `⏰ Result timeout fired - shouldCompleteStage=${shouldCompleteStage}, isGameOver=${isGameOver}, gameState=${gameStateRef.current}`
-        );
+        if (__DEV__) {
+          console.log(
+            `⏰ Result timeout fired - shouldCompleteStage=${shouldCompleteStage}, isGameOver=${isGameOver}, gameState=${gameStateRef.current}`
+          );
+        }
         // Check if stage was just completed (4 wins total)
         if (shouldCompleteStage) {
-          console.log(
-            `🎯 Calling handleStageComplete() for stage ${stage} after showing result`
-          );
+          if (__DEV__) {
+            console.log(
+              `🎯 Calling handleStageComplete() for stage ${stage} after showing result`
+            );
+          }
           handleStageComplete();
         } else if (isGameOver) {
           // Game over - check if player completed any stage
-          console.log(`💀 Showing game over modal after result animation`);
+          if (__DEV__) console.log(`💀 Showing game over modal after result animation`);
           if (completedLevel > 0) {
             // Player completed at least one stage, award jokers based on completion
             const jokerCount = completedLevel;
@@ -616,18 +640,22 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           !isProcessingRoundRef.current
         ) {
           // Reset positions to edges of game area (not off-screen)
-          console.log(
-            `🔄 Starting next countdown after win - gameState=${gameStateRef.current}, isProcessing=${isProcessingRoundRef.current}`
-          );
+          if (__DEV__) {
+            console.log(
+              `🔄 Starting next countdown after win - gameState=${gameStateRef.current}, isProcessing=${isProcessingRoundRef.current}`
+            );
+          }
           playerGestureX.value = -200;
           playerGestureY.value = 0;
           computerGestureX.value = 200;
           computerGestureY.value = 0;
           startCountdown(undefined, newRoundsPlayed);
         } else {
-          console.log(
-            `❌ NOT starting countdown - gameState=${gameStateRef.current}, levelComplete=${gameStateRef.current === 'levelComplete'}, jokerSelection=${gameStateRef.current === 'jokerSelection'}, isProcessing=${isProcessingRoundRef.current}`
-          );
+          if (__DEV__) {
+            console.log(
+              `❌ NOT starting countdown - gameState=${gameStateRef.current}, levelComplete=${gameStateRef.current === 'levelComplete'}, jokerSelection=${gameStateRef.current === 'jokerSelection'}, isProcessing=${isProcessingRoundRef.current}`
+            );
+          }
         }
       }, STAGE_TIMINGS.resultDisplayDuration);
     }
@@ -635,7 +663,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Handle stage complete
   const handleStageComplete = () => {
-    console.log(`🎊 handleStageComplete called for stage ${stage}`);
+    if (__DEV__) console.log(`🎊 handleStageComplete called for stage ${stage}`);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
     if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
@@ -647,9 +675,9 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     setGameState('levelComplete');
 
     if (stage < 3) {
-      console.log(`📈 Stage ${stage} < 3, showing advancement modal`);
+      if (__DEV__) console.log(`📈 Stage ${stage} < 3, showing advancement modal`);
     } else {
-      console.log(`🏆 Stage ${stage} = 3, showing final completion modal`);
+      if (__DEV__) console.log(`🏆 Stage ${stage} = 3, showing final completion modal`);
     }
 
     if (stage < 3) {
@@ -665,7 +693,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           let newStage: number;
           setStage((prev) => {
             newStage = prev + 1;
-            console.log(`Stage advancing from ${prev} to ${newStage}`);
+            if (__DEV__) console.log(`Stage advancing from ${prev} to ${newStage}`);
             return newStage;
           });
 
@@ -680,9 +708,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
             // Pass the new stage to ensure correct stage logic is used
             setTimeout(() => {
-              console.log(
-                `🚀 Starting countdown for newly advanced stage: ${newStage}`
-              );
+              if (__DEV__) {
+                console.log(
+                  `🚀 Starting countdown for newly advanced stage: ${newStage}`
+                );
+              }
               startCountdown(newStage);
             }, 100); // Additional delay to ensure all state updates
           }, 200); // Increased delay to ensure stage state updates properly
@@ -760,14 +790,18 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   // Log hint modal display
   useEffect(() => {
     if (gameState === 'hint' && hintGesture) {
-      console.log(
-        `🎭 HINT MODAL DISPLAYED: Stage ${stage} hint with gesture ${hintGesture}`
-      );
+      if (__DEV__) {
+        console.log(
+          `🎭 HINT MODAL DISPLAYED: Stage ${stage} hint with gesture ${hintGesture}`
+        );
+      }
     }
     if (gameState === 'computerChoice' && showComputerPreview) {
-      console.log(
-        `👁️ PREVIEW MODAL DISPLAYED: Stage ${stage} showing computer choice ${computerChoice}`
-      );
+      if (__DEV__) {
+        console.log(
+          `👁️ PREVIEW MODAL DISPLAYED: Stage ${stage} showing computer choice ${computerChoice}`
+        );
+      }
     }
   }, [gameState, hintGesture, showComputerPreview, stage, computerChoice]);
 
@@ -862,9 +896,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
         // Animate to final positions within the game area
         // ⚠️ POSITIONING VALUES: These determine where hands end up:
-        console.log(
-          `🎯 Entrance Style: ${entranceStyle} - ${entranceStyle === 0 ? 'BOTTOM-RIGHT CPU' : entranceStyle === 1 ? 'TOP-RIGHT CPU' : 'CENTER-RIGHT CPU'}`
-        );
+        if (__DEV__) {
+          console.log(
+            `🎯 Entrance Style: ${entranceStyle} - ${entranceStyle === 0 ? 'BOTTOM-RIGHT CPU' : entranceStyle === 1 ? 'TOP-RIGHT CPU' : 'CENTER-RIGHT CPU'}`
+          );
+        }
         if (entranceStyle === 0) {
           // Position in opposite corners of game area
           playerGestureX.value = withSpring(
@@ -883,9 +919,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             HAND_POSITIONS.style0.cpu.y,
             SPRING_CONFIG
           );
-          console.log(
-            `🔥 BOTTOM-RIGHT CPU POSITION SET TO: X=${HAND_POSITIONS.style0.cpu.x}, Y=${HAND_POSITIONS.style0.cpu.y}`
-          );
+          if (__DEV__) {
+            console.log(
+              `🔥 BOTTOM-RIGHT CPU POSITION SET TO: X=${HAND_POSITIONS.style0.cpu.x}, Y=${HAND_POSITIONS.style0.cpu.y}`
+            );
+          }
         } else if (entranceStyle === 1) {
           // Position in opposite corners (reversed)
           playerGestureX.value = withSpring(
@@ -922,9 +960,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             HAND_POSITIONS.style2.cpu.y,
             SPRING_CONFIG
           );
-          console.log(
-            `🔥 CENTER-RIGHT CPU POSITION SET TO: X=${HAND_POSITIONS.style2.cpu.x}, Y=${HAND_POSITIONS.style2.cpu.y}`
-          );
+          if (__DEV__) {
+            console.log(
+              `🔥 CENTER-RIGHT CPU POSITION SET TO: X=${HAND_POSITIONS.style2.cpu.x}, Y=${HAND_POSITIONS.style2.cpu.y}`
+            );
+          }
         }
 
         // Animate rotations to final positions (maintain entrance angle for diagonals)

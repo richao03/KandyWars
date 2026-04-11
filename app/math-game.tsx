@@ -17,16 +17,16 @@ export default function MathGameScreen() {
   };
 
   const handleGameComplete = () => {
-    console.log('Math game completed! Context:', minigameContext);
+    if (__DEV__) console.log('Math game completed! Context:', minigameContext);
 
     // Mark study as completed based on context BEFORE navigating
     // This ensures the state is updated before Market re-renders
     if (minigameContext === 'after-school') {
       markStudiedTonight();
-      console.log('After-school study session finished.');
+      if (__DEV__) console.log('After-school study session finished.');
     } else if (minigameContext === 'lunch') {
       markLunchMinigamePlayed();
-      console.log('Lunch minigame finished.');
+      if (__DEV__) console.log('Lunch minigame finished.');
     }
 
     setMinigameContext(null);

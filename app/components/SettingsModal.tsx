@@ -23,7 +23,7 @@ export default function SettingsModal({
   const handleSave = () => {
     // Update Redux cache with new player name
     dispatch(updateCachedUserObject({ playerName: playerName.trim() || 'Player' }));
-    console.log('✅ Player name updated locally:', playerName);
+    if (__DEV__) console.log('✅ Player name updated locally:', playerName);
     onClose();
   };
 

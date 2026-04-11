@@ -18,9 +18,11 @@ export default function StoryModal({
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     if (visible) {
       // Start minigame music when modal appears
-      console.log('🎵 StoryModal: Setting minigame music');
+      if (__DEV__) console.log('🎵 StoryModal: Setting minigame music');
       MusicController.setTrack('minigame');
 
       // Fade in
@@ -30,7 +32,7 @@ export default function StoryModal({
         useNativeDriver: true,
       }).start(() => {
         // After fade in, wait 3 seconds then fade out
-        setTimeout(() => {
+        timer = setTimeout(() => {
           Animated.timing(fadeAnim, {
             toValue: 0,
             duration: 800,
@@ -42,6 +44,10 @@ export default function StoryModal({
         }, 3000);
       });
     }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [visible, fadeAnim, onContinue]);
   const getStoryContent = (level: number) => {
     switch (level) {

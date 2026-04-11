@@ -11,14 +11,14 @@ export default function LogicGameScreen() {
   };
 
   const handleGameComplete = () => {
-    console.log('Logic game completed! Context:', minigameContext);
+    if (__DEV__) console.log('Logic game completed! Context:', minigameContext);
 
     if (minigameContext === 'after-school') {
       markStudiedTonight();
-      console.log('After-school study session finished.');
+      if (__DEV__) console.log('After-school study session finished.');
     } else if (minigameContext === 'lunch') {
       markLunchMinigamePlayed();
-      console.log('Lunch minigame finished.');
+      if (__DEV__) console.log('Lunch minigame finished.');
     }
 
     setMinigameContext(null);

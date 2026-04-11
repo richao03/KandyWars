@@ -126,16 +126,20 @@ function StashMoneyModal({
     const epsilon = 0.01; // Small tolerance for floating point comparison
     const isMaxDeposit = Math.abs(amount - balance) < epsilon;
 
-    console.log(
-      `💰 Stash check - amount: ${amount}, balance: ${balance}, diff: ${Math.abs(amount - balance)}, isMaxDeposit: ${isMaxDeposit}`
-    );
+    if (__DEV__) {
+      console.log(
+        `💰 Stash check - amount: ${amount}, balance: ${balance}, diff: ${Math.abs(amount - balance)}, isMaxDeposit: ${isMaxDeposit}`
+      );
+    }
 
     // Track max deposit for Maximalist hall pass BEFORE stashing
     if (isMaxDeposit) {
       dispatch(incrementMaxDeposit());
-      console.log(
-        `🏆 Maximalist: Full wallet deposited! ($${formatCurrency(amount)})`
-      );
+      if (__DEV__) {
+        console.log(
+          `🏆 Maximalist: Full wallet deposited! ($${formatCurrency(amount)})`
+        );
+      }
     }
 
     stashMoney(amount);

@@ -88,7 +88,7 @@ export default function TitleSettings() {
     try {
       // Update Redux cache with new player name
       dispatch(updateCachedUserObject({ playerName: trimmedName }));
-      console.log('✅ Player name updated in Redux:', trimmedName);
+      if (__DEV__) console.log('✅ Player name updated in Redux:', trimmedName);
 
       // Sync to service cache
       const updatedUser = cachedUser
@@ -96,7 +96,7 @@ export default function TitleSettings() {
         : null;
       if (updatedUser) {
         scoreboardService.setCachedUserObject(updatedUser);
-        console.log('✅ Player name synced to service cache');
+        if (__DEV__) console.log('✅ Player name synced to service cache');
 
         // Also ensure scoreboard slice is in sync
         dispatch(setWonDifficulties(updatedUser.difficultyWon));
@@ -129,17 +129,17 @@ export default function TitleSettings() {
   useEffect(() => {
     const loadUserObject = async () => {
       if (cachedUser) {
-        console.log('✅ User object already cached:', cachedUser);
+        if (__DEV__) console.log('✅ User object already cached:', cachedUser);
         return;
       }
 
       setIsLoading(true);
       try {
-        console.log('📊 Loading user object from Firebase...');
+        if (__DEV__) console.log('📊 Loading user object from Firebase...');
         await scoreboardService.initializeAuth();
         const userObject = await scoreboardService.fetchUserObject();
 
-        console.log('✅ User object loaded:', userObject);
+        if (__DEV__) console.log('✅ User object loaded:', userObject);
         dispatch(setCachedUserObject(userObject));
         dispatch(setWonDifficulties(userObject.difficultyWon));
         dispatch(setTotalCompletions(userObject.totalWinCount));
@@ -160,14 +160,14 @@ export default function TitleSettings() {
       async () => {
         try {
           setIsResetting(true);
-          console.log('🗑️ Clearing all data...');
+          if (__DEV__) console.log('🗑️ Clearing all data...');
 
           // Delete user document from Firebase
-          console.log('🗑️ Deleting user document from Firebase...');
+          if (__DEV__) console.log('🗑️ Deleting user document from Firebase...');
           try {
             await scoreboardService.initializeAuth();
             await scoreboardService.deleteUserObject();
-            console.log('✅ User document deleted from Firebase');
+            if (__DEV__) console.log('✅ User document deleted from Firebase');
           } catch (error) {
             console.error(
               '❌ Failed to delete user document from Firebase:',
@@ -180,12 +180,12 @@ export default function TitleSettings() {
           dispatch(clearCachedUserObject());
           dispatch(setWonDifficulties([]));
           dispatch(setTotalCompletions(0));
-          console.log('✅ All Redux slices reset in memory');
+          if (__DEV__) console.log('✅ All Redux slices reset in memory');
 
           // STEP 2: Reset wallet context completely (including username and player ID)
           if (walletContext) {
             await walletContext.completeReset();
-            console.log(
+            if (__DEV__) console.log(
               '✅ Wallet completely reset including username and player ID'
             );
           }
@@ -193,11 +193,11 @@ export default function TitleSettings() {
           // STEP 3: Clear service cache and Firebase session
           scoreboardService.clearUserObjectCache();
           resetFirebaseSession(); // Reset session flag so Firebase re-initializes
-          console.log('✅ Service cache and Firebase session cleared');
+          if (__DEV__) console.log('✅ Service cache and Firebase session cleared');
 
           // STEP 4: Clear ALL AsyncStorage data
           const allKeys = await AsyncStorage.getAllKeys();
-          console.log('🗑️ Found keys to clear:', allKeys);
+          if (__DEV__) console.log('🗑️ Found keys to clear:', allKeys);
           await AsyncStorage.multiRemove(allKeys);
 
           // Clear AsyncStorage again with specific keys to make sure
@@ -215,9 +215,9 @@ export default function TitleSettings() {
           ];
 
           await AsyncStorage.multiRemove(specificKeys);
-          console.log('✅ AsyncStorage cleared');
+          if (__DEV__) console.log('✅ AsyncStorage cleared');
 
-          console.log('✅ All data cleared successfully');
+          if (__DEV__) console.log('✅ All data cleared successfully');
 
           Alert.alert(
             'Data Reset Complete',

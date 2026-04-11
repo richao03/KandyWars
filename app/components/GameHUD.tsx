@@ -18,6 +18,12 @@ import PixelBorder from './PixelBorder';
 import StatusIndicators from './StatusIndicators';
 import { formatCurrency } from '../../src/utils/priceUtils';
 
+// Pre-computed regex for emoji matching (EMOJI_TO_IMAGE_MAP is static)
+const emojiPattern = Object.keys(EMOJI_TO_IMAGE_MAP)
+  .map((emoji) => emoji.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|');
+const emojiRegex = new RegExp(`(${emojiPattern})`, 'g');
+
 // Helper function to render text with emojis replaced by images
 const renderTextWithEmojis = (text: string, textStyle: any) => {
   // Check if text contains any mappable emojis
@@ -29,12 +35,7 @@ const renderTextWithEmojis = (text: string, textStyle: any) => {
     return <Text style={textStyle}>{text}</Text>;
   }
 
-  // Create a regex pattern for all supported emojis
-  const emojiPattern = Object.keys(EMOJI_TO_IMAGE_MAP)
-    .map((emoji) => emoji.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) // Escape special regex chars
-    .join('|');
-
-  const regex = new RegExp(`(${emojiPattern})`, 'g');
+  const regex = emojiRegex;
   const parts = text.split(regex);
   const elements: React.ReactNode[] = [];
 

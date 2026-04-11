@@ -196,7 +196,7 @@ export function generateSeededGameData(
   let basePrices = { ...candyBasePrices };
 
   if (difficultyLevel && difficultyLevel > 3) {
-    console.log('🎲 Difficulty > 3 detected: Shuffling candy price ranges');
+    if (__DEV__) console.log('🎲 Difficulty > 3 detected: Shuffling candy price ranges');
 
     // Extract candy names and price ranges separately
     const candyNames = Object.keys(candyBasePrices);
@@ -212,7 +212,7 @@ export function generateSeededGameData(
     basePrices = {};
     candyNames.forEach((name, index) => {
       basePrices[name] = priceRanges[index];
-      console.log(
+      if (__DEV__) console.log(
         `🍬 ${name}: [${priceRanges[index][0]}, ${priceRanges[index][1]}]`
       );
     });
@@ -400,7 +400,7 @@ export function generateSeededGameData(
       }
 
       periodEvents.push(event);
-      console.log(
+      if (__DEV__) console.log(
         `📅 Day ${day + 1}, Period ${period}: ${eventType} (${isUniversal ? 'Universal' : location})`
       );
     }
@@ -436,7 +436,7 @@ export function generateSeededGameData(
       };
 
       periodEvents.push(event);
-      console.log(
+      if (__DEV__) console.log(
         `📅 Day ${day + 1}, Period ${period}: ${effect} - ${candy} in ${location}`
       );
     }
@@ -473,7 +473,7 @@ export function generateSeededGameData(
     };
 
     periodEvents.push(guaranteedBullyEvent);
-    console.log(
+    if (__DEV__) console.log(
       `🎯 Guaranteed bully event added on Day ${dayIndex + 1}, Period ${period}`
     );
   }
@@ -505,7 +505,7 @@ export function generateSeededGameData(
     };
 
     periodEvents.push(guaranteedStashEvent);
-    console.log(
+    if (__DEV__) console.log(
       `🎯 Guaranteed stash lock event added on Day ${dayIndex + 1}, Period ${period}`
     );
   }
@@ -515,13 +515,15 @@ export function generateSeededGameData(
   periodEvents.length = 0;
   periodEvents.push(...filteredEvents);
 
-  console.log(`📊 Total events generated: ${periodEvents.length}`);
-  console.log(
-    `   Major events: ${periodEvents.filter((e) => ['STASH_LOCKED', 'LOSE_MONEY', 'FOUND_MONEY'].includes(e.effect)).length}`
-  );
-  console.log(
-    `   Minor events: ${periodEvents.filter((e) => ['PRICE_SPIKE', 'PRICE_DROP'].includes(e.effect)).length}`
-  );
+  if (__DEV__) {
+    console.log(`📊 Total events generated: ${periodEvents.length}`);
+    console.log(
+      `   Major events: ${periodEvents.filter((e) => ['STASH_LOCKED', 'LOSE_MONEY', 'FOUND_MONEY'].includes(e.effect)).length}`
+    );
+    console.log(
+      `   Minor events: ${periodEvents.filter((e) => ['PRICE_SPIKE', 'PRICE_DROP'].includes(e.effect)).length}`
+    );
+  }
 
   // Pre-calculate event prices for hybrid lookup
   const eventPrices: Record<

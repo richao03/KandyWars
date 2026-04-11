@@ -37,7 +37,6 @@ export interface Joker {
   id: number | string;
   name: string;
   description?: string;
-  subject?: string;
   theme?: string;
   type?: 'one-time' | 'persistent';
   effect?: string;
@@ -117,7 +116,7 @@ export const useJokers = () => {
     if (!joker) return;
 
     const level = joker.level ?? 1;
-    const sellValue = level <= 1 ? 500 : level === 2 ? 1000 : 2000;
+    const sellValue = level <= 1 ? 500 : level === 2 ? 5000 : 15000;
 
     dispatch(sellJoker(id));
     dispatch(addBalance(sellValue));

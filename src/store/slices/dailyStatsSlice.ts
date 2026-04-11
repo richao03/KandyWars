@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import { resetGame } from './gameSlice';
 
 interface BestSale {
@@ -130,7 +130,7 @@ const dailyStatsSlice = createSlice({
     },
     recordConfiscation: (state) => {
       state.playthroughStats.confiscationCount += 1;
-      console.log('📊 Confiscation recorded, total:', state.playthroughStats.confiscationCount);
+      if (__DEV__) console.log('📊 Confiscation recorded, total:', state.playthroughStats.confiscationCount);
     },
     recordMerchantPurchase: (state, action: PayloadAction<MerchantPurchase>) => {
       state.playthroughStats.merchantPurchases.push(action.payload);
@@ -141,11 +141,11 @@ const dailyStatsSlice = createSlice({
           state.playthroughStats.merchantPurchases.slice(-50);
       }
 
-      console.log('🛍️ Merchant purchase recorded:', action.payload.itemName);
+      if (__DEV__) console.log('🛍️ Merchant purchase recorded:', action.payload.itemName);
     },
     incrementMaxDeposit: (state) => {
       state.playthroughStats.maxDepositsCount += 1;
-      console.log('💰 Max deposit recorded. Total:', state.playthroughStats.maxDepositsCount);
+      if (__DEV__) console.log('💰 Max deposit recorded. Total:', state.playthroughStats.maxDepositsCount);
     },
     resetPlaythroughStats: (state) => {
       state.playthroughStats = {
@@ -196,8 +196,13 @@ export const {
 export default dailyStatsSlice.reducer;
 
 // Selectors
-export const selectStatsByDay = (state: { dailyStats: DailyStatsState }, day: number) =>
-  state.dailyStats.dailyStats.find(s => s.day === day);
+export const selectStatsByDay = (day: number) =>
+  createSelector(
+    [(state: { dailyStats: DailyStatsState }) => state.dailyStats.dailyStats],
+    (dailyStats) => dailyStats.find(s => s.day === day)
+  );
 
-export const selectTotalProfit = (state: { dailyStats: DailyStatsState }) =>
-  state.dailyStats.dailyStats.reduce((sum, day) => sum + day.profit, 0);
+export const selectTotalProfit = createSelector(
+  [(state: { dailyStats: DailyStatsState }) => state.dailyStats.dailyStats],
+  (dailyStats) => dailyStats.reduce((sum, day) => sum + day.profit, 0)
+);

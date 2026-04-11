@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createSelector } from '@reduxjs/toolkit';
 import { resetGame } from './gameSlice';
 
 interface CandyType {
@@ -54,7 +54,7 @@ const inventorySlice = createSlice({
     },
     incrementMaxInventory: (state, action: PayloadAction<number>) => {
       state.maxInventory += action.payload;
-      console.log(`📦 Max inventory increased by ${action.payload} to ${state.maxInventory}`);
+      if (__DEV__) console.log(`📦 Max inventory increased by ${action.payload} to ${state.maxInventory}`);
     },
     resetInventory: () => initialState,
   },
@@ -76,8 +76,15 @@ export const {
 export default inventorySlice.reducer;
 
 // Selectors
-export const selectInventoryCount = (state: { inventory: InventoryState }) =>
-  state.inventory.inventory.reduce((sum, candy) => sum + (candy.quantity || 1), 0);
+export const selectInventoryCount = createSelector(
+  [(state: { inventory: InventoryState }) => state.inventory.inventory],
+  (inventory) => inventory.reduce((sum, candy) => sum + (candy.quantity || 1), 0)
+);
 
-export const selectIsInventoryFull = (state: { inventory: InventoryState }) =>
-  selectInventoryCount(state) >= state.inventory.maxInventory;
+export const selectIsInventoryFull = createSelector(
+  [
+    selectInventoryCount,
+    (state: { inventory: InventoryState }) => state.inventory.maxInventory,
+  ],
+  (count, maxInventory) => count >= maxInventory
+);

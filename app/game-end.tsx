@@ -74,7 +74,7 @@ export default function GameEndScreen() {
 
   // Play results music when screen loads
   useEffect(() => {
-    console.log('🎵 [GAME-END] Setting results music');
+    if (__DEV__) console.log('🎵 [GAME-END] Setting results music');
     MusicController.setTrack('results');
   }, []);
 
@@ -196,12 +196,12 @@ export default function GameEndScreen() {
   // Check for hall pass unlocks when screen loads
   useEffect(() => {
     const checkHallPassUnlocks = async () => {
-      console.log('🎯 Game End Screen: Checking hall pass unlocks');
+      if (__DEV__) console.log('🎯 Game End Screen: Checking hall pass unlocks');
 
       // Clear any previously newly unlocked passes from last session
       // This ensures we only show passes unlocked in THIS game
       clearNewlyUnlocked();
-      console.log('🎓 Cleared previously newly unlocked passes');
+      if (__DEV__) console.log('🎓 Cleared previously newly unlocked passes');
 
       const hasWon = finalScore >= 0;
 
@@ -214,21 +214,21 @@ export default function GameEndScreen() {
 
         // If service cache is empty, restore from Redux
         if (!userObject) {
-          console.log('⚠️ Service cache empty, checking Redux...');
+          if (__DEV__) console.log('⚠️ Service cache empty, checking Redux...');
 
           if (reduxUserObject) {
-            console.log('✅ Restoring user object from Redux to service cache');
+            if (__DEV__) console.log('✅ Restoring user object from Redux to service cache');
             scoreboardService.setCachedUserObject(reduxUserObject);
             userObject = reduxUserObject;
           } else {
             console.error('❌ User object not found in service or Redux cache');
 
             // Try to initialize Firebase as last resort
-            console.log('🔄 Attempting to fetch user object from Firebase...');
+            if (__DEV__) console.log('🔄 Attempting to fetch user object from Firebase...');
             try {
               userObject = await scoreboardService.fetchUserObject();
               scoreboardService.setCachedUserObject(userObject);
-              console.log('✅ User object loaded from Firebase:', userObject);
+              if (__DEV__) console.log('✅ User object loaded from Firebase:', userObject);
             } catch (error) {
               console.error('❌ Failed to fetch user object:', error);
               return;
@@ -236,7 +236,7 @@ export default function GameEndScreen() {
           }
         }
 
-        console.log('📊 Current user object:', userObject);
+        if (__DEV__) console.log('📊 Current user object:', userObject);
 
         // Set total win count for hall pass progress display
         setTotalWinCount(userObject.totalWinCount || 0);
@@ -245,10 +245,10 @@ export default function GameEndScreen() {
         const updates: any = {
           playedMinigames: playedMinigames,
         };
-        console.log('🎮 Updating played minigames:', playedMinigames);
+        if (__DEV__) console.log('🎮 Updating played minigames:', playedMinigames);
 
         if (hasWon) {
-          console.log('🏆 Player won - updating user object...');
+          if (__DEV__) console.log('🏆 Player won - updating user object...');
 
           // Add win-related updates
           updates.totalWinCount = userObject.totalWinCount + 1;
@@ -262,10 +262,10 @@ export default function GameEndScreen() {
               ...userObject.difficultyWon,
               difficultyLevel,
             ];
-            console.log('🏆 Adding difficulty to won list:', difficultyLevel);
+            if (__DEV__) console.log('🏆 Adding difficulty to won list:', difficultyLevel);
           }
         } else {
-          console.log('😢 Player lost - saving minigame progress only');
+          if (__DEV__) console.log('😢 Player lost - saving minigame progress only');
         }
 
         // Update local cache
@@ -275,7 +275,7 @@ export default function GameEndScreen() {
         const updatedUserObject = scoreboardService.getCachedUserObject();
         if (updatedUserObject) {
           await scoreboardService.saveUserObject(updatedUserObject);
-          console.log('✅ User object saved to Firebase:', updatedUserObject);
+          if (__DEV__) console.log('✅ User object saved to Firebase:', updatedUserObject);
 
           // Update Redux (persisted across app restarts)
           dispatch(setCachedUserObject(updatedUserObject));
@@ -284,9 +284,11 @@ export default function GameEndScreen() {
         }
 
         // Batch update universal analytics to Firebase
-        console.log('📊 Syncing local analytics to Firebase...');
-        console.log('📊 Jokers obtained:', localAnalytics.jokersObtained);
-        console.log('📊 Minigames played:', localAnalytics.minigamesPlayed);
+        if (__DEV__) {
+          console.log('📊 Syncing local analytics to Firebase...');
+          console.log('📊 Jokers obtained:', localAnalytics.jokersObtained);
+          console.log('📊 Minigames played:', localAnalytics.minigamesPlayed);
+        }
 
         // Update joker stats
         if (Object.keys(localAnalytics.jokersObtained).length > 0) {
@@ -304,7 +306,7 @@ export default function GameEndScreen() {
 
         // Reset local analytics for next game
         dispatch(resetLocalAnalytics());
-        console.log('✅ Local analytics synced and reset');
+        if (__DEV__) console.log('✅ Local analytics synced and reset');
 
         // Track game completion to scoreboard
         try {
@@ -322,7 +324,7 @@ export default function GameEndScreen() {
             estimatedMinutes, // Approximate minutes (4 min for 6-period days, 5 min for 8-period days)
             periodCount
           );
-          console.log('✅ Game completion tracked to scoreboard');
+          if (__DEV__) console.log('✅ Game completion tracked to scoreboard');
         } catch (error) {
           console.error('❌ Failed to track game completion:', error);
         }
@@ -354,30 +356,32 @@ export default function GameEndScreen() {
           transactionCount: candySalesState.transactionCount,
         };
 
-        console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
-        console.log('🎓 Minigame tracking data:', {
-          hasPlayedAllMinigames: hasPlayedAllMinigames,
-          playedMinigames: playedMinigames,
-          playedCount: playedMinigames.length,
-        });
+        if (__DEV__) {
+          console.log('🎓 Checking hall pass unlocks with gameStats:', gameStats);
+          console.log('🎓 Minigame tracking data:', {
+            hasPlayedAllMinigames: hasPlayedAllMinigames,
+            playedMinigames: playedMinigames,
+            playedCount: playedMinigames.length,
+          });
+        }
 
         const unlocked = checkUnlockRequirements(gameStats, {
           hasPlayedAllMinigames: hasPlayedAllMinigames,
         });
-        console.log('🎓 Newly unlocked Hall Passes:', unlocked);
+        if (__DEV__) console.log('🎓 Newly unlocked Hall Passes:', unlocked);
 
         if (unlocked.length > 0) {
-          console.log(`🎓 ${unlocked.length} hall pass(es) were unlocked!`);
+          if (__DEV__) console.log(`🎓 ${unlocked.length} hall pass(es) were unlocked!`);
 
           // Get current unlocked passes from Redux
           const currentUnlockedPassIds = unlockedPasses.map((p) => p.id);
-          console.log('🎓 Current unlocked passes:', currentUnlockedPassIds);
+          if (__DEV__) console.log('🎓 Current unlocked passes:', currentUnlockedPassIds);
 
           // Merge with newly unlocked (avoid duplicates)
           const allUnlockedPassIds = [
             ...new Set([...currentUnlockedPassIds, ...unlocked]),
           ];
-          console.log('🎓 All unlocked passes:', allUnlockedPassIds);
+          if (__DEV__) console.log('🎓 All unlocked passes:', allUnlockedPassIds);
 
           // Update user object with hall passes
           scoreboardService.updateLocalUserObject({
@@ -388,7 +392,7 @@ export default function GameEndScreen() {
           const updatedUserObject = scoreboardService.getCachedUserObject();
           if (updatedUserObject) {
             await scoreboardService.saveUserObject(updatedUserObject);
-            console.log(
+            if (__DEV__) console.log(
               '✅ Hall passes synced to Firebase:',
               updatedUserObject.unlockedHallPasses
             );
@@ -547,7 +551,7 @@ export default function GameEndScreen() {
     // persistent user data like playerName that should carry over between games
     forceSave(); // Persist Redux changes to AsyncStorage
 
-    console.log('🎮 Play Again: Resetting navigation stack to title screen');
+    if (__DEV__) console.log('🎮 Play Again: Resetting navigation stack to title screen');
 
     // Reset the entire navigation stack to only have title-screen
     // This ensures all old screen instances (including all Market instances) are unmounted
@@ -914,16 +918,18 @@ export default function GameEndScreen() {
 
             {/* Hall Pass Progress - Only show locked passes */}
             {(() => {
-              console.log(
-                '🎖️ Game End - allPasses count:',
-                allPasses?.length || 0
-              );
-              console.log(
-                '🎖️ Game End - locked passes:',
-                allPasses
-                  ?.filter((pass) => !pass.isUnlocked)
-                  .map((p) => p.id) || []
-              );
+              if (__DEV__) {
+                console.log(
+                  '🎖️ Game End - allPasses count:',
+                  allPasses?.length || 0
+                );
+                console.log(
+                  '🎖️ Game End - locked passes:',
+                  allPasses
+                    ?.filter((pass) => !pass.isUnlocked)
+                    .map((p) => p.id) || []
+                );
+              }
               return (
                 allPasses &&
                 allPasses.filter((pass) => !pass.isUnlocked).length > 0
@@ -949,7 +955,7 @@ export default function GameEndScreen() {
                       const isThisGame = (progress as any).isThisGame;
                       const isPercentage = (progress as any).isPercentage;
 
-                      console.log(
+                      if (__DEV__) console.log(
                         `🎖️ Rendering progress for ${pass.id}:`,
                         progress
                       );

@@ -9,6 +9,34 @@ import { JOKER_IDS } from '../constants/jokerIds';
 import { getCandyDefinition } from '../constants/candyRegistry';
 import { formatCurrency, roundToTwoDecimals } from './priceUtils';
 
+// Type-multiplier joker ID to candy type mapping
+export const TYPE_MULTIPLIER_JOKERS: { id: number; candyType: string; label: string }[] = [
+  { id: JOKER_IDS.COCOA_FUTURES, candyType: 'chocolate', label: 'Chocolate' },
+  { id: JOKER_IDS.HARD_KNOCKS, candyType: 'hard_candy', label: 'Hard Candy' },
+  { id: JOKER_IDS.SOUR_LOGIC, candyType: 'sour', label: 'Sour' },
+  { id: JOKER_IDS.DOUBLE_DUTCH, candyType: 'chewy', label: 'Chewy' },
+  { id: JOKER_IDS.TROPICAL_IMPORT, candyType: 'fruity', label: 'Fruity' },
+  { id: JOKER_IDS.BEAR_MARKET, candyType: 'gummy', label: 'Gummy' },
+];
+
+/**
+ * Returns which candy types are "covered" by the player's owned type-multiplier jokers.
+ * A type is covered when the player owns the corresponding type-multiplier joker.
+ */
+export function getCoveredCandyTypes(jokers: { id: number | string; level?: number }[]): string[] {
+  const covered: string[] = [];
+  for (const entry of TYPE_MULTIPLIER_JOKERS) {
+    const owned = jokers.some((j) => {
+      const jId = typeof j.id === 'string' ? parseInt(j.id) : j.id;
+      return jId === entry.id;
+    });
+    if (owned) {
+      covered.push(entry.candyType);
+    }
+  }
+  return covered;
+}
+
 // Hook for mini-games to get study time multiplier
 export const useStudyTimeMultiplier = (
   jokers: any[],
@@ -321,12 +349,12 @@ export class JokerService {
           continue;
         }
 
-        // Bulk Empire — permanent stacking multiplier
-        if (effect.target === 'bulk_empire_boost') {
+        // Triple Threat — bonus when 3+ candy types covered
+        if (effect.target === 'triple_threat_boost') {
           jokerEmoji = _getEmoji(jokerId);
           breakdown.jokerEffects.push({
             jokerName, jokerEmoji,
-            effect: `+0.5x per ${effect.amount} sold/day`,
+            effect: `+${effect.amount}x when 3+ types covered`,
             amount: effect.amount,
             effectType: 'sell',
             isActive,
@@ -440,7 +468,7 @@ function _getEmoji(id: number): string {
   const map: Record<number, string> = {
     [JOKER_IDS.FLIP_ARTIST]: '🔄',
     [JOKER_IDS.COMBO_PLATTER]: '🍱',
-    [JOKER_IDS.BULK_EMPIRE]: '👑',
+    [JOKER_IDS.TRIPLE_THREAT]: '🎯',
     [JOKER_IDS.COCOA_FUTURES]: '🍫',
     [JOKER_IDS.BEAR_MARKET]: '🐻',
     [JOKER_IDS.HARD_KNOCKS]: '💎',

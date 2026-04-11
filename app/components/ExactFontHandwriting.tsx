@@ -90,7 +90,7 @@ export default function ExactFontHandwriting({
     }
 
     animationStarted.current = true;
-    console.log('🎨 Starting ExactFontHandwriting animation');
+    if (__DEV__) console.log('🎨 Starting ExactFontHandwriting animation');
 
     let animationFrame: number;
     let startTime: number;
@@ -116,7 +116,7 @@ export default function ExactFontHandwriting({
       const sugarThreshold = 5 * effectiveDelay + letterDuration * 0.7; // 70% through 5th letter
       if (!sugarCompleted && totalElapsed >= sugarThreshold) {
         setSugarCompleted(true);
-        console.log('🎨 Sugar animation completed, showing buttons');
+        if (__DEV__) console.log('🎨 Sugar animation completed, showing buttons');
         if (onSugarComplete) {
           onSugarComplete(); // Call immediately, don't use setTimeout in animation loop
         }
@@ -136,9 +136,11 @@ export default function ExactFontHandwriting({
         // All letters done
         if (!animationCompleted.current) {
           animationCompleted.current = true;
-          console.log(
-            '🎨 All letters completed, triggering onAnimationComplete'
-          );
+          if (__DEV__) {
+            console.log(
+              '🎨 All letters completed, triggering onAnimationComplete'
+            );
+          }
           onAnimationComplete?.();
         }
       }

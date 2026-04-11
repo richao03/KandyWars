@@ -309,9 +309,11 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
       pathShadeValues.add(shadeValue);
 
       // Debug: Log path progression to ensure correct 0.5 increments
-      console.log(
-        `Path step ${i}: [${coord.row},${coord.col}] = shade ${shadeValue}`
-      );
+      if (__DEV__) {
+        console.log(
+          `Path step ${i}: [${coord.row},${coord.col}] = shade ${shadeValue}`
+        );
+      }
     }
 
     // Store the path direction for decoy generation and validation
@@ -319,13 +321,15 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     setPathDirection(currentPathDirection);
 
     // Debug: Log all path shade values
-    console.log(
-      `Path direction: ${currentPathDirection}, path values: [${Array.from(
-        pathShadeValues
-      )
-        .sort((a, b) => a - b)
-        .join(', ')}]`
-    );
+    if (__DEV__) {
+      console.log(
+        `Path direction: ${currentPathDirection}, path values: [${Array.from(
+          pathShadeValues
+        )
+          .sort((a, b) => a - b)
+          .join(', ')}]`
+      );
+    }
 
     // Create a map of path positions to their next step value
     const pathPositionToNextValue = new Map<string, number>();
@@ -447,7 +451,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
         // Debug logging for path tiles to ensure they get different colors
         const isOnPath = pathShadeValues.has(grid[row][col].shadeValue);
-        if (isOnPath) {
+        if (isOnPath && __DEV__) {
           console.log(
             `Path tile [${row},${col}]: shadeValue=${grid[row][col].shadeValue}, normalized=${normalizedShade}, paletteIndex=${paletteIndex}`
           );

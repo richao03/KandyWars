@@ -65,20 +65,20 @@ describe('Merchant Items', () => {
       it('should apply correct found money multipliers', () => {
         const baseAmount = 10;
 
-        // Level 1: 10x multiplier
+        // Level 1: 2x multiplier
         let activeEffects = [{ itemId: 'metal_detector' as const, level: 1 }];
         let result = MerchantUtils.applyFoundMoneyMultiplier(baseAmount, activeEffects);
-        expect(result).toBe(100); // 10 * 10
+        expect(result).toBe(20); // 10 * 2
 
-        // Level 2: 100x multiplier
+        // Level 2: 4x multiplier
         activeEffects = [{ itemId: 'metal_detector' as const, level: 2 }];
         result = MerchantUtils.applyFoundMoneyMultiplier(baseAmount, activeEffects);
-        expect(result).toBe(1000); // 10 * 100
+        expect(result).toBe(40); // 10 * 4
 
-        // Level 3: 1000x multiplier
+        // Level 3: 8x multiplier
         activeEffects = [{ itemId: 'metal_detector' as const, level: 3 }];
         result = MerchantUtils.applyFoundMoneyMultiplier(baseAmount, activeEffects);
-        expect(result).toBe(10000); // 10 * 1000
+        expect(result).toBe(80); // 10 * 8
       });
 
       it('should enforce max level of 3', () => {

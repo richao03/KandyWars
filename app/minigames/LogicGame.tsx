@@ -121,7 +121,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     const shuffled = [...candyTypes].sort(() => Math.random() - 0.5);
     const code = shuffled.slice(0, 4);
     setSecretCode(code);
-    console.log(`Level ${level} secret code (for testing):`, code.join(''));
+    if (__DEV__) console.log(`Level ${level} secret code (for testing):`, code.join(''));
   };
 
   // Initialize level - reset state and generate new code
@@ -301,9 +301,11 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   };
 
   const handleJokerChoice = (jokerId: number) => {
-    console.log(
-      `Selected candy joker: ${STANDARDIZED_JOKERS.find((j) => j.id === jokerId)?.name}`
-    );
+    if (__DEV__) {
+      console.log(
+        `Selected candy joker: ${STANDARDIZED_JOKERS.find((j) => j.id === jokerId)?.name}`
+      );
+    }
     onComplete();
   };
 

@@ -18,7 +18,7 @@ const userObjectSlice = createSlice({
     setCachedUserObject: (state, action: PayloadAction<UserObject>) => {
       state.cachedUser = action.payload;
       state.lastSynced = Date.now();
-      console.log('📦 User object cached in Redux:', action.payload);
+      if (__DEV__) console.log('📦 User object cached in Redux:', action.payload);
     },
     updateCachedUserObject: (state, action: PayloadAction<Partial<UserObject>>) => {
       if (state.cachedUser) {
@@ -26,13 +26,13 @@ const userObjectSlice = createSlice({
           ...state.cachedUser,
           ...action.payload,
         };
-        console.log('📦 User object updated in Redux:', state.cachedUser);
+        if (__DEV__) console.log('📦 User object updated in Redux:', state.cachedUser);
       }
     },
     clearCachedUserObject: (state) => {
       state.cachedUser = null;
       state.lastSynced = null;
-      console.log('📦 User object cleared from Redux');
+      if (__DEV__) console.log('📦 User object cleared from Redux');
     },
   },
 });

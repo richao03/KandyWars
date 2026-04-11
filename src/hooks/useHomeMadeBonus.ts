@@ -4,12 +4,14 @@ import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
 import { JOKER_IDS, findJokerById } from '../constants/jokerIds';
+import { useToast } from '../context/ToastContext';
 
 export const useHomeMadeBonus = () => {
   const { day, periodCount } = useGame();
   const { getTotalInventoryCount } = useInventory();
   const { jokers } = useJokers();
   const { add: addMoney } = useWallet();
+  const { showToast } = useToast();
 
   const [lastDay, setLastDay] = useState(day);
 
@@ -38,7 +40,8 @@ export const useHomeMadeBonus = () => {
       const bonusAmount = currentInventory * 10;
 
       addMoney(bonusAmount);
-      console.log(`🏠 Home Made: +$${bonusAmount} for ${currentInventory} candies at start of day ${day}!`);
+      showToast(`Home Made +$${bonusAmount}`);
+      if (__DEV__) console.log(`🏠 Home Made: +$${bonusAmount} for ${currentInventory} candies at start of day ${day}!`);
     }
   };
 

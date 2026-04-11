@@ -103,7 +103,7 @@ function AfterSchoolPage() {
 
   // Set after-school flavor text when component loads and track active view
   useEffect(() => {
-    console.log('🏠 [AFTER-SCHOOL] Setting AFTER_SCHOOL flavor text');
+    if (__DEV__) console.log('🏠 [AFTER-SCHOOL] Setting AFTER_SCHOOL flavor text');
     setEvent('AFTER_SCHOOL');
     // Track that user is now in after-school view
     setLastActiveView('after-school');
@@ -138,7 +138,7 @@ function AfterSchoolPage() {
   useFocusEffect(
     useCallback(() => {
       const targetTrack = showStudySubjects ? 'day2' : 'day5';
-      console.log(
+      if (__DEV__) console.log(
         `🎵 [AFTER-SCHOOL] Setting music: ${targetTrack}`
       );
       MusicController.setTrack(targetTrack);
@@ -146,13 +146,13 @@ function AfterSchoolPage() {
   );
 
   const handleStashMoney = useCallback(() => {
-    console.log('🏦 Stash button clicked, setting showStash to true');
+    if (__DEV__) console.log('🏦 Stash button clicked, setting showStash to true');
     setShowStash(true);
   }, []);
 
   // Debug: Log when showStash changes
   useEffect(() => {
-    console.log('🏦 showStash state changed to:', showStash);
+    if (__DEV__) console.log('🏦 showStash state changed to:', showStash);
   }, [showStash]);
 
   // Stop bird music when modal is dismissed
@@ -163,7 +163,7 @@ function AfterSchoolPage() {
   }, [goingToSchoolModalVisible]);
 
   const handleGoDeli = useCallback(() => {
-    console.log('🍖 Deli button clicked');
+    if (__DEV__) console.log('🍖 Deli button clicked');
     setShowDeli(true);
   }, []);
 
@@ -173,44 +173,54 @@ function AfterSchoolPage() {
   }, []);
 
   const handleSleepConfirm = () => {
-    console.log('🌙 AfterSchool: handleSleepConfirm called');
-    console.log(
-      '🌙 AfterSchool: Current wallet balance before allowance:',
-      balance
-    );
+    if (__DEV__) {
+      console.log('🌙 AfterSchool: handleSleepConfirm called');
+      console.log(
+        '🌙 AfterSchool: Current wallet balance before allowance:',
+        balance
+      );
+    }
 
     // Close the sleep modal and add allowance before showing going to school modal
     setSleepConfirmModalVisible(false);
 
-    console.log('\n=== 🌙 SLEEP SEQUENCE START ===');
-    console.log(`🌙 Current wallet balance: $${balance}`);
-    console.log(`🌙 Current stashed amount: $${stashedAmount}`);
-    console.log(`🌙 Current day: ${day}`);
-    console.log(`🌙 Jokers owned:`, jokers.map(j => ({ id: j.id, name: j.name })));
+    if (__DEV__) {
+      console.log('\n=== 🌙 SLEEP SEQUENCE START ===');
+      console.log(`🌙 Current wallet balance: $${balance}`);
+      console.log(`🌙 Current stashed amount: $${stashedAmount}`);
+      console.log(`🌙 Current day: ${day}`);
+      console.log(`🌙 Jokers owned:`, jokers.map(j => ({ id: j.id, name: j.name })));
+    }
 
     // Apply daily interest from High Yield Account joker (if owned)
-    console.log('\n--- Step 1: Checking High Yield Account interest ---');
+    if (__DEV__) console.log('\n--- Step 1: Checking High Yield Account interest ---');
     const earnedInterest = applyDailyInterest(jokers);
-    if (earnedInterest > 0) {
-      console.log(`✅ Earned interest: $${earnedInterest.toFixed(2)}`);
-    } else {
-      console.log('ℹ️ No interest earned (joker not owned or no stash)');
+    if (__DEV__) {
+      if (earnedInterest > 0) {
+        console.log(`✅ Earned interest: $${earnedInterest.toFixed(2)}`);
+      } else {
+        console.log('ℹ️ No interest earned (joker not owned or no stash)');
+      }
     }
 
     // Apply Inheritance hall pass (10% wallet to piggy bank)
-    console.log('\n--- Step 2: Checking Inheritance transfer ---');
+    if (__DEV__) console.log('\n--- Step 2: Checking Inheritance transfer ---');
     const inheritanceTransfer = applyInheritance();
-    if (inheritanceTransfer > 0) {
-      console.log(`✅ Inheritance transfer: $${inheritanceTransfer.toFixed(2)}`);
-    } else {
-      console.log('ℹ️ No inheritance transfer (hall pass not selected or no balance)');
+    if (__DEV__) {
+      if (inheritanceTransfer > 0) {
+        console.log(`✅ Inheritance transfer: $${inheritanceTransfer.toFixed(2)}`);
+      } else {
+        console.log('ℹ️ No inheritance transfer (hall pass not selected or no balance)');
+      }
     }
 
     // Add daily allowance (jokers could modify this amount)
-    console.log('\n--- Step 3: Calculating daily allowance ---');
+    if (__DEV__) console.log('\n--- Step 3: Calculating daily allowance ---');
     const receivedAllowance = addAllowance(jokers, periodCount);
-    console.log(`✅ Total allowance received: $${receivedAllowance}`);
-    console.log('=== 🌙 SLEEP SEQUENCE END ===\n');
+    if (__DEV__) {
+      console.log(`✅ Total allowance received: $${receivedAllowance}`);
+      console.log('=== 🌙 SLEEP SEQUENCE END ===\n');
+    }
     setAllowanceAmount(receivedAllowance);
 
     // Track allowance in daily stats
@@ -231,7 +241,7 @@ function AfterSchoolPage() {
 
     const warnings = guaranteedEventsForTomorrow.map((event) => event.hint);
     setGuaranteedEventWarnings(warnings);
-    console.log('🚨 Guaranteed events for tomorrow:', warnings);
+    if (__DEV__) console.log('🚨 Guaranteed events for tomorrow:', warnings);
 
     // Stop current music and play bird sounds
     MusicController.stop();
@@ -240,13 +250,15 @@ function AfterSchoolPage() {
   };
 
   const handleGoingToSchoolComplete = useCallback(async () => {
-    console.log('🌙 AfterSchool: handleGoingToSchoolComplete called');
-    console.log(
-      '🌙 AfterSchool: Current wallet balance before startNewDay:',
-      balance
-    );
-    console.log('🌙 AfterSchool: Current day:', day);
-    console.log('🌙 AfterSchool: Current stashedAmount (debt):', stashedAmount);
+    if (__DEV__) {
+      console.log('🌙 AfterSchool: handleGoingToSchoolComplete called');
+      console.log(
+        '🌙 AfterSchool: Current wallet balance before startNewDay:',
+        balance
+      );
+      console.log('🌙 AfterSchool: Current day:', day);
+      console.log('🌙 AfterSchool: Current stashedAmount (debt):', stashedAmount);
+    }
 
     // Close the interstitial
     setGoingToSchoolModalVisible(false);
@@ -256,17 +268,19 @@ function AfterSchoolPage() {
       Math.floor(periodCount / periodsPerDay) * periodsPerDay + periodsPerDay;
     const maxPeriods = periodsPerDay * 5; // 5 days of periods (40 for 8 periods/day, 30 for 6 periods/day)
     if (nextPeriodCount >= maxPeriods) {
-      console.log(
-        `🎯 Day 5 complete - navigating to game end screen instead of starting day 6 (${periodsPerDay} periods/day)`
-      );
-      console.log(
-        '🎯 Current periodCount:',
-        periodCount,
-        'Next would be:',
-        nextPeriodCount,
-        'Max:',
-        maxPeriods
-      );
+      if (__DEV__) {
+        console.log(
+          `🎯 Day 5 complete - navigating to game end screen instead of starting day 6 (${periodsPerDay} periods/day)`
+        );
+        console.log(
+          '🎯 Current periodCount:',
+          periodCount,
+          'Next would be:',
+          nextPeriodCount,
+          'Max:',
+          maxPeriods
+        );
+      }
       // Stop bird sounds before navigating to game end
       MusicController.stop();
       router.push('/game-end');
@@ -277,12 +291,12 @@ function AfterSchoolPage() {
     resetDailyStats();
     dispatch(resetEarlySaleFlag()); // Reset Vacuum Sealer early sale penalty flag for new day
     resetDailyJokerUsage(day + 1); // Reset instant jokers for the new day
-    console.log(
+    if (__DEV__) console.log(
       `🌙 AfterSchool: Daily stats reset, calling startNewDay with ${periodsPerDay} periods/day...`
     );
     // Start new day (this will exit after-school mode and increment to next day)
     startNewDay(periodsPerDay);
-    console.log('🌙 AfterSchool: startNewDay completed, navigating to market');
+    if (__DEV__) console.log('🌙 AfterSchool: startNewDay completed, navigating to market');
     // Stop bird sounds before navigating
     MusicController.stop();
     // Navigate back to market (school) - market screen will start its own music via useFocusEffect
@@ -414,7 +428,7 @@ function AfterSchoolPage() {
     ));
   }, [options]);
 
-  console.log(
+  if (__DEV__) console.log(
     '🎬 Rendering AfterSchoolPage, showStash:',
     showStash,
     'showDeli:',
@@ -431,12 +445,12 @@ function AfterSchoolPage() {
 
       {showStash ? (
         <>
-          {console.log('🏦 Rendering PiggyBankPage branch')}
+          {__DEV__ && console.log('🏦 Rendering PiggyBankPage branch')}
           <PiggyBankPage onBack={() => setShowStash(false)} />
         </>
       ) : showDeli ? (
         <>
-          {console.log('🍖 Rendering DeliPage branch')}
+          {__DEV__ && console.log('🍖 Rendering DeliPage branch')}
           <DeliPage onBack={() => setShowDeli(false)} />
         </>
       ) : (

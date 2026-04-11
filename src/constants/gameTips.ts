@@ -26,7 +26,7 @@ export const GAME_TIPS = [
   'Medium candy is the sweet spot for mid-game moves.',
   'Prices trash today? End the day early, live to trade tomorrow.',
   'Day 5, last period — sell everything!',
-  "Every subject has its own minigame. Try \'em all.",
+  "Every minigame can drop any joker. Try \'em all.",
   "Confiscation wipes your whole inventory. Don't hold, fold.",
   'The amount of money you find is proportionate to your wallet',
   'Buy cheap in bulk, wait for the spike, then eat.',

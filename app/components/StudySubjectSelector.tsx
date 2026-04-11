@@ -10,19 +10,6 @@ import AvailableJokersModal from './AvailableJokersModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 
-// Map subject names to joker subjects
-const subjectToJokerSubject: Record<string, string> = {
-  Math: 'Math',
-  Gym: 'Gym',
-  Cooking: 'Home Economics',
-  Economy: 'Economy',
-  Logic: 'Logic',
-  Recess: 'Recess',
-  'Comp Sci': 'Computer',
-  Art: 'Art',
-  Geography: 'Geography',
-};
-
 const subjects = [
   {
     name: 'Math',
@@ -177,7 +164,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       setSelectedMinigame(winnerName);
 
       const route = subjectRoutes[winnerName];
-      console.log(`🎲 Roulette landed on: ${winnerName}`);
+      if (__DEV__) console.log(`🎲 Roulette landed on: ${winnerName}`);
       setMinigameContext(isLunchPeriod ? 'lunch' : 'after-school');
 
       // Brief pause to show the final selection before navigating
@@ -197,29 +184,11 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     };
   }, [disabled, isLunchPeriod, hasPlayedLunchMinigame]);
 
-  // Calculate unobtained jokers for each subject
-  const getUnobtainedJokerCount = React.useCallback(
-    (subjectName: string) => {
-      const jokerSubject = subjectToJokerSubject[subjectName];
-      if (!jokerSubject) return 0;
-
-      // Get all jokers for this subject
-      const subjectJokers = STANDARDIZED_JOKERS.filter(
-        (j) => j.subject === jokerSubject
-      );
-
-      // Get IDs of owned jokers
-      const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
-
-      // Count unobtained jokers
-      const unobtained = subjectJokers.filter(
-        (j) => !ownedIds.has(j.id.toString())
-      );
-
-      return unobtained.length;
-    },
-    [jokersOwned]
-  );
+  // Calculate total unobtained jokers from the flat pool
+  const totalUnobtainedCount = React.useMemo(() => {
+    const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
+    return STANDARDIZED_JOKERS.filter((j) => !ownedIds.has(j.id.toString())).length;
+  }, [jokersOwned]);
 
   const handleSubjectSelect = (subject: string) => {
     // During lunch, check if a game has already been played
@@ -232,7 +201,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       return;
     }
 
-    console.log(`Starting ${subject} minigame...`);
+    if (__DEV__) console.log(`Starting ${subject} minigame...`);
 
     // Set the context for where this minigame was started
     setMinigameContext(isLunchPeriod ? 'lunch' : 'after-school');
@@ -314,7 +283,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                       shouldDim && styles.dimmedText,
                     ]}
                   >
-                    {getUnobtainedJokerCount(subject.name)} jokers left
+                    {totalUnobtainedCount} jokers left
                   </Text>
                 </View>
               </PixelBorder>
@@ -405,7 +374,6 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         visible={showAvailableJokers}
         onClose={() => setShowAvailableJokers(false)}
         jokers={STANDARDIZED_JOKERS}
-        subject="All"
         themeColors={{
           borderColor: '#f5f5dc',
           backgroundColor: '#0d2818',

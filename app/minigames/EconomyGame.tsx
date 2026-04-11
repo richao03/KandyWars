@@ -307,17 +307,19 @@ function generatePuzzle(levelIndex: number): Puzzle {
   }
 
   // Debug: Log the generated puzzle details
-  console.log(`🎲 Level ${levelIndex + 1} Puzzle Generated:`);
-  console.log(
-    `   Start: ${Object.keys(startInventory)
-      .map((item) => CATALOG[item as Item])
-      .join('')}`
-  );
-  console.log(`   Goal: ${CATALOG[goal]}`);
-  console.log(
-    `   Solution tiles: ${solutionTrades.map((t) => t.label).join(', ')}`
-  );
-  console.log(`   All tiles: ${allTrades.map((t) => t.label).join(', ')}`);
+  if (__DEV__) {
+    console.log(`🎲 Level ${levelIndex + 1} Puzzle Generated:`);
+    console.log(
+      `   Start: ${Object.keys(startInventory)
+        .map((item) => CATALOG[item as Item])
+        .join('')}`
+    );
+    console.log(`   Goal: ${CATALOG[goal]}`);
+    console.log(
+      `   Solution tiles: ${solutionTrades.map((t) => t.label).join(', ')}`
+    );
+    console.log(`   All tiles: ${allTrades.map((t) => t.label).join(', ')}`);
+  }
 
   return {
     startInventory,
@@ -510,11 +512,13 @@ function Slot({
 
           // If it was a quick tap (< 200ms) and didn't move much, treat as a tap to remove
           if (!dragMoved.current && dragDuration < 200) {
-            console.log(
-              '👆 Tap detected on slot',
-              slotIndex,
-              '- removing tile'
-            );
+            if (__DEV__) {
+              console.log(
+                '👆 Tap detected on slot',
+                slotIndex,
+                '- removing tile'
+              );
+            }
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onRemove(slotIndex);
             setIsDragging(false);
@@ -699,14 +703,14 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   /** ---------- Drag handlers ---------- */
   const handleDragStart = (tile: TradeTile) => {
-    console.log('🎯 Drag started:', tile.label);
+    if (__DEV__) console.log('🎯 Drag started:', tile.label);
     setDragPosition({ x: 0, y: 0 }); // Reset position to prevent flash
     setDraggingTile(tile);
     setDragSourceSlot(null); // From palette
   };
 
   const handleDragFromSlot = (tile: TradeTile, fromIndex: number) => {
-    console.log('🎯 Drag started from slot:', fromIndex, tile.label);
+    if (__DEV__) console.log('🎯 Drag started from slot:', fromIndex, tile.label);
     setDragPosition({ x: 0, y: 0 }); // Reset position to prevent flash
     setDraggingTile(tile);
     setDragSourceSlot(fromIndex);
@@ -732,33 +736,39 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     }
 
     if (targetSlot !== highlightedSlot) {
-      console.log('🎯 Hovering over slot:', targetSlot, 'at position', {
-        x,
-        y,
-      });
+      if (__DEV__) {
+        console.log('🎯 Hovering over slot:', targetSlot, 'at position', {
+          x,
+          y,
+        });
+      }
     }
     setHighlightedSlot(targetSlot);
   };
 
   const handleDragEnd = () => {
-    console.log(
-      '🎯 Drag ended. Highlighted slot:',
-      highlightedSlot,
-      'Source slot:',
-      dragSourceSlot
-    );
+    if (__DEV__) {
+      console.log(
+        '🎯 Drag ended. Highlighted slot:',
+        highlightedSlot,
+        'Source slot:',
+        dragSourceSlot
+      );
+    }
 
     if (draggingTile && highlightedSlot !== null) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (dragSourceSlot !== null) {
         // Dragging from slot to slot - swap or move
-        console.log(
-          '✅ Moving/swapping tiles between slots',
-          dragSourceSlot,
-          '→',
-          highlightedSlot
-        );
+        if (__DEV__) {
+          console.log(
+            '✅ Moving/swapping tiles between slots',
+            dragSourceSlot,
+            '→',
+            highlightedSlot
+          );
+        }
         setSlots((prev) => {
           const copy = [...prev];
           const targetTile = copy[highlightedSlot];
@@ -775,7 +785,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         });
       } else {
         // Dragging from palette to slot
-        console.log('✅ Placing tile from palette to slot', highlightedSlot);
+        if (__DEV__) console.log('✅ Placing tile from palette to slot', highlightedSlot);
         setSlots((prev) => {
           const copy = [...prev];
           copy[highlightedSlot] = { ...draggingTile, source: 'slot' };
@@ -783,7 +793,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         });
       }
     } else {
-      console.log('❌ No valid drop target');
+      if (__DEV__) console.log('❌ No valid drop target');
     }
 
     setDraggingTile(null);
@@ -848,25 +858,29 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       const isLast = levelIndex === LEVEL_CONFIG.length - 1;
 
       if (isLast) {
-        console.log('🎯 Economy Game: Final level completed!', {
-          levelIndex,
-          completedLevel,
-        });
+        if (__DEV__) {
+          console.log('🎯 Economy Game: Final level completed!', {
+            levelIndex,
+            completedLevel,
+          });
+        }
         // Mark final level as completed and stop timer
         if (timerRef.current) clearTimeout(timerRef.current);
         setCompletedLevel(levelIndex + 1);
 
         // All levels complete - go to joker selection
-        console.log('🎯 Economy Game: Showing victory modal...');
+        if (__DEV__) console.log('🎯 Economy Game: Showing victory modal...');
         SoundEffects.playCongratsSound();
         showModal(
           'Trading Master!',
           `Incredible! You've mastered all trading levels!\nTime left: ${timeLeft}s`,
           '🏆',
           () => {
-            console.log(
-              '🎯 Economy Game: Victory modal confirmed, switching to joker selection'
-            );
+            if (__DEV__) {
+              console.log(
+                '🎯 Economy Game: Victory modal confirmed, switching to joker selection'
+              );
+            }
             hideModal();
             setTimeout(() => {
               setGameState('jokerSelection');
@@ -945,10 +959,12 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   };
 
   if (gameState === 'jokerSelection') {
-    console.log(
-      '🃏 Economy Game: Showing joker selection, completedLevel:',
-      completedLevel
-    );
+    if (__DEV__) {
+      console.log(
+        '🃏 Economy Game: Showing joker selection, completedLevel:',
+        completedLevel
+      );
+    }
     // Ensure completedLevel is at least 1 and at most 3
     const rewardLevel = Math.max(1, Math.min(3, completedLevel)) as 1 | 2 | 3;
     return (

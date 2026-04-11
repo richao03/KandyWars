@@ -39,8 +39,10 @@ const hallPassModifiersSlice = createSlice({
   initialState,
   reducers: {
     setHallPassModifiers: (state, action: PayloadAction<HallPassModifiers>) => {
-      console.log('🎖️ MODIFIERS REDUCER: setHallPassModifiers called');
-      console.log('🎖️ MODIFIERS REDUCER: Received payload:', JSON.stringify(action.payload));
+      if (__DEV__) {
+        console.log('🎖️ MODIFIERS REDUCER: setHallPassModifiers called');
+        console.log('🎖️ MODIFIERS REDUCER: Received payload:', JSON.stringify(action.payload));
+      }
       state.salePriceBonusPercent = action.payload.salePriceBonusPercent;
       state.inventoryBonusSlots = action.payload.inventoryBonusSlots;
       state.allowanceBonusPercent = action.payload.allowanceBonusPercent;
@@ -48,19 +50,21 @@ const hallPassModifiersSlice = createSlice({
       state.rerollBonusCount = action.payload.rerollBonusCount;
       state.salesMultiplier = action.payload.salesMultiplier ?? 1; // Default to 1x if not provided (backwards compatibility)
       state.isInitialized = true;
-      console.log('🎖️ MODIFIERS REDUCER: State updated successfully');
-      console.log('🎖️ MODIFIERS REDUCER: New state:', JSON.stringify({
-        salePriceBonusPercent: state.salePriceBonusPercent,
-        inventoryBonusSlots: state.inventoryBonusSlots,
-        allowanceBonusPercent: state.allowanceBonusPercent,
-        jokerBonusCount: state.jokerBonusCount,
-        rerollBonusCount: state.rerollBonusCount,
-        salesMultiplier: state.salesMultiplier,
-        isInitialized: state.isInitialized,
-      }));
+      if (__DEV__) {
+        console.log('🎖️ MODIFIERS REDUCER: State updated successfully');
+        console.log('🎖️ MODIFIERS REDUCER: New state:', JSON.stringify({
+          salePriceBonusPercent: state.salePriceBonusPercent,
+          inventoryBonusSlots: state.inventoryBonusSlots,
+          allowanceBonusPercent: state.allowanceBonusPercent,
+          jokerBonusCount: state.jokerBonusCount,
+          rerollBonusCount: state.rerollBonusCount,
+          salesMultiplier: state.salesMultiplier,
+          isInitialized: state.isInitialized,
+        }));
+      }
     },
     resetHallPassModifiers: (state) => {
-      console.log('🎖️ MODIFIERS: Resetting hall pass modifiers to zero');
+      if (__DEV__) console.log('🎖️ MODIFIERS: Resetting hall pass modifiers to zero');
       return initialState;
     },
   },

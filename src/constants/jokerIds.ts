@@ -1,63 +1,79 @@
 // Centralized Joker ID System
-// 40 total jokers
+// 73 total jokers
 
 export const JOKER_IDS = {
-  // Math Jokers
   DOUBLE_UP: 1,
-  FLIP_ARTIST: 2, // Was Median Formula — 1.5x/2x/3x when selling at 3x+ markup
-  ACE_THE_TEST: 31, // Merged with Coaching: 2x allowance + $300 flat
+  FLIP_ARTIST: 2,
+  ACE_THE_TEST: 31,
   INDUCTIVE_REASONING: 43,
   VARIETY_PACK: 50,
-
-  // Computer Jokers
   TAPPED_IN: 6,
-  COMBO_PLATTER: 8, // Was Micro Chip — bonus when both candy types covered by jokers
+  COMBO_PLATTER: 8,
   DATA_COMPRESSION: 9,
   SIXTH_SENSE: 56,
-
-  // Home Economics Jokers
   VACUUM_SEALER: 12,
   PERFECT_BAKE: 15,
   BAKE_SALE: 16,
   HOME_MADE: 17,
-  BULK_EMPIRE: 18, // Was Super Size Me — permanent stacking multiplier for high-volume daily sales
-
-  // Art Jokers (Type multiplier: Chocolate)
+  TRIPLE_THREAT: 18,
   TREASURE_CHEST: 66,
   ODD_TODD: 30,
   COCOA_FUTURES: 23,
-  SAFE_HOUSE: 67, // Merged: protects wallet + stash
+  SAFE_HOUSE: 67,
   THE_GOOD_OLD_DAYS: 24,
-
-  // Economy Jokers (Type multiplier: Gummy)
   BEAR_MARKET: 19,
   MARKET_MANIPULATION: 20,
   DEPOSIT_BONUS: 22,
   ROMAN_COIN: 37,
   BULK_DISCOUNT: 47,
   BROKE_AND_HUNGRY: 52,
-
-  // Gym Jokers (Type multiplier: Hard Candy)
   FARMERS_CARRY: 11,
   BET_YOU_IM_FASTER: 25,
   HARD_KNOCKS: 26,
   UNDERDOG: 49,
-
-  // Logic Jokers (Type multiplier: Sour)
   EVEN_STEVENS: 29,
   PURSUASION: 48,
   SOUR_LOGIC: 46,
   EXTRA_CREDIT: 55,
-
-  // Recess Jokers (Type multiplier: Chewy)
   DOUBLE_DUTCH: 32,
   EARLY_BIRD: 45,
-
-  // Geography Jokers (Type multiplier: Fruity)
   GOLDEN_HOUR: 38,
   TRADE_ROUTES: 39,
   MYSTERIOUS_ARTIFACT: 53,
   TROPICAL_IMPORT: 42,
+  SUGAR_RUSH: 57,
+  LOAN_SHARK: 58,
+  GLASS_CANNON: 59,
+  CONTRABAND: 60,
+  ALL_IN: 61,
+  HOT_POTATO: 62,
+  COMPOUND_INTEREST: 63,
+  REPUTATION: 64,
+  STREET_SMARTS: 65,
+  MINT_CONDITION: 70,
+  KING_SIZE: 71,
+  MEDIUM_RARE: 72,
+  CLEARANCE_SALE: 73,
+  PIGGY_BANK_PRO: 74,
+  MARKET_CRASH: 75,
+  INFLATION: 76,
+  LUCKY_CHARM: 77,
+  BULLY_BAIT: 78,
+  TEACHERS_SPY: 79,
+  CLASS_CLOWN: 80,
+  DETENTION_DODGE: 81,
+  COLLECTOR: 82,
+  MINIMALIST: 83,
+  LUCKY_7: 84,
+  NIGHT_OWL: 85,
+  PENNY_PINCHER: 86,
+  TAX_COLLECTOR: 87,
+  LAST_STAND: 88,
+  MOMENTUM: 89,
+  DIVERSIFIER: 90,
+  PEAK_HOURS: 91,
+  PATIENCE_PAYS: 92,
+  SPARE_CHANGE: 93,
 } as const;
 
 // Reverse mapping for getting name from ID
@@ -73,7 +89,7 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.PERFECT_BAKE]: 'Perfect Bake',
   [JOKER_IDS.BAKE_SALE]: 'Bake Sale',
   [JOKER_IDS.HOME_MADE]: 'Home Made',
-  [JOKER_IDS.BULK_EMPIRE]: 'Bulk Empire',
+  [JOKER_IDS.TRIPLE_THREAT]: 'Triple Threat',
   [JOKER_IDS.TREASURE_CHEST]: 'Treasure Chest',
   [JOKER_IDS.ODD_TODD]: 'Odd Todd',
   [JOKER_IDS.COCOA_FUTURES]: 'Cocoa Futures',
@@ -101,6 +117,39 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.BROKE_AND_HUNGRY]: 'Broke and Hungry',
   [JOKER_IDS.EXTRA_CREDIT]: 'Extra Credit',
   [JOKER_IDS.SIXTH_SENSE]: 'Sixth Sense',
+  [JOKER_IDS.SUGAR_RUSH]: 'Sugar Rush',
+  [JOKER_IDS.LOAN_SHARK]: 'Loan Shark',
+  [JOKER_IDS.GLASS_CANNON]: 'Glass Cannon',
+  [JOKER_IDS.CONTRABAND]: 'Contraband',
+  [JOKER_IDS.ALL_IN]: 'All In',
+  [JOKER_IDS.HOT_POTATO]: 'Hot Potato',
+  [JOKER_IDS.COMPOUND_INTEREST]: 'Compound Interest',
+  [JOKER_IDS.REPUTATION]: 'Reputation',
+  [JOKER_IDS.STREET_SMARTS]: 'Street Smarts',
+  [JOKER_IDS.MINT_CONDITION]: 'Mint Condition',
+  [JOKER_IDS.KING_SIZE]: 'King Size',
+  [JOKER_IDS.MEDIUM_RARE]: 'Medium Rare',
+  [JOKER_IDS.CLEARANCE_SALE]: 'Clearance Sale',
+  [JOKER_IDS.PIGGY_BANK_PRO]: 'Piggy Bank Pro',
+  [JOKER_IDS.MARKET_CRASH]: 'Market Crash',
+  [JOKER_IDS.INFLATION]: 'Inflation',
+  [JOKER_IDS.LUCKY_CHARM]: 'Lucky Charm',
+  [JOKER_IDS.BULLY_BAIT]: 'Bully Bait',
+  [JOKER_IDS.TEACHERS_SPY]: "Teacher's Spy",
+  [JOKER_IDS.CLASS_CLOWN]: 'Class Clown',
+  [JOKER_IDS.DETENTION_DODGE]: 'Detention Dodge',
+  [JOKER_IDS.COLLECTOR]: 'Collector',
+  [JOKER_IDS.MINIMALIST]: 'Minimalist',
+  [JOKER_IDS.LUCKY_7]: 'Lucky 7',
+  [JOKER_IDS.NIGHT_OWL]: 'Night Owl',
+  [JOKER_IDS.PENNY_PINCHER]: 'Penny Pincher',
+  [JOKER_IDS.TAX_COLLECTOR]: 'Tax Collector',
+  [JOKER_IDS.LAST_STAND]: 'Last Stand',
+  [JOKER_IDS.MOMENTUM]: 'Momentum',
+  [JOKER_IDS.DIVERSIFIER]: 'Diversifier',
+  [JOKER_IDS.PEAK_HOURS]: 'Peak Hours',
+  [JOKER_IDS.PATIENCE_PAYS]: 'Patience Pays',
+  [JOKER_IDS.SPARE_CHANGE]: 'Spare Change',
 };
 
 // Helper function to check if a joker has a specific ID

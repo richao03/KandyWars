@@ -80,7 +80,7 @@ export const TextWithEmojis: React.FC<TextWithEmojisProps> = ({
         EMOJI_TO_IMAGE_MAP[part as keyof typeof EMOJI_TO_IMAGE_MAP];
 
       if (part === '👀') {
-        console.log('ere?');
+        if (__DEV__) console.log('ere?');
         elements.push(
           <Image
             key={`${imageKey}-right-${i}`}

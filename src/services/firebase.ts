@@ -63,7 +63,7 @@ export const initializeFirebase = () => {
       persistence: getReactNativePersistence(AsyncStorage),
     });
 
-    console.log('🔐 Firebase Auth initialized with AsyncStorage persistence');
+    if (__DEV__) console.log('🔐 Firebase Auth initialized with AsyncStorage persistence');
   } else {
     app = getApps()[0];
     // Auth is already initialized, just get the existing instance
@@ -108,16 +108,16 @@ class ScoreboardService {
   // Initialize Firebase auth only (for scoreboard/settings that don't need user object)
   async initializeAuth(): Promise<void> {
     if (this.isInitialized) {
-      console.log('📊 Firebase auth already initialized');
+      if (__DEV__) console.log('📊 Firebase auth already initialized');
       return;
     }
 
     try {
-      console.log('📊 Initializing Firebase auth...');
+      if (__DEV__) console.log('📊 Initializing Firebase auth...');
       initializeFirebase();
 
       // Wait for auth state to be restored (handles persisted sessions)
-      console.log('📊 Waiting for auth state to be restored...');
+      if (__DEV__) console.log('📊 Waiting for auth state to be restored...');
       const user = await new Promise<User>((resolve, reject) => {
         const unsubscribe = onAuthStateChanged(
           auth,
@@ -125,18 +125,18 @@ class ScoreboardService {
             unsubscribe(); // Clean up listener
 
             if (user) {
-              console.log(
+              if (__DEV__) console.log(
                 '📊 User already signed in (persisted session):',
                 user.uid
               );
               resolve(user);
             } else {
-              console.log(
+              if (__DEV__) console.log(
                 '📊 No persisted session found, signing in anonymously...'
               );
               try {
                 const userCredential = await signInAnonymously(auth);
-                console.log(
+                if (__DEV__) console.log(
                   '📊 New anonymous user created:',
                   userCredential.user.uid
                 );
@@ -154,11 +154,11 @@ class ScoreboardService {
 
       // Use Firebase Auth UID as the document ID (for security rules)
       this.deviceId = user.uid;
-      console.log('📱 User ID (Auth UID):', this.deviceId);
+      if (__DEV__) console.log('📱 User ID (Auth UID):', this.deviceId);
 
       this.isInitialized = true;
 
-      console.log('✅ Firebase auth initialized successfully');
+      if (__DEV__) console.log('✅ Firebase auth initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Firebase auth:', error);
       throw error;
@@ -172,7 +172,7 @@ class ScoreboardService {
 
     // If we have cached user object, return it
     if (this.cachedUserObject) {
-      console.log('📊 Returning cached user object');
+      if (__DEV__) console.log('📊 Returning cached user object');
       return this.cachedUserObject;
     }
 
@@ -182,7 +182,7 @@ class ScoreboardService {
       this.cachedUserObject = userObject;
       this.lastFetchTime = Date.now();
 
-      console.log('✅ User object loaded and cached:', userObject);
+      if (__DEV__) console.log('✅ User object loaded and cached:', userObject);
       return userObject;
     } catch (error) {
       console.error('❌ Failed to initialize Firebase:', error);
@@ -214,7 +214,7 @@ class ScoreboardService {
           // Convert Firebase Timestamp to number (milliseconds)
           lastUpdated: rawData.lastUpdated?.toMillis?.() || Date.now(),
         };
-        console.log('📊 User object fetched from Firebase:', userData);
+        if (__DEV__) console.log('📊 User object fetched from Firebase:', userData);
         return userData;
       } else {
         // Create new user object
@@ -234,7 +234,7 @@ class ScoreboardService {
           ...newUser,
           lastUpdated: serverTimestamp(),
         });
-        console.log('📊 New user object created:', newUser);
+        if (__DEV__) console.log('📊 New user object created:', newUser);
         return newUser;
       }
     } catch (error) {
@@ -252,7 +252,7 @@ class ScoreboardService {
   setCachedUserObject(userObject: UserObject): void {
     this.cachedUserObject = userObject;
     this.lastFetchTime = Date.now();
-    console.log('📦 User object restored to service cache:', userObject);
+    if (__DEV__) console.log('📦 User object restored to service cache:', userObject);
   }
 
   // Refresh user object from Firebase and update cache (with staleness check)
@@ -261,21 +261,21 @@ class ScoreboardService {
     if (!force && this.cachedUserObject && this.lastFetchTime) {
       const cacheAge = Date.now() - this.lastFetchTime;
       if (cacheAge < this.CACHE_STALE_MS) {
-        console.log(
+        if (__DEV__) console.log(
           `📊 Cache is still fresh (${Math.round(cacheAge / 1000)}s old), skipping refresh`
         );
         return this.cachedUserObject;
       }
-      console.log(
+      if (__DEV__) console.log(
         `🔄 Cache is stale (${Math.round(cacheAge / 1000)}s old), refreshing...`
       );
     }
 
-    console.log('🔄 Refreshing user object from Firebase...');
+    if (__DEV__) console.log('🔄 Refreshing user object from Firebase...');
     const userObject = await this.fetchUserObject();
     this.cachedUserObject = userObject;
     this.lastFetchTime = Date.now();
-    console.log('✅ User object refreshed and cached:', userObject);
+    if (__DEV__) console.log('✅ User object refreshed and cached:', userObject);
     return userObject;
   }
 
@@ -286,7 +286,7 @@ class ScoreboardService {
         ...this.cachedUserObject,
         ...updates,
       };
-      console.log('📝 Local user object updated:', this.cachedUserObject);
+      if (__DEV__) console.log('📝 Local user object updated:', this.cachedUserObject);
     }
   }
 
@@ -294,7 +294,7 @@ class ScoreboardService {
   clearUserObjectCache(): void {
     this.cachedUserObject = null;
     this.lastFetchTime = null;
-    console.log(
+    if (__DEV__) console.log(
       '🗑️ User object cache cleared - next access will fetch from Firebase'
     );
   }
@@ -319,7 +319,7 @@ class ScoreboardService {
         lastUpdated: Date.now(),
       };
       this.cachedUserObject = updatedUserObject;
-      console.log('✅ User object saved to Firebase:', updatedUserObject);
+      if (__DEV__) console.log('✅ User object saved to Firebase:', updatedUserObject);
     } catch (error) {
       console.error('❌ Failed to save user object:', error);
       throw error;
@@ -334,7 +334,7 @@ class ScoreboardService {
 
     try {
       // Delete user-scoped analytics subcollection
-      console.log('🗑️ Deleting user analytics subcollection...');
+      if (__DEV__) console.log('🗑️ Deleting user analytics subcollection...');
       const analyticsCollectionRef = collection(
         db,
         'users',
@@ -347,12 +347,12 @@ class ScoreboardService {
         deleteDoc(doc.ref)
       );
       await Promise.all(deletePromises);
-      console.log(`✅ Deleted ${analyticsSnapshot.size} analytics documents`);
+      if (__DEV__) console.log(`✅ Deleted ${analyticsSnapshot.size} analytics documents`);
 
       // Delete main user document
       const userDocRef = doc(db, 'users', this.deviceId);
       await deleteDoc(userDocRef);
-      console.log('✅ User object deleted from Firebase');
+      if (__DEV__) console.log('✅ User object deleted from Firebase');
 
       // Clear local cache
       this.cachedUserObject = null;
@@ -373,7 +373,7 @@ class ScoreboardService {
     }
 
     if (!privacySettings.shareScore) {
-      console.log('Score sharing disabled by user');
+      if (__DEV__) console.log('Score sharing disabled by user');
       return null;
     }
 
@@ -393,7 +393,7 @@ class ScoreboardService {
       };
 
       const docRef = await addDoc(collection(db, 'scoreboard'), entry);
-      console.log('📊 Score submitted successfully:', docRef.id);
+      if (__DEV__) console.log('📊 Score submitted successfully:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error('Failed to submit score:', error);
@@ -405,9 +405,11 @@ class ScoreboardService {
     difficulty: 'easy' | 'medium' | 'hard' | 'all' = 'all',
     limitCount = 20
   ): Promise<ScoreboardEntry[]> {
-    console.log('📊 Fetching top scores...');
-    console.log('  - Difficulty:', difficulty);
-    console.log('  - Limit:', limitCount);
+    if (__DEV__) {
+      console.log('📊 Fetching top scores...');
+      console.log('  - Difficulty:', difficulty);
+      console.log('  - Limit:', limitCount);
+    }
 
     if (!this.isInitialized) {
       console.warn('❌ Scoreboard not initialized, cannot fetch scores');
@@ -415,7 +417,7 @@ class ScoreboardService {
     }
 
     try {
-      console.log('📊 Building Firestore query...');
+      if (__DEV__) console.log('📊 Building Firestore query...');
       let q = query(
         collection(db, 'scoreboard'),
         orderBy('finalBalance', 'desc'),
@@ -423,7 +425,7 @@ class ScoreboardService {
       );
 
       if (difficulty !== 'all') {
-        console.log('📊 Adding difficulty filter:', difficulty);
+        if (__DEV__) console.log('📊 Adding difficulty filter:', difficulty);
         q = query(
           collection(db, 'scoreboard'),
           where('difficulty', '==', difficulty),
@@ -432,22 +434,22 @@ class ScoreboardService {
         );
       }
 
-      console.log('📊 Executing Firestore query...');
+      if (__DEV__) console.log('📊 Executing Firestore query...');
       const querySnapshot = await getDocs(q);
-      console.log('📊 Query returned', querySnapshot.size, 'documents');
+      if (__DEV__) console.log('📊 Query returned', querySnapshot.size, 'documents');
 
       const scores: ScoreboardEntry[] = [];
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        console.log('📊 Document:', doc.id, data);
+        if (__DEV__) console.log('📊 Document:', doc.id, data);
         scores.push({
           id: doc.id,
           ...data,
         } as ScoreboardEntry);
       });
 
-      console.log('✅ Successfully fetched', scores.length, 'scores');
+      if (__DEV__) console.log('✅ Successfully fetched', scores.length, 'scores');
       return scores;
     } catch (error) {
       console.error('❌ Failed to fetch scores:', error);
@@ -543,7 +545,7 @@ class ScoreboardService {
 
   // Auto-tracking methods for real-time updates
   async trackJokerUsage(jokerId: number, playerName: string): Promise<void> {
-    console.log(
+    if (__DEV__) console.log(
       '🃏 Tracking joker usage - ID:',
       jokerId,
       'Player:',
@@ -551,16 +553,18 @@ class ScoreboardService {
     );
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log(
-        '❌ Cannot track joker usage - not initialized or no device ID'
-      );
-      console.log('  - isInitialized:', this.isInitialized);
-      console.log('  - deviceId:', this.deviceId);
+      if (__DEV__) {
+        console.log(
+          '❌ Cannot track joker usage - not initialized or no device ID'
+        );
+        console.log('  - isInitialized:', this.isInitialized);
+        console.log('  - deviceId:', this.deviceId);
+      }
       return;
     }
 
     try {
-      console.log('🃏 Adding joker usage to player_stats collection...');
+      if (__DEV__) console.log('🃏 Adding joker usage to player_stats collection...');
       const docData = {
         playerId: this.deviceId!,
         playerName,
@@ -568,10 +572,10 @@ class ScoreboardService {
         jokerId,
         timestamp: serverTimestamp(),
       };
-      console.log('🃏 Document data:', docData);
+      if (__DEV__) console.log('🃏 Document data:', docData);
 
       const docRef = await addDoc(collection(db, 'player_stats'), docData);
-      console.log('✅ Joker usage tracked successfully! Doc ID:', docRef.id);
+      if (__DEV__) console.log('✅ Joker usage tracked successfully! Doc ID:', docRef.id);
     } catch (error) {
       console.error('❌ Failed to track joker usage:', error);
     }
@@ -588,22 +592,24 @@ class ScoreboardService {
     completionTime: number,
     totalPeriodsPlayed: number
   ): Promise<void> {
-    console.log('🎮 Tracking game completion...');
-    console.log('  - Final Balance:', finalBalance);
-    console.log('  - Difficulty:', difficulty);
-    console.log('  - Days Played:', daysPlayed);
-    console.log('  - Player Name:', playerName);
-    console.log('  - Total Periods:', totalPeriodsPlayed);
+    if (__DEV__) {
+      console.log('🎮 Tracking game completion...');
+      console.log('  - Final Balance:', finalBalance);
+      console.log('  - Difficulty:', difficulty);
+      console.log('  - Days Played:', daysPlayed);
+      console.log('  - Player Name:', playerName);
+      console.log('  - Total Periods:', totalPeriodsPlayed);
+    }
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log(
+      if (__DEV__) console.log(
         '❌ Cannot track game completion - not initialized or no device ID'
       );
       return;
     }
 
     try {
-      console.log('🎮 Adding game completion to scoreboard collection...');
+      if (__DEV__) console.log('🎮 Adding game completion to scoreboard collection...');
       const docData = {
         playerId: this.deviceId,
         playerName,
@@ -620,10 +626,10 @@ class ScoreboardService {
         deviceInfo: `${Platform.OS} ${Platform.Version}`,
         timestamp: serverTimestamp(),
       };
-      console.log('🎮 Document data:', docData);
+      if (__DEV__) console.log('🎮 Document data:', docData);
 
       const docRef = await addDoc(collection(db, 'scoreboard'), docData);
-      console.log(
+      if (__DEV__) console.log(
         '✅ Game completion tracked successfully! Doc ID:',
         docRef.id
       );
@@ -661,7 +667,7 @@ class ScoreboardService {
       const globalAnalyticsRef = doc(db, 'analytics', 'minigameStats');
       await setDoc(globalAnalyticsRef, updates, { merge: true });
 
-      console.log(
+      if (__DEV__) console.log(
         '✅ Batch updated minigame stats (user-scoped + global):',
         minigameCounts
       );
@@ -689,11 +695,11 @@ class ScoreboardService {
 
       if (statsDoc.exists()) {
         const data = statsDoc.data() as { [jokerName: string]: number };
-        console.log('📊 Fetched global joker stats:', data);
+        if (__DEV__) console.log('📊 Fetched global joker stats:', data);
         return data;
       }
 
-      console.log('📊 No global joker stats found');
+      if (__DEV__) console.log('📊 No global joker stats found');
       return {};
     } catch (error) {
       console.error('❌ Failed to fetch global joker stats:', error);
@@ -713,11 +719,11 @@ class ScoreboardService {
 
       if (statsDoc.exists()) {
         const data = statsDoc.data() as { [minigameName: string]: number };
-        console.log('📊 Fetched global minigame stats:', data);
+        if (__DEV__) console.log('📊 Fetched global minigame stats:', data);
         return data;
       }
 
-      console.log('📊 No global minigame stats found');
+      if (__DEV__) console.log('📊 No global minigame stats found');
       return {};
     } catch (error) {
       console.error('❌ Failed to fetch global minigame stats:', error);
@@ -726,10 +732,10 @@ class ScoreboardService {
   }
 
   async getPlayedMinigames(): Promise<string[]> {
-    console.log('🎮 Fetching played minigames...');
+    if (__DEV__) console.log('🎮 Fetching played minigames...');
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log(
+      if (__DEV__) console.log(
         '❌ Cannot fetch played minigames - not initialized or no device ID'
       );
       return [];
@@ -753,7 +759,7 @@ class ScoreboardService {
       });
 
       const uniqueMinigames = Array.from(minigames);
-      console.log('✅ Played minigames:', uniqueMinigames);
+      if (__DEV__) console.log('✅ Played minigames:', uniqueMinigames);
       return uniqueMinigames;
     } catch (error) {
       console.error('❌ Failed to fetch played minigames:', error);
@@ -790,7 +796,7 @@ class ScoreboardService {
       const globalAnalyticsRef = doc(db, 'analytics', 'jokerStats');
       await setDoc(globalAnalyticsRef, updates, { merge: true });
 
-      console.log(
+      if (__DEV__) console.log(
         '✅ Batch updated joker stats (user-scoped + global):',
         jokerCounts
       );
@@ -822,7 +828,7 @@ class ScoreboardService {
         periodsCount,
         timestamp: serverTimestamp(),
       });
-      console.log('📚 Daily periods tracked:', periodsCount);
+      if (__DEV__) console.log('📚 Daily periods tracked:', periodsCount);
     } catch (error) {
       console.error('Failed to track daily periods:', error);
     }
@@ -831,7 +837,7 @@ class ScoreboardService {
   // Deprecated - use updateLocalUserObject and saveUserObject instead
   // Kept for backward compatibility during migration
   async incrementGameCompletions(): Promise<number> {
-    console.log(
+    if (__DEV__) console.log(
       '⚠️ incrementGameCompletions is deprecated - use user object methods'
     );
     return this.getTotalWinCount();
@@ -839,28 +845,28 @@ class ScoreboardService {
 
   // Renamed from getTotalCompletions - now uses cached user object
   getTotalWinCount(): number {
-    console.log('🏆 Getting total win count from cache...');
+    if (__DEV__) console.log('🏆 Getting total win count from cache...');
 
     if (!this.cachedUserObject) {
       console.warn('⚠️ User object not cached yet');
       return 0;
     }
 
-    console.log('✅ Total win count:', this.cachedUserObject.totalWinCount);
+    if (__DEV__) console.log('✅ Total win count:', this.cachedUserObject.totalWinCount);
     return this.cachedUserObject.totalWinCount;
   }
 
   // Backward compatibility alias
   async getTotalCompletions(): Promise<number> {
-    console.log('⚠️ getTotalCompletions is deprecated - use getTotalWinCount');
+    if (__DEV__) console.log('⚠️ getTotalCompletions is deprecated - use getTotalWinCount');
     return this.getTotalWinCount();
   }
 
   async trackDifficultyWin(difficultyLevel: number): Promise<void> {
-    console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
+    if (__DEV__) console.log('🏆 Tracking difficulty win for level:', difficultyLevel);
 
     if (!this.isInitialized || !this.deviceId) {
-      console.log(
+      if (__DEV__) console.log(
         '❌ Cannot track difficulty win - not initialized or no device ID'
       );
       return;
@@ -881,7 +887,7 @@ class ScoreboardService {
         difficultyLevel,
         timestamp: serverTimestamp(),
       });
-      console.log(
+      if (__DEV__) console.log(
         '✅ Difficulty win tracked for level:',
         difficultyLevel,
         'for device:',
@@ -894,14 +900,14 @@ class ScoreboardService {
 
   // Now uses cached user object instead of Firebase query
   getWonDifficulties(): number[] {
-    console.log('🏆 Getting won difficulties from cache...');
+    if (__DEV__) console.log('🏆 Getting won difficulties from cache...');
 
     if (!this.cachedUserObject) {
       console.warn('⚠️ User object not cached yet');
       return [];
     }
 
-    console.log('✅ Won difficulties:', this.cachedUserObject.difficultyWon);
+    if (__DEV__) console.log('✅ Won difficulties:', this.cachedUserObject.difficultyWon);
     return this.cachedUserObject.difficultyWon;
   }
 
@@ -917,13 +923,13 @@ class ScoreboardService {
     if (!this.isInitialized) await this.initialize();
 
     try {
-      console.log('📊 Fetching joker stats from universal counters...');
+      if (__DEV__) console.log('📊 Fetching joker stats from universal counters...');
 
       const statsDocRef = doc(db, 'analytics', 'jokerStats');
       const statsDoc = await getDoc(statsDocRef);
 
       if (!statsDoc.exists()) {
-        console.log('📊 No joker stats found');
+        if (__DEV__) console.log('📊 No joker stats found');
         return [];
       }
 
@@ -934,7 +940,7 @@ class ScoreboardService {
         .sort((a, b) => b.count - a.count)
         .slice(0, limit);
 
-      console.log('✅ Most obtained jokers:', sortedJokers);
+      if (__DEV__) console.log('✅ Most obtained jokers:', sortedJokers);
       return sortedJokers;
     } catch (error) {
       console.error('❌ Failed to fetch joker analytics:', error);
@@ -948,13 +954,13 @@ class ScoreboardService {
     if (!this.isInitialized) await this.initialize();
 
     try {
-      console.log('📊 Fetching minigame stats from universal counters...');
+      if (__DEV__) console.log('📊 Fetching minigame stats from universal counters...');
 
       const statsDocRef = doc(db, 'analytics', 'minigameStats');
       const statsDoc = await getDoc(statsDocRef);
 
       if (!statsDoc.exists()) {
-        console.log('📊 No minigame stats found');
+        if (__DEV__) console.log('📊 No minigame stats found');
         return [];
       }
 
@@ -965,7 +971,7 @@ class ScoreboardService {
         .sort((a, b) => b.count - a.count)
         .slice(0, limit);
 
-      console.log('✅ Most played minigames:', sortedMinigames);
+      if (__DEV__) console.log('✅ Most played minigames:', sortedMinigames);
       return sortedMinigames;
     } catch (error) {
       console.error('❌ Failed to fetch minigame analytics:', error);

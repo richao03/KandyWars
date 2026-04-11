@@ -109,7 +109,7 @@ function LocationModal({
   }, [hasMapMaker, gameData, periodCount]);
 
   const handleLocationSelect = (location: Location) => {
-    console.log('🟡 Location selected:', location);
+    if (__DEV__) console.log('🟡 Location selected:', location);
     onSelectLocation(location);
     onClose();
   };

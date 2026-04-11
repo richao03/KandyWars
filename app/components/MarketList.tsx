@@ -51,6 +51,12 @@ const MarketList = React.memo(function MarketList({
     [localPricesUpdating, onCandyPress, onGummyBearsLayout]
   );
 
+  const handleUnlockPress = useCallback(() => {
+    if (unlockButton) {
+      onUnlock?.(unlockButton.size);
+    }
+  }, [unlockButton, onUnlock]);
+
   return (
     <View style={styles.container}>
       {isFocused && showLunchMinigames && (
@@ -73,12 +79,16 @@ const MarketList = React.memo(function MarketList({
           showsVerticalScrollIndicator={true}
           overScrollMode="never"
           renderItem={renderItem}
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          removeClippedSubviews={true}
+          windowSize={5}
           ListFooterComponent={unlockButton ? (
             <UnlockCandyRow
               size={unlockButton.size}
               cost={unlockButton.cost}
               canAfford={(playerBalance ?? 0) >= unlockButton.cost}
-              onPress={() => onUnlock?.(unlockButton.size)}
+              onPress={handleUnlockPress}
             />
           ) : null}
         />

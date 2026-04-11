@@ -42,7 +42,7 @@ export const loadData = async <T>(key: string, defaultValue: T): Promise<T> => {
 export const clearData = async (key: string): Promise<boolean> => {
   try {
     await AsyncStorage.removeItem(key);
-    console.log(`Cleared ${key} successfully`);
+    if (__DEV__) console.log(`Cleared ${key} successfully`);
     return true;
   } catch (error) {
     console.error(`Failed to clear ${key}:`, error);
@@ -62,11 +62,11 @@ export const clearGameProgress = async (): Promise<boolean> => {
       STORAGE_KEYS.PROCESSED_EVENTS,
     ];
     await AsyncStorage.multiRemove(gameProgressKeys);
-    console.log('🗑️ Cleared game progress data successfully (preserved player identity)');
+    if (__DEV__) console.log('🗑️ Cleared game progress data successfully (preserved player identity)');
 
     // Set force reset flag to ensure GameContext ignores any remaining saved state
     await setForceResetFlag();
-    console.log('🔄 Set force reset flag for next GameContext load');
+    if (__DEV__) console.log('🔄 Set force reset flag for next GameContext load');
 
     // Double-check that game state is actually cleared
     const gameState = await AsyncStorage.getItem(STORAGE_KEYS.GAME_STATE);
@@ -74,7 +74,7 @@ export const clearGameProgress = async (): Promise<boolean> => {
       console.warn('⚠️ Game state still exists after clear, forcing removal');
       await AsyncStorage.removeItem(STORAGE_KEYS.GAME_STATE);
     } else {
-      console.log('✅ Confirmed game state cleared');
+      if (__DEV__) console.log('✅ Confirmed game state cleared');
     }
 
     return true;
@@ -87,7 +87,7 @@ export const clearGameProgress = async (): Promise<boolean> => {
 export const clearAllGameData = async (): Promise<boolean> => {
   try {
     await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
-    console.log('Cleared all game data successfully');
+    if (__DEV__) console.log('Cleared all game data successfully');
     return true;
   } catch (error) {
     console.error('Failed to clear all game data:', error);

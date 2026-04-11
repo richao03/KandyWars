@@ -21,6 +21,8 @@ import localAnalyticsReducer from './slices/localAnalyticsSlice';
 import userObjectReducer from './slices/userObjectSlice';
 import merchantReducer from './slices/merchantSlice';
 import tutorialReducer from './slices/tutorialSlice';
+import hustleReducer from './slices/hustleSlice';
+import questReducer from './slices/questSlice';
 
 // Combine reducers
 const rootReducer = combineReducers({
@@ -43,6 +45,8 @@ const rootReducer = combineReducers({
   userObject: userObjectReducer,
   merchant: merchantReducer,
   tutorial: tutorialReducer,
+  hustle: hustleReducer,
+  quest: questReducer,
 });
 
 // Persist configuration
@@ -50,7 +54,7 @@ const persistConfig = {
   key: 'root',
   version: 6, // Increment version to trigger migration
   storage: AsyncStorage,
-  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial'], // Only persist these slices
+  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial', 'hustle', 'quest'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
   // Performance optimizations
   timeout: 10000, // 10 second timeout for persistence operations
@@ -60,14 +64,14 @@ const persistConfig = {
   migrate: (state: any) => {
     // Handle migrations if needed
     if (state && !state._persist?.version) {
-      console.log('🔄 Migrating legacy state to new persist format');
+      if (__DEV__) console.log('🔄 Migrating legacy state to new persist format');
       // If there's legacy state without version, keep it as-is
       return Promise.resolve(state);
     }
 
     // Migration to version 2: Force hall pass re-initialization for new passes
     if (state && state._persist?.version < 2) {
-      console.log('🔄 Migrating to version 2: Resetting hall pass isLoaded flag');
+      if (__DEV__) console.log('🔄 Migrating to version 2: Resetting hall pass isLoaded flag');
       if (state.hallPass) {
         state.hallPass.isLoaded = false; // Force re-initialization
       }
@@ -75,7 +79,7 @@ const persistConfig = {
 
     // Migration to version 3: Force hall pass re-initialization for 4 new passes
     if (state && state._persist?.version < 3) {
-      console.log('🔄 Migrating to version 3: Forcing hall pass refresh for new passes');
+      if (__DEV__) console.log('🔄 Migrating to version 3: Forcing hall pass refresh for new passes');
       if (state.hallPass) {
         state.hallPass.isLoaded = false; // Force re-initialization to load all 17 passes
       }
@@ -83,7 +87,7 @@ const persistConfig = {
 
     // Migration to version 4: Update hall pass rarities (add magical tier, reorder by difficulty)
     if (state && state._persist?.version < 4) {
-      console.log('🔄 Migrating to version 4: Updating hall pass rarities and order');
+      if (__DEV__) console.log('🔄 Migrating to version 4: Updating hall pass rarities and order');
       if (state.hallPass) {
         state.hallPass.isLoaded = false; // Force re-initialization to load updated rarities
       }
@@ -96,7 +100,7 @@ const persistConfig = {
     // - Add joker level field
     // - Preserve money/wallet
     if (state && state._persist?.version < 5) {
-      console.log('🔄 Migrating to version 5: Money-making system revamp (15 candies, joker levels)');
+      if (__DEV__) console.log('🔄 Migrating to version 5: Money-making system revamp (15 candies, joker levels)');
       if (state.inventory) {
         state.inventory.items = []; // Clear old candy inventory
         state.inventory.totalQuantity = 0;
@@ -122,7 +126,7 @@ const persistConfig = {
     // - Clear inventory and seed data (candy price ranges changed)
     // - mediumCandiesUnlocked/bigCandiesUnlocked default to false via gameSlice initialState
     if (state && state._persist?.version < 6) {
-      console.log('🔄 Migrating to version 6: Candy size unlock system');
+      if (__DEV__) console.log('🔄 Migrating to version 6: Candy size unlock system');
       if (state.inventory) {
         state.inventory.items = [];
         state.inventory.totalQuantity = 0;
@@ -165,7 +169,7 @@ export const forceSave = () => {
   try {
     persistor.flush();
     const endTime = performance.now();
-    console.log(`💾 Manual save triggered successfully - took ${(endTime - startTime).toFixed(2)}ms`);
+    if (__DEV__) console.log(`💾 Manual save triggered successfully - took ${(endTime - startTime).toFixed(2)}ms`);
   } catch (error) {
     console.error('❌ Manual save failed:', error);
   }

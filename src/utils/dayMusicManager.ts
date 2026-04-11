@@ -61,18 +61,20 @@ export const DayMusicManager = {
    */
   async playForDay(day: number) {
     try {
-      console.log(`🎵 [DayMusicManager] playForDay(${day}) called`);
-      console.log(`🎵 [DayMusicManager] Current state: isDayMusicLoaded=${isDayMusicLoaded}, currentDay=${currentDay}, isTransitioning=${isTransitioning}`);
+      if (__DEV__) {
+        console.log(`🎵 [DayMusicManager] playForDay(${day}) called`);
+        console.log(`🎵 [DayMusicManager] Current state: isDayMusicLoaded=${isDayMusicLoaded}, currentDay=${currentDay}, isTransitioning=${isTransitioning}`);
+      }
 
       // If a transition is already in progress, skip this request
       if (isTransitioning) {
-        console.log(`🎵 [DayMusicManager] ⚠️ TRANSITION IN PROGRESS - Skipping request for day ${day}`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] ⚠️ TRANSITION IN PROGRESS - Skipping request for day ${day}`);
         return;
       }
 
       // If already playing music for this day, don't reload
       if (isDayMusicLoaded && currentDay === day && dayMusicPlayer) {
-        console.log(`🎵 [DayMusicManager] Day ${day} music ALREADY PLAYING - skipping`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] Day ${day} music ALREADY PLAYING - skipping`);
         return;
       }
 
@@ -85,11 +87,11 @@ export const DayMusicManager = {
         return;
       }
 
-      console.log(`🎵 [DayMusicManager] Will load day${dayIndex}.wav for requested day ${day}`);
+      if (__DEV__) console.log(`🎵 [DayMusicManager] Will load day${dayIndex}.wav for requested day ${day}`);
 
       // Set transition lock
       isTransitioning = true;
-      console.log(`🎵 [DayMusicManager] 🔒 LOCKED - Starting transition`);
+      if (__DEV__) console.log(`🎵 [DayMusicManager] 🔒 LOCKED - Starting transition`);
 
       // Ensure global audio mode is configured for mixing
       await initializeAudioMode();
@@ -100,15 +102,15 @@ export const DayMusicManager = {
 
       // Crossfade if there's existing music, otherwise just play
       if (isDayMusicLoaded && currentDay !== day && dayMusicPlayer) {
-        console.log(`🎵 [DayMusicManager] CROSSFADING from day ${currentDay} (day${((currentDay - 1) % 5) + 1}.wav) to day ${day} (day${dayIndex}.wav)`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] CROSSFADING from day ${currentDay} (day${((currentDay - 1) % 5) + 1}.wav) to day ${day} (day${dayIndex}.wav)`);
         const oldPlayer = dayMusicPlayer;
         dayMusicPlayer = newPlayer;
         currentDay = day;
         isDayMusicLoaded = true;
         await crossfade(oldPlayer, newPlayer, 1000);
-        console.log(`🎵 [DayMusicManager] Crossfade complete - now playing day${dayIndex}.wav`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] Crossfade complete - now playing day${dayIndex}.wav`);
       } else {
-        console.log(`🎵 [DayMusicManager] No existing music - FADING IN day${dayIndex}.wav`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] No existing music - FADING IN day${dayIndex}.wav`);
         // No existing music, just fade in
         newPlayer.volume = 0;
         newPlayer.play();
@@ -127,18 +129,20 @@ export const DayMusicManager = {
           }
           await new Promise(resolve => setTimeout(resolve, stepDuration));
         }
-        console.log(`🎵 [DayMusicManager] Fade in complete - day${dayIndex}.wav playing at volume 0.5`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] Fade in complete - day${dayIndex}.wav playing at volume 0.5`);
       }
 
       // Release transition lock
       isTransitioning = false;
-      console.log(`🎵 [DayMusicManager] 🔓 UNLOCKED - Transition complete`);
-      console.log(`🎵 [DayMusicManager] ✅ SUCCESS: Day ${day} music (day${dayIndex}.wav) is now playing`);
+      if (__DEV__) {
+        console.log(`🎵 [DayMusicManager] 🔓 UNLOCKED - Transition complete`);
+        console.log(`🎵 [DayMusicManager] ✅ SUCCESS: Day ${day} music (day${dayIndex}.wav) is now playing`);
+      }
     } catch (error) {
       console.error(`🎵 [DayMusicManager] ❌ ERROR loading day ${day} music:`, error);
       // Release lock on error
       isTransitioning = false;
-      console.log(`🎵 [DayMusicManager] 🔓 UNLOCKED (error recovery)`);
+      if (__DEV__) console.log(`🎵 [DayMusicManager] 🔓 UNLOCKED (error recovery)`);
     }
   },
 
@@ -149,7 +153,7 @@ export const DayMusicManager = {
     try {
       // Wait if transition is in progress
       if (isTransitioning) {
-        console.log(`🎵 [DayMusicManager] ⚠️ STOP called while transition in progress - waiting...`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] ⚠️ STOP called while transition in progress - waiting...`);
         // Wait for transition to complete (max 2 seconds)
         let waitCount = 0;
         while (isTransitioning && waitCount < 40) {
@@ -159,7 +163,7 @@ export const DayMusicManager = {
       }
 
       if (dayMusicPlayer && isDayMusicLoaded) {
-        console.log(`🎵 [DayMusicManager] Fading out day ${currentDay} music...`);
+        if (__DEV__) console.log(`🎵 [DayMusicManager] Fading out day ${currentDay} music...`);
 
         // Fade out over 500ms
         const steps = 10;

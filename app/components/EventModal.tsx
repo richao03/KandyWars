@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   ImageBackground,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,9 +20,12 @@ import ReAnimated, {
 } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
+import { useJokers, Joker as JokerType } from '../../src/hooks/useJokers';
 import { useWallet } from '../../src/hooks/useWallet';
 import { SoundEffects } from '../../src/utils/soundEffects';
+import { StandardizedJoker, getJokerEffectsAtLevel } from '../../src/utils/jokerEffectEngine';
 import { formatCurrency } from '../../src/utils/priceUtils';
+import JokerCard from './JokerCard';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
@@ -126,6 +130,7 @@ const AnimatedMoneyCounter = ({
 const EventModal = React.memo(function EventModal() {
   const { currentEvent, dismissEvent, getTheme } = useEventHandler();
   const { balance } = useWallet();
+  const { addJoker, canAddPersistentJoker } = useJokers();
   const fadeAnim = useSharedValue(0);
   const scaleAnim = useSharedValue(0.8);
   const shakeAnim = useSharedValue(0);
@@ -134,6 +139,15 @@ const EventModal = React.memo(function EventModal() {
   const [showMoneyGain, setShowMoneyGain] = useState(false);
   const [startAmount, setStartAmount] = useState(0);
   const [finalAmount, setFinalAmount] = useState(0);
+  // Detention Discovery state
+  const [showDetentionDiscovery, setShowDetentionDiscovery] = useState(false);
+  const [detentionChoices, setDetentionChoices] = useState<StandardizedJoker[]>([]);
+  const [detentionChosen, setDetentionChosen] = useState(false);
+
+  // Ref to hold the latest currentEvent so Reanimated worklet callbacks
+  // (which capture stale closures) can read the up-to-date value.
+  const currentEventRef = useRef(currentEvent);
+  currentEventRef.current = currentEvent;
 
   // Reanimated shared values for smooth UI thread animations
   const moneyValue = useSharedValue(0);
@@ -293,6 +307,42 @@ const EventModal = React.memo(function EventModal() {
     };
   }, [currentEvent]);
 
+  const handleDetentionClaim = useCallback((joker: StandardizedJoker) => {
+    if (detentionChosen) return;
+
+    const isOneTime = joker.type === 'one-time';
+
+    // Block persistent jokers if slots are full — but still allow dismissal
+    if (!isOneTime && !canAddPersistentJoker()) {
+      // Can't add this joker, but don't silently block — just skip it
+      if (__DEV__) console.log('Detention: Aura slots full, cannot claim persistent joker');
+      return;
+    }
+
+    const jokerToAdd: JokerType = {
+      id: joker.id,
+      name: joker.name,
+      description: joker.description,
+      type: isOneTime ? 'one-time' : 'persistent',
+      effect: '',
+      effects: joker.effects,
+      level: 1,
+    };
+
+    addJoker(jokerToAdd, 'event');
+    setDetentionChosen(true);
+    SoundEffects.playPositiveSound();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Auto-dismiss after a short delay
+    setTimeout(() => {
+      setShowDetentionDiscovery(false);
+      setDetentionChoices([]);
+      setDetentionChosen(false);
+      dismissEvent();
+    }, 1200);
+  }, [detentionChosen, addJoker, canAddPersistentJoker, dismissEvent]);
+
   const handleDismissCleanup = useCallback(() => {
     // Reset all animation state
     setShowMoneyLoss(false);
@@ -303,6 +353,31 @@ const EventModal = React.memo(function EventModal() {
     // Clear any running animation timeouts
     animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
     animationTimeouts.current = [];
+
+    // Read from ref to avoid stale closure from Reanimated worklet callbacks.
+    // runOnJS captures the function reference at worklet creation time, so
+    // the useCallback closure may hold an outdated currentEvent.
+    const event = currentEventRef.current;
+
+    // Check for Detention Discovery joker drop before fully dismissing
+    console.log('🎲 DETENTION CHECK:', {
+      hasEvent: !!event,
+      effect: event?.effect,
+      hasJokerDrop: event?.hasJokerDrop,
+      choicesCount: event?.detentionJokerChoices?.length ?? 0,
+    });
+
+    if (event?.hasJokerDrop && event?.detentionJokerChoices?.length > 0) {
+      console.log('🎲 DETENTION: Showing joker selection!', event.detentionJokerChoices.map((j: any) => j.name));
+      setDetentionChoices(event.detentionJokerChoices);
+      setShowDetentionDiscovery(true);
+      setDetentionChosen(false);
+      // Play a discovery sound
+      SoundEffects.playPositiveSound();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      return; // Don't dismiss yet — show joker selection first
+    }
+
     // Callback will be executed in dismissEvent
     dismissEvent();
   }, [dismissEvent]);
@@ -332,6 +407,96 @@ const EventModal = React.memo(function EventModal() {
       { translateX: shakeAnim.value },
     ],
   }));
+
+  // Show Detention Discovery joker selection overlay
+  console.log('🎲 DETENTION RENDER CHECK:', { showDetentionDiscovery, choicesLength: detentionChoices.length, currentEventExists: !!currentEvent });
+  if (showDetentionDiscovery && detentionChoices.length > 0) {
+    console.log('🎲 DETENTION: Rendering joker selection UI!');
+    return (
+      <View
+        style={[styles.modalOverlay, { opacity: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)' }]}
+        pointerEvents="auto"
+      >
+        <View style={styles.centeredContainer}>
+          <PixelBorder
+            borderColor="#d4af37"
+            borderWidth={4}
+            backgroundColor="#00512C"
+            innerPadding={0}
+            style={{ width: '90%', maxWidth: 400, maxHeight: '90%' }}
+          >
+            <View style={{ padding: 20 }}>
+              <Text style={styles.detentionTitle}>
+                Detention Discovery!
+              </Text>
+              <Text style={styles.detentionSubtitle}>
+                While hiding, you found something interesting...
+              </Text>
+              <Text style={styles.detentionInstruction}>
+                Pick one to keep:
+              </Text>
+
+              <ScrollView
+                style={{ maxHeight: 400 }}
+                contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+              >
+                {detentionChoices.map((joker) => {
+                  const effects = getJokerEffectsAtLevel(joker, 1);
+                  const isChosen = detentionChosen;
+                  return (
+                    <TouchableOpacity
+                      key={joker.id.toString()}
+                      onPress={() => handleDetentionClaim(joker)}
+                      disabled={detentionChosen}
+                      activeOpacity={0.7}
+                    >
+                      <PixelBorder
+                        borderColor={isChosen ? '#22c55e' : '#d4af37'}
+                        borderWidth={3}
+                        backgroundColor="rgba(0, 30, 15, 0.8)"
+                        innerPadding={12}
+                      >
+                        <Text style={styles.detentionJokerName}>
+                          {joker.name}
+                        </Text>
+                        <Text style={styles.detentionJokerDesc}>
+                          {joker.description}
+                        </Text>
+                        <Text style={styles.detentionJokerType}>
+                          {joker.type === 'one-time' ? 'Instant' : 'Aura (Persistent)'}
+                        </Text>
+                      </PixelBorder>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {detentionChosen && (
+                <Text style={styles.detentionClaimedText}>
+                  Nice find!
+                </Text>
+              )}
+
+              {/* Skip/close button — always available as escape hatch */}
+              {!detentionChosen && (
+                <TouchableOpacity
+                  style={{ marginTop: 12, alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16 }}
+                  onPress={() => {
+                    setShowDetentionDiscovery(false);
+                    setDetentionChoices([]);
+                    setDetentionChosen(false);
+                    dismissEvent();
+                  }}
+                >
+                  <Text style={{ color: '#d4af37', fontSize: 12, fontFamily: 'PixeloidMono' }}>Skip</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </PixelBorder>
+        </View>
+      </View>
+    );
+  }
 
   if (!currentEvent) {
     return null;
@@ -910,5 +1075,62 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(34, 197, 94, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  // Detention Discovery styles — matches joker tab color scheme
+  detentionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#d4af37',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  detentionSubtitle: {
+    fontSize: 14,
+    color: '#f7e98e',
+    fontFamily: 'CrayonPastel',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  detentionInstruction: {
+    fontSize: 16,
+    color: '#d4af37',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  detentionJokerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#d4af37',
+    fontFamily: 'PixeloidMono',
+    marginBottom: 4,
+  },
+  detentionJokerDesc: {
+    fontSize: 13,
+    color: '#f7e98e',
+    fontFamily: 'CrayonPastel',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  detentionJokerType: {
+    fontSize: 11,
+    color: '#8a9a7c',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'right',
+  },
+  detentionClaimedText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#22c55e',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });
