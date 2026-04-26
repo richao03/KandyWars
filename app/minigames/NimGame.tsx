@@ -464,7 +464,6 @@ export default function NimGame({ onComplete }: NimGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="gym"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -623,7 +622,6 @@ export default function NimGame({ onComplete }: NimGameProps) {
           leftInfo={`Level ${level}/3`}
           centerInfo={`${remaining} left`}
           rightInfo={currentTurn === 'player' ? '👆 Pick' : '🤖 AI'}
-          theme="gym"
         />
 
         <ScrollView
@@ -655,7 +653,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
           </PressableButton>
         )}
         <Text style={styles.hintText}>
-          Don't get stuck with the last pick or you lose!
+          Don&apos;t get stuck with the last pick or you lose!
         </Text>
         {/* Leave button pinned to bottom */}
         <PixelBorder

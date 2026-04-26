@@ -23,10 +23,21 @@ import merchantReducer from './slices/merchantSlice';
 import tutorialReducer from './slices/tutorialSlice';
 import hustleReducer from './slices/hustleSlice';
 import questReducer from './slices/questSlice';
+import settingsReducer from './slices/settingsSlice';
+import jokerStatsReducer from './slices/jokerStatsSlice';
+import shopkeeperReducer from './slices/shopkeeperSlice';
+import juiceSettingsReducer from './slices/juiceSettingsSlice';
+
+// Per-slice persist config: keep showLunchMinigames transient (lunch modal UI flag)
+const gamePersistConfig = {
+  key: 'game',
+  storage: AsyncStorage,
+  blacklist: ['showLunchMinigames'],
+};
 
 // Combine reducers
 const rootReducer = combineReducers({
-  game: gameReducer,
+  game: persistReducer(gamePersistConfig, gameReducer),
   flavorText: flavorTextReducer,
   joker: jokerReducer,
   wallet: walletReducer,
@@ -47,14 +58,18 @@ const rootReducer = combineReducers({
   tutorial: tutorialReducer,
   hustle: hustleReducer,
   quest: questReducer,
+  settings: settingsReducer,
+  jokerStats: jokerStatsReducer,
+  shopkeeper: shopkeeperReducer,
+  juiceSettings: juiceSettingsReducer,
 });
 
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 6, // Increment version to trigger migration
+  version: 7, // Increment version to trigger migration
   storage: AsyncStorage,
-  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial', 'hustle', 'quest'], // Only persist these slices
+  whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial', 'hustle', 'quest', 'settings', 'jokerStats', 'shopkeeper', 'juiceSettings'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
   // Performance optimizations
   timeout: 10000, // 10 second timeout for persistence operations
@@ -135,6 +150,14 @@ const persistConfig = {
         state.seed.gameData = null;
         state.seed.currentSeed = null;
       }
+    }
+
+    // Migration to version 7: Shopkeeper NPC system
+    // - New shopkeeper slice with persistent level/XP across runs
+    // - No data changes needed, slice initializes with defaults
+    if (state && state._persist?.version < 7) {
+      if (__DEV__) console.log('🔄 Migrating to version 7: Shopkeeper NPC system');
+      // Shopkeeper slice will initialize with defaults automatically
     }
 
     return Promise.resolve(state);

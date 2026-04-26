@@ -8,9 +8,17 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { persistor, store } from '../src/store/store';
 import GameEffectsManager from './components/GameEffectsManager';
+import JuiceLayer from './components/JuiceLayer';
+import ScreenFX from './components/ScreenFX';
 import { AdVisibilityProvider } from '../src/context/AdVisibilityContext';
 import { ToastProvider } from '../src/context/ToastContext';
 import { initializeAudioMode } from '../src/utils/audioConfig';
+import { registerHapticSettingsGetter } from '../src/utils/hapticTier';
+import { useAppSelector } from '../src/store/hooks';
+import {
+  selectHaptics,
+  selectReduceMotion,
+} from '../src/store/slices/juiceSettingsSlice';
 import Constants from 'expo-constants';
 
 // Keep the splash screen visible while we fetch resources
@@ -92,11 +100,13 @@ export default function RootLayout() {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <GameEffectsManager />
+        <HapticRegistrar />
         <ToastProvider>
         <AdVisibilityProvider>
           <SafeAreaProvider>
             <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
               <GestureHandlerRootView style={{ flex: 1 }}>
+                <ScreenFX>
                 <Stack
                   screenOptions={{
                     animation: 'none',
@@ -183,6 +193,8 @@ export default function RootLayout() {
                         }}
                       />
                 </Stack>
+                </ScreenFX>
+                <JuiceLayer />
               </GestureHandlerRootView>
             </SafeAreaView>
           </SafeAreaProvider>
@@ -191,6 +203,23 @@ export default function RootLayout() {
       </PersistGate>
     </Provider>
   );
+}
+
+/**
+ * HapticRegistrar
+ *
+ * Bridges the Redux juiceSettings slice into the `hapticTier` util via
+ * `registerHapticSettingsGetter`. Re-registers whenever reduceMotion/haptics
+ * change so the getter always reflects current state without the util
+ * having to import the slice (which would create a circular dep).
+ */
+function HapticRegistrar() {
+  const reduceMotion = useAppSelector(selectReduceMotion);
+  const haptics = useAppSelector(selectHaptics);
+  useEffect(() => {
+    registerHapticSettingsGetter(() => ({ reduceMotion, haptics }));
+  }, [reduceMotion, haptics]);
+  return null;
 }
 
 /**

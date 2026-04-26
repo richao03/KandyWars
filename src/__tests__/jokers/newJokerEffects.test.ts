@@ -143,24 +143,77 @@ describe('New Joker Effects (IDs 57-93)', () => {
   // CONDITIONAL MULTIPLIERS
   // ========================================================================
   describe('Conditional Multipliers', () => {
-    describe('All In (61) — cash < $500', () => {
-      it('should trigger 4x when currentCash < 500', () => {
+    describe('All In (61) — full stack + cash threshold', () => {
+      it('L1 should trigger 4x when selling full stack and currentCash < $500', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
           currentCash: 200,
+          quantity: 10,
+          inventory: [{ name: 'M&Ms', quantity: 10 }],
           jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 1)],
         });
         // multiplier = 1 + (4 - 1) = 4
         expect(result.jokerMultiplier).toBe(4);
       });
 
-      it('should NOT trigger when currentCash >= 500', () => {
+      it('should NOT trigger at L1 when currentCash >= $500', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
           currentCash: 500,
+          quantity: 10,
+          inventory: [{ name: 'M&Ms', quantity: 10 }],
           jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 1)],
         });
         expect(result.jokerMultiplier).toBe(1);
+      });
+
+      it('should NOT trigger when NOT selling full stack (qty < ownedQty)', () => {
+        const result = calculateSaleTotal({
+          ...baseSaleParams,
+          currentCash: 100,
+          quantity: 5, // sell only half
+          inventory: [{ name: 'M&Ms', quantity: 10 }], // own 10
+          jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 1)],
+        });
+        expect(result.jokerMultiplier).toBe(1);
+      });
+
+      it('L2 cash threshold is $5k', () => {
+        const below = calculateSaleTotal({
+          ...baseSaleParams,
+          currentCash: 4999,
+          quantity: 10,
+          inventory: [{ name: 'M&Ms', quantity: 10 }],
+          jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 2)],
+        });
+        expect(below.jokerMultiplier).toBe(6); // 1 + (6-1)
+        const above = calculateSaleTotal({
+          ...baseSaleParams,
+          currentCash: 5000,
+          quantity: 10,
+          inventory: [{ name: 'M&Ms', quantity: 10 }],
+          jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 2)],
+        });
+        expect(above.jokerMultiplier).toBe(1);
+      });
+
+      it('L3 cash threshold is $15k', () => {
+        const below = calculateSaleTotal({
+          ...baseSaleParams,
+          currentCash: 14999,
+          quantity: 10,
+          inventory: [{ name: 'M&Ms', quantity: 10 }],
+          jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 3)],
+        });
+        expect(below.jokerMultiplier).toBe(8); // 1 + (8-1)
+        const above = calculateSaleTotal({
+          ...baseSaleParams,
+          currentCash: 15000,
+          quantity: 10,
+          inventory: [{ name: 'M&Ms', quantity: 10 }],
+          jokers: [makeTestJoker(JOKER_IDS.ALL_IN, 3)],
+        });
+        expect(above.jokerMultiplier).toBe(1);
       });
     });
 
@@ -229,24 +282,30 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
     });
 
-    describe('Peak Hours (91) — periods 3-5', () => {
-      it('should trigger 2x during period 3', () => {
+    describe('Peak Hours (91) — periods 3-5 (profit boost)', () => {
+      it('should add to profit boost during period 3', () => {
+        // Peak Hours is now a profit boost, not a multiplier
+        // profitBoost += (2-1) = 1, so profitBoost = 2
+        // multiplier stays at 1
+        // totalProfit = 500, boostedProfit = 500 * 2 = 1000
+        // totalGain = 500 + (1000 * 1) = 1500
         const result = calculateSaleTotal({
           ...baseSaleParams,
           period: 3,
           jokers: [makeTestJoker(JOKER_IDS.PEAK_HOURS, 1)],
         });
-        // multiplier = 1 + (2 - 1) = 2
-        expect(result.jokerMultiplier).toBe(2);
+        expect(result.jokerMultiplier).toBe(1);
+        expect(result.totalGain).toBe(1500);
       });
 
-      it('should trigger 2x during period 5', () => {
+      it('should add to profit boost during period 5', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
           period: 5,
           jokers: [makeTestJoker(JOKER_IDS.PEAK_HOURS, 1)],
         });
-        expect(result.jokerMultiplier).toBe(2);
+        expect(result.jokerMultiplier).toBe(1);
+        expect(result.totalGain).toBe(1500);
       });
 
       it('should NOT trigger outside periods 3-5', () => {
@@ -256,6 +315,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
           jokers: [makeTestJoker(JOKER_IDS.PEAK_HOURS, 1)],
         });
         expect(result.jokerMultiplier).toBe(1);
+        expect(result.totalGain).toBe(1000); // No boost
       });
     });
 
@@ -334,16 +394,24 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
     });
 
-    describe('Hot Potato (62) — sell multiplier with penalty', () => {
-      it('should increase totalGain with 2x sell multiplier', () => {
+    describe('Hot Potato (62) — +3/+5/+7 mult on every sale (melt window handled in usePeriodAdvance)', () => {
+      it('L1 should add +3 to multiplier (amount 4)', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
           jokers: [makeTestJoker(JOKER_IDS.HOT_POTATO, 1)],
         });
-        // sell_multiplier 2x: multiplier = 1 + (2 - 1) = 2
-        // totalGain = 500 + (500 * 2) = 1500
-        expect(result.jokerMultiplier).toBe(2);
-        expect(result.totalGain).toBe(1500);
+        // sell_multiplier amount 4: multiplier = 1 + (4 - 1) = 4
+        // totalGain = 500 + (500 * 4) = 2500
+        expect(result.jokerMultiplier).toBe(4);
+        expect(result.totalGain).toBe(2500);
+      });
+
+      it('L3 should add +7 to multiplier (amount 8)', () => {
+        const result = calculateSaleTotal({
+          ...baseSaleParams,
+          jokers: [makeTestJoker(JOKER_IDS.HOT_POTATO, 3)],
+        });
+        expect(result.jokerMultiplier).toBe(8);
       });
     });
 
@@ -361,16 +429,18 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
     });
 
-    describe('Momentum (89) — scales with consecutive sales', () => {
-      it('should scale multiplier with consecutivePeriodSales', () => {
+    describe('Momentum (89) — scales with consecutive sales (profit boost)', () => {
+      it('should scale profit boost with consecutivePeriodSales', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
           consecutivePeriodSales: 3,
           jokers: [makeTestJoker(JOKER_IDS.MOMENTUM, 1)],
         });
-        // L1: +0.3 per consecutive sale, 3 sales = +0.9
-        // multiplier = 1 + 0.9 = 1.9
-        expect(result.jokerMultiplier).toBeCloseTo(1.9);
+        // L1: +0.3 per consecutive sale, 3 sales = profitBoost += 0.9
+        // profitBoost = 1.9, multiplier = 1
+        // totalGain = 500 + (500 * 1.9 * 1) = 500 + 950 = 1450
+        expect(result.jokerMultiplier).toBe(1);
+        expect(result.totalGain).toBe(1450);
       });
 
       it('should give no bonus when consecutivePeriodSales is 0', () => {
@@ -380,6 +450,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
           jokers: [makeTestJoker(JOKER_IDS.MOMENTUM, 1)],
         });
         expect(result.jokerMultiplier).toBe(1);
+        expect(result.totalGain).toBe(1000);
       });
     });
   });
@@ -395,8 +466,10 @@ describe('New Joker Effects (IDs 57-93)', () => {
         expect(effects[0].target).toBe('loan_shark_income');
         expect(effects[0].operation).toBe('add');
         expect(effects[0].amount).toBe(5000);
-        expect(effects[1].target).toBe('loan_shark_income');
-        expect(effects[1].operation).toBe('multiply');
+        // Debt target renamed from 'loan_shark_income' (w/ multiply) to
+        // 'loan_shark_debt' (w/ add) for clarity. Amount stays negative.
+        expect(effects[1].target).toBe('loan_shark_debt');
+        expect(effects[1].operation).toBe('add');
         expect(effects[1].amount).toBe(-6000);
       });
     });
@@ -405,7 +478,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
       it('should return compound_interest_boost at L1 with 1.2x', () => {
         const effects = getJokerEffectsAtLevel(JOKER_IDS.COMPOUND_INTEREST, 1);
         expect(effects).toHaveLength(1);
-        expect(effects[0].target).toBe('compound_interest_boost');
+        expect(effects[0].target).toBe('compound_interest_profit_boost');
         expect(effects[0].amount).toBe(1.2);
       });
 
@@ -419,7 +492,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
       it('should return reputation_boost with add operation', () => {
         const effects = getJokerEffectsAtLevel(JOKER_IDS.REPUTATION, 1);
         expect(effects).toHaveLength(1);
-        expect(effects[0].target).toBe('reputation_boost');
+        expect(effects[0].target).toBe('reputation_profit_boost');
         expect(effects[0].operation).toBe('add');
         expect(effects[0].amount).toBe(0.2);
       });
@@ -431,7 +504,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
         expect(effects).toHaveLength(1);
         expect(effects[0].target).toBe('street_smarts_boost');
         expect(effects[0].operation).toBe('add');
-        expect(effects[0].amount).toBe(0.10);
+        expect(effects[0].amount).toBe(0.5);
       });
     });
 
@@ -497,23 +570,53 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
     });
 
-    describe("Teacher's Spy (79)", () => {
-      it('should return event_early_reveal with 2 periods at L1', () => {
-        const effects = getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_SPY, 1);
+    describe("Teacher's Pet (79)", () => {
+      it('should return price_peek_hint with 1 candy at L1', () => {
+        const effects = getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 1);
         expect(effects).toHaveLength(1);
-        expect(effects[0].target).toBe('event_early_reveal');
-        expect(effects[0].operation).toBe('add');
-        expect(effects[0].amount).toBe(2);
+        expect(effects[0].target).toBe('price_peek_hint');
+        expect(effects[0].operation).toBe('set');
+        expect(effects[0].amount).toBe(1);
+      });
+
+      it('should scale to 2/3 candies at L2/L3', () => {
+        expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 2)[0].amount).toBe(2);
+        expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 3)[0].amount).toBe(3);
       });
     });
 
     describe('Class Clown (80)', () => {
-      it('should return event_positive_chance with 50% at L1', () => {
+      it('should return location_change_boost with +10% at L1', () => {
         const effects = getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 1);
         expect(effects).toHaveLength(1);
-        expect(effects[0].target).toBe('event_positive_chance');
-        expect(effects[0].operation).toBe('set');
-        expect(effects[0].amount).toBe(0.50);
+        expect(effects[0].target).toBe('location_change_boost');
+        expect(effects[0].operation).toBe('add');
+        expect(effects[0].amount).toBeCloseTo(0.1);
+      });
+
+      it('should scale to +25%/+50% at L2/L3', () => {
+        expect(getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 2)[0].amount).toBeCloseTo(0.25);
+        expect(getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 3)[0].amount).toBeCloseTo(0.5);
+      });
+
+      it('profit boost fires in calc only when previousLocation differs', () => {
+        const fires = calculateSaleTotal({
+          ...baseSaleParams,
+          currentLocation: 'home room',
+          previousLocation: 'gym',
+          jokers: [makeTestJoker(JOKER_IDS.CLASS_CLOWN, 1)],
+        });
+        // profitBoost = 1 + 0.1 = 1.1, totalProfit=500, boosted=550, totalGain=1050
+        expect(fires.totalGain).toBe(1050);
+
+        const skips = calculateSaleTotal({
+          ...baseSaleParams,
+          currentLocation: 'home room',
+          previousLocation: 'home room',
+          jokers: [makeTestJoker(JOKER_IDS.CLASS_CLOWN, 1)],
+        });
+        // No boost — location unchanged
+        expect(skips.totalGain).toBe(1000);
       });
     });
 

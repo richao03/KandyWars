@@ -2,179 +2,188 @@
 
 ## System Overview
 
-- **47 total jokers** across 9 minigame subjects
-- **Level system:** 1–3 (higher = stronger). Some jokers are not upgradeable (max level 1).
-- **Types:** `persistent` (always active, capped at 5 aura slots) or `one-time` (consumed on use, unlimited)
-- **Upgrade costs:** $5,000 (L1→L2), $30,000 (L2→L3)
-- All jokers are available from any minigame (no subject lock)
+- **76 total jokers**
+- **Level system:** 1–3 (higher = stronger). Some jokers are max level 1 (not upgradeable).
+- **Types:** `persistent` (always active, capped at 5 aura slots, 6 with Sixth Sense) or `one-time` (activated manually)
+- **Upgrade costs:** $5,000 (L1->L2), $30,000 (L2->L3)
+- **Level colors:** L1 = green, L2 = blue, L3 = purple
 
 ---
 
 ## Sale Formula
 
 ```
-finalProfit = (baseProfit × profitBoost) × multiplier
-totalGain   = purchaseValue + finalProfit
+finalProfit = (baseProfit x profitBoost) x multiplier
 ```
 
-**Profit boosts** and **multipliers** are two separate layers. Each layer stacks additively within itself.
+- **profitBoost** starts at 1 (100%). Profit jokers ADD to this (e.g., +50% = profitBoost becomes 1.5).
+- **multiplier** starts at 1. Mult jokers ADD to this (e.g., +0.5 = multiplier becomes 1.5).
+- Both layers stack additively within themselves, then multiply together.
 
 ---
 
-## Jokers by Category
+## Complete Joker Table
 
-### Profit Boosts — Candy Type
+### Profit Boosts (% added to profit)
 
-Scale the profit directly. A 1.5x boost on $100 profit = $150. Multiple type boosts add together:
-> $100 × (1 + 0.5 + 0.5) = $200
+| ID  | Name            | Description                                              | L1/L2/L3 Values | Code Effect                 |
+| --- | --------------- | -------------------------------------------------------- | --------------- | --------------------------- |
+| 23  | Cocoa Futures   | +50%/+100%/+200% profit on Chocolate candy               | 1.5/2/3         | profitBoost += (amount - 1) |
+| 26  | Hard Knocks     | +50%/+100%/+200% profit on Hard Candy                    | 1.5/2/3         | profitBoost += (amount - 1) |
+| 46  | Sour Logic      | +50%/+100%/+200% profit on Sour candy                    | 1.5/2/3         | profitBoost += (amount - 1) |
+| 32  | Double Dutch    | +50%/+100%/+200% profit on Chewy candy                   | 1.5/2/3         | profitBoost += (amount - 1) |
+| 42  | Tropical Import | +50%/+100%/+200% profit on Fruity candy                  | 1.5/2/3         | profitBoost += (amount - 1) |
+| 8   | Combo Platter   | +100%/+150%/+200% profit when 2 candy types are covered  | 1/1.5/2         | profitBoost += amount       |
+| 47  | Bulk Discount   | +50%/+100%/+200% profit when selling 20+ at once         | 1.5/2/3         | profitBoost += (amount - 1) |
+| 87  | Tax Collector   | 5%/8%/12% of sale as bonus cash                          | 0.05/0.08/0.12  | profitBoost += amount       |
+| 29  | Even Stevens    | +50%/+100%/+200% profit when inventory limit is even     | 1.5/2/3         | profitBoost += (amount - 1) |
+| 38  | Golden Hour     | +50%/+100%/+200% profit in last 2 periods of day         | 1.5/2/3         | profitBoost += (amount - 1) |
+| 45  | Early Bird      | +50%/+100%/+200% profit on first sale each day           | 1.5/2/3         | profitBoost += (amount - 1) |
+| 49  | Underdog        | +50%/+100%/+200% profit when cash < $5k/$10k/$15k        | 1.5/2/3         | profitBoost += (amount - 1) |
+| 50  | Variety Pack    | +50%/+100%/+200% profit when 3+ candy types in inventory | 1.5/2/3         | profitBoost += (amount - 1) |
+| 91  | Peak Hours      | +100%/+200%/+300% profit during periods 3-5              | 2/3/4           | profitBoost += (amount - 1) |
 
-| # | Name | Subject | Max Lv | Target | Boost (Lv 1/2/3) |
-|---|------|---------|--------|--------|-------------------|
-| 23 | Cocoa Futures | Art | 3 | Chocolate | 1.5x/2x/3x |
-| 19 | Bear Market | Economy | 3 | Gummy | 1.5x/2x/3x |
-| 26 | Hard Knocks | Gym | 3 | Hard Candy | 1.5x/2x/3x |
-| 46 | Sour Logic | Logic | 3 | Sour | 1.5x/2x/3x |
-| 32 | Double Dutch | Recess | 3 | Chewy | 1.5x/2x/3x |
-| 42 | Tropical Import | Geography | 3 | Fruity | 1.5x/2x/3x |
+### Mult Boosts (added to sale multiplier)
 
-### Profit Boosts — Conditional
+| ID  | Name             | Description                                     | L1/L2/L3 Values | Code Effect                |
+| --- | ---------------- | ----------------------------------------------- | --------------- | -------------------------- |
+| 19  | Bear Market      | +1.5/+2/+3 mult on Gummy candy                  | 1.5/2/3         | multiplier += amount       |
+| 70  | Mint Condition   | +1/+1.5/+2 mult on small candy                  | 1/1.5/2         | multiplier += amount       |
+| 71  | King Size        | +1/+1.5/+2 mult on big candy                    | 1/1.5/2         | multiplier += amount       |
+| 72  | Medium Rare      | +1/+1.5/+2 mult on medium candy                 | 1/1.5/2         | multiplier += amount       |
+| 18  | Triple Threat    | +2/+3/+4 mult when 3+ candy types covered       | 2/3/4           | multiplier += amount       |
+| 30  | Odd Todd         | +0.5/+1/+2 mult when inventory limit is odd     | 1.5/2/3         | multiplier += (amount - 1) |
+| 52  | Broke and Hungry | +1/+2/+3 mult when cash < $2k/$3k/$5k           | 2/3/4           | multiplier += (amount - 1) |
+| 2   | Flip Artist      | +0.5/+1/+2 mult when selling at 3x+ markup      | 1.5/2/3         | multiplier += (amount - 1) |
+| 48  | Pursuasion       | +1/+3/+5 mult on your next sale (one-time)      | 2/4/6           | multiplier += (amount - 1) |
+| 61  | All In           | +3/+5/+7 mult when selling full stack and cash < $500/$5k/$15k | 4/6/8 | multiplier += (amount - 1) (requires qty == ownedQty) |
+| 83  | Minimalist       | +2/+4/+7 mult if exactly 3 jokers owned         | 3/5/8           | multiplier += (amount - 1) |
+| 84  | Lucky 7          | +6/+9/+14 mult if selling exactly 7 candy       | 7/10/15         | multiplier += (amount - 1) |
+| 85  | Night Owl        | +2/+3/+4 mult in last period of day             | 3/4/5           | multiplier += (amount - 1) |
+| 88  | Last Stand       | +9/+14/+19 mult if selling < 5 candy            | 10/15/20        | multiplier += (amount - 1) |
+| 90  | Diversifier      | +1/+2/+3 mult when selling 3+ types same period | 2/3/4           | multiplier += (amount - 1) |
+| 92  | Patience Pays    | +0.5/+0.75/+1 mult when no sale previous period | 1.5/1.75/2      | multiplier += (amount - 1) |
 
-Same profit boost layer, but triggered by sale context (quantity, cash, timing) instead of candy type.
+### Scaling Profit (grows over time, added to profit boost)
 
-| # | Name | Subject | Max Lv | Condition | Boost (Lv 1/2/3) |
-|---|------|---------|--------|-----------|-------------------|
-| 45 | Early Bird | Recess | 3 | First sale of each day | 1.5x/2x/3x |
-| 47 | Bulk Discount | Economy | 3 | Sell 5+/35+/55+ at once | 1.5x/2x/3x |
-| 49 | Underdog | Gym | 3 | Cash < $5k/$10k/$15k | 1.5x/2x/3x |
-| 50 | Penny Pincher | Math | 3 | Profit/candy ≤ $5 | 2x/3x/4x |
-| 52 | Broke and Hungry | Economy | 3 | Cash < $500 | 2x/3x/4x |
+| ID  | Name              | Description                                       | L1/L2/L3 Values | Code Effect                                   |
+| --- | ----------------- | ------------------------------------------------- | --------------- | --------------------------------------------- |
+| 63  | Compound Interest | +20%/+40%/+60% profit (grows each day)            | 1.2/1.4/1.6     | profitBoost += (amount - 1), scales with days |
+| 64  | Reputation        | +20%/+30%/+40% profit per unique candy sold       | 0.2/0.3/0.4     | profitBoost += (amount x uniqueCandiesSold)   |
+| 89  | Momentum          | +30%/+50%/+80% profit per consecutive sale period | 0.3/0.5/0.8     | profitBoost += (amount x consecutiveSales)    |
+| 96  | Penny Wise        | +15%/+25%/+40% profit per time money was stashed  | 0.15/0.25/0.4   | profitBoost += (amount x pennyWiseStashes)    |
 
-### Multipliers — Candy Size
+### Scaling Mult (grows over time, added to multiplier)
 
-Multiply the boosted profit. A 2x multiplier on $200 boosted profit = $400. Multiple multipliers add together:
-> (1 + 0.5 + 0.5) = 2x
+| ID  | Name           | Description                                    | L1/L2/L3 Values | Code Effect                             |
+| --- | -------------- | ---------------------------------------------- | --------------- | --------------------------------------- |
+| 65  | Street Smarts  | +0.5/+0.75/+1 mult per event survived          | 0.5/0.75/1.0    | multiplier += (amount x eventsSurvived) |
+| 73  | Clearance Sale | +10%/+15%/+20% permanent mult per loss sale    | 0.1/0.15/0.2    | multiplier += (amount x lossSaleCount)  |
+| 82  | Collector      | +0.3/+0.5/+0.7 mult per unique joker owned     | 0.3/0.5/0.7     | multiplier += (amount x jokerCount)     |
+| 95  | Hoarder        | +0.3/+0.5/+0.8 mult per time inventory hit max | 0.3/0.5/0.8     | multiplier += (amount x hoarderMaxHits) |
+| 97  | Survivor       | +0.5/+0.75/+1 mult per candy batch melted      | 0.5/0.75/1.0    | multiplier += (amount x candiesMelted)  |
 
-| # | Name | Subject | Max Lv | Target | Multiplier (Lv 1/2/3) |
-|---|------|---------|--------|--------|----------------------|
-| 2 | Median Formula | Math | 3 | Medium | 1.5x/2x/3x |
-| 8 | Micro Chip | Computer | 3 | Small | 1.5x/2x/3x |
-| 18 | Super Size Me | Home Ec | 3 | Big | 1.5x/2x/3x |
+### Tradeoff (high reward + penalty)
 
-### Multipliers — Conditional
+| ID  | Name         | Description                                                  | L1/L2/L3 Values                      | Code Effect                                      |
+| --- | ------------ | ------------------------------------------------------------ | ------------------------------------ | ------------------------------------------------ |
+| 57  | Sugar Rush   | +1/+2/+3 mult on every sale                                  | sell: 2/3/4                          | multiplier += (amount - 1)                       |
+| 58  | Loan Shark   | +$5k/+$8k/+$12k daily cash, owe $6k/$9.5k/$14k at end of day | income: 5k/8k/12k, debt: 6k/9.5k/14k | flat income, flat debt                           |
+| 59  | Glass Cannon | +4/+6/+9 mult on every sale; 10%/7%/5% chance to shatter itself | 5/7/10                            | multiplier += (amount - 1); self-remove on roll  |
+| 60  | Contraband   | +1/+2/+3 mult, confiscation takes 100%                       | 2/3/4                                | multiplier += (amount - 1), 100% confiscation    |
+| 62  | Hot Potato   | +3/+5/+7 mult on every sale; candy melts in 3 periods        | sell: 4/6/8                          | multiplier += (amount - 1); MELT_WINDOW = 3      |
 
-Same multiplier layer, but only active when a condition is met.
+### Inventory
 
-| # | Name | Subject | Max Lv | Condition | Multiplier (Lv 1/2/3) |
-|---|------|---------|--------|-----------|----------------------|
-| 29 | Even Stevens | Logic | 3 | Inventory limit is even | 1.5x/2x/3x |
-| 30 | Odd Todd | Art | 3 | Inventory limit is odd | 1.5x/2x/3x |
-| 38 | Golden Hour | Geography | 3 | Last 2 periods of day | 1.5x/2x/3x |
+| ID  | Name                | Description                                                      | L1/L2/L3 Values                 | Code Effect                              |
+| --- | ------------------- | ---------------------------------------------------------------- | ------------------------------- | ---------------------------------------- |
+| 9   | Data Compression    | +13/+26/+39 inventory                                            | 13/26/39                        | inventory limit += amount                |
+| 43  | Inductive Reasoning | +5/+7/+10 inventory each new day                                 | 5/7/10                          | inventory limit += amount per day        |
+| 39  | Trade Routes        | +2/+3/+4 inventory every period                                  | 2/3/4                           | inventory limit += amount per period     |
+| 66  | Treasure Chest      | +8/+15/+25 inventory, $20/$50/$100 cash per empty inventory at end of day | inv: 8/15/25, cash: 20/50/100   | inventory limit + income                 |
+| 12  | Vacuum Sealer       | 2x inventory limit, -2 mult (min 1x)                             | L1 only                         | inventory x 2, multiplier -= 2 (floor 1) |
 
-### Multipliers — One-Time
+### Income & Allowance
 
-| # | Name | Subject | Max Lv | Multiplier (Lv 1/2/3) |
-|---|------|---------|--------|----------------------|
-| 1 | Double Up | Math | 1 | 2x price of 1 candy for 1 period |
-| 48 | Pursuasion | Logic | 3 | 2x/4x/6x your next sale |
+| ID  | Name                | Description                                                 | L1/L2/L3 Values                               | Code Effect                                 |
+| --- | ------------------- | ----------------------------------------------------------- | --------------------------------------------- | ------------------------------------------- |
+| 31  | Ace the Test        | 2x/3x/4x allowance                                          | 2/3/4                                         | allowance x amount                          |
+| 22  | Deposit Bonus       | 5%/10%/15% of stash added to daily allowance                | 0.05/0.1/0.15                                 | allowance += stash x amount                 |
+| 86  | Penny Pincher       | 10%/15%/20% of stash to allowance, min $50/$100/$200 cash   | 0.1/0.15/0.2                                  | allowance += stash x amount                 |
+| 11  | Farmers Carry       | $5/$25/$100 cash per candy in inventory each period         | 5/25/100                                      | cash += amount x inventoryCount per period  |
+| 17  | Home Made           | $25/$50/$100 cash per candy in inventory at start of day    | 25/50/100                                     | cash += amount x inventoryCount per day     |
+| 15  | Perfect Bake        | $1k/$3k/$5k cash for ending day with 0 inventory            | 1000/3000/5000                                | cash += amount if inventory = 0             |
+| 53  | Mysterious Artifact | 8%/15%/25% daily compound interest on stash                 | 1.08/1.15/1.25                                | stash x= amount daily                       |
+| 74  | Piggy Bank Pro      | 15%/20%/25% daily stash interest                            | 1.15/1.2/1.25                                 | stash x= amount daily                       |
+| 93  | Spare Change        | $5/$10/$20 cash per empty inventory per period              | 5/10/20                                       | cash += amount x emptyInventory per period  |
 
-### Inventory Boosters
+### Instant Cash (one-time)
 
-| # | Name | Subject | Type | Max Lv | Effect (Lv 1/2/3) |
-|---|------|---------|------|--------|--------------------|
-| 9 | Data Compression | Computer | persistent | 3 | Inventory +13/+26/+39 |
-| 54 | Bulk Up | Gym | persistent | 3 | Inventory +15/+30/+45 |
-| 66 | Treasure Chest | Art | persistent | 3 | Inventory +8/+15/+25, plus $20/$50/$100 per empty slot at end of day |
-| 43 | Inductive Reasoning | Math | persistent | 3 | Inventory +5/+7/+10 per new day |
-| 39 | Trade Routes | Geography | persistent | 3 | +1/+2/+3 inventory limit per period |
-| 12 | Vacuum Sealer | Home Ec | persistent | 1 | 2x inventory limit, **-3 to multiplier** (min 1x) |
+| ID  | Name       | Description               | L1/L2/L3 Values | Code Effect    |
+| --- | ---------- | ------------------------- | --------------- | -------------- |
+| 16  | Bake Sale  | $3k/$6k/$9k instant cash  | 3000/6000/9000  | cash += amount |
+| 37  | Roman Coin | $2k/$5k/$10k instant cash | 2000/5000/10000 | cash += amount |
 
-### Allowance & Income
+### Market Manipulation (one-time)
 
-| # | Name | Subject | Type | Max Lv | Effect (Lv 1/2/3) |
-|---|------|---------|------|--------|--------------------|
-| 31 | Ace the Test | Math | persistent | 3 | 2x/3x/4x daily allowance |
-| 7 | Side Gig | Computer | persistent | 3 | 2x/3x/4x daily allowance |
-| 13 | Coaching | Gym | persistent | 3 | +$300/+$600/+$900 daily allowance |
-| 11 | Farmers Carry | Gym | persistent | 3 | Inventory count × $5/$25/$100 per period |
-| 17 | Home Made | Home Ec | persistent | 3 | +$10/$20/$30 per candy at start of each day |
-| 15 | Perfect Bake | Home Ec | persistent | 3 | End day with 0 inventory → +$1k/$3k/$5k |
-| 53 | Mysterious Artifact | Geography | persistent | 3 | 8%/15%/25% daily compound interest on stash (capped $5k/day) |
-| 22 | Deposit Bonus | Economy | persistent | 3 | +10%/+25%/+50% piggy bank deposit bonus |
+| ID  | Name                | Description                                    | L1/L2/L3 Values | Code Effect             |
+| --- | ------------------- | ---------------------------------------------- | --------------- | ----------------------- |
+| 1   | Double Up           | 2x/3x/4x price of any 1 candy for 1 period     | 2/3/4           | candy price x= amount   |
+| 20  | Market Manipulation | Set any candy to the highest price this period | L1 only         | candy price = max price |
+| 25  | Bet You I'm Faster  | Fill entire inventory with any 1 candy         | L1 only         | fill inventory          |
+| 75  | Market Crash        | All prices x0.5/x0.4/x0.3 for 1 period         | 0.5/0.4/0.3     | all prices x= amount    |
+| 76  | Inflation           | All prices x2/x3/x4 for 1 period               | 2/3/4           | all prices x= amount    |
 
-### Instant Cash
+### Event Modifiers
 
-| # | Name | Subject | Type | Max Lv | Effect (Lv 1/2/3) |
-|---|------|---------|------|--------|--------------------|
-| 16 | Bake Sale | Home Ec | one-time | 3 | Instantly gain $3k/$6k/$9k |
-| 37 | Roman Coin | Economy | one-time | 3 | Instantly gain $2k/$5k/$10k |
-| 44 | Atlas Bonus | Geography | one-time | 3 | Instantly gain $2.5k/$5k/$7.5k |
+| ID  | Name            | Description                                  | L1/L2/L3 Values | Code Effect             |
+| --- | --------------- | -------------------------------------------- | --------------- | ----------------------- |
+| 77  | Lucky Charm     | 3x/4x/5x found money multiplier              | 3/4/5           | found money x= amount   |
+| 78  | Bully Bait      | Convert bully events to +$500/+$1k/+$2k cash | 500/1000/2000   | bully -> cash += amount |
+| 79  | Teacher's Pet   | See next-period price arrow on 1/2/3 candies | 1/2/3           | market-list UI hint     |
+| 80  | Class Clown     | +10%/+25%/+50% profit when location changed  | 0.1/0.25/0.5    | profitBoost += amount if prev ≠ curr |
+| 81  | Detention Dodge | Event immunity for 1 day                     | L1 only         | skip events for 1 day   |
 
-### Market Manipulation
+### Utility & Protection
 
-| # | Name | Subject | Type | Max Lv | Effect |
-|---|------|---------|------|--------|--------|
-| 20 | Market Manipulation | Economy | one-time | 1 | Set any candy to the highest price this period |
-| 21 | The Big Short | Economy | one-time | 1 | Set any candy to the lowest price this period |
-| 40 | Continental Drift | Geography | one-time | 1 | Shuffle all candy prices this period |
-| 25 | Bet You I'm Faster | Gym | one-time | 1 | Fill entire inventory with any 1 candy |
-
-### Protection & Utility
-
-| # | Name | Subject | Type | Max Lv | Effect |
-|---|------|---------|------|--------|--------|
-| 6 | Tapped In | Computer | persistent | 1 | 100% event hints (see events before they happen) |
-| 67 | Medieval Shield | Art | persistent | 1 | Protect money from LOSE_MONEY events (consumed) |
-| 74 | Secret Hideout | Recess | persistent | 1 | Protect stash from confiscation permanently |
-| 51 | Hide and Seek | Recess | persistent | 1 | 2x found money from events |
-| 24 | The Good Old Days | Art | persistent | 3 | Deli prices 50%/75%/90% off |
-| 55 | Extra Credit | Logic | persistent | 1 | +1 joker choice after completing a minigame |
-| 56 | Sixth Sense | Computer | persistent | 1 | Hold 6 aura jokers instead of 5 |
+| ID  | Name            | Description                                              | L1/L2/L3 Values             | Code Effect                      |
+| --- | --------------- | -------------------------------------------------------- | --------------------------- | -------------------------------- |
+| 6   | Tapped In       | Preview upcoming events                                  | L1 only                     | 100% event hints                 |
+| 67  | Safe House      | Protects wallet from bullies and stash from confiscation | L1 only                     | blocks bully + confiscation      |
+| 24  | Shrinking Glass | 50%/75%/90% off deli candy                               | 0.5/0.25/0.1                | deli price x= amount             |
+| 55  | Extra Credit    | +1 joker choice after minigames                          | L1 only                     | +1 pick                          |
+| 56  | Sixth Sense     | +1 aura slot (hold 6 instead of 5)                       | L1 only                     | max aura slots += 1              |
+| 94  | Deep Freeze     | Candy never melts                                        | L1 only                     | skip melt check                  |
 
 ---
 
 ## Full Calculation Example
 
-Small Chocolate candy, base profit = $100
+Selling 10 Chocolate Gummy Bears (small candy) at $5 each, bought at $2 each:
 
-| Layer | Joker | Value | Running |
-|-------|-------|-------|---------|
-| **Profit boost** | Cocoa Futures Lv1 (Chocolate) | +0.5 | 1.5x |
-| **Profit boost** | — no more type matches | — | **1.5x** |
-| Boosted profit | $100 × 1.5 | | **$150** |
-| **Multiplier** | Micro Chip Lv2 (Small) | +1.0 | 2x |
-| **Multiplier** | Even Stevens Lv1 | +0.5 | 2.5x |
-| Final profit | $150 × 2.5 | | **$375** |
-
-### Vacuum Sealer Penalty
-
-Vacuum Sealer subtracts **3** from the multiplier (minimum 1x). If your multiplier is 2.5x, it becomes 1x (since 2.5 - 3 < 1).
+| Step                                    | Detail             | Value    |
+| --------------------------------------- | ------------------ | -------- |
+| Base profit                             | ($5 - $2) x 10     | $30      |
+| **Profit boost layer**                  | starts at 1 (100%) |          |
+| + Cocoa Futures L1 (Chocolate)          | +50%               | 1.5      |
+| + Combo Platter L1 (both types covered) | +100%              | 2.5      |
+| + Even Stevens L1 (even inv)            | +50%               | 3.0      |
+| Boosted profit                          | $30 x 3.0          | **$90**  |
+| **Mult layer**                          | starts at 1        |          |
+| + Bear Market L1 (Gummy)                | +1.5               | 2.5      |
+| + Mint Condition L1 (small)             | +1.0               | 3.5      |
+| Final profit                            | $90 x 3.5          | **$315** |
 
 ---
 
 ## Economy Constraints
 
-| Constraint | Value |
-|------------|-------|
-| Persistent (aura) joker slots | 5 max |
-| One-time joker slots | Unlimited |
-| Allowance multiplier cap | 8x combined |
-| Stash interest cap | $5,000/day |
-| Upgrade L1→L2 | $5,000 |
-| Upgrade L2→L3 | $30,000 |
-
----
-
-## Joker Counts by Subject
-
-| Subject | Jokers | Persistent | One-Time |
-|---------|--------|------------|----------|
-| Math | 5 | 4 | 1 |
-| Computer | 5 | 5 | 0 |
-| Home Economics | 5 | 4 | 1 |
-| Art | 5 | 5 | 0 |
-| Economy | 7 | 4 | 3 |
-| Gym | 6 | 5 | 1 |
-| Logic | 4 | 3 | 1 |
-| Recess | 4 | 4 | 0 |
-| Geography | 6 | 4 | 2 |
-| **Total** | **47** | **38** | **9** |
+| Constraint                    | Value                               |
+| ----------------------------- | ----------------------------------- |
+| Persistent (aura) joker slots | 5 (6 with Sixth Sense)              |
+| One-time joker slots          | Unlimited                           |
+| Allowance multiplier cap      | 8x combined                         |
+| Stash interest cap            | $5,000/day                          |
+| Upgrade L1->L2                | $5,000                              |
+| Upgrade L2->L3                | $30,000                             |
+| Candy melt window             | 5 periods (disabled by Deep Freeze) |

@@ -61,7 +61,7 @@ export default function SchoolsOutModal({
             innerPadding={0}
           >
             <View style={styles.textBox}>
-              <Text style={styles.text}>It's 3PM</Text>
+              <Text style={styles.text}>It&apos;s 3PM</Text>
               <Text style={styles.tapText}>Time to head home!</Text>
               <Text style={styles.tipText}>TIP: {randomTip}</Text>
             </View>

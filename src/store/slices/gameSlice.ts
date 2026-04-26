@@ -32,11 +32,16 @@ interface GameState {
   totalCompletions: number;
   gameResetSignal: number; // Increments on each game reset to signal zombie cleanup
   markFarmersCarryBonusApplied: number[]; // Tracks which periods have received Farmers Carry bonus
+  homeMadeBonusAppliedDays: number[]; // Tracks which days have received Home Made bonus
+  spareChangeBonusAppliedPeriods: number[]; // Tracks which periods have received Spare Change bonus
+  loanSharkIncomeAppliedDays: number[]; // Tracks which days have received Loan Shark daily income
   mediumCandiesUnlocked: boolean; // Unlocked on Day 2 for $500
   bigCandiesUnlocked: boolean; // Unlocked on Day 3 for $5000
   bulkEmpireStacks: number; // Bulk Empire: permanent +0.5x per stack
   bulkEmpireDailySales: number; // Bulk Empire: candy count for current day
   bulkEmpireLastDay: number; // Bulk Empire: last day stacks were checked
+  cafeteriaLockedUntil: number; // Lunchroom Monopoly: cafeteria unavailable until periodCount reaches this value
+  showLunchMinigames: boolean; // UI flag: lunch minigames menu open (transient — blacklisted from redux-persist)
 }
 
 const initialState: GameState = {
@@ -56,11 +61,16 @@ const initialState: GameState = {
   totalCompletions: 0,
   gameResetSignal: 0,
   markFarmersCarryBonusApplied: [],
+  homeMadeBonusAppliedDays: [],
+  spareChangeBonusAppliedPeriods: [],
+  loanSharkIncomeAppliedDays: [],
   mediumCandiesUnlocked: false,
   bigCandiesUnlocked: false,
   bulkEmpireStacks: 0,
   bulkEmpireDailySales: 0,
   bulkEmpireLastDay: 1,
+  cafeteriaLockedUntil: 0,
+  showLunchMinigames: false,
 };
 
 const gameSlice = createSlice({
@@ -159,9 +169,21 @@ const gameSlice = createSlice({
         period: newPeriodCount,
         location: 'home room',
       });
+      // Reset cafeteria lockout — each day starts fresh.
+      state.cafeteriaLockedUntil = 0;
       if (__DEV__) {
         console.log(
           `💾 New day started, period: ${newPeriodCount} (${periodsPerDay} periods/day) - Auto-save triggered`
+        );
+      }
+    },
+    // Lunchroom Monopoly: called when player visits the cafeteria.
+    // Locks the cafeteria for the next 2 periods (visit + 2 = +3 increment).
+    lockCafeteria: (state) => {
+      state.cafeteriaLockedUntil = state.periodCount + 3;
+      if (__DEV__) {
+        console.log(
+          `🍽️ Cafeteria locked until period ${state.cafeteriaLockedUntil} (current: ${state.periodCount})`
         );
       }
     },
@@ -260,6 +282,9 @@ const gameSlice = createSlice({
         state.bulkEmpireStacks += (newStacks - oldStacks);
       }
     },
+    setShowLunchMinigames: (state, action: PayloadAction<boolean>) => {
+      state.showLunchMinigames = action.payload;
+    },
     markFarmersCarryBonusApplied: (state, action: PayloadAction<number>) => {
       const period = action.payload;
       if (!state.markFarmersCarryBonusApplied.includes(period)) {
@@ -268,6 +293,45 @@ const gameSlice = createSlice({
         if (state.markFarmersCarryBonusApplied.length > 50) {
           state.markFarmersCarryBonusApplied =
             state.markFarmersCarryBonusApplied.slice(-50);
+        }
+      }
+    },
+    markHomeMadeBonusApplied: (state, action: PayloadAction<number>) => {
+      const day = action.payload;
+      if (!state.homeMadeBonusAppliedDays.includes(day)) {
+        state.homeMadeBonusAppliedDays.push(day);
+        // Keep only last 10 days to prevent unbounded growth
+        if (state.homeMadeBonusAppliedDays.length > 10) {
+          state.homeMadeBonusAppliedDays =
+            state.homeMadeBonusAppliedDays.slice(-10);
+        }
+      }
+    },
+    markSpareChangeBonusApplied: (state, action: PayloadAction<number>) => {
+      const period = action.payload;
+      if (!state.spareChangeBonusAppliedPeriods) {
+        state.spareChangeBonusAppliedPeriods = [];
+      }
+      if (!state.spareChangeBonusAppliedPeriods.includes(period)) {
+        state.spareChangeBonusAppliedPeriods.push(period);
+        // Keep only last 50 periods to prevent unbounded growth
+        if (state.spareChangeBonusAppliedPeriods.length > 50) {
+          state.spareChangeBonusAppliedPeriods =
+            state.spareChangeBonusAppliedPeriods.slice(-50);
+        }
+      }
+    },
+    markLoanSharkIncomeApplied: (state, action: PayloadAction<number>) => {
+      const day = action.payload;
+      if (!state.loanSharkIncomeAppliedDays) {
+        state.loanSharkIncomeAppliedDays = [];
+      }
+      if (!state.loanSharkIncomeAppliedDays.includes(day)) {
+        state.loanSharkIncomeAppliedDays.push(day);
+        // Keep only last 10 days to prevent unbounded growth
+        if (state.loanSharkIncomeAppliedDays.length > 10) {
+          state.loanSharkIncomeAppliedDays =
+            state.loanSharkIncomeAppliedDays.slice(-10);
         }
       }
     },
@@ -301,20 +365,27 @@ export const {
   markStudiedTonight,
   markLunchMinigamePlayed,
   markFarmersCarryBonusApplied,
+  markHomeMadeBonusApplied,
+  markSpareChangeBonusApplied,
+  markLoanSharkIncomeApplied,
   setSelectedMinigame,
   unlockMediumCandies,
   unlockBigCandies,
   addBulkEmpireSales,
+  lockCafeteria,
+  setShowLunchMinigames,
 } = gameSlice.actions;
 
 export const selectBulkEmpireStacks = (state: any) => state.game?.bulkEmpireStacks ?? 0;
+export const selectCafeteriaLockedUntil = (state: any) => state.game?.cafeteriaLockedUntil ?? 0;
+export const selectIsCafeteriaLocked = (state: any) =>
+  (state.game?.cafeteriaLockedUntil ?? 0) > (state.game?.periodCount ?? 0);
 
 export default gameSlice.reducer;
 
-// Helper function to get periods per day based on hall pass selection
-export const getPeriodsPerDay = (state: any): number => {
-  const selectedPassIds = state.hallPass?.selectedPassIds || [];
-  return selectedPassIds.includes('time_crunch') ? 6 : 8;
+// Helper function to get periods per day
+export const getPeriodsPerDay = (_state: any): number => {
+  return 8;
 };
 
 // Selectors
@@ -342,6 +413,10 @@ export const selectMediumCandiesUnlocked = (state: any) => state.game?.mediumCan
 export const selectBigCandiesUnlocked = (state: any) => state.game?.bigCandiesUnlocked ?? false;
 export const selectPricesUpdating = (state: any) => state.game?.pricesUpdating ?? false;
 export const selectIsInitialized = (state: any) => state.game?.isInitialized ?? false;
-export const selectLocationHistory = (state: any) => state.game?.locationHistory ?? [];
+const EMPTY_LOCATION_HISTORY: LocationHistory[] = [];
+export const selectLocationHistory = (state: any) =>
+  state.game?.locationHistory ?? EMPTY_LOCATION_HISTORY;
 export const selectIsAfterSchool = (state: any) => state.game?.isAfterSchool ?? false;
 export const selectSelectedMinigame = (state: any) => state.game?.selectedMinigame ?? null;
+export const selectShowLunchMinigames = (state: any): boolean =>
+  state.game?.showLunchMinigames ?? false;

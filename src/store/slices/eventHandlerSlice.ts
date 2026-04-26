@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { resetGame, startNewDay } from './gameSlice';
 
 interface EventData {
   type: string;
@@ -11,6 +12,10 @@ interface EventHandlerState {
   eventHistory: EventData[];
   isProcessing: boolean;
   processedEventIds: string[];
+  lastConfiscationDay: number | null;
+  // Day number for which Detention Dodge grants full event immunity.
+  // When === current day, handleEvent short-circuits before any effect applies.
+  detentionDodgeActiveDay: number | null;
 }
 
 const initialState: EventHandlerState = {
@@ -18,6 +23,8 @@ const initialState: EventHandlerState = {
   eventHistory: [],
   isProcessing: false,
   processedEventIds: [],
+  lastConfiscationDay: null,
+  detentionDodgeActiveDay: null,
 };
 
 const eventHandlerSlice = createSlice({
@@ -68,7 +75,23 @@ const eventHandlerSlice = createSlice({
       state.eventHistory = [];
       state.processedEventIds = [];
     },
+    markConfiscationDay: (state, action: PayloadAction<number>) => {
+      state.lastConfiscationDay = action.payload;
+    },
+    activateDetentionDodge: (state, action: PayloadAction<number>) => {
+      state.detentionDodgeActiveDay = action.payload;
+    },
+    clearDetentionDodge: (state) => {
+      state.detentionDodgeActiveDay = null;
+    },
     resetEventHandler: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetGame, () => initialState);
+    // Clear Detention Dodge immunity when a new day begins.
+    builder.addCase(startNewDay, (state) => {
+      state.detentionDodgeActiveDay = null;
+    });
   },
 });
 
@@ -78,6 +101,9 @@ export const {
   setIsProcessing,
   addToEventHistory,
   clearEventHistory,
+  markConfiscationDay,
+  activateDetentionDodge,
+  clearDetentionDodge,
   resetEventHandler,
 } = eventHandlerSlice.actions;
 
@@ -88,3 +114,5 @@ export const selectCurrentEvent = (state: { eventHandler: EventHandlerState }) =
 export const selectEventHistory = (state: { eventHandler: EventHandlerState }) => state.eventHandler.eventHistory;
 export const selectIsEventProcessing = (state: { eventHandler: EventHandlerState }) => state.eventHandler.isProcessing;
 export const selectProcessedEventIds = (state: { eventHandler: EventHandlerState }) => state.eventHandler.processedEventIds;
+export const selectLastConfiscationDay = (state: { eventHandler: EventHandlerState }) => state.eventHandler.lastConfiscationDay;
+export const selectDetentionDodgeActiveDay = (state: { eventHandler: EventHandlerState }) => state.eventHandler.detentionDodgeActiveDay;

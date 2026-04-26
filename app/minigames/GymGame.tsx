@@ -476,7 +476,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="gym"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -631,7 +630,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
               leftInfo={`Level ${level}/3`}
               centerInfo={`Visited: ${traveledCells.size}/${gridSize * gridSize}`}
               rightInfo={`Moves: ${moves}`}
-              theme="gym"
             />
 
             <View style={styles.contentContainer}>

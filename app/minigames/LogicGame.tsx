@@ -344,7 +344,6 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="candy"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -499,7 +498,6 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           leftInfo={`Level ${level}/3`}
           centerInfo={' '}
           rightInfo={`Tries: ${attempts.length}/${maxAttempts}`}
-          theme="logic"
         />
       </View>
 

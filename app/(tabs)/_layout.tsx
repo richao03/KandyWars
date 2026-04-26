@@ -96,7 +96,6 @@ export default function TabLayout() {
   // Defer ad rendering until after initial UI is interactive
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {
-      // Wait for UI to settle before rendering ad
       setShouldRenderAd(true);
     });
 

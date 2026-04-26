@@ -22,11 +22,13 @@ import { resetInventory } from '../store/slices/inventorySlice';
 import { resetJokers } from '../store/slices/jokerSlice';
 import { resetDailyStats } from '../store/slices/dailyStatsSlice';
 import { resetCandySales } from '../store/slices/candySalesSlice';
+import { incrementStat } from '../store/slices/jokerStatsSlice';
 import { selectSelectedHallPassEffects } from '../store/slices/hallPassSlice';
 import { selectActiveEffects } from '../store/slices/merchantSlice';
 import { HallPassUtils } from '../utils/hallPassUtils';
 import { MerchantUtils } from '../utils/merchantUtils';
-import { processEffectsByTarget } from '../utils/jokerEffectEngine';
+import { processEffectsByTarget, getJokerEffectsAtLevel } from '../utils/jokerEffectEngine';
+import { JOKER_IDS } from '../constants/jokerIds';
 import { useToast } from '../context/ToastContext';
 
 export const useWallet = () => {
@@ -40,7 +42,7 @@ export const useWallet = () => {
   const playerId = useAppSelector(selectPlayerId);
   const isFirstTimeDifficultySelection = useAppSelector(selectIsFirstTimeDifficultySelection);
   const hallPassEffects = useAppSelector(selectSelectedHallPassEffects);
-  const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
+  const allowanceBonusPercent = useAppSelector(state => state.hallPassModifiers.allowanceBonusPercent);
   const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
   const dailyStats = useAppSelector(state => state.dailyStats.dailyStats);
   const currentDayStats = useAppSelector(state => state.dailyStats.currentDayStats);
@@ -64,7 +66,6 @@ export const useWallet = () => {
     let baseAllowance = 10;
 
     // Apply Hall Pass allowance bonus from pre-computed modifiers
-    const allowanceBonusPercent = hallPassModifiers.allowanceBonusPercent;
     if (allowanceBonusPercent > 0) {
       baseAllowance = Math.round(baseAllowance * (1 + allowanceBonusPercent / 100));
       if (__DEV__) console.log(`🎖️ Hall Pass allowance bonus: ${allowanceBonusPercent}% → $${baseAllowance}`);
@@ -170,12 +171,19 @@ export const useWallet = () => {
 
     dispatch(addBalance(finalAllowance));
     return finalAllowance;
-  }, [dispatch, hallPassModifiers.allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects, stashedAmount, showToast]);
+  }, [dispatch, allowanceBonusPercent, selectedPassIds, dailyStats, currentDayStats, merchantEffects, stashedAmount, showToast]);
 
   const stashMoneyAction = useCallback((amount: number): boolean => {
     const epsilon = 0.001;
     if (balance >= amount - epsilon) {
       dispatch(stashMoney({ amountPaid: amount, amountStashed: amount }));
+      // Penny Wise — increment per intentional player stash deposit. Skip
+      // zero/cancelled deposits, and do NOT increment for daily-interest
+      // or inheritance auto-stashes (those use stashMoney directly with
+      // amountPaid:0 and shouldn't count as a player action).
+      if (amount > 0) {
+        dispatch(incrementStat({ stat: 'pennyWiseStashes' }));
+      }
       return true;
     }
     return false;
@@ -223,46 +231,67 @@ export const useWallet = () => {
 
   const applyDailyInterest = useCallback((jokers?: any[]): number => {
     if (__DEV__) {
-      console.log(`💰 High Yield Account Debug: Checking daily interest...`);
-      console.log(`💰 High Yield Account Debug: jokers:`, jokers?.map(j => ({ id: j.id, name: j.name })));
-      console.log(`💰 High Yield Account Debug: stashedAmount: $${stashedAmount}`);
+      console.log(`💰 Daily Interest Debug: Checking daily interest...`);
+      console.log(`💰 Daily Interest Debug: jokers:`, jokers?.map((j: any) => ({ id: j.id, name: j.name })));
+      console.log(`💰 Daily Interest Debug: stashedAmount: $${stashedAmount}`);
     }
 
-    // Check if player has High Yield Account joker (ID 53)
     if (!jokers || jokers.length === 0) {
-      if (__DEV__) console.log(`💰 High Yield Account: No jokers owned, skipping interest`);
+      if (__DEV__) console.log(`💰 Daily Interest: No jokers owned, skipping interest`);
       return 0;
     }
 
     if (stashedAmount <= 0) {
-      if (__DEV__) console.log(`💰 High Yield Account: No money stashed ($${stashedAmount}), skipping interest`);
+      if (__DEV__) console.log(`💰 Daily Interest: No money stashed ($${stashedAmount}), skipping interest`);
       return 0;
     }
 
-    const highYieldJoker = jokers.find((j: any) => j.id === 53);
-    if (__DEV__) console.log(`💰 High Yield Account Debug: hasHighYieldAccount (ID 53): ${!!highYieldJoker}`);
-
-    if (!highYieldJoker) {
-      if (__DEV__) console.log(`💰 High Yield Account: Joker not owned, skipping interest`);
-      return 0;
-    }
-
-    // Apply compound interest based on joker level (8%/15%/25%)
-    const level = highYieldJoker.level ?? 1;
-    const rate = level <= 1 ? 0.08 : level === 2 ? 0.15 : 0.25;
     const MAX_DAILY_INTEREST = 5000;
-    const rawInterest = stashedAmount * rate;
-    const interest = Math.min(rawInterest, MAX_DAILY_INTEREST);
-    if (__DEV__) {
-      console.log(`💰 High Yield Account: Level ${level}, rate ${rate * 100}%, raw interest: $${rawInterest.toFixed(2)}, capped: $${interest.toFixed(2)} (max $${MAX_DAILY_INTEREST}/day)`);
-      console.log(`💰 High Yield Account: Stashed before interest: $${stashedAmount}`);
+    let totalInterest = 0;
+
+    // --- Mysterious Artifact (ID 53): 8%/15%/25% stash interest ---
+    const highYieldJoker = jokers.find((j: any) => j.id === JOKER_IDS.MYSTERIOUS_ARTIFACT);
+    if (__DEV__) console.log(`💰 Mysterious Artifact (ID 53): owned=${!!highYieldJoker}`);
+    if (highYieldJoker) {
+      const level = (highYieldJoker as any).level ?? 1;
+      const effects = getJokerEffectsAtLevel(JOKER_IDS.MYSTERIOUS_ARTIFACT, level);
+      const interestEffect = effects.find(e => e.target === 'stash_interest');
+      const rate = interestEffect ? interestEffect.amount - 1 : (level <= 1 ? 0.08 : level === 2 ? 0.15 : 0.25);
+      const rawInterest = stashedAmount * rate;
+      const interest = Math.min(rawInterest, MAX_DAILY_INTEREST);
+      totalInterest += interest;
+      if (__DEV__) {
+        console.log(`💰 Mysterious Artifact: Level ${level}, rate ${(rate * 100).toFixed(0)}%, interest: $${interest.toFixed(2)}`);
+      }
     }
-    dispatch(stashMoney({ amountPaid: 0, amountStashed: interest }));
-    if (__DEV__) {
-      console.log(`💰 High Yield Account: ✅ Earned $${interest.toFixed(2)} interest (${rate * 100}% of $${stashedAmount}, capped at $${MAX_DAILY_INTEREST})`);
-      console.log(`💰 High Yield Account: Stashed after interest: $${stashedAmount + interest}`);
+
+    // --- Piggy Bank Pro (ID 74): 15%/20%/25% stash interest ---
+    const piggyBankProJoker = jokers.find((j: any) => j.id === JOKER_IDS.PIGGY_BANK_PRO);
+    if (__DEV__) console.log(`💰 Piggy Bank Pro (ID 74): owned=${!!piggyBankProJoker}`);
+    if (piggyBankProJoker) {
+      const level = (piggyBankProJoker as any).level ?? 1;
+      const effects = getJokerEffectsAtLevel(JOKER_IDS.PIGGY_BANK_PRO, level);
+      const interestEffect = effects.find(e => e.target === 'stash_interest');
+      const rate = interestEffect ? interestEffect.amount - 1 : (level <= 1 ? 0.15 : level === 2 ? 0.20 : 0.25);
+      const rawInterest = stashedAmount * rate;
+      const interest = Math.min(rawInterest, MAX_DAILY_INTEREST);
+      totalInterest += interest;
+      if (__DEV__) {
+        console.log(`💰 Piggy Bank Pro: Level ${level}, rate ${(rate * 100).toFixed(0)}%, interest: $${interest.toFixed(2)}`);
+      }
     }
-    return interest;
+
+    if (totalInterest <= 0) {
+      if (__DEV__) console.log(`💰 Daily Interest: Neither interest joker owned, skipping`);
+      return 0;
+    }
+
+    const cappedTotal = Math.min(totalInterest, MAX_DAILY_INTEREST * 2);
+    dispatch(stashMoney({ amountPaid: 0, amountStashed: cappedTotal }));
+    if (__DEV__) {
+      console.log(`💰 Daily Interest: ✅ Total interest earned: $${cappedTotal.toFixed(2)} (stash was $${stashedAmount})`);
+    }
+    return cappedTotal;
   }, [dispatch, stashedAmount]);
 
   const applyInheritance = useCallback((): number => {

@@ -1,5 +1,8 @@
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { SparkController } from '../utils/sparkController';
+import { JuiceController } from '../utils/juiceController';
+import { MusicController } from '../utils/musicController';
 import {
   incrementPeriod,
   startAfterSchool,
@@ -27,9 +30,9 @@ import {
   selectMinigameContext,
   selectPricesUpdating,
   selectIsInitialized,
-  selectLocationHistory,
   selectIsAfterSchool,
   selectSelectedMinigame,
+  selectShowLunchMinigames,
 } from '../store/slices/gameSlice';
 
 export const useGame = () => {
@@ -45,10 +48,13 @@ export const useGame = () => {
   const minigameContext = useAppSelector(selectMinigameContext);
   const pricesUpdating = useAppSelector(selectPricesUpdating);
   const isInitialized = useAppSelector(selectIsInitialized);
-  const locationHistory = useAppSelector(selectLocationHistory);
+  // locationHistory intentionally not subscribed here — no consumer of useGame reads it.
+  // The two places that need it (TransactionModalManager, useTransactionHandler) read
+  // state.game.locationHistory directly so they don't re-trigger every useGame consumer.
   const isAfterSchool = useAppSelector(selectIsAfterSchool);
   const selectedMinigame = useAppSelector(selectSelectedMinigame);
   const gameResetSignal = useAppSelector(selectGameResetSignal);
+  const showLunchMinigames = useAppSelector(selectShowLunchMinigames);
 
   const incrementPeriodAction = useCallback((location: Parameters<typeof incrementPeriod>[0]) => {
     dispatch(incrementPeriod(location));
@@ -63,10 +69,17 @@ export const useGame = () => {
   }, [dispatch]);
 
   const resetGameAction = useCallback(() => {
+    // Stop any in-flight particle/flash/music-duck state from the prior run.
+    SparkController.reset();
+    JuiceController.reset();
+    MusicController.restore(0);
     dispatch(resetGame());
   }, [dispatch]);
 
   const fullResetGameAction = useCallback(() => {
+    SparkController.reset();
+    JuiceController.reset();
+    MusicController.restore(0);
     dispatch(fullResetGame());
   }, [dispatch]);
 
@@ -118,7 +131,6 @@ export const useGame = () => {
     period,
     periodCount,
     currentLocation,
-    locationHistory,
     isAfterSchool,
     hasStudiedTonight,
     hasPlayedLunchMinigame,
@@ -128,6 +140,7 @@ export const useGame = () => {
     pricesUpdating,
     isInitialized,
     gameResetSignal,
+    showLunchMinigames,
     incrementPeriod: incrementPeriodAction,
     startAfterSchool: startAfterSchoolAction,
     startNewDay: startNewDayAction,

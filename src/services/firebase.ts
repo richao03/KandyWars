@@ -84,6 +84,7 @@ export interface UserObject {
   playedMinigames: string[]; // Array of minigame IDs that have been played at least once
   totalWinCount: number; // Total number of wins
   highestSingleSale: number; // Highest single transaction
+  lifetimeSalesByLocation: { [location: string]: number }; // +1 per sale transaction, keyed by location
   lastUpdated: number; // Timestamp in milliseconds (serializable for Redux)
 }
 
@@ -211,6 +212,7 @@ class ScoreboardService {
           playedMinigames: rawData.playedMinigames || [],
           totalWinCount: rawData.totalWinCount || 0,
           highestSingleSale: rawData.highestSingleSale || 0,
+          lifetimeSalesByLocation: rawData.lifetimeSalesByLocation || {},
           // Convert Firebase Timestamp to number (milliseconds)
           lastUpdated: rawData.lastUpdated?.toMillis?.() || Date.now(),
         };
@@ -226,6 +228,7 @@ class ScoreboardService {
           playedMinigames: [],
           totalWinCount: 0,
           highestSingleSale: 0,
+          lifetimeSalesByLocation: {},
           lastUpdated: Date.now(),
         };
 
@@ -288,6 +291,23 @@ class ScoreboardService {
       };
       if (__DEV__) console.log('📝 Local user object updated:', this.cachedUserObject);
     }
+  }
+
+  // Increment the lifetime per-transaction sale counter for a given location.
+  // Persists to Firebase on next saveUserObject (typically game-end).
+  incrementSalesAtLocation(location: string): void {
+    if (!this.cachedUserObject) {
+      if (__DEV__) console.warn('⚠️ incrementSalesAtLocation: user object not cached yet');
+      return;
+    }
+    const current = this.cachedUserObject.lifetimeSalesByLocation || {};
+    this.cachedUserObject = {
+      ...this.cachedUserObject,
+      lifetimeSalesByLocation: {
+        ...current,
+        [location]: (current[location] || 0) + 1,
+      },
+    };
   }
 
   // Clear user object cache (call when starting new game to force fresh fetch)

@@ -13,26 +13,26 @@ export interface CandyDefinition {
 // Size correlates with price: small=cheap, medium=mid, big=expensive
 // Unlocked progressively: small (Day 1), medium (Day 2, $500), big (Day 3, $5000)
 export const CANDY_REGISTRY: CandyDefinition[] = [
-  // Small candies ($1–$200)
-  { name: 'Gummy Bears',     size: 'small',  types: ['gummy', 'chewy'],         baseMin: 1,    baseMax: 20 },
-  { name: 'Jolly Ranchers',  size: 'small',  types: ['hard_candy', 'fruity'],   baseMin: 5,    baseMax: 50 },
-  { name: 'Warheads',        size: 'small',  types: ['sour', 'hard_candy'],     baseMin: 15,   baseMax: 100 },
-  { name: 'M&Ms',            size: 'small',  types: ['chocolate', 'hard_candy'], baseMin: 30,   baseMax: 150 },
-  { name: 'Nerd Rope',       size: 'small',  types: ['chewy', 'fruity'],        baseMin: 50,   baseMax: 200 },
+  // Small candies ($0.10–$20)
+  { name: 'Gummy Bears',     size: 'small',  types: ['gummy', 'chewy'],         baseMin: 0.1,  baseMax: 2 },
+  { name: 'Jolly Ranchers',  size: 'small',  types: ['hard_candy', 'fruity'],   baseMin: 0.5,  baseMax: 5 },
+  { name: 'Warheads',        size: 'small',  types: ['sour', 'hard_candy'],     baseMin: 1.5,  baseMax: 10 },
+  { name: 'M&Ms',            size: 'small',  types: ['chocolate', 'hard_candy'], baseMin: 3,    baseMax: 15 },
+  { name: 'Nerd Rope',       size: 'small',  types: ['chewy', 'fruity'],        baseMin: 5,    baseMax: 20 },
 
-  // Medium candies ($50–$2,000) — unlocked Day 2 for $500
-  { name: 'Bubble Gum',      size: 'medium', types: ['gummy', 'sour'],          baseMin: 50,   baseMax: 200 },
-  { name: 'Swedish Fish',    size: 'medium', types: ['gummy', 'fruity'],        baseMin: 100,  baseMax: 500 },
-  { name: 'Sour Straws',     size: 'medium', types: ['sour', 'chewy'],          baseMin: 200,  baseMax: 800 },
-  { name: 'Caramel',         size: 'medium', types: ['hard_candy', 'chewy'],    baseMin: 400,  baseMax: 1500 },
-  { name: 'Snickers',        size: 'medium', types: ['chocolate', 'chewy'],     baseMin: 600,  baseMax: 2000 },
+  // Medium candies ($5–$200) — unlocked Day 2 for $5
+  { name: 'Bubble Gum',      size: 'medium', types: ['gummy', 'sour'],          baseMin: 5,    baseMax: 20 },
+  { name: 'Swedish Fish',    size: 'medium', types: ['gummy', 'fruity'],        baseMin: 10,   baseMax: 50 },
+  { name: 'Sour Straws',     size: 'medium', types: ['sour', 'chewy'],          baseMin: 20,   baseMax: 80 },
+  { name: 'Caramel',         size: 'medium', types: ['hard_candy', 'chewy'],    baseMin: 40,   baseMax: 150 },
+  { name: 'Snickers',        size: 'medium', types: ['chocolate', 'chewy'],     baseMin: 60,   baseMax: 200 },
 
-  // Big candies ($500–$10,000) — unlocked Day 3 for $5000
-  { name: 'Tootsie Roll',    size: 'big',    types: ['gummy', 'chocolate'],     baseMin: 500,  baseMax: 1500 },
-  { name: 'Jaw Breaker',     size: 'big',    types: ['hard_candy', 'gummy'],    baseMin: 1000, baseMax: 3000 },
-  { name: 'Strawberry Bark', size: 'big',    types: ['chocolate', 'sour'],      baseMin: 2000, baseMax: 5000 },
-  { name: 'Sour Patch Kids', size: 'big',    types: ['sour', 'fruity'],         baseMin: 3500, baseMax: 7500 },
-  { name: 'Taffy',           size: 'big',    types: ['chocolate', 'fruity'],    baseMin: 5000, baseMax: 10000 },
+  // Big candies ($50–$1000) — unlocked Day 3 for $50
+  { name: 'Tootsie Roll',    size: 'big',    types: ['gummy', 'chocolate'],     baseMin: 50,   baseMax: 150 },
+  { name: 'Jaw Breaker',     size: 'big',    types: ['hard_candy', 'gummy'],    baseMin: 100,  baseMax: 300 },
+  { name: 'Strawberry Bark', size: 'big',    types: ['chocolate', 'sour'],      baseMin: 200,  baseMax: 500 },
+  { name: 'Sour Patch Kids', size: 'big',    types: ['sour', 'fruity'],         baseMin: 350,  baseMax: 750 },
+  { name: 'Taffy',           size: 'big',    types: ['chocolate', 'fruity'],    baseMin: 500,  baseMax: 1000 },
 ];
 
 // All candy names as a constant array

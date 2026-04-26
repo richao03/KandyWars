@@ -471,7 +471,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="computer"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -608,7 +607,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           leftInfo={`Level ${level}/3`}
           centerInfo={`❌: ${turns}/${maxTurns}`}
           rightInfo={'hax0rs'}
-          theme="computer"
         />
 
         <View style={styles.gameContainer}>
@@ -930,12 +928,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     paddingVertical: 16,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ff073a',
-    fontFamily: 'PixeloidMono',
   },
   // Joker Selection Styles
   jokerContainer: {

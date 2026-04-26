@@ -1,0 +1,248 @@
+[
+  {
+    "id": "no_longer_freshman",
+    "name": "Not a Freshman",
+    "description": "That",
+    "unlockRequirement": "Win the game once",
+    "effects": [
+      {
+        "type": "sale_price_bonus",
+        "value": 10,
+        "description": "+50% profit bonus on candy sales"
+      }
+    ],
+    "rarity": "common"
+  },
+  {
+    "id": "sophomore_swagger",
+    "name": "Sophomore Swagger",
+    "description": "Experience brings confidence and efficiency.",
+    "unlockRequirement": "Win the game 3 times",
+    "effects": [
+      {
+        "type": "inventory_bonus",
+        "value": 15,
+        "description": "+15 inventory slots"
+      }
+    ],
+    "rarity": "common"
+  },
+  {
+    "id": "valedictorian_vendor",
+    "name": "Valedictorian Vendor",
+    "description": "Academic excellence across all minigames.",
+    "unlockRequirement": "Play every single minigame at least once",
+    "effects": [
+      {
+        "type": "joker_bonus",
+        "value": 1,
+        "description": "Get +1 extra joker at joker selection screen"
+      }
+    ],
+    "rarity": "magical"
+  },
+  {
+    "id": "maximalist",
+    "name": "Maximalist",
+    "description": "All in, every time.",
+    "unlockRequirement": "Deposit your entire wallet 4 times in one game",
+    "effects": [
+      {
+        "type": "allowance_bonus",
+        "value": 1000,
+        "description": "+1000% daily allowance"
+      }
+    ],
+    "rarity": "magical"
+  },
+  {
+    "id": "junior_genius",
+    "name": "Junior Genius",
+    "description": "Your business acumen is showing!",
+    "unlockRequirement": "Win the game with $100,000+ profit",
+    "effects": [
+      {
+        "type": "special",
+        "value": 2,
+        "description": "All jokers obtained start at Level 2"
+      }
+    ],
+    "rarity": "magical"
+  },
+  {
+    "id": "senior_executive",
+    "name": "Senior Executive",
+    "description": "You run this school",
+    "unlockRequirement": "Win the game 5 times",
+    "effects": [
+      {
+        "type": "special",
+        "value": 2000,
+        "description": "Start the game with $2,000 instead of $200"
+      }
+    ],
+    "rarity": "rare"
+  },
+  {
+    "id": "finance_club",
+    "name": "Finance Club",
+    "description": "What",
+    "unlockRequirement": "Win the game with $35,000+ in the piggy bank",
+    "effects": [
+      {
+        "type": "special",
+        "value": 10,
+        "description": "10% of previous day"
+      }
+    ],
+    "rarity": "rare"
+  },
+  {
+    "id": "forged_pass",
+    "name": "Forged Pass",
+    "description": "Fake it till you make it.",
+    "unlockRequirement": "Win the game with 8+ jokers",
+    "effects": [
+      {
+        "type": "special",
+        "value": 1,
+        "description": "+1 reroll in joker selection"
+      }
+    ],
+    "rarity": "rare"
+  },
+  {
+    "id": "teachers_pet",
+    "name": "Teacher",
+    "description": "Bring an apple for the teacher every morning.",
+    "unlockRequirement": "Get your stash confiscated 3 or more times in one game",
+    "effects": [
+      {
+        "type": "special",
+        "value": 75,
+        "description": "Stash confiscation only takes 25% of candy instead of 100%"
+      }
+    ],
+    "rarity": "epic"
+  },
+  {
+    "id": "inheritance",
+    "name": "Inheritance",
+    "description": "Build generational wealth.",
+    "unlockRequirement": "Win the game with $50,000+ in the piggy bank",
+    "effects": [
+      {
+        "type": "special",
+        "value": 10,
+        "description": "10% of wallet transferred to piggy bank at start of each day"
+      }
+    ],
+    "rarity": "epic"
+  },
+  {
+    "id": "candy_kingpin",
+    "name": "Candy Kingpin",
+    "description": "You ARE the candy economy.",
+    "unlockRequirement": "Win the game 10 times",
+    "effects": [
+      {
+        "type": "allowance_bonus",
+        "value": 100,
+        "description": "+100% daily allowance"
+      }
+    ],
+    "rarity": "epic"
+  },
+  {
+    "id": "minimalist_master",
+    "name": "Minimalist Master",
+    "description": "Les is mor.",
+    "unlockRequirement": "Win without using any jokers",
+    "effects": [],
+    "rarity": "legendary"
+  },
+  {
+    "id": "high_roller",
+    "name": "High Roller",
+    "description": "Those are big boy numbers.",
+    "unlockRequirement": "Win the game and sell over 1000 units of candy",
+    "effects": [
+      {
+        "type": "inventory_bonus",
+        "value": 15,
+        "description": "+15 inventory slots"
+      }
+    ],
+    "rarity": "legendary"
+  },
+  {
+    "id": "perfect_scholar",
+    "name": "Perfect Scholar",
+    "description": "Academic excellence meets business prowess.",
+    "unlockRequirement": "Win the game on difficulty level 6",
+    "effects": [
+      {
+        "type": "allowance_bonus",
+        "value": 1000,
+        "description": "+1000% daily allowance"
+      }
+    ],
+    "rarity": "legendary"
+  },
+  {
+    "id": "time_crunch",
+    "name": "Time Crunch",
+    "description": "Ain",
+    "unlockRequirement": "Win the game with 50%+ profit from periods 1-4",
+    "effects": [
+      {
+        "type": "special",
+        "value": 1,
+        "description": "Start the game with medium candy unlocked"
+      }
+    ],
+    "rarity": "legendary"
+  },
+  {
+    "id": "final_exam",
+    "name": "Final Exam",
+    "description": "Everything rides on the last period.",
+    "unlockRequirement": "Win the game with 50%+ profit from periods 7-8",
+    "effects": [
+      {
+        "type": "special",
+        "value": 15,
+        "description": "Period 8 sales are 15x profit, periods 1-7 are -75% profit"
+      }
+    ],
+    "rarity": "legendary"
+  },
+  {
+    "id": "speedrun_champion",
+    "name": "Speedrun Champion",
+    "description": "Why make more sale if little sale get job done",
+    "unlockRequirement": "Win a run with a single sale over $10,000",
+    "effects": [
+      {
+        "type": "special",
+        "value": 2,
+        "description": "+100% sales profit"
+      }
+    ],
+    "rarity": "legendary"
+  },
+  {
+    "id": "lunchroom_monopoly",
+    "name": "Lunchroom Monopoly",
+    "description": "Cafeteria sales print money, but the lunch lady needs a break after each one.",
+    "unlockRequirement": "Make 50 lifetime Cafeteria sales",
+    "effects": [
+      {
+        "type": "special",
+        "value": 6,
+        "description": "Cafeteria sales 6x profit (+500%); every other location −50%. Cafeteria locked for 2 periods after each visit."
+      }
+    ],
+    "rarity": "legendary"
+  }
+]

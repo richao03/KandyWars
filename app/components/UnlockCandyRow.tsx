@@ -33,17 +33,19 @@ const UnlockCandyRow = React.memo(function UnlockCandyRow({
 
   const handlePress = useCallback(() => {
     if (!canAfford) return;
-    // Wobble animation, then fire onPress after it finishes
+    // Wobble animation, then fire onPress after it finishes.
+    // RE4-safe: invoke onPress via JS-side timeout instead of withTiming
+    // callback (UI-thread worklet callback crashes when calling non-worklet
+    // functions).
     rotation.value = withSequence(
       withTiming(-4, { duration: 50 }),
       withTiming(4, { duration: 50 }),
       withTiming(-3, { duration: 50 }),
       withTiming(3, { duration: 50 }),
       withTiming(-1, { duration: 40 }),
-      withTiming(0, { duration: 40 }, () => {
-        runOnJS(onPress)();
-      })
+      withTiming(0, { duration: 40 })
     );
+    setTimeout(onPress, 280); // 5 * 50 + 40 - matches sequence total
   }, [canAfford, onPress, rotation]);
 
   const label = size === 'medium' ? 'Unlock Medium Candies' : 'Unlock Big Candies';

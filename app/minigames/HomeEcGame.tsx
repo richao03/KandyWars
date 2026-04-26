@@ -52,6 +52,7 @@ const CandyImage = React.memo(({ candy }: { candy: string }) => {
     <Image source={getCandyImage(candy)} style={{ width: 50, height: 50 }} />
   );
 });
+CandyImage.displayName = 'CandyImage';
 
 interface HomeEcGameProps {
   onComplete: () => void;
@@ -514,7 +515,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="homeec"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -678,7 +678,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             leftInfo={`Level ${level}/3`}
             centerInfo={`🎯: ${score}/${levelConfig.matches}`}
             rightInfo={`Time: ${timeLeft}s`}
-            theme="homeec"
           />
 
           {/* Game Area - Center Panel */}
@@ -789,7 +788,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         onClose={hideModal}
         onConfirm={modal.onConfirm}
         showCancelButton={modal.showCancelButton}
-        theme="school"
         dismissible={modal.dismissible}
       />
     </>

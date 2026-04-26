@@ -18,7 +18,7 @@ import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { setPeriodCount } from '../../src/store/slices/gameSlice';
+import { setPeriodCount, unlockMediumCandies } from '../../src/store/slices/gameSlice';
 import { setHallPassModifiers } from '../../src/store/slices/hallPassModifiersSlice';
 import { syncHallPassesFromFirebase } from '../../src/store/slices/hallPassSlice';
 import {
@@ -256,6 +256,16 @@ export default function SugarWarsTitleScreen({
       // Set hall pass modifiers AFTER wallet initialization
       // Because initializeWallet calls resetGame which clears the modifiers
       dispatch(setHallPassModifiers(hallPassModifiers));
+
+      // Time Crunch: start with medium candy unlocked
+      if (selectedPasses.some(p => p.id === 'time_crunch')) {
+        dispatch(unlockMediumCandies());
+      }
+
+      // Senior Executive: start with $2000 instead of $20
+      if (selectedPasses.some(p => p.id === 'senior_executive')) {
+        dispatch(setBalance(2000));
+      }
 
       // Mark game as initialized so continue button works
       setIsInitialized(true);

@@ -110,7 +110,7 @@ describe('New Joker Integration Tests', () => {
       expect(currentPrice).toBe(35.00); // 5 + (3 × 10)
     });
 
-    it('should calculate The Good Old Days deli savings over time', () => {
+    it('should calculate Shrinking Glass deli savings over time', () => {
       const deliPurchases = [
         { candy: 'Snickers', basePrice: 10.00, quantity: 5 },
         { candy: 'M&Ms', basePrice: 8.50, quantity: 3 },
@@ -173,7 +173,7 @@ describe('New Joker Integration Tests', () => {
       const automaticJokers = [
         JOKER_IDS.COCOA_FUTURES,
         JOKER_IDS.HOME_MADE,
-        JOKER_IDS.THE_GOOD_OLD_DAYS,
+        JOKER_IDS.SHRINKING_GLASS,
       ];
 
       expect(candySelectorJokers).toHaveLength(2);

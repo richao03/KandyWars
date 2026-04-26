@@ -1,0 +1,1294 @@
+[
+  {
+    "id": 1,
+    "name": "Double Up",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 3,
+    "flavorText": "f(x) = 2x",
+    "description": "2x/3x/4x price of any 1 candy for 1 period",
+    "descriptionStripped": "2x/3x/4x price of any 1 candy for 1 period",
+    "perLevelDescriptions": {
+      "1": "2x price of any 1 candy for 1 period",
+      "2": "3x price of any 1 candy for 1 period",
+      "3": "4x price of any 1 candy for 1 period"
+    },
+    "icon": "dice.png",
+    "canLevel": true
+  },
+  {
+    "id": 2,
+    "name": "Flip Artist",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Buy the dip, sell the rip",
+    "description": "+0.5/+1/+2 mult when selling at 3x+ markup",
+    "descriptionStripped": "+0.5/+1/+2 mult when selling at 3x+ markup",
+    "perLevelDescriptions": {
+      "1": "+0.5 mult when selling at 3x+ markup",
+      "2": "+1 mult when selling at 3x+ markup",
+      "3": "+2 mult when selling at 3x+ markup"
+    },
+    "icon": "bullseye.png",
+    "canLevel": true
+  },
+  {
+    "id": 6,
+    "name": "Tapped In",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 1,
+    "flavorText": "Signal through the noise",
+    "description": "Always see future special events in the rumor mill",
+    "descriptionStripped": "Always see future special events in the rumor mill",
+    "perLevelDescriptions": {
+      "1": "Always see future special events in the rumor mill",
+      "2": "Always see future special events in the rumor mill",
+      "3": "Always see future special events in the rumor mill"
+    },
+    "icon": "tappedIn.png",
+    "canLevel": false
+  },
+  {
+    "id": 8,
+    "name": "Combo Platter",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Two flavors, one big payday",
+    "description": "+100%/+150%/+200% profit when 2 candy types are covered",
+    "descriptionStripped": "+100%/+150%/+200% profit when 2 candy types are covered",
+    "perLevelDescriptions": {
+      "1": "+100% profit when 2 candy types are covered",
+      "2": "+150% profit when 2 candy types are covered",
+      "3": "+200% profit when 2 candy types are covered"
+    },
+    "icon": "cafeteria.png",
+    "canLevel": true
+  },
+  {
+    "id": 9,
+    "name": "Data Compression",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Lossless compression for sugar",
+    "description": "+13/+26/+39 inventory",
+    "descriptionStripped": "+13/+26/+39 inventory",
+    "perLevelDescriptions": {
+      "1": "+13 inventory",
+      "2": "+26 inventory",
+      "3": "+39 inventory"
+    },
+    "icon": "gear.png",
+    "canLevel": true
+  },
+  {
+    "id": 11,
+    "name": "Farmers Carry",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Forearms like Popeye!",
+    "description": "+$5/$25/$100 cash per candy in inventory each period",
+    "descriptionStripped": "+$5/$25/$100 cash per candy in inventory each period",
+    "perLevelDescriptions": {
+      "1": "+$5 cash per candy in inventory each period",
+      "2": "$25 cash per candy in inventory each period",
+      "3": "$100 cash per candy in inventory each period"
+    },
+    "icon": "farmersCarry.png",
+    "canLevel": true
+  },
+  {
+    "id": 12,
+    "name": "Vacuum Sealer",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 1,
+    "flavorText": "All candy, no air!",
+    "description": "2x inventory limit, -2 mult (min 1x)",
+    "descriptionStripped": "2x inventory limit, -2 mult (min 1x)",
+    "perLevelDescriptions": {
+      "1": "2x inventory limit, -2 mult (min 1x)",
+      "2": "2x inventory limit, -2 mult (min 1x)",
+      "3": "2x inventory limit, -2 mult (min 1x)"
+    },
+    "icon": "vacuumsealer.png",
+    "canLevel": false
+  },
+  {
+    "id": 15,
+    "name": "Perfect Bake",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Lined them up perfectly",
+    "description": "$1k/$3k/$5k cash for ending day with 0 inventory",
+    "descriptionStripped": "$1k/$3k/$5k cash for ending day with 0 inventory",
+    "perLevelDescriptions": {
+      "1": "$1k cash for ending day with 0 inventory",
+      "2": "$3k cash for ending day with 0 inventory",
+      "3": "$5k cash for ending day with 0 inventory"
+    },
+    "icon": "statusCupcake.png",
+    "canLevel": true
+  },
+  {
+    "id": 16,
+    "name": "Bake Sale",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 3,
+    "flavorText": "C.R.E.A.M. and cookies",
+    "description": "$3k/$6k/$9k instant cash",
+    "descriptionStripped": "$3k/$6k/$9k instant cash",
+    "perLevelDescriptions": {
+      "1": "$3k instant cash",
+      "2": "$6k instant cash",
+      "3": "$9k instant cash"
+    },
+    "icon": "cupcake.png",
+    "canLevel": true
+  },
+  {
+    "id": 17,
+    "name": "Home Made",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Home made hits different",
+    "description": "$25/$50/$100 cash per candy in inventory at start of day",
+    "descriptionStripped": "$25/$50/$100 cash per candy in inventory at start of day",
+    "perLevelDescriptions": {
+      "1": "$25 cash per candy in inventory at start of day",
+      "2": "$50 cash per candy in inventory at start of day",
+      "3": "$100 cash per candy in inventory at start of day"
+    },
+    "icon": "homemade.png",
+    "canLevel": true
+  },
+  {
+    "id": 18,
+    "name": "Triple Threat",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Triple Double No Assists!",
+    "description": "+2/+3/+4 mult when 3+ candy types covered by your jokers",
+    "descriptionStripped": "+2/+3/+4 mult when 3+ candy types covered by your jokers",
+    "perLevelDescriptions": {
+      "1": "+2 mult when 3+ candy types covered by your jokers",
+      "2": "+3 mult when 3+ candy types covered by your jokers",
+      "3": "+4 mult when 3+ candy types covered by your jokers"
+    },
+    "icon": "trident.png",
+    "canLevel": true
+  },
+  {
+    "id": 19,
+    "name": "Bear Market",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "The Right to Gummy Bear Arms",
+    "description": "+1.5/+2/+3 mult on Gummy candy",
+    "descriptionStripped": "+1.5/+2/+3 mult on Gummy candy",
+    "perLevelDescriptions": {
+      "1": "+1.5 mult on Gummy candy",
+      "2": "+2 mult on Gummy candy",
+      "3": "+3 mult on Gummy candy"
+    },
+    "icon": "bear.png",
+    "canLevel": true
+  },
+  {
+    "id": 20,
+    "name": "Market Manipulation",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 1,
+    "flavorText": "Pump and dump!",
+    "description": "Set any candy to the highest price this period",
+    "descriptionStripped": "Set any candy to the highest price this period",
+    "perLevelDescriptions": {
+      "1": "Set any candy to the highest price this period",
+      "2": "Set any candy to the highest price this period",
+      "3": "Set any candy to the highest price this period"
+    },
+    "icon": "priceSpike.png",
+    "canLevel": false
+  },
+  {
+    "id": 22,
+    "name": "Deposit Bonus",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "A dollar saved is a dollar earned",
+    "description": "5%/10%/15% of stash added to daily allowance",
+    "descriptionStripped": "5%/10%/15% of stash added to daily allowance",
+    "perLevelDescriptions": {
+      "1": "5% of stash added to daily allowance",
+      "2": "10% of stash added to daily allowance",
+      "3": "15% of stash added to daily allowance"
+    },
+    "icon": "piggyBank.png",
+    "canLevel": true
+  },
+  {
+    "id": 23,
+    "name": "Cocoa Futures",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "",
+    "description": "+50%/+100%/+200% profit on Chocolate candy",
+    "descriptionStripped": "+50%/+100%/+200% profit on Chocolate candy",
+    "perLevelDescriptions": {
+      "1": "+50% profit on Chocolate candy",
+      "2": "+100% profit on Chocolate candy",
+      "3": "+200% profit on Chocolate candy"
+    },
+    "icon": "chocolate.png",
+    "canLevel": true
+  },
+  {
+    "id": 24,
+    "name": "Shrinking Glass",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Honey I shrunk the candy",
+    "description": "50%/75%/90% off deli candy",
+    "descriptionStripped": "50%/75%/90% off deli candy",
+    "perLevelDescriptions": {
+      "1": "50% off deli candy",
+      "2": "75% off deli candy",
+      "3": "90% off deli candy"
+    },
+    "icon": "magnifyingGlass.png",
+    "canLevel": true
+  },
+  {
+    "id": 25,
+    "name": "Bet You I'm Faster",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 1,
+    "flavorText": "Bet you all the candies in the world",
+    "description": "Fill entire inventory with any 1 candy",
+    "descriptionStripped": "Fill entire inventory with any 1 candy",
+    "perLevelDescriptions": {
+      "1": "Fill entire inventory with any 1 candy",
+      "2": "Fill entire inventory with any 1 candy",
+      "3": "Fill entire inventory with any 1 candy"
+    },
+    "icon": "recess.png",
+    "canLevel": false
+  },
+  {
+    "id": 26,
+    "name": "Hard Knocks",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Hard candy, hard cash",
+    "description": "+50%/+100%/+200% profit on Hard Candy",
+    "descriptionStripped": "+50%/+100%/+200% profit on Hard Candy",
+    "perLevelDescriptions": {
+      "1": "+50% profit on Hard Candy",
+      "2": "+100% profit on Hard Candy",
+      "3": "+200% profit on Hard Candy"
+    },
+    "icon": null,
+    "canLevel": true
+  },
+  {
+    "id": 29,
+    "name": "Even Stevens",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "All good things come in pairs",
+    "description": "+50%/+100%/+200% profit when inventory limit is even",
+    "descriptionStripped": "+50%/+100%/+200% profit when inventory limit is even",
+    "perLevelDescriptions": {
+      "1": "+50% profit when inventory limit is even",
+      "2": "+100% profit when inventory limit is even",
+      "3": "+200% profit when inventory limit is even"
+    },
+    "icon": "scale.png",
+    "canLevel": true
+  },
+  {
+    "id": 30,
+    "name": "Odd Todd",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Never tell me the odds!",
+    "description": "+0.5/+1/+2 mult when inventory limit is odd",
+    "descriptionStripped": "+0.5/+1/+2 mult when inventory limit is odd",
+    "perLevelDescriptions": {
+      "1": "+0.5 mult when inventory limit is odd",
+      "2": "+1 mult when inventory limit is odd",
+      "3": "+2 mult when inventory limit is odd"
+    },
+    "icon": "theater.png",
+    "canLevel": true
+  },
+  {
+    "id": 31,
+    "name": "Ace the Test",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "You earned this new book bag!",
+    "description": "2x/3x/4x allowance",
+    "descriptionStripped": "2x/3x/4x allowance",
+    "perLevelDescriptions": {
+      "1": "2x allowance",
+      "2": "3x allowance",
+      "3": "4x allowance"
+    },
+    "icon": "book.png",
+    "canLevel": true
+  },
+  {
+    "id": 32,
+    "name": "Double Dutch",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Double your pleasure, double your profit",
+    "description": "+50%/+100%/+200% profit on Chewy candy",
+    "descriptionStripped": "+50%/+100%/+200% profit on Chewy candy",
+    "perLevelDescriptions": {
+      "1": "+50% profit on Chewy candy",
+      "2": "+100% profit on Chewy candy",
+      "3": "+200% profit on Chewy candy"
+    },
+    "icon": "jumpRope.png",
+    "canLevel": true
+  },
+  {
+    "id": 37,
+    "name": "Roman Coin",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 3,
+    "flavorText": "",
+    "description": "$2k/$5k/$10k instant cash",
+    "descriptionStripped": "$2k/$5k/$10k instant cash",
+    "perLevelDescriptions": {
+      "1": "$2k instant cash",
+      "2": "$5k instant cash",
+      "3": "$10k instant cash"
+    },
+    "icon": "coin.png",
+    "canLevel": true
+  },
+  {
+    "id": 38,
+    "name": "Golden Hour",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "The last light of day is the most valuable",
+    "description": "+50%/+100%/+200% profit in last 2 periods of day",
+    "descriptionStripped": "+50%/+100%/+200% profit in last 2 periods of day",
+    "perLevelDescriptions": {
+      "1": "+50% profit in last 2 periods of day",
+      "2": "+100% profit in last 2 periods of day",
+      "3": "+200% profit in last 2 periods of day"
+    },
+    "icon": "sunrise.png",
+    "canLevel": true
+  },
+  {
+    "id": 39,
+    "name": "Trade Routes",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Ancient paths, modern profits",
+    "description": "+2/+3/+4 inventory every period",
+    "descriptionStripped": "+2/+3/+4 inventory every period",
+    "perLevelDescriptions": {
+      "1": "+2 inventory every period",
+      "2": "+3 inventory every period",
+      "3": "+4 inventory every period"
+    },
+    "icon": "treasureMap.png",
+    "canLevel": true
+  },
+  {
+    "id": 42,
+    "name": "Tropical Import",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "",
+    "description": "+50%/+100%/+200% profit on Fruity candy",
+    "descriptionStripped": "+50%/+100%/+200% profit on Fruity candy",
+    "perLevelDescriptions": {
+      "1": "+50% profit on Fruity candy",
+      "2": "+100% profit on Fruity candy",
+      "3": "+200% profit on Fruity candy"
+    },
+    "icon": "backpack.png",
+    "canLevel": true
+  },
+  {
+    "id": 43,
+    "name": "Inductive Reasoning",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "",
+    "description": "+5/+7/+10 inventory each new day",
+    "descriptionStripped": "+5/+7/+10 inventory each new day",
+    "perLevelDescriptions": {
+      "1": "+5 inventory each new day",
+      "2": "+7 inventory each new day",
+      "3": "+10 inventory each new day"
+    },
+    "icon": "logic.png",
+    "canLevel": true
+  },
+  {
+    "id": 45,
+    "name": "Early Bird",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "First come, first served",
+    "description": "+50%/+100%/+200% profit on first sale each day",
+    "descriptionStripped": "+50%/+100%/+200% profit on first sale each day",
+    "perLevelDescriptions": {
+      "1": "+50% profit on first sale each day",
+      "2": "+100% profit on first sale each day",
+      "3": "+200% profit on first sale each day"
+    },
+    "icon": "sunrise.png",
+    "canLevel": true
+  },
+  {
+    "id": 46,
+    "name": "Sour Logic",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "When life gives you lemons, sell sour candy",
+    "description": "+50%/+100%/+200% profit on Sour candy",
+    "descriptionStripped": "+50%/+100%/+200% profit on Sour candy",
+    "perLevelDescriptions": {
+      "1": "+50% profit on Sour candy",
+      "2": "+100% profit on Sour candy",
+      "3": "+200% profit on Sour candy"
+    },
+    "icon": "magic.png",
+    "canLevel": true
+  },
+  {
+    "id": 47,
+    "name": "Bulk Discount",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Buy in bulk, sell in bulk",
+    "description": "+50%/+100%/+200% profit when selling 20+ at once",
+    "descriptionStripped": "+50%/+100%/+200% profit when selling 20+ at once",
+    "perLevelDescriptions": {
+      "1": "+50% profit when selling 20+ at once",
+      "2": "+100% profit when selling 20+ at once",
+      "3": "+200% profit when selling 20+ at once"
+    },
+    "icon": "bulkSale.png",
+    "canLevel": true
+  },
+  {
+    "id": 48,
+    "name": "Pursuasion",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 3,
+    "flavorText": "These are limited edition, trust me",
+    "description": "+1/+3/+5 mult on your next sale (one-time)",
+    "descriptionStripped": "+1/+3/+5 mult on your next sale (one-time)",
+    "perLevelDescriptions": {
+      "1": "+1 mult on your next sale (one-time)",
+      "2": "+3 mult on your next sale (one-time)",
+      "3": "+5 mult on your next sale (one-time)"
+    },
+    "icon": "talkingHead.png",
+    "canLevel": true
+  },
+  {
+    "id": 49,
+    "name": "Underdog",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Nothing to lose, everything to gain",
+    "description": "+50%/+100%/+200% profit when cash < $5k/$10k/$15k",
+    "descriptionStripped": "+50%/+100%/+200% profit when cash < $5k/$10k/$15k",
+    "perLevelDescriptions": {
+      "1": "+50% profit when cash < $5k",
+      "2": "+100% profit when cash < $10k",
+      "3": "+200% profit when cash < $15k"
+    },
+    "icon": "gym.png",
+    "canLevel": true
+  },
+  {
+    "id": 50,
+    "name": "Variety Pack",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "",
+    "description": "+50%/+100%/+200% profit when 3+ candy types in inventory",
+    "descriptionStripped": "+50%/+100%/+200% profit when 3+ candy types in inventory",
+    "perLevelDescriptions": {
+      "1": "+50% profit when 3+ candy types in inventory",
+      "2": "+100% profit when 3+ candy types in inventory",
+      "3": "+200% profit when 3+ candy types in inventory"
+    },
+    "icon": "bulkSale.png",
+    "canLevel": true
+  },
+  {
+    "id": 52,
+    "name": "Broke and Hungry",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Get rich or die trying",
+    "description": "+1/+2/+3 mult when cash < $2k/$3k/$5k",
+    "descriptionStripped": "+1/+2/+3 mult when cash < $2k/$3k/$5k",
+    "perLevelDescriptions": {
+      "1": "+1 mult when cash < $2k",
+      "2": "+2 mult when cash < $3k",
+      "3": "+3 mult when cash < $5k"
+    },
+    "icon": "priceCrash.png",
+    "canLevel": true
+  },
+  {
+    "id": 53,
+    "name": "Mysterious Artifact",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "It has a pulsating glow...",
+    "description": "8%/15%/25% daily compound interest on stash",
+    "descriptionStripped": "8%/15%/25% daily compound interest on stash",
+    "perLevelDescriptions": {
+      "1": "8% daily compound interest on stash",
+      "2": "15% daily compound interest on stash",
+      "3": "25% daily compound interest on stash"
+    },
+    "icon": "artifact.png",
+    "canLevel": true
+  },
+  {
+    "id": 55,
+    "name": "Extra Credit",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 1,
+    "flavorText": "Always doing extra",
+    "description": "+1 joker choice after minigames",
+    "descriptionStripped": "+1 joker choice after minigames",
+    "perLevelDescriptions": {
+      "1": "+1 joker choice after minigames",
+      "2": "+1 joker choice after minigames",
+      "3": "+1 joker choice after minigames"
+    },
+    "icon": "book.png",
+    "canLevel": false
+  },
+  {
+    "id": 56,
+    "name": "Sixth Sense",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 1,
+    "flavorText": "I see dead... jokers?",
+    "description": "+1 aura slot (hold 6 instead of 5)",
+    "descriptionStripped": "+1 aura slot (hold 6 instead of 5)",
+    "perLevelDescriptions": {
+      "1": "+1 aura slot (hold 6 instead of 5)",
+      "2": "+1 aura slot (hold 6 instead of 5)",
+      "3": "+1 aura slot (hold 6 instead of 5)"
+    },
+    "icon": "crystalBall.png",
+    "canLevel": false
+  },
+  {
+    "id": 57,
+    "name": "Sugar Rush",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "This was almost the game name!",
+    "description": "+1/+2/+3 mult on every sale",
+    "descriptionStripped": "+1/+2/+3 mult on every sale",
+    "perLevelDescriptions": {
+      "1": "+1 mult on every sale",
+      "2": "+2 mult on every sale",
+      "3": "+3 mult on every sale"
+    },
+    "icon": "rushing.png",
+    "canLevel": true
+  },
+  {
+    "id": 58,
+    "name": "Loan Shark",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Borrow now, pay later... with interest",
+    "description": "+$5k/+$8k/+$12k daily cash, owe $6k/$9.5k/$14k at end of day",
+    "descriptionStripped": "+$5k/+$8k/+$12k daily cash, owe $6k/$9.5k/$14k at end of day",
+    "perLevelDescriptions": {
+      "1": "+$5k daily cash, owe $6k at end of day",
+      "2": "+$8k daily cash, owe $9.5k at end of day",
+      "3": "+$12k daily cash, owe $14k at end of day"
+    },
+    "icon": "shark.png",
+    "canLevel": true
+  },
+  {
+    "id": 59,
+    "name": "Glass Cannon",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Fragile like your ego",
+    "description": "+4/+6/+9 mult on every sale; 10%/7%/5% chance to shatter itself",
+    "descriptionStripped": "+4/+6/+9 mult on every sale; 10%/7%/5% chance to shatter itself",
+    "perLevelDescriptions": {
+      "1": "+4 mult on every sale; 10% chance to shatter itself",
+      "2": "+6 mult on every sale; 7% chance to shatter itself",
+      "3": "+9 mult on every sale; 5% chance to shatter itself"
+    },
+    "icon": "glassCannon.png",
+    "canLevel": true
+  },
+  {
+    "id": 60,
+    "name": "Contraband",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "No risk it, no biscuit",
+    "description": "+1/+2/+3 mult, confiscation takes 100%",
+    "descriptionStripped": "+1/+2/+3 mult, confiscation takes 100%",
+    "perLevelDescriptions": {
+      "1": "+1 mult, confiscation takes 100%",
+      "2": "+2 mult, confiscation takes 100%",
+      "3": "+3 mult, confiscation takes 100%"
+    },
+    "icon": "x.png",
+    "canLevel": true
+  },
+  {
+    "id": 61,
+    "name": "All In",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Nothing left to lose",
+    "description": "+3/+5/+7 mult when selling entire stack and cash < $500/$5k/$15k",
+    "descriptionStripped": "+3/+5/+7 mult when selling entire stack and cash < $500/$5k/$15k",
+    "perLevelDescriptions": {
+      "1": "+3 mult when selling entire stack and cash < $500",
+      "2": "+5 mult when selling entire stack and cash < $5k",
+      "3": "+7 mult when selling entire stack and cash < $15k"
+    },
+    "icon": "pokerChips.png",
+    "canLevel": true
+  },
+  {
+    "id": 62,
+    "name": "Hot Potato",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Sell fast or watch it melt",
+    "description": "+3/+5/+7 mult on every sale; candy melts in 3 periods",
+    "descriptionStripped": "+3/+5/+7 mult on every sale; candy melts in 3 periods",
+    "perLevelDescriptions": {
+      "1": "+3 mult on every sale; candy melts in 3 periods",
+      "2": "+5 mult on every sale; candy melts in 3 periods",
+      "3": "+7 mult on every sale; candy melts in 3 periods"
+    },
+    "icon": "fire.png",
+    "canLevel": true
+  },
+  {
+    "id": 63,
+    "name": "Compound Interest",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Money makes money makes money",
+    "description": "+20%/+40%/+60% profit (grows each day)",
+    "descriptionStripped": "+20%/+40%/+60% profit (grows each day)",
+    "perLevelDescriptions": {
+      "1": "+20% profit (grows each day)",
+      "2": "+40% profit (grows each day)",
+      "3": "+60% profit (grows each day)"
+    },
+    "icon": "piggyBank.png",
+    "canLevel": true
+  },
+  {
+    "id": 64,
+    "name": "Reputation",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Word gets around when you sell the good stuff",
+    "description": "+20%/+30%/+40% profit per unique candy sold",
+    "descriptionStripped": "+20%/+30%/+40% profit per unique candy sold",
+    "perLevelDescriptions": {
+      "1": "+20% profit per unique candy sold",
+      "2": "+30% profit per unique candy sold",
+      "3": "+40% profit per unique candy sold"
+    },
+    "icon": "talkingHead.png",
+    "canLevel": true
+  },
+  {
+    "id": 65,
+    "name": "Street Smarts",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "",
+    "description": "+0.5/+0.75/+1 mult per event survived",
+    "descriptionStripped": "+0.5/+0.75/+1 mult per event survived",
+    "perLevelDescriptions": {
+      "1": "+0.5 mult per event survived",
+      "2": "+0.75 mult per event survived",
+      "3": "+1 mult per event survived"
+    },
+    "icon": "streetSmart.png",
+    "canLevel": true
+  },
+  {
+    "id": 66,
+    "name": "Treasure Chest",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Empty inventory, room for treasure",
+    "description": "+8/+15/+25 inventory, $20/$50/$100 cash per empty inventory at end of day",
+    "descriptionStripped": "+8/+15/+25 inventory, $20/$50/$100 cash per empty inventory at end of day",
+    "perLevelDescriptions": {
+      "1": "+8 inventory, $20 cash per empty inventory at end of day",
+      "2": "+15 inventory, $50 cash per empty inventory at end of day",
+      "3": "+25 inventory, $100 cash per empty inventory at end of day"
+    },
+    "icon": "vault.png",
+    "canLevel": true
+  },
+  {
+    "id": 67,
+    "name": "Safe House",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 1,
+    "flavorText": "Never let em know how much dough you hold",
+    "description": "Protects wallet from bullies and stash from confiscation",
+    "descriptionStripped": "Protects wallet from bullies and stash from confiscation",
+    "perLevelDescriptions": {
+      "1": "Protects wallet from bullies and stash from confiscation",
+      "2": "Protects wallet from bullies and stash from confiscation",
+      "3": "Protects wallet from bullies and stash from confiscation"
+    },
+    "icon": "shield.png",
+    "canLevel": false
+  },
+  {
+    "id": 70,
+    "name": "Mint Condition",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Small but mighty",
+    "description": "+1/+1.5/+2 mult on small candy",
+    "descriptionStripped": "+1/+1.5/+2 mult on small candy",
+    "perLevelDescriptions": {
+      "1": "+1 mult on small candy",
+      "2": "+1.5 mult on small candy",
+      "3": "+2 mult on small candy"
+    },
+    "icon": "crystalBall.png",
+    "canLevel": true
+  },
+  {
+    "id": 71,
+    "name": "King Size",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Go big or go home",
+    "description": "+1/+1.5/+2 mult on big candy",
+    "descriptionStripped": "+1/+1.5/+2 mult on big candy",
+    "perLevelDescriptions": {
+      "1": "+1 mult on big candy",
+      "2": "+1.5 mult on big candy",
+      "3": "+2 mult on big candy"
+    },
+    "icon": "crown.png",
+    "canLevel": true
+  },
+  {
+    "id": 72,
+    "name": "Medium Rare",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "A venti means 20 ounces",
+    "description": "+1/+1.5/+2 mult on medium candy",
+    "descriptionStripped": "+1/+1.5/+2 mult on medium candy",
+    "perLevelDescriptions": {
+      "1": "+1 mult on medium candy",
+      "2": "+1.5 mult on medium candy",
+      "3": "+2 mult on medium candy"
+    },
+    "icon": "mediumRare.png",
+    "canLevel": true
+  },
+  {
+    "id": 73,
+    "name": "Clearance Sale",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Every loss is an investment in future gains",
+    "description": "+10%/+15%/+20% permanent mult per loss sale",
+    "descriptionStripped": "+10%/+15%/+20% permanent mult per loss sale",
+    "perLevelDescriptions": {
+      "1": "+10% permanent mult per loss sale",
+      "2": "+15% permanent mult per loss sale",
+      "3": "+20% permanent mult per loss sale"
+    },
+    "icon": "clearanceSale.png",
+    "canLevel": true
+  },
+  {
+    "id": 74,
+    "name": "Piggy Bank Pro",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Your piggy bank went to business school",
+    "description": "15%/20%/25% daily stash interest",
+    "descriptionStripped": "15%/20%/25% daily stash interest",
+    "perLevelDescriptions": {
+      "1": "15% daily stash interest",
+      "2": "20% daily stash interest",
+      "3": "25% daily stash interest"
+    },
+    "icon": "piggyBank.png",
+    "canLevel": true
+  },
+  {
+    "id": 75,
+    "name": "Market Crash",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 3,
+    "flavorText": "Buy the dip!",
+    "description": "All prices x0.5/x0.4/x0.3 for 1 period",
+    "descriptionStripped": "All prices x0.5/x0.4/x0.3 for 1 period",
+    "perLevelDescriptions": {
+      "1": "All prices x0.5 for 1 period",
+      "2": "All prices x0.4 for 1 period",
+      "3": "All prices x0.3 for 1 period"
+    },
+    "icon": "priceCrash.png",
+    "canLevel": true
+  },
+  {
+    "id": 76,
+    "name": "Inflation",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 3,
+    "flavorText": "Everything costs more, but sells for more too",
+    "description": "All prices x2/x3/x4 for 1 period",
+    "descriptionStripped": "All prices x2/x3/x4 for 1 period",
+    "perLevelDescriptions": {
+      "1": "All prices x2 for 1 period",
+      "2": "All prices x3 for 1 period",
+      "3": "All prices x4 for 1 period"
+    },
+    "icon": "priceSpike.png",
+    "canLevel": true
+  },
+  {
+    "id": 77,
+    "name": "Lucky Charm",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Fortune favors the prepared",
+    "description": "3x/4x/5x found money multiplier",
+    "descriptionStripped": "3x/4x/5x found money multiplier",
+    "perLevelDescriptions": {
+      "1": "3x found money multiplier",
+      "2": "4x found money multiplier",
+      "3": "5x found money multiplier"
+    },
+    "icon": "artifact.png",
+    "canLevel": true
+  },
+  {
+    "id": 78,
+    "name": "Bully Bait",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Turn their threats into your treats",
+    "description": "Convert bully events to +$500/+$1k/+$2k cash",
+    "descriptionStripped": "Convert bully events to +$500/+$1k/+$2k cash",
+    "perLevelDescriptions": {
+      "1": "Convert bully events to +$500 cash",
+      "2": "Convert bully events to +$1k cash",
+      "3": "Convert bully events to +$2k cash"
+    },
+    "icon": "beast.png",
+    "canLevel": true
+  },
+  {
+    "id": 79,
+    "name": "Teacher's Pet",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Bring an apple, hear the gossip",
+    "description": "See next-period price arrow on 1/2/3 candies (biggest movers)",
+    "descriptionStripped": "See next-period price arrow on 1/2/3 candies (biggest movers)",
+    "perLevelDescriptions": {
+      "1": "See next-period price arrow on 1 candies (biggest movers)",
+      "2": "See next-period price arrow on 2 candies (biggest movers)",
+      "3": "See next-period price arrow on 3 candies (biggest movers)"
+    },
+    "icon": "student.png",
+    "canLevel": true
+  },
+  {
+    "id": 80,
+    "name": "Class Clown",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Fresh crowds love fresh jokes",
+    "description": "+10%/+25%/+50% profit when this period’s location is new (not last period’s)",
+    "descriptionStripped": "+10%/+25%/+50% profit when this period’s location is new (not last period’s)",
+    "perLevelDescriptions": {
+      "1": "+10% profit when this period’s location is new (not last period’s)",
+      "2": "+25% profit when this period’s location is new (not last period’s)",
+      "3": "+50% profit when this period’s location is new (not last period’s)"
+    },
+    "icon": "theater.png",
+    "canLevel": true
+  },
+  {
+    "id": 81,
+    "name": "Detention Dodge",
+    "type": "one-time",
+    "typeLabel": "Instant",
+    "maxLevel": 1,
+    "flavorText": "",
+    "description": "Event immunity for 1 day",
+    "descriptionStripped": "Event immunity for 1 day",
+    "perLevelDescriptions": {
+      "1": "Event immunity for 1 day",
+      "2": "Event immunity for 1 day",
+      "3": "Event immunity for 1 day"
+    },
+    "icon": "rushing.png",
+    "canLevel": false
+  },
+  {
+    "id": 82,
+    "name": "Collector",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Gotta catch em all",
+    "description": "+0.3/+0.5/+0.7 mult per unique joker owned",
+    "descriptionStripped": "+0.3/+0.5/+0.7 mult per unique joker owned",
+    "perLevelDescriptions": {
+      "1": "+0.3 mult per unique joker owned",
+      "2": "+0.5 mult per unique joker owned",
+      "3": "+0.7 mult per unique joker owned"
+    },
+    "icon": "collector.png",
+    "canLevel": true
+  },
+  {
+    "id": 83,
+    "name": "Minimalist",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Less is more... way more",
+    "description": "+2/+4/+7 mult if exactly 3 jokers owned",
+    "descriptionStripped": "+2/+4/+7 mult if exactly 3 jokers owned",
+    "perLevelDescriptions": {
+      "1": "+2 mult if exactly 3 jokers owned",
+      "2": "+4 mult if exactly 3 jokers owned",
+      "3": "+7 mult if exactly 3 jokers owned"
+    },
+    "icon": "minimalist.png",
+    "canLevel": true
+  },
+  {
+    "id": 84,
+    "name": "Lucky 7",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Seven is the magic number",
+    "description": "+6/+9/+14 mult if selling exactly 7 candy",
+    "descriptionStripped": "+6/+9/+14 mult if selling exactly 7 candy",
+    "perLevelDescriptions": {
+      "1": "+6 mult if selling exactly 7 candy",
+      "2": "+9 mult if selling exactly 7 candy",
+      "3": "+14 mult if selling exactly 7 candy"
+    },
+    "icon": "seven.png",
+    "canLevel": true
+  },
+  {
+    "id": 85,
+    "name": "Night Owl",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "The best deals happen after dark",
+    "description": "+2/+3/+4 mult in last period of day",
+    "descriptionStripped": "+2/+3/+4 mult in last period of day",
+    "perLevelDescriptions": {
+      "1": "+2 mult in last period of day",
+      "2": "+3 mult in last period of day",
+      "3": "+4 mult in last period of day"
+    },
+    "icon": "nightowl.png",
+    "canLevel": true
+  },
+  {
+    "id": 86,
+    "name": "Penny Pincher",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "A penny saved is a penny earned twice",
+    "description": "10%/15%/20% of stash to allowance, min $50/$100/$200 cash",
+    "descriptionStripped": "10%/15%/20% of stash to allowance, min $50/$100/$200 cash",
+    "perLevelDescriptions": {
+      "1": "10% of stash to allowance, min $50 cash",
+      "2": "15% of stash to allowance, min $100 cash",
+      "3": "20% of stash to allowance, min $200 cash"
+    },
+    "icon": "cent.png",
+    "canLevel": true
+  },
+  {
+    "id": 87,
+    "name": "Tax Collector",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Uncle Sam wants his cut... and so do you",
+    "description": "5%/8%/12% of sale as bonus cash",
+    "descriptionStripped": "5%/8%/12% of sale as bonus cash",
+    "perLevelDescriptions": {
+      "1": "5% of sale as bonus cash",
+      "2": "8% of sale as bonus cash",
+      "3": "12% of sale as bonus cash"
+    },
+    "icon": "moneyWithWings.png",
+    "canLevel": true
+  },
+  {
+    "id": 88,
+    "name": "Last Stand",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "When all hope seems lost, profits soar",
+    "description": "+9/+14/+19 mult if selling < 5 candy",
+    "descriptionStripped": "+9/+14/+19 mult if selling < 5 candy",
+    "perLevelDescriptions": {
+      "1": "+9 mult if selling < 5 candy",
+      "2": "+14 mult if selling < 5 candy",
+      "3": "+19 mult if selling < 5 candy"
+    },
+    "icon": "sunrise.png",
+    "canLevel": true
+  },
+  {
+    "id": 89,
+    "name": "Momentum",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Keep the sales rolling",
+    "description": "+30%/+50%/+80% profit per consecutive sale period",
+    "descriptionStripped": "+30%/+50%/+80% profit per consecutive sale period",
+    "perLevelDescriptions": {
+      "1": "+30% profit per consecutive sale period",
+      "2": "+50% profit per consecutive sale period",
+      "3": "+80% profit per consecutive sale period"
+    },
+    "icon": "swingset.png",
+    "canLevel": true
+  },
+  {
+    "id": 90,
+    "name": "Diversifier",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Never put all your candy in one basket",
+    "description": "+1/+2/+3 mult when selling 3+ types same period",
+    "descriptionStripped": "+1/+2/+3 mult when selling 3+ types same period",
+    "perLevelDescriptions": {
+      "1": "+1 mult when selling 3+ types same period",
+      "2": "+2 mult when selling 3+ types same period",
+      "3": "+3 mult when selling 3+ types same period"
+    },
+    "icon": "2468.png",
+    "canLevel": true
+  },
+  {
+    "id": 91,
+    "name": "Peak Hours",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Timing is everything in this business",
+    "description": "+100%/+200%/+300% profit during periods 3-5",
+    "descriptionStripped": "+100%/+200%/+300% profit during periods 3-5",
+    "perLevelDescriptions": {
+      "1": "+100% profit during periods 3-5",
+      "2": "+200% profit during periods 3-5",
+      "3": "+300% profit during periods 3-5"
+    },
+    "icon": "mountain.png",
+    "canLevel": true
+  },
+  {
+    "id": 92,
+    "name": "Patience Pays",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Good things come to those who wait",
+    "description": "+0.5/+0.75/+1 mult when no sale previous period",
+    "descriptionStripped": "+0.5/+0.75/+1 mult when no sale previous period",
+    "perLevelDescriptions": {
+      "1": "+0.5 mult when no sale previous period",
+      "2": "+0.75 mult when no sale previous period",
+      "3": "+1 mult when no sale previous period"
+    },
+    "icon": "clock.png",
+    "canLevel": true
+  },
+  {
+    "id": 93,
+    "name": "Spare Change",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Empty pockets still jingle",
+    "description": "$5/$10/$20 cash per empty inventory per period",
+    "descriptionStripped": "$5/$10/$20 cash per empty inventory per period",
+    "perLevelDescriptions": {
+      "1": "$5 cash per empty inventory per period",
+      "2": "$10 cash per empty inventory per period",
+      "3": "$20 cash per empty inventory per period"
+    },
+    "icon": "coin.png",
+    "canLevel": true
+  },
+  {
+    "id": 94,
+    "name": "Deep Freeze",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 1,
+    "flavorText": "Keep it cool, keep it fresh",
+    "description": "Candy never melts",
+    "descriptionStripped": "Candy never melts",
+    "perLevelDescriptions": {
+      "1": "Candy never melts",
+      "2": "Candy never melts",
+      "3": "Candy never melts"
+    },
+    "icon": "ice.png",
+    "canLevel": false
+  },
+  {
+    "id": 95,
+    "name": "Hoarder",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Full bags, full pockets",
+    "description": "+0.3/+0.5/+0.8 mult per time inventory hit max",
+    "descriptionStripped": "+0.3/+0.5/+0.8 mult per time inventory hit max",
+    "perLevelDescriptions": {
+      "1": "+0.3 mult per time inventory hit max",
+      "2": "+0.5 mult per time inventory hit max",
+      "3": "+0.8 mult per time inventory hit max"
+    },
+    "icon": "backpack.png",
+    "canLevel": true
+  },
+  {
+    "id": 96,
+    "name": "Penny Wise",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "Save a penny, earn a dollar",
+    "description": "+15%/+25%/+40% profit per time money was stashed",
+    "descriptionStripped": "+15%/+25%/+40% profit per time money was stashed",
+    "perLevelDescriptions": {
+      "1": "+15% profit per time money was stashed",
+      "2": "+25% profit per time money was stashed",
+      "3": "+40% profit per time money was stashed"
+    },
+    "icon": "cent.png",
+    "canLevel": true
+  },
+  {
+    "id": 97,
+    "name": "Survivor",
+    "type": "persistent",
+    "typeLabel": "Aura",
+    "maxLevel": 3,
+    "flavorText": "What melts away makes you stronger",
+    "description": "+0.5/+0.75/+1 mult per candy batch melted",
+    "descriptionStripped": "+0.5/+0.75/+1 mult per candy batch melted",
+    "perLevelDescriptions": {
+      "1": "+0.5 mult per candy batch melted",
+      "2": "+0.75 mult per candy batch melted",
+      "3": "+1 mult per candy batch melted"
+    },
+    "icon": "fire.png",
+    "canLevel": true
+  }
+]

@@ -24,10 +24,6 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
   selectedPasses.forEach((pass) => {
     // Handle special hall passes by ID (like we do with jokers)
     switch (pass.id) {
-      case 'time_crunch':
-        // Time Crunch: +400% profit bonus
-        modifiers.salePriceBonusPercent += 80; // 400% / 5 = 80
-        break;
       case 'speedrun_champion':
         // Speedrun Champion: +100% profit bonus
         modifiers.salePriceBonusPercent += 20; // 100% / 5 = 20

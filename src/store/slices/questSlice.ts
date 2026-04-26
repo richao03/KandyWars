@@ -15,11 +15,13 @@ export interface Quest {
 interface QuestState {
   activeQuest: Quest | null;
   completedQuestIds: string[];
+  pendingJokerChoices: any[];
 }
 
 const initialState: QuestState = {
   activeQuest: null,
   completedQuestIds: [],
+  pendingJokerChoices: [],
 };
 
 const questSlice = createSlice({
@@ -84,6 +86,14 @@ const questSlice = createSlice({
       state.activeQuest = null;
     },
 
+    setPendingJokerChoices: (state, action: PayloadAction<any[]>) => {
+      state.pendingJokerChoices = action.payload;
+    },
+
+    clearPendingJokerChoices: (state) => {
+      state.pendingJokerChoices = [];
+    },
+
     resetQuests: () => initialState,
   },
   extraReducers: (builder) => {
@@ -96,12 +106,17 @@ export const {
   completeQuest,
   clearActiveQuest,
   failQuest,
+  setPendingJokerChoices,
+  clearPendingJokerChoices,
   resetQuests,
 } = questSlice.actions;
 
 export default questSlice.reducer;
 
 // Selectors
+const EMPTY_IDS: string[] = [];
+const EMPTY_CHOICES: any[] = [];
+
 export const selectActiveQuest = (state: any): Quest | null =>
   state.quest?.activeQuest ?? null;
 
@@ -109,4 +124,7 @@ export const selectIsQuestActive = (state: any): boolean =>
   state.quest?.activeQuest != null && !state.quest.activeQuest.completed;
 
 export const selectCompletedQuestIds = (state: any): string[] =>
-  state.quest?.completedQuestIds ?? [];
+  state.quest?.completedQuestIds ?? EMPTY_IDS;
+
+export const selectPendingJokerChoices = (state: any): any[] =>
+  state.quest?.pendingJokerChoices ?? EMPTY_CHOICES;

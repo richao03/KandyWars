@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Gummy Bears",
+    "size": "small",
+    "types": [
+      "gummy",
+      "chewy"
+    ],
+    "baseMin": 0.1,
+    "baseMax": 2
+  },
+  {
+    "name": "Jolly Ranchers",
+    "size": "small",
+    "types": [
+      "hard_candy",
+      "fruity"
+    ],
+    "baseMin": 0.5,
+    "baseMax": 5
+  },
+  {
+    "name": "Warheads",
+    "size": "small",
+    "types": [
+      "sour",
+      "hard_candy"
+    ],
+    "baseMin": 1.5,
+    "baseMax": 10
+  },
+  {
+    "name": "M&Ms",
+    "size": "small",
+    "types": [
+      "chocolate",
+      "hard_candy"
+    ],
+    "baseMin": 3,
+    "baseMax": 15
+  },
+  {
+    "name": "Nerd Rope",
+    "size": "small",
+    "types": [
+      "chewy",
+      "fruity"
+    ],
+    "baseMin": 5,
+    "baseMax": 20
+  },
+  {
+    "name": "Bubble Gum",
+    "size": "medium",
+    "types": [
+      "gummy",
+      "sour"
+    ],
+    "baseMin": 5,
+    "baseMax": 20
+  },
+  {
+    "name": "Swedish Fish",
+    "size": "medium",
+    "types": [
+      "gummy",
+      "fruity"
+    ],
+    "baseMin": 10,
+    "baseMax": 50
+  },
+  {
+    "name": "Sour Straws",
+    "size": "medium",
+    "types": [
+      "sour",
+      "chewy"
+    ],
+    "baseMin": 20,
+    "baseMax": 80
+  },
+  {
+    "name": "Caramel",
+    "size": "medium",
+    "types": [
+      "hard_candy",
+      "chewy"
+    ],
+    "baseMin": 40,
+    "baseMax": 150
+  },
+  {
+    "name": "Snickers",
+    "size": "medium",
+    "types": [
+      "chocolate",
+      "chewy"
+    ],
+    "baseMin": 60,
+    "baseMax": 200
+  },
+  {
+    "name": "Tootsie Roll",
+    "size": "big",
+    "types": [
+      "gummy",
+      "chocolate"
+    ],
+    "baseMin": 50,
+    "baseMax": 150
+  },
+  {
+    "name": "Jaw Breaker",
+    "size": "big",
+    "types": [
+      "hard_candy",
+      "gummy"
+    ],
+    "baseMin": 100,
+    "baseMax": 300
+  },
+  {
+    "name": "Strawberry Bark",
+    "size": "big",
+    "types": [
+      "chocolate",
+      "sour"
+    ],
+    "baseMin": 200,
+    "baseMax": 500
+  },
+  {
+    "name": "Sour Patch Kids",
+    "size": "big",
+    "types": [
+      "sour",
+      "fruity"
+    ],
+    "baseMin": 350,
+    "baseMax": 750
+  },
+  {
+    "name": "Taffy",
+    "size": "big",
+    "types": [
+      "chocolate",
+      "fruity"
+    ],
+    "baseMin": 500,
+    "baseMax": 1000
+  }
+]

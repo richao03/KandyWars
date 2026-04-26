@@ -1,106 +1,63 @@
 import Slider from '@react-native-community/slider';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated as RNAnimated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  Image,
+  Pressable,
+  Animated as RNAnimated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
 import {
   advanceTutorial,
   selectTutorialStep,
 } from '../../src/store/slices/tutorialSlice';
 import { Candy } from '../../src/types/candy';
+import { computeBigSaleFX } from '../../src/utils/computeBigSaleFX';
+import { computeEffectTier } from '../../src/utils/computeEffectTier';
+import {
+  computeSparkScale,
+  type SparkScale,
+} from '../../src/utils/computeSparkScale';
+import { triggerTieredHaptic } from '../../src/utils/hapticTier';
 import { MerchantUtils } from '../../src/utils/merchantUtils';
-import { calculateSaleTotal } from '../../src/utils/saleCalculations';
-import { SoundEffects } from '../../src/utils/soundEffects';
 import { formatCurrency } from '../../src/utils/priceUtils';
+import { calculateSaleTotal } from '../../src/utils/saleCalculations';
+import { ScreenFXController } from '../../src/utils/screenFXController';
+import {
+  SoundEffects,
+  playCashRegister,
+  playJokerChip,
+  playJokerMult,
+} from '../../src/utils/soundEffects';
+import { SparkController } from '../../src/utils/sparkController';
+import { JOKER_ICON_MAP as JOKER_ICON_BY_NAME } from '../../utils/jokerIcons';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
+import PressableScale from './PressableScale';
 import SparkEffect from './SparkEffect';
 import TextWithEmojis from './TextWithEmojis';
 import type { SaleInputs } from './TransactionModalManager';
-
-// Joker icon lookup by name — matches StatusIndicators.tsx
-const JOKER_ICON_BY_NAME: Record<string, any> = {
-  'Double Up': require('../../assets/images/emojis/dice.png'),
-  'Flip Artist': require('../../assets/images/emojis/bullseye.png'),
-  'Geometric Expansion': require('../../assets/images/emojis/backpack.png'),
-  'Ace the Test': require('../../assets/images/emojis/book.png'),
-  'Inductive Reasoning': require('../../assets/images/emojis/logic.png'),
-  'Tapped in': require('../../assets/images/emojis/tappedIn.png'),
-  'Combo Platter': require('../../assets/images/emojis/cafeteria.png'),
-  'Triple Threat': require('../../assets/images/emojis/trident.png'),
-  'Data Compression': require('../../assets/images/emojis/gear.png'),
-  'Vacuum Sealer': require('../../assets/images/emojis/vacuumsealer.png'),
-  'Perfect Bake': require('../../assets/images/emojis/statusCupcake.png'),
-  'Bake Sale': require('../../assets/images/emojis/cupcake.png'),
-  'Home Made': require('../../assets/images/emojis/homemade.png'),
-  'Bulk Empire': require('../../assets/images/emojis/slowcooker.png'),
-  'Treasure Chest': require('../../assets/images/emojis/vault.png'),
-  'Odd Todd': require('../../assets/images/emojis/theater.png'),
-  'Cocoa Futures': require('../../assets/images/emojis/chocolate.png'),
-  'Safe House': require('../../assets/images/emojis/shield.png'),
-  'The Good Old Days': require('../../assets/images/emojis/oldTv.png'),
-  'Bear Market': require('../../assets/images/emojis/priceCrash.png'),
-  'Market Manipulation': require('../../assets/images/emojis/priceSpike.png'),
-  'Deposit Bonus': require('../../assets/images/emojis/piggyBank.png'),
-  'Roman Coin': require('../../assets/images/emojis/coin.png'),
-  'Farmers Carry': require('../../assets/images/emojis/farmersCarry.png'),
-  "Bet You I'm Faster": require('../../assets/images/emojis/recess.png'),
-  'Hard Knocks': require('../../assets/images/emojis/diamondHand.png'),
-  'Even Stevens': require('../../assets/images/emojis/scale.png'),
-  'Sour Logic': require('../../assets/images/emojis/magic.png'),
-  'Double Dutch': require('../../assets/images/emojis/jumpRope.png'),
-  'Golden Hour': require('../../assets/images/emojis/sunrise.png'),
-  'Trade Routes': require('../../assets/images/emojis/treasureMap.png'),
-  'Mysterious Artifact': require('../../assets/images/emojis/artifact.png'),
-  'Tropical Import': require('../../assets/images/emojis/backpack.png'),
-  'Jump Rope Rhythm': require('../../assets/images/emojis/jumpRope.png'),
-  Pursuasion: require('../../assets/images/emojis/talkingHead.png'),
-  'Early Bird': require('../../assets/images/emojis/sunrise.png'),
-  'Bulk Discount': require('../../assets/images/emojis/bulkSale.png'),
-  Underdog: require('../../assets/images/emojis/gym.png'),
-  'Variety Pack': require('../../assets/images/emojis/bulkSale.png'),
-  'Broke and Hungry': require('../../assets/images/emojis/priceCrash.png'),
-  'Extra Credit': require('../../assets/images/emojis/book.png'),
-  'Sixth Sense': require('../../assets/images/emojis/crystalBall.png'),
-  'Sugar Rush': require('../../assets/images/emojis/rushing.png'),
-  'Loan Shark': require('../../assets/images/emojis/shark.png'),
-  'Glass Cannon': require('../../assets/images/emojis/glassCannon.png'),
-  Contraband: require('../../assets/images/emojis/x.png'),
-  'All In': require('../../assets/images/emojis/pokerChips.png'),
-  'Hot Potato': require('../../assets/images/emojis/fire.png'),
-  'Compound Interest': require('../../assets/images/emojis/piggyBank.png'),
-  Reputation: require('../../assets/images/emojis/talkingHead.png'),
-  'Street Smarts': require('../../assets/images/emojis/streetSmart.png'),
-  'Mint Condition': require('../../assets/images/emojis/crystalBall.png'),
-  'King Size': require('../../assets/images/emojis/crown.png'),
-  'Medium Rare': require('../../assets/images/emojis/mediumRare.png'),
-  'Clearance Sale': require('../../assets/images/emojis/clearanceSale.png'),
-  'Piggy Bank Pro': require('../../assets/images/emojis/piggyBank.png'),
-  'Market Crash': require('../../assets/images/emojis/priceCrash.png'),
-  Inflation: require('../../assets/images/emojis/priceSpike.png'),
-  'Lucky Charm': require('../../assets/images/emojis/artifact.png'),
-  'Bully Bait': require('../../assets/images/emojis/beast.png'),
-  "Teacher's Spy": require('../../assets/images/emojis/student.png'),
-  'Class Clown': require('../../assets/images/emojis/theater.png'),
-  'Detention Dodge': require('../../assets/images/emojis/rushing.png'),
-  Collector: require('../../assets/images/emojis/collector.png'),
-  Minimalist: require('../../assets/images/emojis/minimalist.png'),
-  'Lucky 7': require('../../assets/images/emojis/seven.png'),
-  'Night Owl': require('../../assets/images/emojis/nightowl.png'),
-  'Penny Pincher': require('../../assets/images/emojis/cent.png'),
-  'Tax Collector': require('../../assets/images/emojis/moneyWithWings.png'),
-  'Last Stand': require('../../assets/images/emojis/sunrise.png'),
-  Momentum: require('../../assets/images/emojis/swingset.png'),
-  Diversifier: require('../../assets/images/emojis/2468.png'),
-  'Peak Hours': require('../../assets/images/emojis/mountain.png'),
-  'Patience Pays': require('../../assets/images/emojis/clock.png'),
-  'Spare Change': require('../../assets/images/emojis/coin.png'),
-  'Influencer Shoutout': require('../../assets/images/emojis/talkingHead.png'),
-  'Hall Pass': require('../../assets/images/emojis/hallpass.png'),
-};
 
 type PriceBreakdown = {
   basePrice: number;
@@ -131,6 +88,22 @@ type PriceBreakdown = {
   finalPrice: number;
 };
 
+type SaleResultLike = {
+  totalGain: number;
+  profitPerUnit: number;
+  totalProfit: number;
+  purchaseValue: number;
+  hallPassBonus: number;
+  jokerMultiplier: number;
+  vacuumSealerPenalty: number;
+  bonusBreakdown: Array<{
+    emoji: string;
+    name: string;
+    multiplier: number;
+    flatBonus?: number;
+  }>;
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
@@ -146,6 +119,21 @@ type Props = {
   playerBalance?: number;
   availableInventorySpace?: number;
   saleInputs?: SaleInputs | null;
+  /**
+   * Debug-only: forces mode='Sell' and bypasses calculateSaleTotal so the
+   * modal renders against a synthesized sale. Used by `app/debug-tier-preview.tsx`
+   * to preview the scoring animation + screen FX at any tier without needing
+   * real game state. Has no effect when `undefined`.
+   */
+  debugSaleOverride?: {
+    saleResult: SaleResultLike;
+    /** Optional synthetic candy override. Falls back to the `candy` prop. */
+    candy?: Candy & {
+      cost: number;
+      quantityOwned: number;
+      averagePrice: number | null;
+    };
+  };
 };
 
 function TransactionModal({
@@ -154,15 +142,20 @@ function TransactionModal({
   onConfirm,
   maxBuyQuantity,
   maxSellQuantity,
-  candy,
+  candy: candyProp,
   priceBreakdown,
   playerBalance,
   availableInventorySpace,
   saleInputs,
+  debugSaleOverride,
 }: Props) {
+  // Debug override swaps the displayed candy without affecting the real prop
+  // contract upstream — keeps TransactionModalManager / market.tsx unchanged.
+  const candy = debugSaleOverride?.candy ?? candyProp;
   const [mode, setMode] = useState<'Buy' | 'Sell'>('Buy');
   const [quantity, setQuantity] = useState(1);
   const [isClosing, setIsClosing] = useState(false);
+  const reduceMotion = useAppSelector(selectReduceMotion);
 
   // Scoring animation state
   const [scoringActive, setScoringActive] = useState(false);
@@ -170,13 +163,137 @@ function TransactionModal({
   const [animatedProfit, setAnimatedProfit] = useState(0);
   const [animatedMult, setAnimatedMult] = useState(1);
   const [scoringDone, setScoringDone] = useState(false);
-  const scoringFlash = useRef(new RNAnimated.Value(0)).current;
   const pulseScale = useRef(new RNAnimated.Value(1)).current;
   const pendingConfirmRef = useRef<(() => void) | null>(null);
 
+  // Phase 6 sequence: tracks pending timers (so they can be cleared on skip/unmount)
+  const sequenceTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // skipRef forces skip-to-finish on tap during phases 1-4
+  const skipRef = useRef(false);
+  // Refs to joker icon wrappers (for measureInWindow-based particle arcs).
+  // Typed as `any` because the element may be a plain RN View or an
+  // Animated.View — both expose measureInWindow at runtime.
+  const jokerIconRefs = useRef<Record<string, any>>({});
+  // Ref to running total ("You Pocket" value) for spark arc destination
+  const totalDisplayRef = useRef<any>(null);
+  // Ref to the receipt-label View showing "${profit} × {mult}x" — boost
+  // jokers arc to the left third of this box, mult jokers to the right.
+  const breakdownLabelRef = useRef<any>(null);
+  // Captured size of the total-display element so the climax burst can be
+  // rendered as a child (always centered on the value, no runtime measurement).
+  const [totalDisplaySize, setTotalDisplaySize] = useState({
+    width: 0,
+    height: 0,
+  });
+  // Climax explosion state — the climax bumps `climaxExplosionTrigger` to
+  // restart the SparkEffect inside the total-display wrapper.
+  // `climaxExplosionScale` is a granular {count, colors} preset chosen by
+  // sale value (see computeSparkScale). null hides the explosion entirely so
+  // the SparkEffect doesn't auto-fire when the modal reopens.
+  const [climaxExplosionScale, setClimaxExplosionScale] =
+    useState<SparkScale | null>(null);
+  const [climaxExplosionTrigger, setClimaxExplosionTrigger] = useState(0);
+
+  // sellButtonSpark dispersal — fires once when the user clicks Sell. The
+  // existing ambient sparks themselves explode outward (upward + horizontally
+  // away from center) over ~500ms via SparkEffect's `disperseTrigger` prop.
+  // After ~600ms we unmount the SparkEffect entirely so the loop stops.
+  const [sellButtonBurstTrigger, setSellButtonBurstTrigger] = useState(0);
+  const [sellButtonSparkActive, setSellButtonSparkActive] = useState(true);
+
+  // Buy-confirmation feedback — totalCostPunch scales the Total Cost box
+  // briefly when the player commits a purchase (1 → 1.25 → 1).
+  const totalCostPunch = useSharedValue(1);
+
+  // Target value for the climax count-up (driven by useAnimatedMoney)
+  const [finalTotalTarget, setFinalTotalTarget] = useState(0);
+
+  // Reanimated shared values for 6-phase flourishes
+  const totalPunch = useSharedValue(1); // total number scale (Phase 4 climax bounce)
+  const modalExit = useSharedValue(0); // 0..1 modal decay progress (Phase 6)
+  // Running-total text (score) punch that fires when a spark lands on it
+  const runningTotalPunch = useSharedValue(1);
+  // NOTE: finalTotalTarget (state) drives useAnimatedMoney; no shared value
+  // here — that hook owns the shared value internally.
+
+  // Per-joker icon scales (bounded: 16 is more than enough for any real sale).
+  // Declared at top level so React's hook rules are satisfied.
+  const iconScale0 = useSharedValue(1);
+  const iconScale1 = useSharedValue(1);
+  const iconScale2 = useSharedValue(1);
+  const iconScale3 = useSharedValue(1);
+  const iconScale4 = useSharedValue(1);
+  const iconScale5 = useSharedValue(1);
+  const iconScale6 = useSharedValue(1);
+  const iconScale7 = useSharedValue(1);
+  const iconScale8 = useSharedValue(1);
+  const iconScale9 = useSharedValue(1);
+  const iconScale10 = useSharedValue(1);
+  const iconScale11 = useSharedValue(1);
+  const iconScale12 = useSharedValue(1);
+  const iconScale13 = useSharedValue(1);
+  const iconScale14 = useSharedValue(1);
+  const iconScale15 = useSharedValue(1);
+  const iconScales = useMemo(
+    () => [
+      iconScale0,
+      iconScale1,
+      iconScale2,
+      iconScale3,
+      iconScale4,
+      iconScale5,
+      iconScale6,
+      iconScale7,
+      iconScale8,
+      iconScale9,
+      iconScale10,
+      iconScale11,
+      iconScale12,
+      iconScale13,
+      iconScale14,
+      iconScale15,
+    ],
+    [
+      iconScale0,
+      iconScale1,
+      iconScale2,
+      iconScale3,
+      iconScale4,
+      iconScale5,
+      iconScale6,
+      iconScale7,
+      iconScale8,
+      iconScale9,
+      iconScale10,
+      iconScale11,
+      iconScale12,
+      iconScale13,
+      iconScale14,
+      iconScale15,
+    ]
+  );
+
+  const clearSequenceTimers = useCallback(() => {
+    sequenceTimersRef.current.forEach(clearTimeout);
+    sequenceTimersRef.current = [];
+  }, []);
+
+  const scheduleSequence = useCallback((cb: () => void, delay: number) => {
+    const timer = setTimeout(() => {
+      // Remove from ref list when fired
+      const idx = sequenceTimersRef.current.indexOf(timer);
+      if (idx >= 0) sequenceTimersRef.current.splice(idx, 1);
+      cb();
+    }, delay);
+    sequenceTimersRef.current.push(timer);
+    return timer;
+  }, []);
+
   // Tutorial
   const tutorialStep = useAppSelector(selectTutorialStep);
-  const bulkEmpireStacks = useAppSelector((state: any) => state.game?.bulkEmpireStacks ?? 0);
+  const bulkEmpireStacks = useAppSelector(
+    (state: any) => state.game?.bulkEmpireStacks ?? 0
+  );
   const tutorialDispatch = useAppDispatch();
   const isTutorialModal = tutorialStep === 4 || tutorialStep === 7;
   const dimOpacity = isTutorialModal ? 0.25 : 1;
@@ -194,11 +311,14 @@ function TransactionModal({
   const merchantEffects = saleInputs?.merchantEffects ?? [];
   const candySales = saleInputs?.candySales ?? [];
   const totalCandiesSold = saleInputs?.totalCandiesSold ?? 0;
+  const jokerStatsData = saleInputs?.jokerStats ?? {};
   const inventoryCount = saleInputs?.inventoryCount ?? 0;
   const saleDay = saleInputs?.day ?? 1;
   const uniqueLocationsToday = saleInputs?.uniqueLocationsToday ?? 0;
   const salePeriod = saleInputs?.period ?? 1;
   const periodsPerDay = saleInputs?.periodsPerDay ?? 8;
+  const selectedPassIds = saleInputs?.selectedPassIds ?? [];
+  const currentLocation = saleInputs?.currentLocation ?? '';
 
   // Clamp maxBuyQuantity and maxSellQuantity to prevent negative values
   // If value is negative, set to 0
@@ -258,6 +378,8 @@ function TransactionModal({
   // Skip expensive calculation when modal is hidden (stays mounted by TransactionModalManager)
   const saleResult = useMemo(() => {
     if (!visible) return null;
+    // Debug preview: skip calculateSaleTotal entirely and render the synthetic result.
+    if (debugSaleOverride) return debugSaleOverride.saleResult;
     if (mode === 'Sell' && candy.averagePrice !== null) {
       // Use shared calculation function to ensure consistency with actual sale
       return calculateSaleTotal({
@@ -282,6 +404,24 @@ function TransactionModal({
         periodsPerDay,
         bulkEmpireStacks,
         inventory: saleInputs?.inventory ?? [],
+        uniqueTypesSoldThisPeriod: (() => {
+          const salesThisPeriod = candySales.filter(
+            (s: any) => s.period === periodCount
+          );
+          const types = new Set(salesThisPeriod.map((s: any) => s.candyName));
+          types.add(candy.name);
+          return types.size;
+        })(),
+        clearanceSaleStacks: jokerStatsData.clearanceSaleLosses ?? 0,
+        compoundInterestDays: jokerStatsData.compoundInterestDays ?? 0,
+        reputationTypesSold: jokerStatsData.reputationTypesSold ?? 0,
+        streetSmartsEventsSurvived:
+          jokerStatsData.streetSmartsEventsSurvived ?? 0,
+        hoarderMaxHits: jokerStatsData.hoarderMaxHits ?? 0,
+        pennyWiseStashes: jokerStatsData.pennyWiseStashes ?? 0,
+        survivorCandiesMelted: jokerStatsData.survivorCandiesMelted ?? 0,
+        selectedPassIds,
+        currentLocation,
       });
     }
     return null;
@@ -306,7 +446,15 @@ function TransactionModal({
     uniqueLocationsToday,
     salePeriod,
     periodsPerDay,
+    debugSaleOverride,
   ]);
+
+  // Debug preview: lock mode to Sell so the scoring animation runs.
+  useEffect(() => {
+    if (debugSaleOverride && mode !== 'Sell') {
+      setMode('Sell');
+    }
+  }, [debugSaleOverride, mode]);
 
   const pocketValue = saleResult
     ? formatCurrency(saleResult.totalGain)
@@ -326,74 +474,396 @@ function TransactionModal({
     return [...boosts, ...mults];
   }, [saleResult]);
 
-  // Run the scoring animation sequence
+  /**
+   * 6-phase joker reveal sequence — replaces the old 300ms pulse cascade.
+   *
+   * Phase 0: Tap-down (lever click + micro-haptic) — fired from handleConfirm
+   * Phase 1: Anticipation — 200ms, staggered wiggle across joker icons + duck music
+   * Phase 2: Cascade — per-joker pre-pulse, bounce, chip/mult SFX, particle arc,
+   *                    banner flash, score punch, micro-haptic. Gap accelerates.
+   * Phase 3: Dual counters — running Base/Bonuses/Mult ticker (handled in render)
+   * Phase 4: Climax — coin cascade, final total count-up, success haptic, tiered
+   *                   vignette + particle burst
+   * Phase 5: Wallet receipt — restore music volume, fire confirm
+   * Phase 6: Decay — modal opacity/translate fade
+   */
   const runScoringAnimation = useCallback(() => {
     if (!saleResult || scoringSteps.length === 0) {
+      // No bonuses — just confirm immediately.
       pendingConfirmRef.current?.();
       pendingConfirmRef.current = null;
       return;
     }
 
+    skipRef.current = false;
+    clearSequenceTimers();
+
     const baseProfit = saleResult.totalProfit;
+    const finalMult = saleResult.jokerMultiplier;
+    const finalProfit = saleResult.totalGain - saleResult.purchaseValue;
+    const finalTotal = saleResult.totalGain;
+
+    // Initialize counters/state
     setScoringActive(true);
     setScoringDone(false);
     setAnimatedProfit(baseProfit);
     setAnimatedMult(1);
     setScoringStep(-1);
+    totalPunch.value = 1;
+    runningTotalPunch.value = 1;
+    // Seed the final-total counter at its pre-bonus starting point so the
+    // Phase 4 count-up goes from "base total" -> "full total".
+    setFinalTotalTarget(baseProfit + saleResult.purchaseValue);
 
-    let currentProfit = baseProfit;
-    let currentMult = 1;
-    let step = 0;
+    // Tier classification up front — drives climax flair gating
+    const maxJokerMult = scoringSteps.reduce(
+      (acc, s) => (s.bucket === 'mult' ? Math.max(acc, s.multiplier) : acc),
+      1
+    );
+    const tierResult = computeEffectTier({
+      totalGain: finalTotal,
+      purchaseValue: saleResult.purchaseValue,
+      jokerBonusCount: scoringSteps.length,
+      maxJokerMult,
+    });
 
-    const animate = () => {
-      if (step >= scoringSteps.length) {
-        setScoringDone(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setTimeout(() => {
-          setScoringActive(false);
-          setScoringStep(-1);
-          pendingConfirmRef.current?.();
-          pendingConfirmRef.current = null;
-        }, 600);
+    // Measure running-total position for spark arcs. Fallback = screen center.
+    let totalPos: { x: number; y: number } = { x: 200, y: 400 };
+    if (totalDisplayRef.current) {
+      totalDisplayRef.current.measureInWindow(
+        (x: number, y: number, w: number, h: number) => {
+          totalPos = { x: x + w / 2, y: y + h / 2 };
+        }
+      );
+    }
+
+    // Measure the breakdown label "${profit} × {mult}x" so per-bonus arcs
+    // can target the LEFT third (boost) or RIGHT third (mult) of it. Without
+    // a measurement we fall back to splitting around totalPos.
+    let breakdownPos: { x: number; y: number; w: number; h: number } | null =
+      null;
+    if (breakdownLabelRef.current) {
+      breakdownLabelRef.current.measureInWindow(
+        (x: number, y: number, w: number, h: number) => {
+          breakdownPos = { x, y, w, h };
+        }
+      );
+    }
+
+    // SLOW: animation timings multiplied by 1.33 — slower, smoother cascade.
+    const SLOW = 1.33;
+    const ms = (n: number) => Math.round(n * SLOW);
+    // (No MusicController.duck — the sell flow shouldn't touch background
+    //  music. Volume changes on the singleton player can inadvertently kick
+    //  off playback even when music wasn't playing.)
+    // Phase 1 anticipation pulse removed — each icon gets exactly ONE bounce
+    // when its turn arrives in Phase 2. Multiple animation phases hitting
+    // the same iconScale read as a continuous wobble, not a single trigger.
+
+    // ------------- Phase 2: Cascade -------------
+    let runningProfit = baseProfit;
+    let runningMult = 1;
+    let cursor = ms(200);
+
+    const beatOffsets: number[] = [];
+
+    scoringSteps.forEach((bonus, i) => {
+      const gap = ms(Math.max(100, 250 - i * 30));
+      const beatStart = cursor;
+      beatOffsets.push(beatStart);
+
+      // Pre-pulse removed — only one bounce per joker (in the next block).
+
+      // Bounce: single pop + SFX + particle arc + score punch
+      scheduleSequence(
+        () => {
+          if (skipRef.current) return;
+          setScoringStep(i);
+
+          const sv = iconScales[Math.min(i, iconScales.length - 1)];
+          if (!reduceMotion) {
+            // Grow once then ease back — no springy bounce.
+            sv.value = withSequence(
+              withTiming(1.4, { duration: ms(120) }),
+              withTiming(1, { duration: ms(180) })
+            );
+          }
+
+          // SFX routed by bonus type — coin-cluster pitch ladder
+          if (bonus.bucket === 'boost') {
+            playJokerChip(i);
+          } else {
+            playJokerMult(i);
+          }
+
+          // Particle arc — boost arcs LEFT, mult arcs RIGHT, and the two
+          // trajectories are mirror images: same horizontal travel
+          // distance from the joker icon, same vertical lift, opposite
+          // X direction. The end target is computed RELATIVE to each
+          // joker icon's actual position (inside the measureInWindow
+          // callback) so symmetry holds regardless of icon layout.
+          const iconRef = jokerIconRefs.current[`${bonus.name}-${i}`];
+          const arcSymbol =
+            bonus.bucket === 'boost'
+              ? `+$${bonus.flatBonus ?? 0}`
+              : `×${bonus.multiplier.toFixed(1)}`;
+          const ARC_TRAVEL = 180; // horizontal distance the arc covers
+          const arcEndY = breakdownPos
+            ? breakdownPos.y + breakdownPos.h / 2
+            : totalPos.y;
+          const fireArc = (from: { x: number; y: number }) => {
+            const arcTarget = {
+              x:
+                bonus.bucket === 'boost'
+                  ? from.x - ARC_TRAVEL
+                  : from.x + ARC_TRAVEL,
+              y: arcEndY,
+            };
+            SparkController.arc({
+              from,
+              to: arcTarget,
+              tier: tierResult.level,
+              symbol: arcSymbol,
+            });
+          };
+          // measureInWindow now targets a tight inner View that wraps just
+          // the icon image (see renderIcon), so x + w/2 lands on the visual
+          // icon center directly — no fudge constant needed.
+          if (iconRef) {
+            iconRef.measureInWindow(
+              (x: number, y: number, w: number, h: number) => {
+                fireArc({ x: x + w / 2, y: y + h / 2 });
+              }
+            );
+          } else {
+            // Fallback — arc from a fake center if the icon ref isn't ready
+            fireArc({ x: totalPos.x, y: totalPos.y - 100 });
+          }
+
+          // Tick the counters
+          if (bonus.bucket === 'boost') {
+            runningProfit += bonus.flatBonus ?? 0;
+            setAnimatedProfit(runningProfit);
+          } else {
+            runningMult += bonus.multiplier - 1;
+            setAnimatedMult(runningMult);
+          }
+
+          // Per-joker haptic — boost jokers get a light selection tap;
+          // multiplier jokers get a firmer Medium impact since the bigger
+          // visual jump (1 → maxMult) deserves more weight.
+          if (bonus.bucket === 'mult') {
+            triggerTieredHaptic(0.5);
+          } else {
+            triggerTieredHaptic(0.2, 'selection');
+          }
+        },
+        beatStart + ms(60 + 40)
+      );
+
+      // Score-punch on running total when particle "lands"
+      scheduleSequence(
+        () => {
+          if (skipRef.current) return;
+          if (!reduceMotion) {
+            runningTotalPunch.value = withSequence(
+              withTiming(1.15, { duration: ms(90) }),
+              withSpring(1, { damping: 10, stiffness: 200 })
+            );
+          }
+        },
+        beatStart + ms(180)
+      );
+
+      cursor += gap;
+    });
+
+    // ------------- Phase 4: Climax -------------
+    // Wait for the last joker's bounce + score-punch animations to fully settle
+    // before firing the cash-register. Each beat schedules its bounce at
+    // `beatStart + ms(100)` and the resulting animation runs ~ms(280) more,
+    // so add a buffer beyond `cursor` (which may have advanced by only the
+    // smaller of the next gap = ms(100)).
+    const climaxAt = cursor + ms(300);
+
+    scheduleSequence(() => {
+      if (skipRef.current) {
+        // Skip handler has already forced climax — nothing more to do here.
         return;
       }
+      setScoringDone(true);
 
-      const bonus = scoringSteps[step];
-      setScoringStep(step);
+      // Kick off final count-up via state update — useAnimatedMoney will
+      // interpolate from the seeded base total to the full total.
+      setFinalTotalTarget(finalTotal);
+      // Cash-register punctuation closes the joker cascade.
+      playCashRegister();
 
-      scoringFlash.setValue(1);
-      RNAnimated.timing(scoringFlash, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: false,
-      }).start();
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-      if (bonus.bucket === 'boost') {
-        currentProfit += bonus.flatBonus ?? 0;
-        setAnimatedProfit(currentProfit);
-      } else {
-        currentMult += (bonus.multiplier - 1);
-        setAnimatedMult(currentMult);
+      // Big-sale screen FX — shake @ $6k+, edge lights @ $10k/$15k/$20k
+      const bigFX = computeBigSaleFX(finalTotal);
+      if (bigFX.shake && !reduceMotion) ScreenFXController.shake(bigFX.shake);
+      if (bigFX.edgeLights !== 'none' && !reduceMotion) {
+        ScreenFXController.edgeLights(
+          bigFX.edgeLights,
+          bigFX.edgeLightsDuration
+        );
       }
 
-      step++;
-      setTimeout(animate, 300);
-    };
+      // Number bounce
+      if (!reduceMotion) {
+        totalPunch.value = withSequence(
+          withTiming(1.25, { duration: ms(140) }),
+          withSpring(1, { damping: 8, stiffness: 180 })
+        );
+      }
 
-    setTimeout(animate, 200);
-  }, [saleResult, scoringSteps, scoringFlash]);
+      // Climax haptic — base success notification + tier-scaled extra weight.
+      // $15k+ stacks an additional Heavy impact for the higher tiers so a
+      // jackpot truly thumps; below $15k just the success notification fires.
+      triggerTieredHaptic(0.9, 'success');
+      if (finalTotal >= 50000) {
+        // Stack a delayed Heavy impact for jackpot-scale sales
+        setTimeout(() => triggerTieredHaptic(0.8), 80);
+        setTimeout(() => triggerTieredHaptic(0.8), 200);
+      } else if (finalTotal >= 15000) {
+        setTimeout(() => triggerTieredHaptic(0.8), 100);
+      }
+
+      // climaxExplosion — rendered as a CHILD of the total-display
+      // Animated.View (see JSX below), so its center always matches the
+      // current position of the running-total Text. The {count, colors}
+      // preset is chosen by `finalTotal` via computeSparkScale (granular
+      // tier lookup). Bumping the trigger restarts the SparkEffect.
+      if (!reduceMotion) {
+        const scale = computeSparkScale(finalTotal);
+        if (scale.count > 0) {
+          setClimaxExplosionScale(scale);
+          setClimaxExplosionTrigger((t) => t + 1);
+        }
+      }
+    }, climaxAt);
+
+    // ------------- Phase 5: Wallet receipt -------------
+    // Tier-gated total runtime budget (slowed by 33%).
+    const tierTailMs = ms(
+      tierResult.level === 'jackpot'
+        ? 1400
+        : tierResult.level === 'sapphire'
+          ? 900
+          : tierResult.level === 'gold' || tierResult.level === 'emerald'
+            ? 500
+            : 400
+    );
+
+    scheduleSequence(() => {
+      // (No MusicController.restore — see duck-removal note above.)
+      // Phase 6: decay — fade + translate the modal content before handoff.
+      // Skipped in debug preview mode so the modal stays visible while the
+      // caller (debug-tier-preview) holds it open to admire the screen FX.
+      if (debugSaleOverride) {
+        modalExit.value = 0;
+      } else if (!reduceMotion) {
+        modalExit.value = withTiming(1, { duration: ms(250) });
+      } else {
+        modalExit.value = 0; // no decay for reduce-motion — snap close
+      }
+      setScoringActive(false);
+      setScoringStep(-1);
+      // Fire the pending onConfirm — TransactionModalManager will close the modal.
+      pendingConfirmRef.current?.();
+      pendingConfirmRef.current = null;
+    }, climaxAt + tierTailMs);
+
+    // Suppress unused (beatOffsets is exported as future cache for skip interpolation).
+    void finalProfit;
+    void finalMult;
+    void beatOffsets;
+  }, [
+    saleResult,
+    scoringSteps,
+    reduceMotion,
+    iconScales,
+    totalPunch,
+    runningTotalPunch,
+    modalExit,
+    clearSequenceTimers,
+    scheduleSequence,
+    debugSaleOverride,
+  ]);
+
+  /**
+   * Skip-to-finish handler — fires when user taps anywhere during phases 1-4.
+   * Snaps all counters/state to their final values and immediately triggers
+   * climax SFX/haptic (once), then cues dismissal.
+   */
+  const skipToFinish = useCallback(() => {
+    if (!scoringActive || skipRef.current) return;
+    if (!saleResult) return;
+    skipRef.current = true;
+    clearSequenceTimers();
+
+    const finalProfit = saleResult.totalGain - saleResult.purchaseValue;
+    const finalTotal = saleResult.totalGain;
+
+    // Snap all counters/state immediately
+    setScoringStep(scoringSteps.length);
+    setAnimatedProfit(finalProfit / Math.max(saleResult.jokerMultiplier, 1));
+    setAnimatedMult(saleResult.jokerMultiplier);
+    setScoringDone(true);
+    setFinalTotalTarget(finalTotal);
+
+    // Single climax haptic + cash-register punctuation (no pop cascade).
+    // Same tier-stacked thump as the normal climax for jackpot-scale sales.
+    triggerTieredHaptic(0.9, 'success');
+    if (finalTotal >= 50000) {
+      setTimeout(() => triggerTieredHaptic(0.8), 80);
+      setTimeout(() => triggerTieredHaptic(0.8), 200);
+    } else if (finalTotal >= 15000) {
+      setTimeout(() => triggerTieredHaptic(0.8), 100);
+    }
+    playCashRegister();
+    // (No MusicController.restore — sell flow doesn't touch background music.)
+
+    // Big-sale screen FX — fire on skip-to-finish too
+    const bigFX = computeBigSaleFX(finalTotal);
+    if (bigFX.shake && !reduceMotion) ScreenFXController.shake(bigFX.shake);
+    if (bigFX.edgeLights !== 'none' && !reduceMotion) {
+      ScreenFXController.edgeLights(bigFX.edgeLights, bigFX.edgeLightsDuration);
+    }
+
+    // Dismiss after a beat so the user sees the snapped total
+    scheduleSequence(() => {
+      setScoringActive(false);
+      setScoringStep(-1);
+      pendingConfirmRef.current?.();
+      pendingConfirmRef.current = null;
+    }, 250);
+  }, [
+    scoringActive,
+    saleResult,
+    scoringSteps.length,
+    clearSequenceTimers,
+    scheduleSequence,
+  ]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearSequenceTimers();
+    };
+  }, [clearSequenceTimers]);
 
   const doConfirm = useCallback(() => {
     setIsClosing(true);
-    SoundEffects.playRandomPop();
+    // No pop sound on confirm — sell flow plays coin-cluster cascade + cash-register only.
 
     if (mode === 'Sell' && priceBreakdown) {
       const saleRevenue = priceBreakdown.finalPrice * quantity;
       const userObject = scoreboardService.getCachedUserObject();
       if (userObject && saleRevenue > userObject.highestSingleSale) {
-        scoreboardService.updateLocalUserObject({ highestSingleSale: saleRevenue });
+        scoreboardService.updateLocalUserObject({
+          highestSingleSale: saleRevenue,
+        });
       }
     }
 
@@ -402,15 +872,58 @@ function TransactionModal({
     if (tutorialStep === 4 || tutorialStep === 7) {
       tutorialDispatch(advanceTutorial());
     }
-  }, [mode, quantity, priceBreakdown, onConfirm, tutorialStep, tutorialDispatch]);
+  }, [
+    mode,
+    quantity,
+    priceBreakdown,
+    onConfirm,
+    tutorialStep,
+    tutorialDispatch,
+  ]);
 
   const handleConfirm = () => {
     if (quantity > 0 && quantity <= maxQuantity) {
       // For sells with bonuses, play scoring animation first
       if (mode === 'Sell' && scoringSteps.length > 0 && !scoringActive) {
+        // Phase 0: tap-down haptic only — no pop sound. The joker cascade
+        // (coin-cluster pings) carries the audio from here.
+        triggerTieredHaptic(0.2, 'selection');
+        // Disperse the sellButtonSpark — the existing ambient sparks
+        // explode outward (~500ms) and we unmount them entirely after
+        // ~600ms so the loop stops for good.
+        setSellButtonBurstTrigger((t) => t + 1);
+        setTimeout(() => setSellButtonSparkActive(false), 720);
         pendingConfirmRef.current = doConfirm;
         runScoringAnimation();
         return;
+      }
+      // Same dispersal for sells without bonuses (no scoring animation).
+      if (mode === 'Sell') {
+        setSellButtonBurstTrigger((t) => t + 1);
+        setTimeout(() => setSellButtonSparkActive(false), 720);
+        // Cash-register punctuation fires for EVERY sale regardless of tier
+        // — bonus-less sells get the same closing audio as the cascade ones.
+        playCashRegister();
+        // Tier-scaled completion haptic — matches the climax weight for
+        // bigger sales so even bonus-less sells feel proportionate.
+        const sellTotal = saleResult?.totalGain ?? candy.cost * quantity;
+        triggerTieredHaptic(0.9, 'success');
+        if (sellTotal >= 50000) {
+          setTimeout(() => triggerTieredHaptic(0.8), 80);
+          setTimeout(() => triggerTieredHaptic(0.8), 200);
+        } else if (sellTotal >= 15000) {
+          setTimeout(() => triggerTieredHaptic(0.8), 100);
+        }
+      }
+      // Buy-confirmation feedback — Total Cost punch + cash-register sound
+      // + a Medium impact haptic so a purchase actually feels like one.
+      if (mode === 'Buy') {
+        totalCostPunch.value = withSequence(
+          withTiming(1.3, { duration: 120 }),
+          withTiming(1, { duration: 220 })
+        );
+        playCashRegister();
+        triggerTieredHaptic(0.5);
       }
       doConfirm();
     }
@@ -447,8 +960,33 @@ function TransactionModal({
       setScoringActive(false);
       setScoringStep(-1);
       setScoringDone(false);
+      skipRef.current = false;
+      clearSequenceTimers();
+      totalPunch.value = 1;
+      runningTotalPunch.value = 1;
+      modalExit.value = 0;
+      iconScales.forEach((sv) => {
+        sv.value = 1;
+      });
+      // Hide the climaxExplosion until the next sale's climax sets a scale.
+      // Without this reset, reopening the modal would re-mount the SparkEffect
+      // (whose initial `useEffect` always kicks off a burst) and the
+      // explosion would replay on every modal open.
+      setClimaxExplosionScale(null);
+      // Same idea for the sellButtonSpark dispersal — reset to 0 so the
+      // burst doesn't auto-fire on next open. Also re-enable the ambient
+      // sparks so they restart fresh on each modal open.
+      setSellButtonBurstTrigger(0);
+      setSellButtonSparkActive(true);
     }
-  }, [visible]);
+  }, [
+    visible,
+    clearSequenceTimers,
+    totalPunch,
+    runningTotalPunch,
+    modalExit,
+    iconScales,
+  ]);
 
   const changeMode = (newMode: 'Buy' | 'Sell') => {
     const newMaxQuantity =
@@ -482,113 +1020,150 @@ function TransactionModal({
     }
   };
 
-  // Sell value for tier-based styling
-  const sellValue = mode === 'Sell' ? parseFloat(pocketValue) : 0;
+  // Sell value for tier-based styling. Read the raw number directly —
+  // parseFloat(pocketValue) was broken because formatCurrency adds commas
+  // ("1,234.50" → parseFloat = 1), zeroing out numSparks for every real sale.
+  const sellValue =
+    mode === 'Sell' ? (saleResult?.totalGain ?? candy.cost * quantity) : 0;
 
-  const numSparks =
-    sellValue < 100
-      ? 0
-      : sellValue < 500
-        ? 3
-        : sellValue < 1000
-          ? 5
-          : sellValue < 5000
-            ? 7
-            : sellValue < 10000
-              ? 12
-              : sellValue < 30000
-                ? 20
-                : 24;
+  // sellButtonSpark — ambient sparks rising behind the Sell button. count +
+  // colors come from a granular tier lookup (computeSparkScale; no runtime
+  // math beyond a single table walk).
+  const sellButtonSpark = computeSparkScale(sellValue);
 
+  // Sell-button border color matches the sellButtonSpark palette starting at
+  // the gold tier ($3000+, the emerald stop). Below that, keep the muted
+  // green default so the button doesn't look colored when there's nothing
+  // worth celebrating.
   const buttonBorderColor =
-    sellValue >= 20000
-      ? '#0066ff'
-      : sellValue >= 15000
-        ? '#00cccc'
-        : sellValue >= 10000
-          ? '#00ffcc'
-          : sellValue >= 5000
-            ? '#00ff99'
-            : sellValue >= 2000
-              ? '#2ecc71'
-              : sellValue >= 1000
-                ? '#4caf50'
-                : 'rgba(123,169,101,1)';
+    sellValue >= 3000 && sellButtonSpark.colors.length > 0
+      ? (sellButtonSpark.colors[0] ?? 'rgba(123,169,101,1)')
+      : sellValue >= 1000
+        ? '#4caf50'
+        : 'rgba(123,169,101,1)';
 
   const buttonBackgroundColor =
     sellValue >= 20000
-      ? 'rgba(0, 102, 255, 0.3)'
+      ? 'rgba(0, 102, 255,1)'
       : sellValue >= 15000
-        ? 'rgba(0, 204, 204, 0.3)'
+        ? 'rgba(0, 204, 204, 1)'
         : sellValue >= 10000
-          ? 'rgba(0, 255, 204, 0.3)'
+          ? 'rgba(0, 255, 204, 1)'
           : sellValue >= 5000
-            ? 'rgba(0, 255, 153, 0.3)'
+            ? 'rgba(0, 255, 153,1)'
             : sellValue >= 2000
-              ? 'rgba(46, 204, 113, 0.3)'
+              ? 'rgba(46, 204, 113,1)'
               : sellValue >= 1000
-                ? 'rgba(76, 175, 80, 0.3)'
+                ? 'rgba(76, 175, 80,1)'
                 : 'rgba(154,193,118,1)';
 
-  const sparkColors =
-    sellValue >= 20000
-      ? [
-          '#0066ff',
-          '#0080ff',
-          '#0099ff',
-          '#00b3ff',
-          '#1e90ff',
-          '#4169e1',
-          '#5a7fff',
-          '#00bfff',
-        ]
-      : sellValue >= 15000
-        ? [
-            '#00cccc',
-            '#00e6e6',
-            '#00d9ff',
-            '#00c3ff',
-            '#00b0ff',
-            '#009fff',
-            '#1e90ff',
-            '#4db8ff',
-          ]
-        : sellValue >= 10000
-          ? [
-              '#00ffcc',
-              '#00ffb3',
-              '#00e6cc',
-              '#00d9e6',
-              '#00cccc',
-              '#00b8d4',
-              '#26c6da',
-              '#4dd0e1',
-            ]
-          : sellValue >= 5000
-            ? [
-                '#00ff99',
-                '#00e68a',
-                '#00cc88',
-                '#00b894',
-                '#1abc9c',
-                '#16a085',
-                '#26d9a0',
-                '#2ecc71',
-              ]
-            : sellValue >= 2000
-              ? [
-                  '#3dff88',
-                  '#2ecc71',
-                  '#27ae60',
-                  '#16a085',
-                  '#1abc9c',
-                  '#20c997',
-                ]
-              : sellValue >= 1000
-                ? ['#4caf50', '#43a047', '#388e3c', '#2e7d32']
-                : sellValue >= 500
-                  ? ['#5ced00', '#4caf50', '#43a047']
-                  : ['rgba(123,169,101,1)', '#7ba965', '#6a9a54'];
+  // Final total (Phase 4) renders from finalTotalTarget state directly —
+  // React Native's <Text> has no native `text` prop, so the previous
+  // AnimatedText + useAnimatedMoney pattern silently failed and on Android
+  // produced native setNativeProps errors that could crash the app.
+
+  // Reanimated styles
+  const totalPunchStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: totalPunch.value }],
+  }));
+  const runningTotalPunchStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: runningTotalPunch.value }],
+  }));
+  const totalCostPunchStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: totalCostPunch.value }],
+  }));
+  const modalExitStyle = useAnimatedStyle(() => ({
+    opacity: 1 - modalExit.value,
+    transform: [{ translateY: modalExit.value * 20 }],
+  }));
+
+  // Per-icon animated styles (bounded at 16)
+  const iconStyle0 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale0.value }],
+  }));
+  const iconStyle1 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale1.value }],
+  }));
+  const iconStyle2 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale2.value }],
+  }));
+  const iconStyle3 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale3.value }],
+  }));
+  const iconStyle4 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale4.value }],
+  }));
+  const iconStyle5 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale5.value }],
+  }));
+  const iconStyle6 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale6.value }],
+  }));
+  const iconStyle7 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale7.value }],
+  }));
+  const iconStyle8 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale8.value }],
+  }));
+  const iconStyle9 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale9.value }],
+  }));
+  const iconStyle10 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale10.value }],
+  }));
+  const iconStyle11 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale11.value }],
+  }));
+  const iconStyle12 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale12.value }],
+  }));
+  const iconStyle13 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale13.value }],
+  }));
+  const iconStyle14 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale14.value }],
+  }));
+  const iconStyle15 = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale15.value }],
+  }));
+  const iconStylesMemo = useMemo(
+    () => [
+      iconStyle0,
+      iconStyle1,
+      iconStyle2,
+      iconStyle3,
+      iconStyle4,
+      iconStyle5,
+      iconStyle6,
+      iconStyle7,
+      iconStyle8,
+      iconStyle9,
+      iconStyle10,
+      iconStyle11,
+      iconStyle12,
+      iconStyle13,
+      iconStyle14,
+      iconStyle15,
+    ],
+    [
+      iconStyle0,
+      iconStyle1,
+      iconStyle2,
+      iconStyle3,
+      iconStyle4,
+      iconStyle5,
+      iconStyle6,
+      iconStyle7,
+      iconStyle8,
+      iconStyle9,
+      iconStyle10,
+      iconStyle11,
+      iconStyle12,
+      iconStyle13,
+      iconStyle14,
+      iconStyle15,
+    ]
+  );
 
   return (
     <FastModal
@@ -604,12 +1179,24 @@ function TransactionModal({
         backgroundColor={colors.gold.beige}
         innerPadding={0}
       >
-        <View
-          style={[styles.container, isTutorialModal && { overflow: 'visible' }]}
+        <Animated.View
+          style={[
+            styles.container,
+            isTutorialModal && { overflow: 'visible' },
+            modalExitStyle,
+          ]}
         >
           {/* Tutorial dim overlay */}
           {isTutorialModal && (
             <View style={styles.tutorialDimOverlay} pointerEvents="none" />
+          )}
+          {/* Skip-to-finish overlay — only during scoring, above everything */}
+          {scoringActive && !scoringDone && (
+            <Pressable
+              style={styles.skipOverlay}
+              onPress={skipToFinish}
+              accessible={false}
+            />
           )}
           <PixelBorder
             borderColor="#e5e7eb"
@@ -626,7 +1213,9 @@ function TransactionModal({
               </View>
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Current Price:</Text>
-                <Text style={styles.priceValue}>${formatCurrency(candy.cost)}</Text>
+                <Text style={styles.priceValue}>
+                  ${formatCurrency(candy.cost)}
+                </Text>
               </View>
 
               {candy.quantityOwned > 0 && (
@@ -688,150 +1277,276 @@ function TransactionModal({
           </PixelBorder>
 
           {/* Sale breakdown */}
-          {saleResult && mode === 'Sell' && candy.averagePrice !== null && (() => {
-            const boosts = saleResult.bonusBreakdown.filter(b => b.flatBonus && b.flatBonus > 0);
-            const mults = saleResult.bonusBreakdown.filter(b => b.multiplier > 1 && !b.flatBonus);
-            const boostedProfit = (saleResult.totalGain - saleResult.purchaseValue) / Math.max(saleResult.jokerMultiplier, 1);
-            const finalProfit = saleResult.totalGain - saleResult.purchaseValue;
-
-            // During scoring animation, show animated version
-            const displayProfit = scoringActive ? animatedProfit : boostedProfit;
-            const displayMult = scoringActive ? animatedMult : saleResult.jokerMultiplier;
-            const displayFinal = scoringActive
-              ? (scoringDone ? finalProfit : displayProfit * displayMult)
-              : finalProfit;
-            const displayTotal = scoringActive
-              ? (scoringDone ? saleResult.totalGain : displayProfit * displayMult + saleResult.purchaseValue)
-              : saleResult.totalGain;
-
-            // Currently animating joker
-            const activeBonus = scoringActive && scoringStep >= 0 && scoringStep < scoringSteps.length
-              ? scoringSteps[scoringStep]
-              : null;
-
-            const flashBg = scoringFlash.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['rgba(0,0,0,0)', activeBonus?.bucket === 'mult' ? 'rgba(217,119,6,0.3)' : 'rgba(34,197,94,0.3)'],
-            });
-
-            const renderIcon = (bonus: typeof boosts[0], i: number, prefix: string, isActive: boolean) => {
-              const iconSource = JOKER_ICON_BY_NAME[bonus.name];
-              const opacity = scoringActive && scoringStep >= 0
-                ? (isActive ? 1 : 0.3)
-                : 1;
-              const iconElement = iconSource ? (
-                <Image source={iconSource} style={[styles.receiptIcon, { opacity }]} />
-              ) : (
-                <TextWithEmojis style={{ fontSize: 14, opacity }} imageSize={18}>
-                  {bonus.emoji}
-                </TextWithEmojis>
+          {saleResult &&
+            mode === 'Sell' &&
+            candy.averagePrice !== null &&
+            (() => {
+              const boosts = saleResult.bonusBreakdown.filter(
+                (b) => b.flatBonus && b.flatBonus > 0
               );
+              const mults = saleResult.bonusBreakdown.filter(
+                (b) => b.multiplier > 1 && !b.flatBonus
+              );
+              const boostedProfit =
+                (saleResult.totalGain - saleResult.purchaseValue) /
+                Math.max(saleResult.jokerMultiplier, 1);
+              const finalProfit =
+                saleResult.totalGain - saleResult.purchaseValue;
 
-              if (isActive && scoringActive) {
-                return (
-                  <RNAnimated.View
-                    key={`${prefix}-${i}`}
-                    style={{
-                      transform: [{ scale: pulseScale }],
-                      shadowColor: '#fbbf24',
-                      shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.8,
-                      shadowRadius: 6,
-                    }}
+              // During scoring animation, show animated version
+              const displayProfit = scoringActive
+                ? animatedProfit
+                : boostedProfit;
+              const displayMult = scoringActive
+                ? animatedMult
+                : saleResult.jokerMultiplier;
+              const displayFinal = scoringActive
+                ? scoringDone
+                  ? finalProfit
+                  : displayProfit * displayMult
+                : finalProfit;
+              const displayTotal = scoringActive
+                ? scoringDone
+                  ? saleResult.totalGain
+                  : displayProfit * displayMult + saleResult.purchaseValue
+                : saleResult.totalGain;
+
+              // Currently animating joker
+              const activeBonus =
+                scoringActive &&
+                scoringStep >= 0 &&
+                scoringStep < scoringSteps.length
+                  ? scoringSteps[scoringStep]
+                  : null;
+
+              const renderIcon = (
+                bonus: (typeof boosts)[0],
+                i: number,
+                prefix: string,
+                isActive: boolean,
+                globalIndex: number
+              ) => {
+                const iconSource = JOKER_ICON_BY_NAME[bonus.name];
+                // All jokers stay full opacity — the active one is signaled
+                // by its bounce + glow, not by greying out the others.
+                const opacity = 1;
+                const iconElement = iconSource ? (
+                  <Image
+                    source={iconSource}
+                    style={[styles.receiptIcon, { opacity }]}
+                  />
+                ) : (
+                  <TextWithEmojis
+                    style={{ fontSize: 14, opacity }}
+                    imageSize={18}
                   >
-                    {iconElement}
-                  </RNAnimated.View>
+                    {bonus.emoji}
+                  </TextWithEmojis>
                 );
-              }
 
-              return <View key={`${prefix}-${i}`}>{iconElement}</View>;
-            };
+                const iconKey = `${bonus.name}-${globalIndex}`;
+                const scaleStyle =
+                  iconStylesMemo[
+                    Math.min(globalIndex, iconStylesMemo.length - 1)
+                  ];
 
-            // Check if a specific bonus is the currently animating one
-            const isActiveBonus = (bonus: typeof boosts[0]) =>
-              activeBonus?.name === bonus.name && activeBonus?.emoji === bonus.emoji;
+                const activeGlow =
+                  isActive && scoringActive
+                    ? {
+                        // Bright bloom around the active icon — replaces the
+                        // text banner as the visual cue. shadowOpacity:1 +
+                        // larger shadowRadius makes it read as a halo on iOS;
+                        // elevation:14 boosts it on Android.
+                        shadowColor: '#ffd54a',
+                        shadowOffset: { width: 0, height: 0 },
+                        shadowOpacity: 1,
+                        shadowRadius: 16,
+                        elevation: 14,
+                      }
+                    : undefined;
 
-            return (
-              <PixelBorder
-                borderColor="#fde047"
-                borderWidth={3}
-                backgroundColor="#fef3c7"
-                innerPadding={0}
-              >
-                <View style={styles.priceBreakdownContainer}>
-                  {/* Active joker name flash */}
-                  {scoringActive && activeBonus && (
-                    <RNAnimated.View style={[styles.scoringNameBanner, { backgroundColor: flashBg }]}>
-                      <Text style={styles.scoringNameText}>
-                        {activeBonus.bucket === 'boost' ? '[+Profit] ' : '[xMult] '}
-                        {activeBonus.name}
+                return (
+                  <Animated.View
+                    key={`${prefix}-${i}`}
+                    style={[scaleStyle, activeGlow]}
+                    collapsable={false}
+                  >
+                    {/* The ref for arc measurement lives on this INNER View,
+                        not on the outer Animated.View — that way
+                        measureInWindow returns a tight bounding box around
+                        just the icon image, unaffected by the scale
+                        transform or the active-glow shadow padding on the
+                        wrapper. Without this, the measured center sat ~15px
+                        right of the visual icon center. */}
+                    <View
+                      ref={(ref) => {
+                        jokerIconRefs.current[iconKey] = ref;
+                      }}
+                      collapsable={false}
+                    >
+                      {iconElement}
+                    </View>
+                  </Animated.View>
+                );
+              };
+
+              // Check if a specific bonus is the currently animating one
+              const isActiveBonus = (bonus: (typeof boosts)[0]) =>
+                activeBonus?.name === bonus.name &&
+                activeBonus?.emoji === bonus.emoji;
+
+              return (
+                <PixelBorder
+                  borderColor="#fde047"
+                  borderWidth={3}
+                  backgroundColor="#fef3c7"
+                  innerPadding={0}
+                >
+                  <View style={styles.priceBreakdownContainer}>
+                    {/* Profit row */}
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.breakdownLabel}>Profit</Text>
+                      {boosts.length > 0 && (
+                        <View style={styles.iconRow}>
+                          {boosts.map((b, i) =>
+                            renderIcon(b, i, 'bi', isActiveBonus(b), i)
+                          )}
+                        </View>
+                      )}
+                      <Text
+                        style={[
+                          styles.breakdownValue,
+                          { color: colors.green.success },
+                        ]}
+                      >
+                        ${formatCurrency(displayProfit)}
                       </Text>
-                    </RNAnimated.View>
-                  )}
+                    </View>
 
-                  {/* Profit row */}
-                  <View style={styles.receiptRow}>
-                    <Text style={styles.breakdownLabel}>Profit</Text>
-                    {boosts.length > 0 && (
-                      <View style={styles.iconRow}>
-                        {boosts.map((b, i) => renderIcon(b, i, 'bi', isActiveBonus(b)))}
+                    {/* Multiplier row */}
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.breakdownLabel}>Multiplier</Text>
+                      {(mults.length > 0 ||
+                        saleResult.vacuumSealerPenalty < 1) && (
+                        <View style={styles.iconRow}>
+                          {mults.map((b, i) =>
+                            renderIcon(
+                              b,
+                              i,
+                              'mi',
+                              isActiveBonus(b),
+                              boosts.length + i
+                            )
+                          )}
+                          {saleResult.vacuumSealerPenalty < 1 && (
+                            <Image
+                              source={require('../../assets/images/emojis/vacuumsealer.png')}
+                              style={[styles.receiptIcon, { opacity: 0.5 }]}
+                            />
+                          )}
+                        </View>
+                      )}
+                      <Text
+                        style={[styles.breakdownValue, { color: '#d97706' }]}
+                      >
+                        {displayMult.toFixed(1)}x
+                      </Text>
+                    </View>
+
+                    {/* Totals */}
+                    <View style={styles.divider} />
+                    <View style={styles.receiptRow}>
+                      <View ref={breakdownLabelRef} collapsable={false}>
+                        <Text style={[styles.breakdownLabel, { fontSize: 12 }]}>
+                          ${formatCurrency(displayProfit)} ×{' '}
+                          <Text style={{ color: '#d97706' }}>
+                            {displayMult.toFixed(1)}x
+                          </Text>
+                        </Text>
                       </View>
-                    )}
-                    <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
-                      ${formatCurrency(displayProfit)}
-                    </Text>
-                  </View>
+                      <Animated.View style={runningTotalPunchStyle}>
+                        <Text
+                          style={[
+                            styles.breakdownValue,
+                            { color: colors.green.success },
+                          ]}
+                        >
+                          ${formatCurrency(displayFinal)}
+                        </Text>
+                      </Animated.View>
+                    </View>
+                    <View style={styles.receiptRow}>
+                      <Text
+                        style={[
+                          styles.breakdownLabel,
+                          { fontSize: 12, color: '#92400e' },
+                        ]}
+                      >
+                        + Cost Back
+                      </Text>
+                      <Text
+                        style={[styles.breakdownValue, { color: '#92400e' }]}
+                      >
+                        ${formatCurrency(saleResult.purchaseValue)}
+                      </Text>
+                    </View>
+                    <View style={styles.divider} />
 
-                  {/* Multiplier row */}
-                  <View style={styles.receiptRow}>
-                    <Text style={styles.breakdownLabel}>Multiplier</Text>
-                    {(mults.length > 0 || saleResult.vacuumSealerPenalty < 1) && (
-                      <View style={styles.iconRow}>
-                        {mults.map((b, i) => renderIcon(b, i, 'mi', isActiveBonus(b)))}
-                        {saleResult.vacuumSealerPenalty < 1 && (
-                          <Image
-                            source={require('../../assets/images/emojis/vacuumsealer.png')}
-                            style={[styles.receiptIcon, { opacity: 0.5 }]}
-                          />
+                    {/* You Pocket */}
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.finalPriceLabel}>You Pocket</Text>
+                      <Animated.View
+                        ref={totalDisplayRef}
+                        style={[totalPunchStyle, { overflow: 'visible' }]}
+                        collapsable={false}
+                        onLayout={(e) => {
+                          const { width, height } = e.nativeEvent.layout;
+                          setTotalDisplaySize({ width, height });
+                        }}
+                      >
+                        {/* climaxExplosion — sits centered on the total Text.
+                            count + colors come from computeSparkScale (granular
+                            tier lookup keyed by sale value). */}
+                        {climaxExplosionScale && totalDisplaySize.width > 0 && (
+                          <View
+                            pointerEvents="none"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: totalDisplaySize.width,
+                              height: totalDisplaySize.height,
+                              overflow: 'visible',
+                            }}
+                          >
+                            <SparkEffect
+                              mode="burst"
+                              numSparks={climaxExplosionScale.climaxCount}
+                              sparkColors={climaxExplosionScale.colors}
+                              origin={{
+                                x: totalDisplaySize.width / 2,
+                                y: totalDisplaySize.height / 2,
+                              }}
+                              trigger={climaxExplosionTrigger}
+                              imageSource={require('../../assets/images/emojis/candy.png')}
+                            />
+                          </View>
                         )}
-                      </View>
-                    )}
-                    <Text style={[styles.breakdownValue, { color: '#d97706' }]}>
-                      {displayMult.toFixed(1)}x
-                    </Text>
+                        {scoringActive && scoringDone ? (
+                          <Text style={styles.finalPriceValue}>
+                            ${formatCurrency(finalTotalTarget)}
+                          </Text>
+                        ) : (
+                          <Text style={styles.finalPriceValue}>
+                            ${formatCurrency(displayTotal)}
+                          </Text>
+                        )}
+                      </Animated.View>
+                    </View>
                   </View>
-
-                  {/* Totals */}
-                  <View style={styles.divider} />
-                  <View style={styles.receiptRow}>
-                    <Text style={[styles.breakdownLabel, { fontSize: 12 }]}>
-                      ${formatCurrency(displayProfit)} × <Text style={{ color: '#d97706' }}>{displayMult.toFixed(1)}x</Text>
-                    </Text>
-                    <Text style={[styles.breakdownValue, { color: colors.green.success }]}>
-                      ${formatCurrency(displayFinal)}
-                    </Text>
-                  </View>
-                  <View style={styles.receiptRow}>
-                    <Text style={[styles.breakdownLabel, { fontSize: 12, color: '#92400e' }]}>
-                      + Cost Back
-                    </Text>
-                    <Text style={[styles.breakdownValue, { color: '#92400e' }]}>
-                      ${formatCurrency(saleResult.purchaseValue)}
-                    </Text>
-                  </View>
-                  <View style={styles.divider} />
-
-                  {/* You Pocket */}
-                  <View style={styles.receiptRow}>
-                    <Text style={styles.finalPriceLabel}>You Pocket</Text>
-                    <Text style={styles.finalPriceValue}>
-                      ${formatCurrency(displayTotal)}
-                    </Text>
-                  </View>
-                </View>
-              </PixelBorder>
-            );
-          })()}
+                </PixelBorder>
+              );
+            })()}
 
           <View style={styles.sliderSection}>
             <Text style={styles.quantityLabel}>
@@ -904,36 +1619,36 @@ function TransactionModal({
             )}
             {/* Hide tabs during tutorial: step 4 = buy only, step 7 = sell only */}
             {tutorialStep !== 4 && tutorialStep !== 7 && (
-            <View style={styles.tabContainer}>
-              <PixelBorder
-                borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
-                borderWidth={3}
-                backgroundColor={mode === 'Buy' ? '#ffcc99' : '#f3f4f6'}
-                style={{ flex: 1, marginRight: 6 }}
-              >
-                <TouchableOpacity
-                  style={styles.tab}
-                  onPress={() => changeMode('Buy')}
+              <View style={styles.tabContainer}>
+                <PixelBorder
+                  borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
+                  borderWidth={3}
+                  backgroundColor={mode === 'Buy' ? '#ffcc99' : '#f3f4f6'}
+                  style={{ flex: 1, marginRight: 6 }}
                 >
-                  <Text style={styles.tabText}>Buy</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-              <PixelBorder
-                borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
-                borderWidth={3}
-                backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
-                style={{ flex: 1 }}
-              >
-                <TouchableOpacity
-                  style={styles.tab}
-                  onPress={() => {
-                    changeMode('Sell');
-                  }}
+                  <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => changeMode('Buy')}
+                  >
+                    <Text style={styles.tabText}>Buy</Text>
+                  </TouchableOpacity>
+                </PixelBorder>
+                <PixelBorder
+                  borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
+                  borderWidth={3}
+                  backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
+                  style={{ flex: 1 }}
                 >
-                  <Text style={styles.tabText}>Sell</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-            </View>
+                  <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => {
+                      changeMode('Sell');
+                    }}
+                  >
+                    <Text style={styles.tabText}>Sell</Text>
+                  </TouchableOpacity>
+                </PixelBorder>
+              </View>
             )}
             {mode === 'Buy' ? (
               <PixelBorder
@@ -944,9 +1659,15 @@ function TransactionModal({
               >
                 <View style={styles.totalValueContainer}>
                   <Text style={styles.totalValueLabel}>Total Cost:</Text>
-                  <Text style={[styles.totalValueAmount, { color: '#ef4444' }]}>
+                  <Animated.Text
+                    style={[
+                      styles.totalValueAmount,
+                      { color: '#ef4444' },
+                      totalCostPunchStyle,
+                    ]}
+                  >
                     ${formatCurrency(quantity * candy.cost)}
-                  </Text>
+                  </Animated.Text>
                 </View>
               </PixelBorder>
             ) : (
@@ -984,7 +1705,8 @@ function TransactionModal({
             <View style={[styles.tutorialHint, { zIndex: 10, elevation: 10 }]}>
               <Text style={styles.tutorialHintText}>
                 {tutorialStep === 4 && 'Smash that Buy button!'}
-                {tutorialStep === 7 && 'Cash out! Hit Sell and watch the money roll in'}
+                {tutorialStep === 7 &&
+                  'Cash out! Hit Sell and watch the money roll in'}
               </Text>
             </View>
           )}
@@ -1018,45 +1740,79 @@ function TransactionModal({
                 </View>
               </PixelBorder>
             </PressableButton>
-            <PressableButton
-              onPress={handleConfirm}
-              shadowColor={
-                tutorialStep === 4 || tutorialStep === 7
-                  ? '#FFD700'
-                  : buttonBorderColor
-              }
-              shadowOffset={{ width: 0, height: 4 }}
-              shadowOpacity={0.5}
-              shadowRadius={5}
-              elevation={8}
-              style={{ flex: 1 }}
+            {/* Sell button area — wraps the button and the sellButtonSpark
+                so the spark can sit BEHIND the sell button but IN FRONT of
+                content above (Total Value PixelBorder etc.). overflow:visible
+                lets particles extend above the row without being clipped. */}
+            <View
+              style={{ flex: 1, position: 'relative', overflow: 'visible' }}
             >
-              <View style={{ position: 'relative' }}>
-                {mode === 'Sell' && numSparks > 0 && (
-                  <SparkEffect
-                    numSparks={numSparks}
-                    sparkColors={sparkColors}
-                  />
+              {/* sellButtonSpark — absolute fill. zIndex:0 + elevation:1 puts
+                  it ABOVE the Total Value (in sibling-row above buttonRow),
+                  while the sell button below uses elevation:8, keeping it on
+                  top of the sparks. Bumping `disperseTrigger` makes the
+                  existing ambient sparks explode outward; after ~600ms we
+                  unmount the SparkEffect entirely (sellButtonSparkActive). */}
+              {mode === 'Sell' &&
+                sellButtonSparkActive &&
+                sellButtonSpark.count > 0 && (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 0,
+                      elevation: 1,
+                      overflow: 'visible',
+                    }}
+                  >
+                    <SparkEffect
+                      numSparks={sellButtonSpark.count}
+                      sparkColors={sellButtonSpark.colors}
+                      imageSource={sellButtonSpark.imageSource}
+                      disperseTrigger={sellButtonBurstTrigger}
+                    />
+                  </View>
                 )}
-                <PixelBorder
-                  borderColor={
+              <PressableScale style={{ flex: 1 }} onPress={handleConfirm}>
+                <PressableButton
+                  onPress={undefined}
+                  shadowColor={
                     tutorialStep === 4 || tutorialStep === 7
                       ? '#FFD700'
                       : buttonBorderColor
                   }
-                  borderWidth={tutorialStep === 4 || tutorialStep === 7 ? 4 : 3}
-                  backgroundColor={buttonBackgroundColor}
-                  innerPadding={0}
-                  style={{ overflow: 'visible' }}
+                  shadowOffset={{ width: 0, height: 4 }}
+                  shadowOpacity={0.5}
+                  shadowRadius={5}
+                  elevation={8}
+                  style={{ flex: 1 }}
                 >
-                  <View style={styles.confirmButton}>
-                    <Text style={styles.confirmButtonText}>{mode}</Text>
-                  </View>
-                </PixelBorder>
-              </View>
-            </PressableButton>
+                  <PixelBorder
+                    borderColor={
+                      tutorialStep === 4 || tutorialStep === 7
+                        ? '#FFD700'
+                        : buttonBorderColor
+                    }
+                    borderWidth={
+                      tutorialStep === 4 || tutorialStep === 7 ? 4 : 3
+                    }
+                    backgroundColor={buttonBackgroundColor}
+                    innerPadding={0}
+                    style={{ overflow: 'visible' }}
+                  >
+                    <View style={styles.confirmButton}>
+                      <Text style={styles.confirmButtonText}>Confirm</Text>
+                    </View>
+                  </PixelBorder>
+                </PressableButton>
+              </PressableScale>
+            </View>
           </View>
-        </View>
+        </Animated.View>
       </PixelBorder>
     </FastModal>
   );
@@ -1169,6 +1925,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
+    // Allow sellButtonSpark to extend above the row (over the Total Value
+    // PixelBorder). Without this, Android can clip particles at the row edge.
+    overflow: 'visible',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -1300,20 +2059,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#bae6fd',
     marginVertical: 8,
   },
-  scoringNameBanner: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    marginBottom: 6,
-    alignItems: 'center',
-  },
-  scoringNameText: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'PixeloidMono',
-    color: '#1a1a2e',
-    textAlign: 'center',
-  },
   warningContainer: {
     marginTop: 10,
     backgroundColor: '#fef3c7',
@@ -1335,6 +2080,12 @@ const styles = StyleSheet.create({
     zIndex: 5,
     elevation: 5,
     borderRadius: 8,
+  },
+  skipOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+    zIndex: 20,
+    elevation: 20,
   },
   tutorialHint: {
     backgroundColor: '#1a1a2e',

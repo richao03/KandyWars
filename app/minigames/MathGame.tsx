@@ -514,7 +514,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="candy"
         onComplete={onComplete}
         rewardTier={jokerRewardTier as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -549,7 +548,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
-                Don't let numbers reach the edge!
+                Don&apos;t let numbers reach the edge!
               </Text>
             </View>
           </PixelBorder>
@@ -643,7 +642,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         leftInfo={`Level ${level}/3`}
         centerInfo={`🎯: ${matchedIndices.length}/${getLevelConfig(level).requiredMatches}`}
         rightInfo={'Mathing!'}
-        theme="math"
       />
 
       {/* Scrolling numbers */}

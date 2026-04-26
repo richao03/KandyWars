@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { resetGame } from './gameSlice';
 import seedrandom from 'seedrandom';
 import { CANDY_NAMES } from '../../constants/candyRegistry';
@@ -27,11 +27,15 @@ export interface HustleEvent {
 interface HustleState {
   hustles: HustleEvent[];
   completedHustleIds: string[];
+  lastCompletedHustle: HustleEvent | null;
+  notEnoughCandyMessage: string | null;
 }
 
 const initialState: HustleState = {
   hustles: [],
   completedHustleIds: [],
+  lastCompletedHustle: null,
+  notEnoughCandyMessage: null,
 };
 
 const hustleSlice = createSlice({
@@ -116,10 +120,23 @@ const hustleSlice = createSlice({
       const hustle = state.hustles.find((h) => h.id === hustleId);
       if (hustle) {
         hustle.completed = true;
+        state.lastCompletedHustle = { ...hustle };
       }
       if (!state.completedHustleIds.includes(hustleId)) {
         state.completedHustleIds.push(hustleId);
       }
+    },
+
+    clearLastCompletedHustle: (state) => {
+      state.lastCompletedHustle = null;
+    },
+
+    setNotEnoughCandyMessage: (state, action: PayloadAction<string>) => {
+      state.notEnoughCandyMessage = action.payload;
+    },
+
+    clearNotEnoughCandyMessage: (state) => {
+      state.notEnoughCandyMessage = null;
     },
 
     resetHustles: () => initialState,
@@ -129,18 +146,35 @@ const hustleSlice = createSlice({
   },
 });
 
-export const { generateHustles, completeHustle, resetHustles } =
-  hustleSlice.actions;
+export const {
+  generateHustles,
+  completeHustle,
+  clearLastCompletedHustle,
+  setNotEnoughCandyMessage,
+  clearNotEnoughCandyMessage,
+  resetHustles,
+} = hustleSlice.actions;
 
 // Selectors
-export const selectHustles = (state: any): HustleEvent[] =>
-  state.hustle?.hustles ?? [];
+const EMPTY_HUSTLES: HustleEvent[] = [];
+const EMPTY_IDS: string[] = [];
 
-export const selectActiveHustles = (state: any): HustleEvent[] =>
-  (state.hustle?.hustles ?? []).filter((h: HustleEvent) => !h.completed);
+export const selectHustles = (state: any): HustleEvent[] =>
+  state.hustle?.hustles ?? EMPTY_HUSTLES;
+
+export const selectActiveHustles = createSelector(
+  [selectHustles],
+  (hustles): HustleEvent[] => hustles.filter((h: HustleEvent) => !h.completed)
+);
 
 export const selectCompletedHustleIds = (state: any): string[] =>
-  state.hustle?.completedHustleIds ?? [];
+  state.hustle?.completedHustleIds ?? EMPTY_IDS;
+
+export const selectLastCompletedHustle = (state: any): HustleEvent | null =>
+  state.hustle?.lastCompletedHustle ?? null;
+
+export const selectNotEnoughCandyMessage = (state: any): string | null =>
+  state.hustle?.notEnoughCandyMessage ?? null;
 
 /**
  * Select a hustle matching the current location and period.
@@ -151,7 +185,7 @@ export const selectHustleForCurrentLocation = (
   location: string,
   period: number
 ): HustleEvent | undefined => {
-  const hustles: HustleEvent[] = state.hustle?.hustles ?? [];
+  const hustles: HustleEvent[] = state.hustle?.hustles ?? EMPTY_HUSTLES;
   return hustles.find(
     (h) =>
       !h.completed &&

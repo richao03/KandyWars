@@ -2,22 +2,26 @@ import { useCallback } from 'react';
 import { JOKER_IDS } from '../constants/jokerIds';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
+  activateDetentionDodge as activateDetentionDodgeAction,
   addToEventHistory,
   clearCurrentEvent,
   clearEventHistory,
+  markConfiscationDay,
   resetEventHandler,
   setCurrentEvent,
   setIsProcessing,
   selectCurrentEvent,
+  selectDetentionDodgeActiveDay,
   selectEventHistory,
   selectIsEventProcessing,
+  selectLastConfiscationDay,
   selectProcessedEventIds,
 } from '../store/slices/eventHandlerSlice';
 import { recordConfiscation } from '../store/slices/dailyStatsSlice';
 import { selectActiveEffects, consumeEffect } from '../store/slices/merchantSlice';
-import { removeJoker } from '../store/slices/jokerSlice';
-import { selectPeriodCount } from '../store/slices/gameSlice';
-import { STANDARDIZED_JOKERS } from '../utils/jokerEffectEngine';
+import { selectDay, selectPeriodCount } from '../store/slices/gameSlice';
+import { STANDARDIZED_JOKERS, getJokerEffectsAtLevel } from '../utils/jokerEffectEngine';
+import { incrementStat } from '../store/slices/jokerStatsSlice';
 import { useInventory } from './useInventory';
 import { useJokers } from './useJokers';
 import { useWallet } from './useWallet';
@@ -65,6 +69,9 @@ export const useEventHandler = () => {
   const selectedPassIds = useAppSelector((state) => state.hallPass.selectedPassIds);
   const merchantEffects = useAppSelector(selectActiveEffects);
   const periodCount = useAppSelector(selectPeriodCount);
+  const currentDay = useAppSelector(selectDay);
+  const lastConfiscationDay = useAppSelector(selectLastConfiscationDay);
+  const detentionDodgeActiveDay = useAppSelector(selectDetentionDodgeActiveDay);
 
   const handleEvent = useCallback(
     (eventData: any) => {
@@ -84,6 +91,22 @@ export const useEventHandler = () => {
         return;
       }
 
+      // Detention Dodge (#81): full event immunity for the current day after activation.
+      // Short-circuit BEFORE any effect (money / stash / flags) is applied.
+      if (
+        detentionDodgeActiveDay !== null &&
+        detentionDodgeActiveDay === currentDay
+      ) {
+        if (__DEV__)
+          console.log(
+            '🙈 DETENTION DODGE: Immune for day',
+            currentDay,
+            '- skipping event',
+            eventId
+          );
+        return;
+      }
+
       if (__DEV__) {
         console.log('🎯 EVENT: Processing event:', eventId);
         console.log('🎯 EVENT: Processed IDs so far:', processedEventIds);
@@ -94,8 +117,23 @@ export const useEventHandler = () => {
       }
 
       // Check for protection jokers
-      const hasSafeHouse = jokers.some(
+      // Safe House (#67) — persistent aura blocking LOSE_MONEY and STASH_LOCKED.
+      // Per jokerEffectEngine its effects have duration='persistent', so the joker
+      // is NOT consumed on use.
+      const safeHouseJoker = jokers.find(
         (j) => j.id.toString() === JOKER_IDS.SAFE_HOUSE.toString()
+      );
+      const hasSafeHouse = !!safeHouseJoker;
+
+      // Lucky Charm (#77) — multiplies FOUND_MONEY grants by amount (3x/4x/5x by level).
+      const luckyCharmJoker = jokers.find(
+        (j) => j.id.toString() === JOKER_IDS.LUCKY_CHARM.toString()
+      );
+
+      // Bully Bait (#78) — converts LOSE_MONEY (bully) events into a flat cash grant
+      // of $500/$1000/$2000 depending on level.
+      const bullyBaitJoker = jokers.find(
+        (j) => j.id.toString() === JOKER_IDS.BULLY_BAIT.toString()
       );
 
       // Create a mutable copy of eventData to add protection flags
@@ -107,7 +145,7 @@ export const useEventHandler = () => {
         if (hasSafeHouse) {
           if (__DEV__) console.log('🛡️ Safe House: Protected from money loss!');
           processedEventData.protectedByMedievalShield = true;
-          dispatch(removeJoker(JOKER_IDS.SAFE_HOUSE.toString()));
+          // Persistent aura — do NOT remove the joker.
         }
         // Check for 6th Grade Bodyguard protection (merchant item) - PRIORITY 2
         else if (MerchantUtils.hasBodyguard(merchantEffects)) {
@@ -115,6 +153,25 @@ export const useEventHandler = () => {
           processedEventData.protectedByBodyguard = true;
           // Consume one bodyguard
           dispatch(consumeEffect({ itemId: 'sixth_grade_bodyguard' }));
+        }
+        // Bully Bait (#78): convert the bully event into a cash windfall.
+        else if (bullyBaitJoker) {
+          const level = (bullyBaitJoker as any).level ?? 1;
+          const effects = getJokerEffectsAtLevel(
+            Number(JOKER_IDS.BULLY_BAIT),
+            level
+          );
+          const conversionAmount =
+            (effects.find((e) => e.target === 'event_conversion')?.amount as number) ?? 0;
+          if (__DEV__) {
+            console.log(
+              `🎣 Bully Bait L${level}: Converting bully event to +$${conversionAmount}`
+            );
+          }
+          processedEventData.convertedByBullyBait = true;
+          processedEventData.bullyBaitAmount = conversionAmount;
+          processedEventData.dollarAmount = conversionAmount;
+          wallet.add(conversionAmount);
         } else {
           // Get CURRENT balance at time of execution, not stale closure value
           const currentBalance = wallet.balance;
@@ -151,15 +208,41 @@ export const useEventHandler = () => {
         // Apply Metal Detector merchant multiplier
         amountFound = MerchantUtils.applyFoundMoneyMultiplier(amountFound, merchantEffects);
 
+        // Lucky Charm (#77): multiply found money by level-scaled amount (3x/4x/5x).
+        if (luckyCharmJoker) {
+          const level = (luckyCharmJoker as any).level ?? 1;
+          const effects = getJokerEffectsAtLevel(
+            Number(JOKER_IDS.LUCKY_CHARM),
+            level
+          );
+          const multiplier =
+            (effects.find((e) => e.target === 'found_money_multiplier')?.amount as number) ?? 1;
+          const before = amountFound;
+          amountFound = Math.round(amountFound * multiplier);
+          if (__DEV__) {
+            console.log(
+              `🍀 Lucky Charm L${level}: $${before} × ${multiplier} = $${amountFound}`
+            );
+          }
+          processedEventData.boostedByLuckyCharm = true;
+          processedEventData.luckyCharmMultiplier = multiplier;
+        }
+
         // Store the actual amount found (after all multipliers) in the processed event
         processedEventData.dollarAmount = amountFound;
         wallet.add(amountFound);
       } else if (eventData.effect === 'STASH_LOCKED') {
+        // Guard: at most one real confiscation per day. A second STASH_LOCKED
+        // in the same day is skipped entirely (no modal, no protection consumed).
+        if (lastConfiscationDay === currentDay) {
+          if (__DEV__) console.log('🛡️ STASH_LOCKED: already confiscated today, skipping second event');
+          return;
+        }
         // Check for Safe House protection (joker) - PRIORITY 1
         if (hasSafeHouse) {
           if (__DEV__) console.log('🔒 Safe House: Protected from confiscation!');
           processedEventData.protectedByCandyVault = true;
-          dispatch(removeJoker(JOKER_IDS.SAFE_HOUSE.toString()));
+          // Persistent aura — do NOT remove the joker.
         }
         // Check for Hall Monitor Bribe protection (merchant item) - PRIORITY 2
         else if (MerchantUtils.hasHallMonitorBribe(merchantEffects)) {
@@ -193,7 +276,14 @@ export const useEventHandler = () => {
 
           // Track confiscation for hall pass unlock
           dispatch(recordConfiscation());
+          // Mark today as "already confiscated" so a second STASH_LOCKED is skipped.
+          dispatch(markConfiscationDay(currentDay));
         }
+      }
+
+      // Track event survived for Street Smarts
+      if (eventData.effect === 'LOSE_MONEY' || eventData.effect === 'STASH_LOCKED') {
+        dispatch(incrementStat({ stat: 'streetSmartsEventsSurvived' }));
       }
 
       // === Detention Discovery: consolation joker drop after surviving negative events ===
@@ -201,6 +291,7 @@ export const useEventHandler = () => {
         (eventData.effect === 'LOSE_MONEY' &&
           !processedEventData.protectedByMedievalShield &&
           !processedEventData.protectedByBodyguard &&
+          !processedEventData.convertedByBullyBait &&
           !processedEventData.bullyHasMercy) ||
         (eventData.effect === 'STASH_LOCKED' &&
           !processedEventData.protectedByCandyVault &&
@@ -267,8 +358,22 @@ export const useEventHandler = () => {
       dispatch(setCurrentEvent(processedEventData));
       if (__DEV__) console.log('🔄 EVENT: Stored in Redux successfully');
     },
-    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds, merchantEffects, periodCount]
+    [dispatch, wallet, clearInventory, jokers, inventory, removeFromInventory, selectedPassIds, merchantEffects, periodCount, currentDay, lastConfiscationDay, detentionDodgeActiveDay]
   );
+
+  /**
+   * Activate Detention Dodge (#81): grants full event immunity for the current day.
+   * Returns the day number the immunity is active for so callers can confirm.
+   * The joker itself is marked "used today" / removed by JokerCard — this helper
+   * only wires up the Redux state that `handleEvent` reads.
+   */
+  const activateDetentionDodge = useCallback(() => {
+    dispatch(activateDetentionDodgeAction(currentDay));
+    if (__DEV__) {
+      console.log('🙈 DETENTION DODGE: Activated for day', currentDay);
+    }
+    return currentDay;
+  }, [dispatch, currentDay]);
 
   const clearEvent = useCallback(() => {
     dispatch(clearCurrentEvent());
@@ -350,5 +455,6 @@ export const useEventHandler = () => {
     addHistoryEntry,
     clearHistory,
     reset,
+    activateDetentionDodge,
   };
 };

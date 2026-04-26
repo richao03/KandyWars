@@ -30,9 +30,20 @@ const inventorySlice = createSlice({
       const existing = state.inventory.find(c => c.id === action.payload.id);
       if (existing) {
         existing.quantity = (existing.quantity || 0) + (action.payload.quantity || 1);
+        // Reset melt timer on new purchase
+        if (action.payload.purchasedAt !== undefined) {
+          existing.purchasedAt = action.payload.purchasedAt;
+        }
       } else {
         state.inventory.push(action.payload);
       }
+    },
+    meltExpiredCandy: (state, action: PayloadAction<{ currentPeriod: number; meltWindow?: number }>) => {
+      const { currentPeriod, meltWindow = 5 } = action.payload;
+      state.inventory = state.inventory.filter(candy => {
+        if (candy.purchasedAt === undefined) return true;
+        return (currentPeriod - candy.purchasedAt) < meltWindow;
+      });
     },
     removeCandy: (state, action: PayloadAction<{ id: string; quantity?: number }>) => {
       const index = state.inventory.findIndex(c => c.id === action.payload.id);
@@ -71,6 +82,7 @@ export const {
   setMaxInventory,
   incrementMaxInventory,
   resetInventory,
+  meltExpiredCandy,
 } = inventorySlice.actions;
 
 export default inventorySlice.reducer;

@@ -4,6 +4,7 @@ import {
   Platform,
   StyleSheet,
   TouchableOpacity,
+  View,
   ViewStyle,
 } from 'react-native';
 import Animated, {
@@ -83,6 +84,30 @@ export default function PressableButton({
     });
   };
 
+  const shadowView = (
+    <Animated.View
+      style={[
+        styles.shadow,
+        {
+          shadowColor,
+          shadowOffset,
+          shadowRadius,
+        },
+        animatedShadowStyle,
+        animatedStyle,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+
+  // When no onPress is provided, the consumer is relying on a parent pressable
+  // (e.g. PressableScale) to handle taps. Rendering a TouchableOpacity here
+  // would claim the responder and silently swallow the parent's onPress.
+  if (!onPress) {
+    return <View style={[styles.touchable, style]}>{shadowView}</View>;
+  }
+
   return (
     <TouchableOpacity
       onPressIn={handlePressIn}
@@ -92,20 +117,7 @@ export default function PressableButton({
       activeOpacity={activeOpacity}
       style={[styles.touchable, style]}
     >
-      <Animated.View
-        style={[
-          styles.shadow,
-          {
-            shadowColor,
-            shadowOffset,
-            shadowRadius,
-          },
-          animatedShadowStyle,
-          animatedStyle,
-        ]}
-      >
-        {children}
-      </Animated.View>
+      {shadowView}
     </TouchableOpacity>
   );
 }

@@ -588,7 +588,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="geography"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -605,7 +604,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         leftInfo={`Level ${level}/3`}
         centerInfo={`Moves: ${moves}`}
         rightInfo={`Time: ${timeLeft}s`}
-        theme="geography"
       />
 
       {/* Show preview message */}
@@ -674,7 +672,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         onClose={hideModal}
         onConfirm={modal.onConfirm}
         showCancelButton={modal.showCancelButton}
-        theme="school"
         dismissible={modal.dismissible}
       />
     </View>

@@ -59,6 +59,7 @@ export const applyMultiplier = (baseValue: number, multiplier: number): number =
  * formatCurrency(0)        // "0.00"
  */
 export const formatCurrency = (amount: number): string => {
+  'worklet';
   const fixed = Math.abs(amount).toFixed(2);
   const [whole, decimal] = fixed.split('.');
   const withCommas = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');

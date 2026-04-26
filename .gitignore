@@ -7,6 +7,11 @@ node_modules/
 .expo/
 dist/
 web-build/
+
+# Docs site build output
+docs-site/build/
+docs-site/.docusaurus/
+docs-site/node_modules/
 expo-env.d.ts
 
 # Native

@@ -562,8 +562,8 @@ export function generateSeededGameData(
   // Tutorial mode: override Gummy Bears prices (periodCount is 0-indexed)
   // periodCount 0 = first period player sees, periodCount 1 = after first Next Period
   if (tutorialMode && candyPrices['Gummy Bears']) {
-    candyPrices['Gummy Bears'][0] = 2; // periodCount 0: cheap buy ($2)
-    candyPrices['Gummy Bears'][1] = 8; // periodCount 1: profitable sell ($8)
+    candyPrices['Gummy Bears'][0] = 0.02; // periodCount 0: cheap buy ($0.02)
+    candyPrices['Gummy Bears'][1] = 0.08; // periodCount 1: profitable sell ($0.08)
   }
 
   return {

@@ -99,7 +99,7 @@ export default function TutorialOverlay({
                 innerPadding={0}
               >
                 <View style={styles.congratsInner}>
-                  <Text style={styles.congratsTitle}>You're a Natural!</Text>
+                  <Text style={styles.congratsTitle}>You&apos;re a Natural!</Text>
                   <Text style={styles.congratsMessage}>{config.message}</Text>
                   <Text style={styles.tapHint}>Tap to continue</Text>
                 </View>

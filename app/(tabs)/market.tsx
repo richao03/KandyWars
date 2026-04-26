@@ -4,7 +4,6 @@ import { router, useFocusEffect } from 'expo-router';
 import React, {
   Suspense,
   lazy,
-  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -13,8 +12,8 @@ import React, {
 } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import colors from '../../src/constants/colors';
-import { JOKER_IDS, findJokerById, hasJokerById } from '../../src/constants/jokerIds';
-import { getJokerEffectsAtLevel } from '../../src/utils/jokerEffectEngine';
+import { JOKER_IDS, findJokerById } from '../../src/constants/jokerIds';
+import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useComputedJokerEffects } from '../../src/hooks/useComputedJokerEffects';
@@ -29,21 +28,17 @@ import { usePriceDoubling } from '../../src/hooks/usePriceDoubling';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { resetDailyStats } from '../../src/store/slices/candySalesSlice';
 import {
   getPeriodsPerDay,
   selectMediumCandiesUnlocked,
   selectBigCandiesUnlocked,
   unlockMediumCandies,
   unlockBigCandies,
-  selectBulkEmpireStacks,
+  selectShowLunchMinigames,
+  setShowLunchMinigames as setShowLunchMinigamesAction,
 } from '../../src/store/slices/gameSlice';
 import { spendBalance, selectDifficultyLevel } from '../../src/store/slices/walletSlice';
-import { incrementMaxInventory } from '../../src/store/slices/inventorySlice';
-import {
-  consumeEffect,
-  selectActiveEffects,
-} from '../../src/store/slices/merchantSlice';
+import { consumeEffect } from '../../src/store/slices/merchantSlice';
 import {
   advanceTutorial,
   selectTutorialStep,
@@ -52,27 +47,32 @@ import {
   startTutorial,
 } from '../../src/store/slices/tutorialSlice';
 import { JokerService } from '../../src/utils/jokerService';
-import { MerchantUtils } from '../../src/utils/merchantUtils';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import { calculateSaleTotal } from '../../src/utils/saleCalculations';
 import { useHustle } from '../../src/hooks/useHustle';
-import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
-import seedrandom from 'seedrandom';
+import { usePeriodEventFlavorText } from '../../src/hooks/usePeriodEventFlavorText';
+import { usePeriodAdvance } from '../../src/hooks/usePeriodAdvance';
+import { useTransactionHandler } from '../../src/hooks/useTransactionHandler';
+import { computeEndDayBonuses } from '../../src/utils/endDayBonuses';
+import {
+  clearLastCompletedHustle,
+  selectLastCompletedHustle,
+  selectNotEnoughCandyMessage,
+} from '../../src/store/slices/hustleSlice';
 import {
   generateQuest,
-  completeQuest,
   clearActiveQuest,
   failQuest,
   selectActiveQuest,
   selectIsQuestActive,
+  selectPendingJokerChoices,
+  setPendingJokerChoices,
+  clearPendingJokerChoices,
 } from '../../src/store/slices/questSlice';
 import { setCurrentEvent } from '../../src/store/slices/eventHandlerSlice';
-import { ScrollView } from 'react-native';
 import ConfirmationModal from '../components/ConfirmationModal';
 import FirstTimeHint from '../components/FirstTimeHint';
 import EventModal from '../components/EventModal';
-import { Location } from '../components/LocationModal';
 import MarketContent from '../components/MarketContent';
 import TutorialOverlay from '../components/TutorialOverlay';
 import TransactionModalManager, {
@@ -92,7 +92,6 @@ function DebugJokerPanel({
   generateHustlesAction,
   setShowHustleJokerSelection,
   setShowQuestJokerSelection,
-  setQuestJokerChoices,
   generateQuest: generateQuestAction,
   unlockedCandies,
   jokers,
@@ -136,7 +135,7 @@ function DebugJokerPanel({
           const unowned = STANDARDIZED_JOKERS.filter((sj) => !ownedIds.has(sj.id.toString()));
           const choices = unowned.slice(0, 2);
           if (choices.length > 0) {
-            setQuestJokerChoices(choices);
+            dispatch(setPendingJokerChoices(choices));
             setShowQuestJokerSelection(true);
           }
         }}
@@ -217,6 +216,12 @@ function Market(props) {
   const bigUnlocked = useAppSelector(selectBigCandiesUnlocked);
 
   const dispatch = useAppDispatch();
+
+  const showLunchMinigames = useAppSelector(selectShowLunchMinigames);
+  const setShowLunchMinigames = useCallback(
+    (v: boolean) => dispatch(setShowLunchMinigamesAction(v)),
+    [dispatch]
+  );
 
   // Tutorial state
   const tutorialStep = useAppSelector(selectTutorialStep);
@@ -335,10 +340,9 @@ function Market(props) {
     hasPlayedLunchMinigame,
     markLunchMinigamePlayed,
     isAfterSchool,
-    locationHistory,
   } = useGame();
 
-  const { hasActiveEvent: hasActiveEventFn, handleEvent } = useEventHandler();
+  const { hasActiveEvent: hasActiveEventFn } = useEventHandler();
   const hasActiveEvent = hasActiveEventFn();
   const {
     getTotalStats,
@@ -347,7 +351,7 @@ function Market(props) {
     addCandySold,
     recordSale: recordDailyStatsSale,
   } = useDailyStats();
-  const { setEvent, setFlavorText, setHint } = useFlavorText();
+  const { setEvent, setHint } = useFlavorText();
   const { addSale, resetSales, consecutivePeriodSales, totalCandiesSold } =
     useCandySales();
   const [pendingLocationModal, setPendingLocationModal] = useState(false);
@@ -357,33 +361,22 @@ function Market(props) {
   const { applySalePriceBonus, getSalePriceBonus, selectedPassIds } =
     useHallPass();
 
-  // Get pre-computed hall pass modifiers from Redux (computed once at game start)
-  const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
-
-  // Get candy sales state for Vacuum Sealer penalty check
-  const hasEarlySaleToday = useAppSelector(
-    (state) => state.candySales.hasEarlySaleToday
-  );
-
-  // Get merchant effects
-  const merchantEffects = useAppSelector(selectActiveEffects);
-
   // Hustle system
   const {
     activeHustles,
     generateHustles: generateHustlesAction,
     completeHustle: completeHustleAction,
     getHustleForLocation,
-    getHustleRumors,
   } = useHustle();
   const [showHustleJokerSelection, setShowHustleJokerSelection] = useState(false);
-  const [hustleNotEnoughCandy, setHustleNotEnoughCandy] = useState<string | null>(null);
+  const lastCompletedHustle = useAppSelector(selectLastCompletedHustle);
+  const hustleNotEnoughCandy = useAppSelector(selectNotEnoughCandyMessage);
 
   // Student Delivery Quest system
   const activeQuest = useAppSelector(selectActiveQuest);
   const isQuestActive = useAppSelector(selectIsQuestActive);
   const [showQuestJokerSelection, setShowQuestJokerSelection] = useState(false);
-  const [questJokerChoices, setQuestJokerChoices] = useState<any[]>([]);
+  const questJokerChoices = useAppSelector(selectPendingJokerChoices);
 
   // Initialize computed joker effects system
   useComputedJokerEffects();
@@ -481,164 +474,12 @@ function Market(props) {
     }
   }, [activeQuest, day, period, dispatch, setHint]);
 
-  // Track the last event period to prevent duplicate triggers
-  const lastEventPeriodRef = useRef<number>(-1);
-  const lastHintPeriodRef = useRef<number>(-1);
-
   // Ref for transaction modal manager (prevents parent re-renders)
   const transactionModalRef = useRef<TransactionModalHandle>(null);
 
-  // Update flavor text when period changes
-  useEffect(() => {
-    // Only process events if this instance is focused (prevents duplicate event processing from zombie instances)
-    if (!isFocused) {
-      return;
-    }
-
-    // Debounce flavor text updates to prevent rapid re-renders during navigation
-    const timeoutId = setTimeout(() => {
-      // Check for current event
-      // Universal events (isUniversal=true) trigger at any location
-      // Location-based events (isUniversal=false) require matching location
-      // Note: periodCount is 0-indexed (0-39), but event periods are 1-indexed (1-40)
-      const currentEvent = gameData.periodEvents.find(
-        (e) =>
-          e.period === periodCount + 1 &&
-          (e.isUniversal || e.location === currentLocation)
-      );
-
-      // Check for upcoming events in next period (for hints)
-      // Always show hints for all upcoming events (Option 3: Hybrid)
-      // Note: periodCount is 0-indexed, event periods are 1-indexed, so +2 for next period
-      const nextPeriodEvents = gameData.periodEvents.filter(
-        (e) => e.period === periodCount + 2
-      );
-
-      // Collect hustle rumors for display
-      const hustleRumors = getHustleRumors();
-
-      // Build quest hint if active
-      const questHint = activeQuest && !activeQuest.completed && day === activeQuest.day
-        ? `A student needs you to hold ${activeQuest.quantity} ${activeQuest.candyName} until period ${activeQuest.targetPeriod}. Sell them then for a reward!`
-        : null;
-
-      // Combine all rumors/hints
-      const allRumors = [...hustleRumors];
-      if (questHint) allRumors.push(questHint);
-
-      // Use the already-calculated period instead of recalculating
-      if (period === 0) {
-        setEvent('NEW_DAY');
-        // Show rumors at start of day if any
-        if (allRumors.length > 0) {
-          // Delay slightly so NEW_DAY text shows first, then hint overrides
-          setTimeout(() => {
-            setHint(allRumors.join('  ---  '));
-          }, 3000);
-        }
-      } else if (currentEvent) {
-        // Major events: FOUND_MONEY, LOSE_MONEY, STASH_LOCKED - show modal
-        // Minor events: PRICE_SPIKE, PRICE_DROP - show flavor text only
-
-        // Set event type for tracking
-        setEvent(currentEvent.effect);
-
-        // Only trigger event if we haven't already triggered it for this period
-        if (lastEventPeriodRef.current !== periodCount) {
-          lastEventPeriodRef.current = periodCount;
-
-          // Minor events (PRICE_SPIKE, PRICE_DROP): Show flavor text only, no modal
-          if (
-            currentEvent.effect === 'PRICE_SPIKE' ||
-            currentEvent.effect === 'PRICE_DROP'
-          ) {
-            setFlavorText(currentEvent.flavorText || '');
-          } else {
-            handleEvent(currentEvent);
-          }
-        }
-      } else if (nextPeriodEvents.length > 0) {
-        // Show hints for all upcoming events in next period
-        // Only check hint once per period to avoid re-rolling on tab switches
-        if (lastHintPeriodRef.current !== periodCount) {
-          lastHintPeriodRef.current = periodCount;
-
-          // Check if jokers affect hint chance
-          const baseHintChance = 0.7; // 70% base chance
-          const effectiveHintChance = jokerService.applyJokerEffects(
-            baseHintChance,
-            'hint_chance',
-            jokers,
-            periodCount,
-            baseHintChance,
-            undefined,
-            activeEffects,
-            periodsPerDay
-          );
-
-          if (Math.random() < effectiveHintChance) {
-            const allHints = nextPeriodEvents
-              .map((e) => e.hint)
-              .filter((h) => h)
-              .join('\n\n');
-            setHint(allHints);
-          } else if (allRumors.length > 0) {
-            // Show rumors when no event hints pass the roll
-            setHint(allRumors.join('  ---  '));
-          } else {
-
-            // Show period-specific flavor text instead of hint
-            if (period <= 2) {
-              setEvent('MORNING_TRADE');
-            } else if (
-              period >= Math.floor(periodsPerDay / 2) &&
-              period <= Math.ceil(periodsPerDay * 0.75)
-            ) {
-              setEvent('LUNCH_RUSH');
-            } else if (period >= periodsPerDay - 1) {
-              setEvent('FINAL_PERIOD');
-            } else {
-              setEvent('PERIOD_CHANGE');
-            }
-          }
-        }
-      } else if (allRumors.length > 0) {
-        // Show rumors when no events at all
-        setHint(allRumors.join('  ---  '));
-      } else {
-        // Period-specific flavor text based on time of day
-        if (period <= 2) {
-          setEvent('MORNING_TRADE');
-        } else if (
-          period >= Math.floor(periodsPerDay / 2) &&
-          period <= Math.ceil(periodsPerDay * 0.75)
-        ) {
-          setEvent('LUNCH_RUSH');
-        } else if (period >= periodsPerDay - 1) {
-          setEvent('FINAL_PERIOD');
-        } else {
-          setEvent('PERIOD_CHANGE');
-        }
-      }
-    }, 50); // 50ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [
-    isFocused,
-    periodCount,
-    currentLocation,
-    gameData.periodEvents,
-    setEvent,
-    setFlavorText,
-    setHint,
-    jokers,
-    activeEffects,
-    period,
-    periodsPerDay,
-    getHustleRumors,
-    activeQuest,
-    day,
-  ]);
+  // Period event + hint + flavor text orchestration (extracted to a dedicated hook
+  // so market.tsx's FC body stops re-evaluating this 150-line effect on every render).
+  usePeriodEventFlavorText();
 
   const [candies, setCandies] = useState<CandyForMarket[]>([]);
   const [selectedSize, setSelectedSize] = useState<CandySize>('small');
@@ -690,6 +531,27 @@ function Market(props) {
   const calculatedCandies = useMemo(() => {
     const eventPrices = gameData.eventPrices || {};
 
+    // Teacher's Pet — peek the direction of next-period price on the top N biggest movers.
+    // N = 1/2/3 depending on joker level. Shown as ↑ or ↓ next to the candy row.
+    const teachersPet = jokers.find(
+      (j: any) => j.id === JOKER_IDS.TEACHERS_PET || j.id === String(JOKER_IDS.TEACHERS_PET)
+    );
+    const peekHints: Record<string, 'up' | 'down'> = {};
+    if (teachersPet) {
+      const peekCount = (teachersPet as any).level === 3 ? 3 : (teachersPet as any).level === 2 ? 2 : 1;
+      const movers: Array<{ name: string; delta: number }> = [];
+      for (const candy of visibleCandies) {
+        const curr = gameData.candyPrices[candy.name]?.[periodCount] ?? 0;
+        const next = gameData.candyPrices[candy.name]?.[periodCount + 1] ?? curr;
+        const delta = next - curr;
+        if (delta !== 0) movers.push({ name: candy.name, delta });
+      }
+      movers.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+      for (const m of movers.slice(0, peekCount)) {
+        peekHints[m.name] = m.delta > 0 ? 'up' : 'down';
+      }
+    }
+
     return visibleCandies.map((candy) => {
       // Just look up the price - no heavy calculations!
       let basePrice: number;
@@ -710,13 +572,22 @@ function Market(props) {
       // Get inventory data
       const inventoryItem = inventory.find((item) => item.name === candy.name);
 
+      // Calculate freshness remaining (periods until melt)
+      const MELT_WINDOW = 5;
+      let freshnessRemaining: number | undefined;
+      if (inventoryItem && inventoryItem.quantity && inventoryItem.quantity > 0 && inventoryItem.purchasedAt !== undefined) {
+        const periodsHeld = periodCount - inventoryItem.purchasedAt;
+        freshnessRemaining = Math.max(0, MELT_WINDOW - periodsHeld);
+      }
+
       return {
         ...candy,
         basePrice,
         cost: basePrice,
         quantityOwned: inventoryItem?.quantity ?? 0,
         averagePrice: inventoryItem?.price ?? null,
-        // priceBreakdown removed - TransactionModal calculates on-demand
+        freshnessRemaining,
+        priceHint: peekHints[candy.name] ?? null,
       };
     });
   }, [
@@ -726,6 +597,7 @@ function Market(props) {
     gameData.eventPrices,
     inventory,
     visibleCandies,
+    jokers,
   ]);
 
   // Sync memoized candies to state only when they change
@@ -737,11 +609,11 @@ function Market(props) {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [dayStatsModalVisible, setDayStatsModalVisible] = useState(false);
   const [dayStatsBonuses, setDayStatsBonuses] = useState<
-    Array<{
+    {
       jokerName: string;
       amount: number;
       emoji?: string;
-    }>
+    }[]
   >([]);
   const [schoolsOutModalVisible, setSchoolsOutModalVisible] = useState(false);
   const [stashMoneyModalVisible, setStashMoneyModalVisible] = useState(false);
@@ -764,9 +636,12 @@ function Market(props) {
   const [endDayConfirmVisible, setEndDayConfirmVisible] = useState(false);
   const [isEarlyEndDay, setIsEarlyEndDay] = useState(false);
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
-  const [showLunchMinigames, setShowLunchMinigames] = useState(false);
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
   const [isDroneDeposit, setIsDroneDeposit] = useState(false);
+
+  // Candy melt modal state
+  const [meltModalVisible, setMeltModalVisible] = useState(false);
+  const [meltedCandies, setMeltedCandies] = useState<{ name: string; quantity: number; value: number }[]>([]);
 
   // Candy size unlock modal state
   const [unlockModalVisible, setUnlockModalVisible] = useState(false);
@@ -842,278 +717,13 @@ function Market(props) {
     setInventoryModalVisible(true);
   }, []);
 
-  // --- Refs for read-only values used inside handleTransaction ---
-  // These prevent handleTransaction from being recreated when these values change
-  const candiesRef = useRef(candies);
-  const balanceRef = useRef(balance);
-  const inventoryRef = useRef(inventory);
-  const jokersRef = useRef(jokers);
-  const activeEffectsRef = useRef(activeEffects);
-  const merchantEffectsRef = useRef(merchantEffects);
-  const hallPassModifiersRef = useRef(hallPassModifiers);
-  const hasEarlySaleTodayRef = useRef(hasEarlySaleToday);
-  const periodsPerDayRef = useRef(periodsPerDay);
-  const periodCountRef = useRef(periodCount);
-  const totalCandiesSoldRef = useRef(totalCandiesSold);
-  const locationHistoryRef = useRef(locationHistory);
-  const bulkEmpireStacks = useAppSelector(selectBulkEmpireStacks);
-  const bulkEmpireStacksRef = useRef(bulkEmpireStacks);
-  const activeQuestRef = useRef(activeQuest);
+  const { handleTransaction } = useTransactionHandler({
+    candies,
+    setCandies,
+    closeModal,
+    setShowQuestJokerSelection,
+  });
 
-  useEffect(() => {
-    candiesRef.current = candies;
-    balanceRef.current = balance;
-    inventoryRef.current = inventory;
-    jokersRef.current = jokers;
-    activeEffectsRef.current = activeEffects;
-    merchantEffectsRef.current = merchantEffects;
-    hallPassModifiersRef.current = hallPassModifiers;
-    hasEarlySaleTodayRef.current = hasEarlySaleToday;
-    periodsPerDayRef.current = periodsPerDay;
-    periodCountRef.current = periodCount;
-    totalCandiesSoldRef.current = totalCandiesSold;
-    locationHistoryRef.current = locationHistory;
-    bulkEmpireStacksRef.current = bulkEmpireStacks;
-    activeQuestRef.current = activeQuest;
-  }, [candies, balance, inventory, jokers, activeEffects, merchantEffects, hallPassModifiers, hasEarlySaleToday, periodsPerDay, periodCount, totalCandiesSold, locationHistory, bulkEmpireStacks, activeQuest]);
-
-  const handleTransaction = useCallback(
-    (candyIndex: number, quantity: number, mode: 'buy' | 'sell') => {
-      if (candyIndex === null || candyIndex === undefined) return;
-      const candy = candiesRef.current[candyIndex];
-      if (!candy) return;
-
-      if (mode === 'buy') {
-        // Check for Time Zone Arbitrage joker effect (morning purchase discount)
-        const currentPeriodCount = periodCountRef.current;
-        const periodWithinDay = currentPeriodCount % 8;
-        const isMorning = periodWithinDay <= 2; // Periods 0, 1, 2 are "morning"
-        const currentJokers = jokersRef.current;
-        const hasTimeZoneArbitrage = currentJokers.some(
-          (joker: any) => joker.id == 42 || joker.id === '42'
-        );
-
-        let purchasePrice = candy.cost;
-        if (hasTimeZoneArbitrage && isMorning) {
-          purchasePrice = candy.cost * 0.9;
-        }
-
-        const totalCost = purchasePrice * quantity;
-        if (balanceRef.current < totalCost) {
-          return;
-        }
-
-        // Try to add to inventory first - this will check inventory limits
-        const inventorySuccess = addToInventory(
-          candy.name,
-          quantity,
-          purchasePrice,
-          currentPeriodCount // Track when candy was purchased
-        );
-        if (!inventorySuccess) {
-          // Inventory is full, transaction fails
-          return;
-        }
-
-        spend(totalCost);
-        addSpent(totalCost); // Track daily spending
-
-        // Reset consecutive sales tracking when buying
-        resetSales();
-
-        // Pure state update — no side effects
-        const newQty = candy.quantityOwned + quantity;
-        const newAvg =
-          candy.averagePrice === null
-            ? purchasePrice
-            : (candy.averagePrice * candy.quantityOwned +
-                purchasePrice * quantity) /
-              newQty;
-
-        setCandies((prev) =>
-          prev.map((c, i) =>
-            i !== candyIndex
-              ? c
-              : { ...c, quantityOwned: newQty, averagePrice: newAvg }
-          )
-        );
-      } else {
-        // === SELLING LOGIC ===
-        const currentPeriodCount = periodCountRef.current;
-        const currentJokers = jokersRef.current;
-        const currentActiveEffects = activeEffectsRef.current;
-        const currentInventory = inventoryRef.current;
-        const currentHallPassModifiers = hallPassModifiersRef.current;
-        const currentMerchantEffects = merchantEffectsRef.current;
-        const currentHasEarlySaleToday = hasEarlySaleTodayRef.current;
-        const currentPeriodsPerDay = periodsPerDayRef.current;
-
-        // === HANDLE ONE-TIME JOKERS (with side effects) ===
-        let oneTimeMultiplier = 1;
-        const bonusDetails: Array<{
-          emoji: string;
-          name: string;
-          multiplier: number;
-          flatBonus?: number;
-        }> = [];
-
-        // 1. Check for one-time sell multiplier jokers (Persuasion, etc) from Redux state
-        const sellMultiplierInfo = jokerService.hasOneTimeSellMultiplier(
-          currentJokers,
-          currentPeriodCount,
-          currentActiveEffects
-        );
-        if (sellMultiplierInfo.hasEffect && sellMultiplierInfo.multiplier) {
-          oneTimeMultiplier *= sellMultiplierInfo.multiplier;
-          bonusDetails.push({
-            emoji: sellMultiplierInfo.jokerEmoji || '🗣️',
-            name: sellMultiplierInfo.jokerName,
-            multiplier: sellMultiplierInfo.multiplier,
-          });
-
-          if (sellMultiplierInfo.jokerId) {
-            clearActiveEffect(sellMultiplierInfo.jokerId);
-          }
-        }
-
-        // Consume Influencer Shoutout if active (before calculation)
-        if (MerchantUtils.hasInfluencerShoutout(currentMerchantEffects)) {
-          dispatch(consumeEffect({ itemId: 'influencer_shoutout' }));
-        }
-
-        // === CALCULATE SALE USING SHARED FUNCTION ===
-        const inventoryItem = currentInventory.find(
-          (item) => item.name === candy.name
-        );
-        const purchasePrice = inventoryItem?.price ?? candy.cost;
-
-        // Compute dynamic sale params from refs
-        const currentPeriodsPerDayVal = currentPeriodsPerDay;
-        const currentDay = Math.max(1, Math.floor(currentPeriodCount / currentPeriodsPerDayVal) + 1);
-        const currentPeriodInDay = Math.max(1, (currentPeriodCount % currentPeriodsPerDayVal) + 1);
-        const currentInventoryCount = getTotalInventoryCount();
-        const dayStartPeriod = Math.floor(currentPeriodCount / currentPeriodsPerDayVal) * currentPeriodsPerDayVal;
-        const todayLocations = new Set(
-          (locationHistoryRef.current || [])
-            .filter((h: any) => h.period >= dayStartPeriod)
-            .map((h: any) => h.location)
-        );
-
-        const saleResult = calculateSaleTotal({
-          candyName: candy.name,
-          basePrice: candy.cost,
-          purchasePrice,
-          quantity,
-          jokers: currentJokers,
-          periodCount: currentPeriodCount,
-          inventoryLimit: getInventoryLimit(),
-          activeEffects: currentActiveEffects,
-          hallPassModifiers: currentHallPassModifiers,
-          merchantEffects: currentMerchantEffects,
-          consecutivePeriodSales: consecutivePeriodSales(),
-          totalCandiesSold: totalCandiesSoldRef.current || 0,
-          hasEarlySaleToday: currentHasEarlySaleToday,
-          initialMultiplier: oneTimeMultiplier,
-          inventoryCount: currentInventoryCount,
-          day: currentDay,
-          uniqueLocationsToday: todayLocations.size,
-          period: currentPeriodInDay,
-          periodsPerDay: currentPeriodsPerDayVal,
-          bulkEmpireStacks: bulkEmpireStacksRef.current,
-          inventory: currentInventory,
-        });
-
-        // Merge bonus breakdown from one-time jokers
-        bonusDetails.push(...saleResult.bonusBreakdown);
-
-        const {
-          totalGain,
-          profitPerUnit,
-          totalProfit,
-          purchaseValue,
-          hallPassBonus,
-          jokerMultiplier,
-          vacuumSealerPenalty,
-        } = saleResult;
-
-        const finalProfit = totalGain - purchaseValue;
-
-        // All dispatches in the flat function body — React batches these
-        add(totalGain);
-        addProfit(finalProfit); // Track daily profit (profit only, not purchase value)
-        addCandySold(quantity); // Track daily candy sales
-        recordDailyStatsSale(candy.name, quantity, totalGain, currentPeriodCount);
-
-        // Triple Threat (ID 18) — no daily sales tracking needed (handled in saleCalculations)
-
-        // Track sale for period-based hall pass unlocks (Time Crunch, Final Exam)
-        // IMPORTANT: Pass finalProfit (profit after all bonuses/penalties) not revenue for accurate tracking
-        addSale({
-          candyId: candy.name,
-          candyName: candy.name,
-          quantity: quantity,
-          price: candy.cost,
-          total: finalProfit, // ✅ Pass PROFIT (after all bonuses and penalties), not revenue
-          timestamp: Date.now(),
-          period: currentPeriodCount,
-          periodsPerDay: currentPeriodsPerDay,
-        });
-
-        removeFromInventory(candy.name, quantity);
-
-        // Pure state update — no side effects
-        setCandies((prev) =>
-          prev.map((c, i) =>
-            i !== candyIndex
-              ? c
-              : { ...c, quantityOwned: c.quantityOwned - quantity }
-          )
-        );
-
-        // Check Student Delivery Quest completion
-        const questRef = activeQuestRef.current;
-        if (
-          questRef &&
-          !questRef.completed &&
-          candy.name === questRef.candyName &&
-          currentDay === questRef.day &&
-          currentPeriodInDay === questRef.targetPeriod &&
-          quantity >= questRef.quantity
-        ) {
-          dispatch(completeQuest());
-          // Generate 2 random joker choices for the reward (seeded)
-          const questRng = seedrandom(`${questRef.id}-reward`);
-          const ownedIds = new Set(jokersRef.current.map((j: any) => j.id.toString()));
-          const unowned = STANDARDIZED_JOKERS.filter((sj) => !ownedIds.has(sj.id.toString()));
-          if (unowned.length > 0) {
-            // Shuffle unowned jokers deterministically
-            const shuffled = [...unowned];
-            for (let si = shuffled.length - 1; si > 0; si--) {
-              const sj = Math.floor(questRng() * (si + 1));
-              [shuffled[si], shuffled[sj]] = [shuffled[sj], shuffled[si]];
-            }
-            setQuestJokerChoices(shuffled.slice(0, Math.min(2, shuffled.length)));
-            setShowQuestJokerSelection(true);
-            SoundEffects.playPositiveSound();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            if (__DEV__) console.log('📦 QUEST: Completed! Showing joker reward');
-          } else {
-            dispatch(clearActiveQuest());
-            if (__DEV__) console.log('📦 QUEST: Completed but no unowned jokers available');
-          }
-        }
-      }
-
-      closeModal();
-    },
-    [
-      // Only stable dispatch callbacks remain as deps:
-      addToInventory, spend, addSpent, resetSales, add, addProfit,
-      addCandySold, recordDailyStatsSale, addSale, removeFromInventory,
-      closeModal, jokerService, clearActiveEffect,
-      dispatch, getInventoryLimit, consecutivePeriodSales,
-    ]
-  );
 
 
   const handleNextDay = useCallback(() => {
@@ -1142,102 +752,13 @@ function Market(props) {
     periodsPerDay,
   ]);
 
-  const handleLocationSelect = useCallback(
-    (location: Location) => {
-      if (location === 'the connect') {
-        setLocationModalVisible(false);
-        router.push('/merchant-shop');
-        return;
-      }
-
-      startTransition(() => {
-        setLocationModalVisible(false);
-        setLocalPricesUpdating(true);
-
-        const hasTradeRoutes = jokers.some((joker: any) => joker.id === 39);
-        if (hasTradeRoutes) {
-          dispatch(incrementMaxInventory(1));
-        }
-
-        if (showLunchMinigames) {
-          setShowLunchMinigames(false);
-        }
-
-        // Detect day change for daily stat resets
-        const oldDay = day;
-
-        // Call incrementPeriod and update flavor text
-        incrementPeriod(location);
-        setEvent('PERIOD_CHANGE');
-
-        // Advance tutorial from step 5 (next period) to step 6 (sell gummy bears)
-        if (tutorialStep === 5) {
-          dispatch(advanceTutorial());
-        }
-
-        // Check if we crossed into a new day and reset daily stats if so
-        // Note: We can't directly read the new day here, but we can use periodCount
-        // Day changes when periodCount % periodsPerDay === 0
-        const newPeriodCount = periodCount + 1;
-        const newDay = Math.floor((newPeriodCount - 1) / periodsPerDay) + 1;
-        if (newDay > oldDay) {
-          dispatch(resetDailyStats());
-        }
-
-        // Check for Hallway Hustle at the new location+period
-        const newPeriodInDay = (newPeriodCount % periodsPerDay) + 1;
-        const matchingHustle = getHustleForLocation(location, newPeriodInDay);
-        if (matchingHustle) {
-          // Check if player has enough candy
-          const candyInInventory = inventory.find(
-            (item) => item.name === matchingHustle.candyName || item.id === matchingHustle.candyName
-          );
-          const ownedQty = candyInInventory?.quantity ?? 0;
-
-          if (ownedQty >= matchingHustle.quantity) {
-            // Take the candy and show joker selection
-            removeFromInventory(matchingHustle.candyName, matchingHustle.quantity);
-            completeHustleAction(matchingHustle.id);
-            if (__DEV__) console.log(`🤝 HUSTLE: Completed! Took ${matchingHustle.quantity} ${matchingHustle.candyName}`);
-            // Show joker selection after a brief delay for loading state to clear
-            setTimeout(() => {
-              setShowHustleJokerSelection(true);
-            }, 500);
-          } else {
-            // Not enough candy — show notification
-            setHustleNotEnoughCandy(
-              `A kid here wants ${matchingHustle.quantity} ${matchingHustle.candyName}, but you only have ${ownedQty}...`
-            );
-            if (__DEV__) console.log(`🤝 HUSTLE: Not enough candy. Need ${matchingHustle.quantity} ${matchingHustle.candyName}, have ${ownedQty}`);
-            // Clear the message after 4 seconds
-            setTimeout(() => setHustleNotEnoughCandy(null), 4000);
-          }
-        }
-
-        // Reset loading state after a short delay
-        setTimeout(() => {
-          setLocalPricesUpdating(false);
-        }, 400);
-      });
-    },
-    [
-      jokers,
-      dispatch,
-      incrementPeriod,
-      setEvent,
-      candies,
-      addToInventory,
-      periodCount,
-      showLunchMinigames,
-      day,
-      periodsPerDay,
-      tutorialStep,
-      getHustleForLocation,
-      inventory,
-      removeFromInventory,
-      completeHustleAction,
-    ]
-  );
+  const { handleLocationSelect } = usePeriodAdvance({
+    setLocationModalVisible,
+    setLocalPricesUpdating,
+    setMeltedCandies,
+    setMeltModalVisible,
+    setShowHustleJokerSelection,
+  });
 
   const handleLunchConfirm = useCallback(() => {
     setLunchConfirmVisible(false);
@@ -1249,58 +770,22 @@ function Market(props) {
   }, []);
 
   const handleEndDayConfirm = useCallback(() => {
-    // Trigger success haptic feedback when ending day
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     setEndDayConfirmVisible(false);
 
-    // Reset lunch minigames flag when ending day early
     if (showLunchMinigames) {
       setShowLunchMinigames(false);
     }
 
-    const maxPeriods = periodsPerDay * 5;
-
-    // Check for Perfect Bake joker bonus (empty inventory at end of day)
-    const bonuses: Array<{
-      jokerName: string;
-      amount: number;
-      emoji?: string;
-    }> = [];
-
-    const perfectBakeJoker = findJokerById(jokers, JOKER_IDS.PERFECT_BAKE);
-    if (perfectBakeJoker) {
-      const totalInventory = getTotalInventoryCount();
-      if (totalInventory === 0) {
-        const bonusAmount = 1000;
-        add(bonusAmount);
-        bonuses.push({
-          jokerName: 'Perfect Bake',
-          amount: bonusAmount,
-          emoji: '🧁',
-        });
-      }
+    const bonuses = computeEndDayBonuses({
+      jokers,
+      totalInventoryCount: getTotalInventoryCount(),
+      inventoryLimit: getInventoryLimit(),
+    });
+    for (const bonus of bonuses) {
+      add(bonus.amount);
     }
-
-    // Check for Treasure Chest joker bonus (cash per empty slot at end of day)
-    const treasureChestJoker = findJokerById(jokers, JOKER_IDS.TREASURE_CHEST);
-    if (treasureChestJoker) {
-      const totalInventory = getTotalInventoryCount();
-      const invLimit = getInventoryLimit();
-      const emptySlots = Math.max(0, invLimit - totalInventory);
-      if (emptySlots > 0) {
-        const level = (treasureChestJoker as any).level ?? 1;
-        const cashPerSlot = level === 1 ? 20 : level === 2 ? 50 : 100;
-        const treasureBonus = emptySlots * cashPerSlot;
-        add(treasureBonus);
-        bonuses.push({
-          jokerName: 'Treasure Chest',
-          amount: treasureBonus,
-          emoji: '🏴‍☠️',
-        });
-      }
-    }
-
     setDayStatsBonuses(bonuses);
 
     setLocationModalVisible(false);
@@ -1312,16 +797,12 @@ function Market(props) {
       setDayStatsModalVisible(true);
     }, 150);
   }, [
-    day,
-    periodCount,
-    periodsPerDay,
-    balance,
     jokers,
     getTotalInventoryCount,
     getInventoryLimit,
     add,
-    dayStatsModalVisible,
     showLunchMinigames,
+    setShowLunchMinigames,
   ]);
 
   const handleEndDayCancel = useCallback(() => {
@@ -1485,16 +966,18 @@ function Market(props) {
         />
       )}
 
-      <Suspense fallback={null}>
-        <LocationModal
-          visible={locationModalVisible}
-          onClose={() => {
-            setLocationModalVisible(false);
-          }}
-          onSelectLocation={handleLocationSelect}
-          gameData={gameData}
-        />
-      </Suspense>
+      {locationModalVisible && (
+        <Suspense fallback={null}>
+          <LocationModal
+            visible={locationModalVisible}
+            onClose={() => {
+              setLocationModalVisible(false);
+            }}
+            onSelectLocation={handleLocationSelect}
+            gameData={gameData}
+          />
+        </Suspense>
+      )}
 
       {dayStatsModalVisible && (
         <Suspense fallback={null}>
@@ -1516,36 +999,42 @@ function Market(props) {
         </Suspense>
       )}
 
-      <Suspense fallback={null}>
-        <SchoolsOutModal
-          visible={schoolsOutModalVisible}
-          onComplete={handleSchoolsOutComplete}
-        />
-      </Suspense>
+      {schoolsOutModalVisible && (
+        <Suspense fallback={null}>
+          <SchoolsOutModal
+            visible={schoolsOutModalVisible}
+            onComplete={handleSchoolsOutComplete}
+          />
+        </Suspense>
+      )}
 
-      <Suspense fallback={null}>
-        <StashMoneyModal
-          visible={stashMoneyModalVisible}
-          onClose={() => {
-            // If in drone mode and user just closes (backs out), don't consume drone
-            if (isDroneDeposit) {
-              setIsDroneDeposit(false);
-            }
-            setStashMoneyModalVisible(false);
-          }}
-          onConfirm={handleMoneyStashed}
-          isDroneMode={isDroneDeposit}
-        />
-      </Suspense>
+      {stashMoneyModalVisible && (
+        <Suspense fallback={null}>
+          <StashMoneyModal
+            visible={stashMoneyModalVisible}
+            onClose={() => {
+              // If in drone mode and user just closes (backs out), don't consume drone
+              if (isDroneDeposit) {
+                setIsDroneDeposit(false);
+              }
+              setStashMoneyModalVisible(false);
+            }}
+            onConfirm={handleMoneyStashed}
+            isDroneMode={isDroneDeposit}
+          />
+        </Suspense>
+      )}
 
-      <Suspense fallback={null}>
-        <SleepConfirmModal
-          visible={sleepConfirmModalVisible}
-          onConfirm={handleSleepConfirm}
-          onCancel={handleSleepCancel}
-          currentDay={day}
-        />
-      </Suspense>
+      {sleepConfirmModalVisible && (
+        <Suspense fallback={null}>
+          <SleepConfirmModal
+            visible={sleepConfirmModalVisible}
+            onConfirm={handleSleepConfirm}
+            onCancel={handleSleepCancel}
+            currentDay={day}
+          />
+        </Suspense>
+      )}
 
       <ConfirmationModal
         visible={confirmationModal.visible}
@@ -1570,7 +1059,6 @@ function Market(props) {
         cancelText="Not Yet"
         onConfirm={handleLunchConfirm}
         onCancel={() => setLunchConfirmVisible(false)}
-        theme="market"
         dismissible={true}
       />
 
@@ -1587,7 +1075,6 @@ function Market(props) {
         cancelText="Stay in School"
         onConfirm={handleEndDayConfirm}
         onCancel={handleEndDayCancel}
-        theme="market"
         dismissible={false}
       />
 
@@ -1599,7 +1086,18 @@ function Market(props) {
         confirmText="Let's Go!"
         onConfirm={() => setUnlockModalVisible(false)}
         onCancel={() => setUnlockModalVisible(false)}
-        theme="market"
+        dismissible={true}
+      />
+
+      {/* Candy Melt Modal */}
+      <ConfirmationModal
+        visible={meltModalVisible}
+        title="Candy Melted!"
+        message={meltedCandies.map(c => `${c.name} x${c.quantity} ($${c.value.toFixed(2)} lost)`).join('\n')}
+        emoji="🫠"
+        confirmText="OK"
+        onConfirm={() => setMeltModalVisible(false)}
+        onCancel={() => setMeltModalVisible(false)}
         dismissible={true}
       />
 
@@ -1636,19 +1134,25 @@ function Market(props) {
             // Safety dismiss if overlay is stuck
             if (__DEV__) console.log('🤝 HUSTLE: Overlay tapped — dismissing');
             setShowHustleJokerSelection(false);
+            dispatch(clearLastCompletedHustle());
           }}
         >
           <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ flex: 1 }}>
             <Suspense fallback={<View />}>
               <JokerSelection
                 jokers={STANDARDIZED_JOKERS}
-                theme="candy"
                 onComplete={() => {
                   setShowHustleJokerSelection(false);
+                  dispatch(clearLastCompletedHustle());
                 }}
                 rewardTier={1}
                 completionLevel={2}
-                headerText="Hallway Hustle Reward!"
+                showSellAndUpgrade={false}
+                headerText={
+                  lastCompletedHustle
+                    ? `Hallway Hustle — delivered ${lastCompletedHustle.quantity} ${lastCompletedHustle.candyName} to the ${lastCompletedHustle.location}!`
+                    : 'Hallway Hustle Reward!'
+                }
               />
             </Suspense>
           </TouchableOpacity>
@@ -1664,7 +1168,7 @@ function Market(props) {
             // Safety dismiss if overlay is stuck
             if (__DEV__) console.log('📦 QUEST: Overlay tapped — dismissing');
             setShowQuestJokerSelection(false);
-            setQuestJokerChoices([]);
+            dispatch(clearPendingJokerChoices());
             dispatch(clearActiveQuest());
           }}
         >
@@ -1672,14 +1176,14 @@ function Market(props) {
             <Suspense fallback={<View />}>
               <JokerSelection
                 jokers={STANDARDIZED_JOKERS}
-                theme="candy"
                 onComplete={() => {
                   setShowQuestJokerSelection(false);
-                  setQuestJokerChoices([]);
+                  dispatch(clearPendingJokerChoices());
                   dispatch(clearActiveQuest());
                 }}
                 rewardTier={1}
                 completionLevel={2}
+                showSellAndUpgrade={false}
                 headerText="Delivery Quest Complete!"
               />
             </Suspense>
@@ -1701,7 +1205,6 @@ function Market(props) {
           generateHustlesAction={generateHustlesAction}
           setShowHustleJokerSelection={setShowHustleJokerSelection}
           setShowQuestJokerSelection={setShowQuestJokerSelection}
-          setQuestJokerChoices={setQuestJokerChoices}
           generateQuest={generateQuest}
           unlockedCandies={candies.map((c: any) => c.name)}
           jokers={jokers}

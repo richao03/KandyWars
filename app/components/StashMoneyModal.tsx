@@ -23,6 +23,7 @@ import { SoundEffects } from '../../src/utils/soundEffects';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppDispatch } from '../../src/store/hooks';
+import { incrementStat } from '../../src/store/slices/jokerStatsSlice';
 import { incrementMaxDeposit } from '../../src/store/slices/dailyStatsSlice';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
@@ -143,6 +144,7 @@ function StashMoneyModal({
     }
 
     stashMoney(amount);
+    dispatch(incrementStat({ stat: 'pennyWiseStashes' }));
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setAmount(0);

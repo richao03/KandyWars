@@ -29,6 +29,7 @@ const WRONG_ANSWER_SOUND = require('../../assets/soundEffects/wrong1.wav');
 const ACHIEVEMENT_SOUND = require('../../assets/soundEffects/achievement.wav');
 const CONGRATS_SOUND = require('../../assets/soundEffects/congrats1.mp3');
 const BIRD_SOUND = require('../../assets/soundEffects/birds1.m4a');
+const CASH_REGISTER_SOUND = require('../../assets/soundEffects/cashRegister.mp3');
 
 // Audio pooling - create multiple players per sound for overlapping playback
 let audioInitialized = false;
@@ -56,6 +57,9 @@ let achievementPlayerIndex = 0;
 let congratsPlayerPool: any[] = [];
 let congratsPlayerIndex = 0;
 
+let cashRegisterPlayerPool: any[] = [];
+let cashRegisterPlayerIndex = 0;
+
 let birdPlayerPool: any[] = [];
 let birdPlayerIndex = 0;
 
@@ -73,7 +77,7 @@ async function initializeAudioPlayers() {
     // This allows up to 10 simultaneous pops (all 10 different sounds playing at once)
     POP_SOUNDS.forEach((sound, index) => {
       const player = createAudioPlayer(sound);
-      player.volume = 1.0; // Boosted from 0.6 for better audibility on physical devices
+      player.volume = globalSoundVolume;
       popPlayerPool.push(player);
     });
 
@@ -82,44 +86,50 @@ async function initializeAudioPlayers() {
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const posPlayer = createAudioPlayer(POSITIVE_SOUND);
-      posPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
+      posPlayer.volume = globalSoundVolume;
       positivePlayerPool.push(posPlayer);
     }
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const coinPlayer = createAudioPlayer(COIN_SOUND);
-      coinPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
+      coinPlayer.volume = globalSoundVolume;
       coinPlayerPool.push(coinPlayer);
     }
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const negPlayer = createAudioPlayer(NEGATIVE_SOUND);
-      negPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
+      negPlayer.volume = globalSoundVolume;
       negativePlayerPool.push(negPlayer);
     }
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const wrongPlayer = createAudioPlayer(WRONG_ANSWER_SOUND);
-      wrongPlayer.volume = 1.0; // Reduced from 2.0 to prevent distortion
+      wrongPlayer.volume = globalSoundVolume;
       wrongAnswerPlayerPool.push(wrongPlayer);
     }
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const achPlayer = createAudioPlayer(ACHIEVEMENT_SOUND);
-      achPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
+      achPlayer.volume = globalSoundVolume;
       achievementPlayerPool.push(achPlayer);
     }
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const congPlayer = createAudioPlayer(CONGRATS_SOUND);
-      congPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
+      congPlayer.volume = globalSoundVolume;
       congratsPlayerPool.push(congPlayer);
     }
 
     for (let i = 0; i < SOUND_POOL_SIZE; i++) {
       const birdPlayer = createAudioPlayer(BIRD_SOUND);
-      birdPlayer.volume = 1.0; // Boosted from 0.7 for physical devices
+      birdPlayer.volume = globalSoundVolume;
       birdPlayerPool.push(birdPlayer);
+    }
+
+    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+      const crPlayer = createAudioPlayer(CASH_REGISTER_SOUND);
+      crPlayer.volume = globalSoundVolume;
+      cashRegisterPlayerPool.push(crPlayer);
     }
 
     audioInitialized = true;
@@ -157,6 +167,7 @@ async function cleanupAudioPlayers() {
       achievementPlayerPool,
       congratsPlayerPool,
       birdPlayerPool,
+      cashRegisterPlayerPool,
     ];
 
     for (const pool of allPools) {
@@ -179,6 +190,7 @@ async function cleanupAudioPlayers() {
     achievementPlayerPool = [];
     congratsPlayerPool = [];
     birdPlayerPool = [];
+    cashRegisterPlayerPool = [];
 
     // Reset indices
     popPlayerIndex = 0;
@@ -189,6 +201,7 @@ async function cleanupAudioPlayers() {
     achievementPlayerIndex = 0;
     congratsPlayerIndex = 0;
     birdPlayerIndex = 0;
+    cashRegisterPlayerIndex = 0;
 
     // Reset initialization flag
     audioInitialized = false;
@@ -197,7 +210,27 @@ async function cleanupAudioPlayers() {
   }
 }
 
+let globalSoundVolume = 1.0;
+
 export const SoundEffects = {
+  /**
+   * Set volume for all sound effects (0.0 - 1.0)
+   */
+  setVolume(volume: number) {
+    globalSoundVolume = Math.max(0, Math.min(1, volume));
+    // Update all existing players
+    const allPools = [
+      popPlayerPool, positivePlayerPool, coinPlayerPool,
+      negativePlayerPool, wrongAnswerPlayerPool, achievementPlayerPool,
+      congratsPlayerPool, birdPlayerPool, cashRegisterPlayerPool,
+    ];
+    for (const pool of allPools) {
+      for (const player of pool) {
+        try { player.volume = globalSoundVolume; } catch {}
+      }
+    }
+  },
+
   /**
    * Play a random pop sound
    */
@@ -416,3 +449,145 @@ export const SoundEffects = {
     await cleanupAudioPlayers();
   },
 };
+
+// ---------------------------------------------------------------------------
+// Cooldown tracker for rate-varied pop helpers
+// ---------------------------------------------------------------------------
+let _lastPopAtRateTime = 0;
+const _POP_AT_RATE_COOLDOWN_MS = 30;
+
+/**
+ * Private helper: play the next pop from the pool at a given playbackRate.
+ * Enforces a 30ms cooldown between calls (shared with cascade scheduling).
+ */
+async function _playPopAtRate(rate: number): Promise<void> {
+  try {
+    if (!audioInitialized) {
+      await initializeAudioPlayers();
+    }
+
+    const now = Date.now();
+    if (now - _lastPopAtRateTime < _POP_AT_RATE_COOLDOWN_MS) {
+      // Still within cooldown – skip silently (caller is responsible for timing)
+    }
+    _lastPopAtRateTime = now;
+
+    // Round-robin from the existing pop pool
+    const player = popPlayerPool[popPlayerIndex];
+    popPlayerIndex = (popPlayerIndex + 1) % popPlayerPool.length;
+
+    player.seekTo(0);
+    // expo-audio AudioPlayer exposes playbackRate as a settable property
+    try {
+      player.playbackRate = rate;
+    } catch {
+      // Fallback: property may not exist in all environments (silently ignored)
+    }
+    player.play();
+  } catch (error) {
+    console.error('🔊 [SoundEffects] ❌ ERROR in _playPopAtRate:', error);
+  }
+}
+
+/**
+ * Low-mid thump for sell-confirm commit.
+ * Uses the pop pool at playbackRate 0.85 (lower pitch = heavier feel).
+ */
+export async function playLeverClick(): Promise<void> {
+  await _playPopAtRate(0.85);
+}
+
+/**
+ * Coin-cluster cascade ping (boost jokers). Pitches upward as combo grows.
+ * rate = clamp(0.9 + comboIndex * 0.10, 0.9, 1.7)
+ */
+export async function playJokerChip(comboIndex: number): Promise<void> {
+  const rate = Math.min(1.7, Math.max(0.9, 0.9 + comboIndex * 0.1));
+  await _playCoinAtRate(rate);
+}
+
+/**
+ * Bright coin cascade for multiplier jokers — slightly higher pitch ladder
+ * than the chip variant so the two interleave musically.
+ * rate = clamp(1.0 + comboIndex * 0.10, 1.0, 1.85)
+ */
+export async function playJokerMult(comboIndex: number): Promise<void> {
+  const rate = Math.min(1.85, Math.max(1.0, 1.0 + comboIndex * 0.1));
+  await _playCoinAtRate(rate);
+}
+
+/**
+ * Cash-register punctuation — plays at the end of the joker cascade in the
+ * transaction modal. Uses the dedicated cashRegister.mp3 asset.
+ */
+export async function playCashRegister(): Promise<void> {
+  try {
+    if (!audioInitialized) {
+      await initializeAudioPlayers();
+    }
+    const player = cashRegisterPlayerPool[cashRegisterPlayerIndex];
+    cashRegisterPlayerIndex =
+      (cashRegisterPlayerIndex + 1) % cashRegisterPlayerPool.length;
+    if (player) {
+      player.seekTo(0);
+      try {
+        player.playbackRate = 1.0;
+      } catch {
+        /* noop — playbackRate may not be settable in all envs */
+      }
+      player.play();
+    }
+  } catch (error) {
+    console.error('🔊 [SoundEffects] ❌ ERROR in playCashRegister:', error);
+  }
+}
+
+/** Round-robin coin-cluster pop at varying playbackRate. */
+let _lastCoinAtRateTime = 0;
+const _COIN_AT_RATE_COOLDOWN_MS = 30;
+async function _playCoinAtRate(rate: number): Promise<void> {
+  try {
+    if (!audioInitialized) {
+      await initializeAudioPlayers();
+    }
+    const now = Date.now();
+    if (now - _lastCoinAtRateTime < _COIN_AT_RATE_COOLDOWN_MS) {
+      // intentionally non-throttled — log only
+    }
+    _lastCoinAtRateTime = now;
+    const player = coinPlayerPool[coinPlayerIndex];
+    coinPlayerIndex = (coinPlayerIndex + 1) % coinPlayerPool.length;
+    if (!player) return;
+    player.seekTo(0);
+    try {
+      player.playbackRate = rate;
+    } catch {
+      /* noop */
+    }
+    player.play();
+  } catch (error) {
+    console.error('🔊 [SoundEffects] ❌ ERROR in _playCoinAtRate:', error);
+  }
+}
+
+/**
+ * Rapid 4-pop ascending-pitch cascade for final total reveal.
+ * Rates: 1.0, 1.15, 1.3, 1.45 — 40ms apart.
+ */
+export async function playCoinCascade(): Promise<void> {
+  const rates = [1.0, 1.15, 1.3, 1.45];
+  for (let i = 0; i < rates.length; i++) {
+    setTimeout(() => {
+      _playPopAtRate(rates[i]);
+    }, i * 40);
+  }
+}
+
+/**
+ * Single pop for money count-up tick.
+ * rate = 1.0 + progress * 0.4  (progress is 0..1)
+ */
+export async function playMoneyTick(progress: number): Promise<void> {
+  const rate = 1.0 + progress * 0.4;
+  await _playPopAtRate(rate);
+}

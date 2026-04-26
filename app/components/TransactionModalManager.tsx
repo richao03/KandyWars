@@ -29,6 +29,9 @@ export interface SaleInputs {
   uniqueLocationsToday: number;
   period: number;
   periodsPerDay: number;
+  jokerStats: any;
+  selectedPassIds: string[];
+  currentLocation: string;
 }
 
 interface Props {
@@ -105,6 +108,9 @@ const TransactionModalManager = forwardRef<TransactionModalHandle, Props>(
             uniqueLocationsToday: todayLocations.size,
             period: currentPeriod,
             periodsPerDay,
+            jokerStats: state.jokerStats ?? {},
+            selectedPassIds: state.hallPass?.selectedPassIds ?? [],
+            currentLocation: state.game?.currentLocation ?? '',
           });
           setSelectedCandyIndex(index);
         },

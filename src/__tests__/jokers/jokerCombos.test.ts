@@ -98,20 +98,16 @@ describe('Joker Combo Interactions', () => {
     });
   });
 
-  // ===== 2. Multiple conditional multipliers =====
-  describe('Multiple conditional multipliers', () => {
-    it('Even Stevens + Night Owl + Peak Hours: all conditions met, all stack', () => {
-      // Even Stevens (29): conditional_multiplier even, 1.5 -> multiplier += 0.5
+  // ===== 2. Mixed profit boost + multiplier conditionals =====
+  describe('Mixed profit boost + multiplier conditionals', () => {
+    it('Even Stevens (profit) + Night Owl (mult) + Peak Hours (profit): all conditions met', () => {
+      // Even Stevens (29): conditional_profit_boost even, 1.5 -> profitBoost += 0.5
       // Night Owl (85): night_owl_boost, 3 -> multiplier += 2
-      // Peak Hours (91): peak_hours_boost, 2 -> multiplier += 1
-      // multiplier = 1 + 0.5 + 2 + 1 = 4.5
-      // conditions: inventoryLimit=30 (even), period=7 (last period), period 3-5... wait.
-      // Night Owl fires when period >= periodsPerDay - 1 = 7 (period 7 or 8)
-      // Peak Hours fires when period >= 3 && period <= 5
-      // These two CANNOT both fire simultaneously with standard periodsPerDay=8!
-      // Use period=5, periodsPerDay=6 so that period >= 5 (=6-1) AND 3<=5<=5
-      // Actually periodsPerDay-1 = 5, so period 5 >= 5 -> Night Owl fires
-      // And 3 <= 5 <= 5 -> Peak Hours fires
+      // Peak Hours (91): peak_hours_profit_boost, 2 -> profitBoost += 1
+      // profitBoost = 1 + 0.5 + 1 = 2.5, multiplier = 1 + 2 = 3
+      // boostedProfit = 500 * 2.5 = 1250
+      // finalProfit = 1250 * 3 = 3750
+      // totalGain = 500 + 3750 = 4250
       const result = calculateSaleTotal({
         ...baseSaleParams,
         inventoryLimit: 30, // even -> Even Stevens fires
@@ -123,17 +119,16 @@ describe('Joker Combo Interactions', () => {
           makeTestJoker(JOKER_IDS.PEAK_HOURS),
         ],
       });
-      // multiplier = 1 + 0.5 + 2 + 1 = 4.5
-      // totalGain = 500 + (500 * 1 * 4.5) = 500 + 2250 = 2750
-      expect(result.jokerMultiplier).toBe(4.5);
-      expect(result.totalGain).toBe(2750);
+      expect(result.jokerMultiplier).toBe(3);
+      expect(result.totalGain).toBe(4250);
     });
 
-    it('Even Stevens + Odd Todd: only one fires (even inventory)', () => {
+    it('Even Stevens (profit) + Odd Todd (mult): only one fires (even inventory)', () => {
       // inventoryLimit = 30 (even)
-      // Even Stevens fires: multiplier += 0.5
-      // Odd Todd does NOT fire
-      // multiplier = 1 + 0.5 = 1.5
+      // Even Stevens fires: profitBoost += 0.5
+      // Odd Todd does NOT fire (even, not odd)
+      // profitBoost = 1.5, multiplier = 1
+      // totalGain = 500 + (500 * 1.5 * 1) = 500 + 750 = 1250
       const result = calculateSaleTotal({
         ...baseSaleParams,
         inventoryLimit: 30,
@@ -142,7 +137,7 @@ describe('Joker Combo Interactions', () => {
           makeTestJoker(JOKER_IDS.ODD_TODD),
         ],
       });
-      expect(result.jokerMultiplier).toBe(1.5);
+      expect(result.jokerMultiplier).toBe(1);
       expect(result.totalGain).toBe(1250);
     });
   });
@@ -167,12 +162,14 @@ describe('Joker Combo Interactions', () => {
       expect(result.totalGain).toBe(3000);
     });
 
-    it('Underdog + Broke and Hungry: currentCash < $2000 triggers both', () => {
-      // Underdog (49): cash_under_boost 1.5x, cashBelow 5000 -> multiplier += 0.5
+    it('Underdog (profit) + Broke and Hungry (mult): currentCash < $2000 triggers both', () => {
+      // Underdog (49): cash_under_profit_boost 1.5x, cashBelow 5000 -> profitBoost += 0.5
       // Broke and Hungry (52): cash_under_boost 2x, cashBelow 2000 -> multiplier += 1
       // currentCash = 1000 (< 2000 and < 5000)
-      // multiplier = 1 + 0.5 + 1 = 2.5
-      // totalGain = 500 + (500 * 1 * 2.5) = 500 + 1250 = 1750
+      // profitBoost = 1 + 0.5 = 1.5, multiplier = 1 + 1 = 2
+      // boostedProfit = 500 * 1.5 = 750
+      // finalProfit = 750 * 2 = 1500
+      // totalGain = 500 + 1500 = 2000
       const result = calculateSaleTotal({
         ...baseSaleParams,
         currentCash: 1000,
@@ -181,8 +178,8 @@ describe('Joker Combo Interactions', () => {
           makeTestJoker(JOKER_IDS.BROKE_AND_HUNGRY),
         ],
       });
-      expect(result.jokerMultiplier).toBe(2.5);
-      expect(result.totalGain).toBe(1750);
+      expect(result.jokerMultiplier).toBe(2);
+      expect(result.totalGain).toBe(2000);
     });
   });
 
@@ -276,9 +273,10 @@ describe('Joker Combo Interactions', () => {
     it('Sugar Rush + Contraband + Even Stevens: all stack in multiplier', () => {
       // Sugar Rush: multiplier += 1
       // Contraband: multiplier += 1
-      // Even Stevens (inventoryLimit=30, even): multiplier += 0.5
-      // multiplier = 1 + 1 + 1 + 0.5 = 3.5
-      // totalGain = 500 + (500 * 1 * 3.5) = 500 + 1750 = 2250
+      // Even Stevens (inventoryLimit=30, even): profitBoost += 0.5 (now profit boost)
+      // profitBoost = 1.5, multiplier = 1 + 1 + 1 = 3
+      // boostedProfit = 500 * 1.5 = 750, finalProfit = 750 * 3 = 2250
+      // totalGain = 500 + 2250 = 2750
       const result = calculateSaleTotal({
         ...baseSaleParams,
         inventoryLimit: 30,
@@ -288,8 +286,8 @@ describe('Joker Combo Interactions', () => {
           makeTestJoker(JOKER_IDS.EVEN_STEVENS),
         ],
       });
-      expect(result.jokerMultiplier).toBe(3.5);
-      expect(result.totalGain).toBe(2250);
+      expect(result.jokerMultiplier).toBe(3);
+      expect(result.totalGain).toBe(2750);
     });
   });
 
@@ -314,16 +312,16 @@ describe('Joker Combo Interactions', () => {
       expect(result.totalGain).toBe(2200);
     });
 
-    it('Lucky 7 + Bulk Discount: sell 7 candy — Lucky 7 fires, Bulk Discount fires (threshold 5)', () => {
+    it('Lucky 7 + Bulk Discount: sell 7 candy — Lucky 7 fires, Bulk Discount does NOT (threshold 20)', () => {
       // qty = 7
       // Lucky 7 (84): qty === 7 -> fires, multiplier += (7-1) = 6
-      // Bulk Discount (47): qty >= 5 (lv1 threshold) -> fires, profitBoost += (1.5-1) = 0.5
+      // Bulk Discount (47): qty < 20 -> does NOT fire
       // multiplier = 1 + 6 = 7
-      // profitBoost = 1 + 0.5 = 1.5
+      // profitBoost = 1 (unchanged)
       // totalProfit = (100-50)*7 = 350, purchaseValue = 350
-      // boostedProfit = 350 * 1.5 = 525
-      // finalProfit = 525 * 7 = 3675
-      // totalGain = 350 + 3675 = 4025
+      // boostedProfit = 350 * 1 = 350
+      // finalProfit = 350 * 7 = 2450
+      // totalGain = 350 + 2450 = 2800
       const result = calculateSaleTotal({
         ...baseSaleParams,
         quantity: 7,
@@ -333,20 +331,48 @@ describe('Joker Combo Interactions', () => {
         ],
       });
       expect(result.jokerMultiplier).toBe(7);
-      expect(result.totalGain).toBe(4025);
+      expect(result.totalGain).toBe(2800);
+    });
+
+    it('Bulk Discount: sell 20 candy — fires at fixed threshold', () => {
+      // qty = 20, meets threshold
+      // profitBoost = 1 + 0.5 = 1.5
+      // totalProfit = (100-50)*20 = 1000, purchaseValue = 1000
+      // boostedProfit = 1000 * 1.5 = 1500
+      // totalGain = 1000 + 1500 = 2500
+      const result = calculateSaleTotal({
+        ...baseSaleParams,
+        quantity: 20,
+        jokers: [makeTestJoker(JOKER_IDS.BULK_DISCOUNT)],
+      });
+      expect(result.jokerMultiplier).toBe(1);
+      expect(result.totalGain).toBe(2500);
+    });
+
+    it('Bulk Discount: sell 19 candy — does NOT fire (under threshold)', () => {
+      // qty = 19, below fixed threshold of 20
+      // profitBoost = 1 (unchanged)
+      // totalProfit = (100-50)*19 = 950, purchaseValue = 950
+      // totalGain = 950 + 950 = 1900
+      const result = calculateSaleTotal({
+        ...baseSaleParams,
+        quantity: 19,
+        jokers: [makeTestJoker(JOKER_IDS.BULK_DISCOUNT)],
+      });
+      expect(result.totalGain).toBe(1900);
     });
   });
 
   // ===== 7. Mixed bucket stacking =====
   describe('Mixed bucket stacking', () => {
-    it('Cocoa Futures (profit boost) + Even Stevens (multiplier) + Mint Condition (size mult) on small chocolate candy', () => {
+    it('Cocoa Futures (profit boost) + Even Stevens (profit boost) + Mint Condition (size mult) on small chocolate candy', () => {
       // M&Ms: small, chocolate + hard_candy
       // Cocoa Futures (23): profitBoost += 0.5 => profitBoost = 1.5
-      // Even Stevens (29): multiplier += 0.5 (inventoryLimit=30, even) => multiplier = 1.5
-      // Mint Condition (70): multiplier += 1 (small candy) => multiplier = 2.5
-      // boostedProfit = 500 * 1.5 = 750
-      // finalProfit = 750 * 2.5 = 1875
-      // totalGain = 500 + 1875 = 2375
+      // Even Stevens (29): profitBoost += 0.5 (inventoryLimit=30, even) => profitBoost = 2.0
+      // Mint Condition (70): multiplier += 1 (small candy) => multiplier = 2
+      // boostedProfit = 500 * 2.0 = 1000
+      // finalProfit = 1000 * 2 = 2000
+      // totalGain = 500 + 2000 = 2500
       const result = calculateSaleTotal({
         ...baseSaleParams,
         inventoryLimit: 30,
@@ -356,28 +382,30 @@ describe('Joker Combo Interactions', () => {
           makeTestJoker(JOKER_IDS.MINT_CONDITION),
         ],
       });
-      expect(result.jokerMultiplier).toBe(2.5);
-      expect(result.totalGain).toBe(2375);
+      expect(result.jokerMultiplier).toBe(2);
+      expect(result.totalGain).toBe(2500);
     });
   });
 
   // ===== 8. Extreme combo =====
   describe('Extreme combo', () => {
-    it('5 compatible jokers stack to a massive but correct combined multiplier', () => {
+    it('5 compatible jokers stack across profit boost and multiplier', () => {
       // M&Ms: small, chocolate + hard_candy
       // Use: Mint Condition + Even Stevens + Sugar Rush + Contraband + Night Owl
-      // All in multiplier bucket:
-      //   Mint Condition (70): +1 (small)
+      // Profit boost:
       //   Even Stevens (29): +0.5 (even inventoryLimit=30)
+      // profitBoost = 1 + 0.5 = 1.5
+      //
+      // Multiplier:
+      //   Mint Condition (70): +1 (small)
       //   Sugar Rush (57): +(2-1) = +1
       //   Contraband (60): +(2-1) = +1
       //   Night Owl (85): +(3-1) = +2 (period=7, periodsPerDay=8)
-      // multiplier = 1 + 1 + 0.5 + 1 + 1 + 2 = 6.5
+      // multiplier = 1 + 1 + 1 + 1 + 2 = 6
       //
-      // profitBoost = 1 (no profit boost jokers active)
-      // boostedProfit = 500 * 1 = 500
-      // finalProfit = 500 * 6.5 = 3250
-      // totalGain = 500 + 3250 = 3750
+      // boostedProfit = 500 * 1.5 = 750
+      // finalProfit = 750 * 6 = 4500
+      // totalGain = 500 + 4500 = 5000
       const result = calculateSaleTotal({
         ...baseSaleParams,
         inventoryLimit: 30,
@@ -391,8 +419,8 @@ describe('Joker Combo Interactions', () => {
           makeTestJoker(JOKER_IDS.NIGHT_OWL),
         ],
       });
-      expect(result.jokerMultiplier).toBe(6.5);
-      expect(result.totalGain).toBe(3750);
+      expect(result.jokerMultiplier).toBe(6);
+      expect(result.totalGain).toBe(5000);
       expect(result.bonusBreakdown.length).toBe(5);
     });
   });

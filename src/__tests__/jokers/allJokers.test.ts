@@ -69,14 +69,14 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(1);
     });
 
-    it('Bulk Discount (ID: 47) - 1.5x when selling 5+ at once', () => {
+    it('Bulk Discount (ID: 47) - 1.5x when selling 20+ at once (threshold fixed across levels)', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 47);
       expect(joker?.name).toBe('Bulk Discount');
       expect(joker?.type).toBe('persistent');
       expect(joker?.effects[0].target).toBe('bulk_sale_boost');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(1.5);
-      expect(joker?.effects[0].conditions?.bulkThreshold).toBe(5);
+      expect(joker?.effects[0].conditions?.bulkThreshold).toBe(20);
     });
 
     it('Bear Market (ID: 19) - +1.5 on Gummy candy', () => {
@@ -92,10 +92,10 @@ describe('All Jokers - Comprehensive Tests', () => {
 
   // === [xMult] MULTIPLIERS ===
   describe('Multiplier Jokers', () => {
-    it('Even Stevens (ID: 29) - 1.5x ALL if inventory limit is even', () => {
+    it('Even Stevens (ID: 29) - +50% profit if inventory limit is even', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 29);
       expect(joker?.name).toBe('Even Stevens');
-      expect(joker?.effects[0].target).toBe('conditional_multiplier');
+      expect(joker?.effects[0].target).toBe('conditional_profit_boost');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(1.5);
       expect(joker?.effects[0].conditions?.inventoryParity).toBe('even');
@@ -110,29 +110,29 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].conditions?.inventoryParity).toBe('odd');
     });
 
-    it('Golden Hour (ID: 38) - 1.5x profit in last 2 periods of day', () => {
+    it('Golden Hour (ID: 38) - +50% profit in last 2 periods of day', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 38);
       expect(joker?.name).toBe('Golden Hour');
       expect(joker?.type).toBe('persistent');
-      expect(joker?.effects[0].target).toBe('conditional_multiplier');
+      expect(joker?.effects[0].target).toBe('conditional_profit_boost');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(1.5);
     });
 
-    it('Early Bird (ID: 45) - 1.5x on first sale each day', () => {
+    it('Early Bird (ID: 45) - +50% profit on first sale each day', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 45);
       expect(joker?.name).toBe('Early Bird');
       expect(joker?.type).toBe('persistent');
-      expect(joker?.effects[0].target).toBe('first_sale_boost');
+      expect(joker?.effects[0].target).toBe('first_sale_profit_boost');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(1.5);
     });
 
-    it('Underdog (ID: 49) - 1.5x when cash < $5k', () => {
+    it('Underdog (ID: 49) - +50% profit when cash < $5k', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 49);
       expect(joker?.name).toBe('Underdog');
       expect(joker?.type).toBe('persistent');
-      expect(joker?.effects[0].target).toBe('cash_under_boost');
+      expect(joker?.effects[0].target).toBe('cash_under_profit_boost');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(1.5);
       expect(joker?.effects[0].conditions?.cashBelow).toBe(5000);
@@ -157,11 +157,11 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(1.5);
     });
 
-    it('Variety Pack (ID: 50) - 1.5x when 3+ candy types in inventory', () => {
+    it('Variety Pack (ID: 50) - +50% profit when 3+ candy types in inventory', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 50);
       expect(joker?.name).toBe('Variety Pack');
       expect(joker?.type).toBe('persistent');
-      expect(joker?.effects[0].target).toBe('variety_pack_boost');
+      expect(joker?.effects[0].target).toBe('variety_pack_profit_boost');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(1.5);
     });
@@ -229,15 +229,13 @@ describe('All Jokers - Comprehensive Tests', () => {
 
   // === INCOME ===
   describe('Income Jokers', () => {
-    it('Ace the Test (ID: 31) - 2x allowance + $300 flat', () => {
+    it('Ace the Test (ID: 31) - 2x allowance (multiplier only)', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 31);
       expect(joker?.name).toBe('Ace the Test');
+      expect(joker?.effects).toHaveLength(1);
       expect(joker?.effects[0].target).toBe('allowance_multiplier');
       expect(joker?.effects[0].operation).toBe('multiply');
       expect(joker?.effects[0].amount).toBe(2);
-      expect(joker?.effects[1].target).toBe('allowance_add');
-      expect(joker?.effects[1].operation).toBe('add');
-      expect(joker?.effects[1].amount).toBe(300);
     });
 
     it('Deposit Bonus (ID: 22) - 5% of stash as daily allowance', () => {
@@ -291,19 +289,21 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].duration).toBe('one-time');
     });
 
-    it('Bake Sale (ID: 16) - Instantly gain $3000', () => {
+    it('Bake Sale (ID: 16) - Instantly gain $3000 (imperative handler)', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 16);
       expect(joker?.name).toBe('Bake Sale');
       expect(joker?.type).toBe('one-time');
-      expect(joker?.effects[0].target).toBe('money');
-      expect(joker?.effects[0].amount).toBe(3000);
+      // Bake Sale's money grant is handled imperatively in JokerCard.handleBakeSale;
+      // the factory intentionally returns no effects (vestige cleanup).
+      expect(joker?.effects).toEqual([]);
     });
 
-    it('Roman Coin (ID: 37) - Instantly gain $2000', () => {
+    it('Roman Coin (ID: 37) - Instantly gain $2000 (imperative handler)', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 37);
       expect(joker?.name).toBe('Roman Coin');
-      expect(joker?.effects[0].target).toBe('money');
-      expect(joker?.effects[0].amount).toBe(2000);
+      // Roman Coin's money grant is handled imperatively in JokerCard.handleRomanCoin;
+      // the factory intentionally returns no effects (vestige cleanup).
+      expect(joker?.effects).toEqual([]);
     });
 
     it('Market Manipulation (ID: 20) - Set candy to highest price', () => {
@@ -341,9 +341,9 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[1].operation).toBe('enable');
     });
 
-    it('The Good Old Days (ID: 24) - Deli candy costs half price', () => {
+    it('Shrinking Glass (ID: 24) - Deli candy costs half price + inventory', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 24);
-      expect(joker?.name).toBe('The Good Old Days');
+      expect(joker?.name).toBe('Shrinking Glass');
       expect(joker?.effects[0].target).toBe('deli_price_discount');
       expect(joker?.effects[0].amount).toBe(0.5);
       expect(joker?.effects[0].conditions?.location).toBe('deli');
@@ -422,6 +422,9 @@ describe('All Jokers - Comprehensive Tests', () => {
 
   describe('Joker Metadata Validation', () => {
     it('should have all required fields for each joker', () => {
+      // Bake Sale (16) and Roman Coin (37) intentionally have empty `effects`
+      // arrays — their money grants are applied imperatively in JokerCard.
+      const IMPERATIVE_ONLY_JOKER_IDS = new Set([16, 37]);
       STANDARDIZED_JOKERS.forEach((joker) => {
         expect(joker.id).toBeDefined();
         expect(joker.name).toBeDefined();
@@ -429,7 +432,9 @@ describe('All Jokers - Comprehensive Tests', () => {
         expect(joker.flavorText).toBeDefined();
         expect(joker.description).toBeDefined();
         expect(joker.effects).toBeDefined();
-        expect(joker.effects.length).toBeGreaterThan(0);
+        if (!IMPERATIVE_ONLY_JOKER_IDS.has(joker.id)) {
+          expect(joker.effects.length).toBeGreaterThan(0);
+        }
       });
     });
 
@@ -483,27 +488,28 @@ describe('All Jokers - Comprehensive Tests', () => {
         'flip_artist_boost',
         'combo_platter_boost',
         'triple_threat_boost',
-        'variety_pack_boost',
-        'first_sale_boost',
+        'variety_pack_profit_boost',
+        'first_sale_profit_boost',
+        'conditional_profit_boost',
+        'cash_under_profit_boost',
         'bulk_sale_boost',
         'cash_under_boost',
         'extra_joker_choice',
         'extra_aura_slot',
-        'sugar_rush_penalty',
         'loan_shark_income',
+        'loan_shark_debt',
         'glass_cannon_boost',
         'contraband_boost',
         'all_in_boost',
-        'hot_potato_penalty',
-        'compound_interest_boost',
-        'reputation_boost',
+        'compound_interest_profit_boost',
+        'reputation_profit_boost',
         'street_smarts_boost',
         'clearance_sale_boost',
         'price_manipulation',
         'found_money_multiplier',
         'event_conversion',
-        'event_early_reveal',
-        'event_positive_chance',
+        'price_peek_hint',
+        'location_change_boost',
         'event_immunity',
         'collector_boost',
         'minimalist_boost',
@@ -511,11 +517,15 @@ describe('All Jokers - Comprehensive Tests', () => {
         'night_owl_boost',
         'tax_collector_boost',
         'last_stand_boost',
-        'momentum_boost',
+        'momentum_profit_boost',
         'diversifier_boost',
-        'peak_hours_boost',
+        'peak_hours_profit_boost',
         'patience_pays_boost',
         'spare_change_income',
+        'prevent_melt',
+        'hoarder_boost',
+        'penny_wise_boost',
+        'survivor_boost',
       ];
 
       STANDARDIZED_JOKERS.forEach((joker) => {
@@ -525,8 +535,8 @@ describe('All Jokers - Comprehensive Tests', () => {
       });
     });
 
-    it('should have exactly 72 jokers', () => {
-      expect(STANDARDIZED_JOKERS.length).toBe(72);
+    it('should have exactly 76 jokers', () => {
+      expect(STANDARDIZED_JOKERS.length).toBe(76);
     });
   });
 });

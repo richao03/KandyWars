@@ -34,6 +34,19 @@ const userObjectSlice = createSlice({
       state.lastSynced = null;
       if (__DEV__) console.log('📦 User object cleared from Redux');
     },
+    incrementSalesAtLocation: (state, action: PayloadAction<string>) => {
+      if (!state.cachedUser) return;
+      const location = action.payload;
+      const current = state.cachedUser.lifetimeSalesByLocation || {};
+      state.cachedUser = {
+        ...state.cachedUser,
+        lifetimeSalesByLocation: {
+          ...current,
+          [location]: (current[location] || 0) + 1,
+        },
+      };
+      state.lastSynced = Date.now();
+    },
   },
 });
 
@@ -41,6 +54,14 @@ export const {
   setCachedUserObject,
   updateCachedUserObject,
   clearCachedUserObject,
+  incrementSalesAtLocation,
 } = userObjectSlice.actions;
+
+// Selectors
+export const selectCachedUser = (state: { userObject: { cachedUser: UserObject | null } }) =>
+  state.userObject.cachedUser;
+export const selectLifetimeSalesAtLocation = (location: string) =>
+  (state: { userObject: { cachedUser: UserObject | null } }) =>
+    state.userObject.cachedUser?.lifetimeSalesByLocation?.[location] ?? 0;
 
 export default userObjectSlice.reducer;

@@ -9,6 +9,8 @@ interface PixelBorderProps {
   style?: ViewStyle;
   innerPadding?: number;
   pixelSize?: number;
+  /** When true, container and content both get flex:1 to fill parent height */
+  fill?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ const PixelBorder: React.FC<PixelBorderProps> = ({
   backgroundColor = 'transparent',
   style = {},
   innerPadding = 8,
+  fill = false,
 }) => {
   const pixelSize = borderWidth;
   const cornerSize = pixelSize * 5; // 5 steps for the corner
@@ -66,8 +69,8 @@ const PixelBorder: React.FC<PixelBorderProps> = ({
   }, [borderColor, pixelSize, cornerSize, backgroundColor, innerPadding]);
 
   return (
-    <View style={[styles.container, style]}>
-      <View style={[styles.content, pixelStyles.content]}>
+    <View style={[styles.container, fill && { flex: 1 }, style]}>
+      <View style={[styles.content, pixelStyles.content, fill && { flex: 1 }]}>
         {children}
       </View>
 

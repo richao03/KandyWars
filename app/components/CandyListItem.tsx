@@ -1,9 +1,12 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import {
+  CANDY_TYPE_LABELS,
+  getCandyDefinition,
+} from '../../src/constants/candyRegistry';
 import colors from '../../src/constants/colors';
-import { formatCurrency } from '../../src/utils/priceUtils';
-import { getCandyDefinition, CANDY_TYPE_LABELS, CANDY_SIZE_LABELS } from '../../src/constants/candyRegistry';
 import type { Candy } from '../../src/types/candy';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 
@@ -11,6 +14,7 @@ export type CandyForMarket = Candy & {
   cost: number;
   quantityOwned: number;
   averagePrice: number | null;
+  freshnessRemaining?: number; // periods left before melting (0-5), undefined = not owned
 };
 
 // Color mapping for candy types
@@ -37,7 +41,12 @@ interface CandyListItemProps {
   index: number;
   localPricesUpdating: boolean;
   onPress: (index: number) => void;
-  onItemLayout?: (layout: { x: number; y: number; width: number; height: number }) => void;
+  onItemLayout?: (layout: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }) => void;
 }
 
 const CandyListItem = React.memo(function CandyListItem({
@@ -53,7 +62,10 @@ const CandyListItem = React.memo(function CandyListItem({
     if (onItemLayout && itemRef.current) {
       requestAnimationFrame(() => {
         itemRef.current?.measureInWindow((x, y, width, height) => {
-          if (__DEV__) console.log(`📖 CandyListItem measured: x=${x}, y=${y}, w=${width}, h=${height}`);
+          if (__DEV__)
+            console.log(
+              `📖 CandyListItem measured: x=${x}, y=${y}, w=${width}, h=${height}`
+            );
           if (width > 0 && height > 0) onItemLayout({ x, y, width, height });
         });
       });
@@ -61,16 +73,49 @@ const CandyListItem = React.memo(function CandyListItem({
   }, [onItemLayout]);
   const candyDef = getCandyDefinition(item.name);
 
+  const MELT_WINDOW = 5;
+  // Freshness dots: only show when player owns this candy
+  const freshnessDots = useMemo(() => {
+    if (item.freshnessRemaining === undefined || item.quantityOwned <= 0)
+      return null;
+    const remaining = item.freshnessRemaining;
+    return (
+      <View style={styles.freshnessRow}>
+        {Array.from({ length: MELT_WINDOW }, (_, i) => {
+          const isFilled = i < remaining;
+          let dotColor = '#4ade80'; // green
+          if (remaining <= 1)
+            dotColor = '#ef4444'; // red
+          else if (remaining <= 2)
+            dotColor = '#f97316'; // orange
+          else if (remaining <= 3) dotColor = '#eab308'; // yellow
+          return (
+            <View
+              key={i}
+              style={[
+                styles.freshnessDot,
+                { backgroundColor: isFilled ? dotColor : '#333' },
+              ]}
+            />
+          );
+        })}
+      </View>
+    );
+  }, [item.freshnessRemaining, item.quantityOwned]);
+
   // Memoize badge JSX — candyDef is static per candy name, never changes
   const badges = useMemo(() => {
     if (!candyDef) return null;
     return (
       <View style={styles.badgeRow}>
-        <View style={[styles.sizeBadge, { backgroundColor: SIZE_COLORS[candyDef.size] || '#9CA3AF' }]}>
-          <Text style={styles.badgeText}>{CANDY_SIZE_LABELS[candyDef.size]}</Text>
-        </View>
         {candyDef.types.map((type) => (
-          <View key={type} style={[styles.typeBadge, { backgroundColor: TYPE_COLORS[type] || '#888' }]}>
+          <View
+            key={type}
+            style={[
+              styles.typeBadge,
+              { backgroundColor: TYPE_COLORS[type] || '#888' },
+            ]}
+          >
             <Text style={styles.badgeText}>{CANDY_TYPE_LABELS[type]}</Text>
           </View>
         ))}
@@ -104,13 +149,23 @@ const CandyListItem = React.memo(function CandyListItem({
                     <Text style={styles.ownedText}>{item.quantityOwned}</Text>
                   </View>
                 )}
+                {freshnessDots}
               </View>
               {badges}
             </View>
             <View style={styles.candyPriceRow}>
               <Text style={styles.price}>
-                {localPricesUpdating ? '$-.--' : `$${formatCurrency(item.cost)}`}
+                {localPricesUpdating
+                  ? '$-.--'
+                  : `$${formatCurrency(item.cost)}`}
               </Text>
+              {/* Teacher's Pet — next-period price direction arrow (no magnitude shown) */}
+              {item.priceHint === 'up' && (
+                <Text style={styles.priceHintUp}>↑</Text>
+              )}
+              {item.priceHint === 'down' && (
+                <Text style={styles.priceHintDown}>↓</Text>
+              )}
             </View>
           </View>
         </PixelBorder>
@@ -188,6 +243,16 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: 'PixeloidMono',
   },
+  freshnessRow: {
+    flexDirection: 'row',
+    gap: 3,
+    marginLeft: 4,
+  },
+  freshnessDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   price: {
     fontSize: 17,
     fontWeight: '700',
@@ -198,6 +263,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ffb3b3',
+    fontFamily: 'PixeloidMono',
+  },
+  priceHintUp: {
+    marginLeft: 6,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#16a34a',
+    fontFamily: 'PixeloidMono',
+  },
+  priceHintDown: {
+    marginLeft: 6,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#dc2626',
     fontFamily: 'PixeloidMono',
   },
 });

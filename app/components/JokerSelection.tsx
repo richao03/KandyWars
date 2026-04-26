@@ -7,60 +7,61 @@ import React, {
 } from 'react';
 import {
   Animated as RNAnimated,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import colors from '../../src/constants/colors';
+import { triggerTieredHaptic } from '../../src/utils/hapticTier';
+import { SparkController } from '../../src/utils/sparkController';
 import { JOKER_IDS, hasJokerById } from '../../src/constants/jokerIds';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { addBalance, selectBalance } from '../../src/store/slices/walletSlice';
+import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
 import {
   STANDARDIZED_JOKERS,
   StandardizedJoker,
   getJokerEffectsAtLevel,
 } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
-import { SoundEffects } from '../../src/utils/soundEffects';
+import { SoundEffects, playCoinCascade } from '../../src/utils/soundEffects';
 import { formatNumber } from '../../src/utils/priceUtils';
 import JokerCard from './JokerCard';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
-import TextWithEmojis from './TextWithEmojis';
+// PressableScale for press-down spring feedback (I3 game-feel) —
+// applied via JokerCard's onPress CardWrapper (PressableScale internally)
 
 const UPGRADE_COSTS: Record<number, number> = {
   1: 5000, // L1 → L2
   2: 30000, // L2 → L3
 };
 
+const LEVEL_COLORS = { 1: '#22c55e', 2: '#3b82f6', 3: '#a855f7' } as const;
+
 interface JokerSelectionProps {
   jokers: StandardizedJoker[];
-  theme:
-    | 'math'
-    | 'computer'
-    | 'homeec'
-    | 'economy'
-    | 'candy'
-    | 'gym'
-    | 'art'
-    | 'logic'
-    | 'recess'
-    | 'geography';
+  /** @deprecated — themes were unified. Prop kept temporarily for caller compatibility; ignored. */
+  theme?: string;
   onComplete: () => void;
   rewardTier?: 1 | 2 | 3;
   completionLevel?: 1 | 2 | 3;
   headerText?: string;
+  /** Hide the Level Up / Sell Joker buttons. Use for lighter-weight reward flows
+   * (e.g. Hallway Hustle) where the user should just pick or continue. Defaults to true. */
+  showSellAndUpgrade?: boolean;
 }
 
 export default function JokerSelection({
   jokers,
-  theme,
+  theme: _theme,
   onComplete,
   rewardTier = 3,
   completionLevel = 3,
   headerText,
+  showSellAndUpgrade = true,
 }: JokerSelectionProps) {
   const [availableJokers, setAvailableJokers] = useState<StandardizedJoker[]>(
     []
@@ -73,6 +74,13 @@ export default function JokerSelection({
   const [showSellModal, setShowSellModal] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const unchoseAnims = useRef<Record<string, RNAnimated.Value>>({}).current;
+  // Per-card animated values for the shatter-sell effect
+  const sellScaleAnims = useRef<Record<string, RNAnimated.Value>>({});
+  const sellOpacityAnims = useRef<Record<string, RNAnimated.Value>>({});
+  // Per-card view refs for measureInWindow (sell modal)
+  const sellCardRefs = useRef<Record<string, View | null>>({});
+  // Cache of measured card positions keyed by joker id
+  const sellCardPositions = useRef<Record<string, { x: number; y: number }>>({});
   const dispatch = useAppDispatch();
   const balance = useAppSelector(selectBalance);
   const {
@@ -89,6 +97,7 @@ export default function JokerSelection({
     getOwnedJokerLevel,
   } = useJokers();
   const hallPassModifiers = useAppSelector((state) => state.hallPassModifiers);
+  const reduceMotion = useAppSelector(selectReduceMotion);
 
   // Play victory music when component mounts
   useEffect(() => {
@@ -287,17 +296,86 @@ export default function JokerSelection({
         return {
           id: j.id,
           name: j.name || standardized?.name || 'Unknown',
-          description: standardized?.description || j.description || '',
+          description: standardized?.description || (j as any).description || '',
           type: j.type,
           level: (j as any).level ?? 1,
         };
       });
   }, [activeJokers, lockedJokerIds]);
 
+  // Lazily create per-card sell animation values
+  const getSellAnim = (id: string | number) => {
+    const key = id.toString();
+    if (!sellScaleAnims.current[key]) {
+      sellScaleAnims.current[key] = new RNAnimated.Value(1);
+    }
+    if (!sellOpacityAnims.current[key]) {
+      sellOpacityAnims.current[key] = new RNAnimated.Value(1);
+    }
+    return {
+      scale: sellScaleAnims.current[key],
+      opacity: sellOpacityAnims.current[key],
+    };
+  };
+
   const handleSellJoker = (jokerId: string | number, level: number = 1) => {
-    removeJoker(jokerId);
-    dispatch(addBalance(getJokerSellPrice(level)));
-    SoundEffects.playRandomPop();
+    const key = jokerId.toString();
+    const { scale, opacity } = getSellAnim(jokerId);
+
+    // Determine burst origin: use measured position or fall back to screen center
+    const screenCenter = {
+      x: Dimensions.get('window').width / 2,
+      y: Dimensions.get('window').height / 2,
+    };
+    const cachedPos = sellCardPositions.current[key];
+    const burstOrigin = cachedPos ?? screenCenter;
+
+    // Fire sound + haptic immediately (visual feedback before state change).
+    // Spark burst is skipped under reduce-motion.
+    playCoinCascade();
+    triggerTieredHaptic(0.5, 'success');
+    if (!reduceMotion) {
+      SparkController.burst({ origin: burstOrigin, tier: 'silver', count: 6 });
+    }
+
+    if (reduceMotion) {
+      // Reduce-motion path: skip shatter, snap-apply state immediately
+      removeJoker(jokerId);
+      dispatch(addBalance(getJokerSellPrice(level)));
+      delete sellCardPositions.current[key];
+      return;
+    }
+
+    // Card scale+fade shatter: 1 → 1.1 → 0 over 250ms
+    const shatterAnim = RNAnimated.parallel([
+      RNAnimated.sequence([
+        RNAnimated.timing(scale, {
+          toValue: 1.1,
+          duration: 80,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(scale, {
+          toValue: 0,
+          duration: 170,
+          useNativeDriver: true,
+        }),
+      ]),
+      RNAnimated.timing(opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    // Start shatter animation, then dispatch state updates
+    shatterAnim.start(() => {
+      removeJoker(jokerId);
+      dispatch(addBalance(getJokerSellPrice(level)));
+      // Reset animation values for potential re-use
+      scale.setValue(1);
+      opacity.setValue(1);
+      delete sellCardPositions.current[key];
+    });
   };
 
   // Build a JokerCard-compatible object from an id + level
@@ -318,142 +396,19 @@ export default function JokerSelection({
     };
   };
 
-  const getThemeStyles = () => {
-    switch (theme) {
-      case 'math':
-        return {
-          container: styles.mathContainer,
-          title: styles.mathTitle,
-          subtitle: styles.mathSubtitle,
-          jokerCard: styles.mathJokerCard,
-          jokerName: styles.mathJokerName,
-          jokerDescription: styles.mathJokerDescription,
-          skipButton: styles.mathSkipButton,
-          skipButtonText: styles.mathSkipButtonText,
-          generateButton: styles.mathGenerateButton,
-          generateButtonText: styles.mathGenerateButtonText,
-        };
-      case 'computer':
-        return {
-          container: styles.computerContainer,
-          title: styles.computerTitle,
-          subtitle: styles.computerSubtitle,
-          jokerCard: styles.computerJokerCard,
-          jokerName: styles.computerJokerName,
-          jokerDescription: styles.computerJokerDescription,
-          skipButton: styles.computerSkipButton,
-          skipButtonText: styles.computerSkipButtonText,
-          generateButton: styles.computerGenerateButton,
-          generateButtonText: styles.computerGenerateButtonText,
-        };
-      case 'homeec':
-        return {
-          container: styles.homeecContainer,
-          title: styles.homeecTitle,
-          subtitle: styles.homeecSubtitle,
-          jokerCard: styles.homeecJokerCard,
-          jokerName: styles.homeecJokerName,
-          jokerDescription: styles.homeecJokerDescription,
-          skipButton: styles.homeecSkipButton,
-          skipButtonText: styles.homeecSkipButtonText,
-          generateButton: styles.homeecGenerateButton,
-          generateButtonText: styles.homeecGenerateButtonText,
-        };
-      case 'economy':
-        return {
-          container: styles.socialContainer,
-          title: styles.socialTitle,
-          subtitle: styles.socialSubtitle,
-          jokerCard: styles.socialJokerCard,
-          jokerName: styles.socialJokerName,
-          jokerDescription: styles.socialJokerDescription,
-          skipButton: styles.socialSkipButton,
-          skipButtonText: styles.socialSkipButtonText,
-          generateButton: styles.socialGenerateButton,
-          generateButtonText: styles.socialGenerateButtonText,
-        };
-      case 'gym':
-        return {
-          container: styles.gymContainer,
-          title: styles.gymTitle,
-          subtitle: styles.gymSubtitle,
-          jokerCard: styles.gymJokerCard,
-          jokerName: styles.gymJokerName,
-          jokerDescription: styles.gymJokerDescription,
-          skipButton: styles.gymSkipButton,
-          skipButtonText: styles.gymSkipButtonText,
-          generateButton: styles.gymGenerateButton,
-          generateButtonText: styles.gymGenerateButtonText,
-        };
-      case 'art':
-        return {
-          container: styles.artContainer,
-          title: styles.artTitle,
-          subtitle: styles.artSubtitle,
-          jokerCard: styles.artJokerCard,
-          jokerName: styles.artJokerName,
-          jokerDescription: styles.artJokerDescription,
-          skipButton: styles.artSkipButton,
-          skipButtonText: styles.artSkipButtonText,
-          generateButton: styles.artGenerateButton,
-          generateButtonText: styles.artGenerateButtonText,
-        };
-      case 'logic':
-        return {
-          container: styles.logicContainer,
-          title: styles.logicTitle,
-          subtitle: styles.logicSubtitle,
-          jokerCard: styles.logicJokerCard,
-          jokerName: styles.logicJokerName,
-          jokerDescription: styles.logicJokerDescription,
-          skipButton: styles.logicSkipButton,
-          skipButtonText: styles.logicSkipButtonText,
-          generateButton: styles.logicGenerateButton,
-          generateButtonText: styles.logicGenerateButtonText,
-        };
-      case 'recess':
-        return {
-          container: styles.recessContainer,
-          title: styles.recessTitle,
-          subtitle: styles.recessSubtitle,
-          jokerCard: styles.recessJokerCard,
-          jokerName: styles.recessJokerName,
-          jokerDescription: styles.recessJokerDescription,
-          skipButton: styles.recessSkipButton,
-          skipButtonText: styles.recessSkipButtonText,
-          generateButton: styles.recessGenerateButton,
-          generateButtonText: styles.recessGenerateButtonText,
-        };
-      case 'geography':
-        return {
-          container: styles.geographyContainer,
-          title: styles.geographyTitle,
-          subtitle: styles.geographySubtitle,
-          jokerCard: styles.geographyJokerCard,
-          jokerName: styles.geographyJokerName,
-          jokerDescription: styles.geographyJokerDescription,
-          skipButton: styles.geographySkipButton,
-          skipButtonText: styles.geographySkipButtonText,
-          generateButton: styles.geographyGenerateButton,
-          generateButtonText: styles.geographyGenerateButtonText,
-        };
-      default:
-        return {
-          container: styles.candyContainer,
-          title: styles.candyTitle,
-          subtitle: styles.candySubtitle,
-          jokerCard: styles.candyJokerCard,
-          jokerName: styles.candyJokerName,
-          jokerDescription: styles.candyJokerDescription,
-          skipButton: styles.candySkipButton,
-          skipButtonText: styles.candySkipButtonText,
-          generateButton: styles.candyGenerateButton,
-          generateButtonText: styles.candyGenerateButtonText,
-        };
-    }
+  // Unified neutral theme — replaces the 10 per-subject themes that previously skinned this screen.
+  const themeStyles = {
+    container: styles.unifiedContainer,
+    title: styles.unifiedTitle,
+    subtitle: styles.unifiedSubtitle,
+    jokerCard: styles.unifiedJokerCard,
+    jokerName: styles.unifiedJokerName,
+    jokerDescription: styles.unifiedJokerDescription,
+    skipButton: styles.unifiedSkipButton,
+    skipButtonText: styles.unifiedSkipButtonText,
+    generateButton: styles.unifiedGenerateButton,
+    generateButtonText: styles.unifiedGenerateButtonText,
   };
-
-  const themeStyles = getThemeStyles();
 
   // Upgrade modal
   if (showUpgradeModal) {
@@ -600,6 +555,7 @@ export default function JokerSelection({
                   style={[
                     styles.confirmEffectText,
                     themeStyles.jokerDescription,
+                    { color: LEVEL_COLORS[upgradeConfirmJoker.currentLevel as 1 | 2 | 3] || '#22c55e' },
                   ]}
                 >
                   {describeEffectsAtLevel(
@@ -620,7 +576,7 @@ export default function JokerSelection({
                 <Text
                   style={[
                     styles.confirmEffectText,
-                    { color: '#10b981', fontWeight: '700' },
+                    { color: LEVEL_COLORS[(upgradeConfirmJoker.currentLevel + 1) as 1 | 2 | 3] || '#a855f7', fontWeight: '700' },
                   ]}
                 >
                   {describeEffectsAtLevel(
@@ -733,25 +689,52 @@ export default function JokerSelection({
             <View style={styles.cardGrid}>
               {sellableJokers.map((joker) => {
                 const cardJoker = toCardJoker(joker.id, joker.level);
+                const { scale: sScale, opacity: sOpacity } = getSellAnim(joker.id);
+                const jokerKey = joker.id.toString();
 
                 return (
-                  <PressableButton
-                    key={joker.id.toString()}
-                    onPress={() => handleSellJoker(joker.id, joker.level)}
-                    shadowOpacity={0}
-                    elevation={0}
-                    style={{ backgroundColor: 'transparent' }}
+                  <RNAnimated.View
+                    key={jokerKey}
+                    style={{ transform: [{ scale: sScale }], opacity: sOpacity }}
+                    ref={(ref) => {
+                      if (ref) {
+                        sellCardRefs.current[jokerKey] = ref as unknown as View;
+                      }
+                    }}
                   >
-                    <View style={styles.cardContainer}>
-                      <JokerCard
-                        joker={cardJoker}
-                        isAfterSchool={false}
-                        isCompact={true}
-                        showOwned={false}
-                        disableActivation={true}
-                      />
-                    </View>
-                  </PressableButton>
+                    <PressableButton
+                      onPress={() => {
+                        // Measure card position before animating
+                        const viewRef = sellCardRefs.current[jokerKey];
+                        if (viewRef && typeof (viewRef as any).measureInWindow === 'function') {
+                          (viewRef as any).measureInWindow(
+                            (x: number, y: number, w: number, h: number) => {
+                              sellCardPositions.current[jokerKey] = {
+                                x: x + w / 2,
+                                y: y + h / 2,
+                              };
+                              handleSellJoker(joker.id, joker.level);
+                            }
+                          );
+                        } else {
+                          handleSellJoker(joker.id, joker.level);
+                        }
+                      }}
+                      shadowOpacity={0}
+                      elevation={0}
+                      style={{ backgroundColor: 'transparent' }}
+                    >
+                      <View style={styles.cardContainer}>
+                        <JokerCard
+                          joker={cardJoker}
+                          isAfterSchool={false}
+                          isCompact={true}
+                          showOwned={false}
+                          disableActivation={true}
+                        />
+                      </View>
+                    </PressableButton>
+                  </RNAnimated.View>
                 );
               })}
             </View>
@@ -836,128 +819,54 @@ export default function JokerSelection({
             </Text>
             {availableJokers.map((joker) => {
               const isOneTime = joker.type === 'one-time';
-              const typeEmoji = isOneTime ? '⚡' : '🔮';
-              const jokerType = isOneTime ? 'instant' : 'aura';
               const isChosen = chosenJokerId === joker.id;
               const isUnchosen = chosenJokerId !== null && !isChosen;
+              const isAuraFull = !isOneTime && !canAddPersistentJoker();
 
               // Hide unchosen jokers after dismiss animation completes
               if (isUnchosen && dismissedOthers) return null;
 
-              const cardContent = (
-                <PixelBorder
-                  borderColor={
-                    isChosen
-                      ? '#10b981'
-                      : themeStyles.jokerCard?.borderColor || '#8fbc8f'
-                  }
-                  borderWidth={3}
-                  backgroundColor={
-                    themeStyles.jokerCard?.backgroundColor || '#1a2f23'
-                  }
-                  innerPadding={16}
-                >
-                  <View style={styles.jokerHeader}>
-                    <Text
-                      style={[
-                        styles.jokerName,
-                        themeStyles.jokerName,
-                        { flex: 1 },
-                      ]}
-                    >
-                      {isChosen ? '✓ ' : ''}
-                      {joker.name}
-                    </Text>
-                    <View
-                      style={[
-                        styles.typeIndicator,
-                        isOneTime
-                          ? styles.instantIndicator
-                          : styles.auraIndicator,
-                      ]}
-                    >
-                      <TextWithEmojis style={styles.typeEmoji}>
-                        {typeEmoji}
-                      </TextWithEmojis>
-                      <Text
-                        style={[
-                          styles.typeText,
-                          isOneTime ? styles.instantText : styles.auraText,
-                        ]}
-                      >
-                        {jokerType.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text
-                    style={[
-                      styles.jokerDescription,
-                      themeStyles.jokerDescription,
-                    ]}
-                  >
-                    {joker.description}
-                  </Text>
-                </PixelBorder>
-              );
+              const cardJoker = toCardJoker(joker.id, 1);
+              const anim = isChosen || isUnchosen ? getAnim(joker.id) : null;
+              const animStyle = isUnchosen
+                ? { opacity: anim, transform: [{ scale: anim! }] }
+                : isChosen
+                  ? { transform: [{ scale: anim! }] }
+                  : undefined;
 
-              // Unchosen jokers animate out
-              if (isUnchosen) {
-                const anim = getAnim(joker.id);
-                return (
-                  <RNAnimated.View
-                    key={joker.id}
-                    style={{
-                      marginBottom: 12,
-                      width: '100%',
-                      opacity: anim,
-                      transform: [{ scale: anim }],
-                    }}
-                  >
-                    {cardContent}
-                  </RNAnimated.View>
-                );
-              }
-
-              // Chosen joker — wobble animation
-              if (isChosen) {
-                const anim = getAnim(joker.id);
-                return (
-                  <RNAnimated.View
-                    key={joker.id}
-                    style={{
-                      marginBottom: 12,
-                      width: '100%',
-                      transform: [{ scale: anim }],
-                    }}
-                  >
-                    {cardContent}
-                  </RNAnimated.View>
-                );
-              }
-
-              // Not yet chosen — tappable (disabled if aura and slots full)
-              const isAuraFull = !isOneTime && !canAddPersistentJoker();
               return (
-                <PressableButton
+                <RNAnimated.View
                   key={joker.id}
-                  onPress={() => handleClaimJoker(joker)}
-                  disabled={chosenJokerId !== null || isAuraFull}
-                  shadowOpacity={0}
-                  elevation={0}
-                  style={{ marginBottom: 12, width: '100%', opacity: isAuraFull ? 0.4 : 1 }}
+                  style={[
+                    { marginBottom: 12, width: '100%' },
+                    animStyle as any,
+                  ]}
                 >
-                  {cardContent}
+                  <JokerCard
+                    joker={cardJoker}
+                    isAfterSchool={false}
+                    isCompact={true}
+                    showOwned={false}
+                    disableActivation={true}
+                    onPress={
+                      chosenJokerId === null && !isAuraFull
+                        ? () => handleClaimJoker(joker)
+                        : undefined
+                    }
+                    isSelected={isChosen}
+                    selectionDisabled={isAuraFull}
+                  />
                   {isAuraFull && (
                     <Text style={styles.auraFullText}>Aura slots full</Text>
                   )}
-                </PressableButton>
+                </RNAnimated.View>
               );
             })}
           </>
         )}
 
         {/* Level Up Joker button — wallet green */}
-        {upgradeableJokers.length > 0 && (
+        {showSellAndUpgrade && upgradeableJokers.length > 0 && (
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
@@ -988,7 +897,7 @@ export default function JokerSelection({
         )}
 
         {/* Sell Joker button — piggy bank red/pink */}
-        {sellableJokers.length > 0 && (
+        {showSellAndUpgrade && sellableJokers.length > 0 && (
           <PressableButton
             onPress={() => {
               SoundEffects.playRandomPop();
@@ -1249,396 +1158,42 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
 
-  // Math Theme (Chalkboard)
-  mathContainer: {
-    backgroundColor: colors.green.darkBg,
+  // Unified theme — matches the Jokers tab visual identity (dark bg, gold accents).
+  unifiedContainer: {
+    backgroundColor: '#1a1a1a',
   },
-  mathTitle: {
-    color: colors.gold.beige,
-    textShadowColor: '#8fbc8f',
+  unifiedTitle: {
+    color: '#d4af37',
+    textShadowColor: '#000',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
-  mathSubtitle: {
-    color: '#8fbc8f',
+  unifiedSubtitle: {
+    color: '#f5e9c4',
   },
-  mathGenerateButton: {
-    backgroundColor: '#1a2f23',
-    borderColor: '#ffff99',
+  unifiedJokerCard: {
+    backgroundColor: '#2a2a2a',
+    borderColor: '#d4af37',
+    shadowColor: '#000',
   },
-  mathGenerateButtonText: {
-    color: colors.gold.beige,
+  unifiedJokerName: {
+    color: '#d4af37',
   },
-  mathJokerCard: {
-    backgroundColor: '#1a2f23',
-    borderColor: '#8fbc8f',
-    shadowColor: '#ffff99',
+  unifiedJokerDescription: {
+    color: '#f5e9c4',
   },
-  mathJokerName: {
-    color: '#ffff99',
+  unifiedSkipButton: {
+    backgroundColor: '#3a2a1a',
+    borderColor: '#d4af37',
   },
-  mathJokerDescription: {
-    color: colors.gold.beige,
+  unifiedSkipButtonText: {
+    color: '#d4af37',
   },
-  mathSkipButton: {
-    backgroundColor: colors.brown.secondary,
-    borderColor: '#daa520',
+  unifiedGenerateButton: {
+    backgroundColor: '#3a2a1a',
+    borderColor: '#d4af37',
   },
-  mathSkipButtonText: {
-    color: colors.gold.beige,
-  },
-
-  // Computer Theme (Hacker)
-  computerContainer: {
-    backgroundColor: '#0a0e1a',
-  },
-  computerTitle: {
-    color: colors.green.neon,
-    textShadowColor: colors.green.neon,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-  },
-  computerSubtitle: {
-    color: colors.blue.cyan,
-  },
-  computerGenerateButton: {
-    backgroundColor: colors.blue.darkBg,
-    borderColor: colors.blue.cyan,
-  },
-  computerGenerateButtonText: {
-    color: colors.blue.cyan,
-  },
-  computerJokerCard: {
-    backgroundColor: colors.blue.darkBg,
-    borderColor: colors.blue.cyan,
-    shadowColor: colors.blue.cyan,
-  },
-  computerJokerName: {
-    color: colors.green.neon,
-  },
-  computerJokerDescription: {
-    color: '#a0a0ff',
-  },
-  computerSkipButton: {
-    backgroundColor: '#2d1b3d',
-    borderColor: '#8b5cf6',
-  },
-  computerSkipButtonText: {
-    color: '#a78bfa',
-  },
-
-  // Home Economics Theme (Kitchen)
-  homeecContainer: {
-    backgroundColor: '#FDF5E6',
-  },
-  homeecTitle: {
-    color: '#D2691E',
-    textShadowColor: '#F4A460',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  homeecSubtitle: {
-    color: colors.brown.secondary,
-  },
-  homeecGenerateButton: {
-    backgroundColor: '#F4A460',
-    borderColor: '#D2691E',
-  },
-  homeecGenerateButtonText: {
-    color: colors.white,
-    textShadowColor: colors.brown.secondary,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  homeecJokerCard: {
-    backgroundColor: colors.white,
-    borderColor: '#F4A460',
-    shadowColor: '#D2691E',
-  },
-  homeecJokerName: {
-    color: '#D2691E',
-  },
-  homeecJokerDescription: {
-    color: colors.brown.secondary,
-  },
-  homeecSkipButton: {
-    backgroundColor: '#E9ECEF',
-    borderColor: colors.gray.border,
-  },
-  homeecSkipButtonText: {
-    color: colors.gray.medium,
-  },
-
-  // Social Studies Theme (Trading Post)
-  socialContainer: {
-    backgroundColor: colors.gold.beige,
-  },
-  socialTitle: {
-    color: colors.brown.secondary,
-    textShadowColor: '#DEB887',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 3,
-  },
-  socialSubtitle: {
-    color: '#A0522D',
-  },
-  socialGenerateButton: {
-    backgroundColor: '#DEB887',
-    borderColor: '#CD853F',
-  },
-  socialGenerateButtonText: {
-    color: colors.brown.secondary,
-  },
-  socialJokerCard: {
-    backgroundColor: colors.white,
-    borderColor: '#DEB887',
-    shadowColor: colors.brown.secondary,
-  },
-  socialJokerName: {
-    color: colors.brown.secondary,
-  },
-  socialJokerDescription: {
-    color: '#A0522D',
-  },
-  socialSkipButton: {
-    backgroundColor: '#FFE4B5',
-    borderColor: '#DEB887',
-  },
-  socialSkipButtonText: {
-    color: colors.brown.secondary,
-  },
-
-  // Candy Theme (Default)
-  candyContainer: {
-    backgroundColor: '#fdf2f8',
-  },
-  candyTitle: {
-    color: '#be185d',
-    textShadowColor: '#f9a8d4',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  candySubtitle: {
-    color: colors.purple.hotPink,
-  },
-  candyGenerateButton: {
-    backgroundColor: '#f9a8d4',
-    borderColor: colors.purple.hotPink,
-  },
-  candyGenerateButtonText: {
-    color: '#be185d',
-  },
-  candyJokerCard: {
-    backgroundColor: colors.white,
-    borderColor: '#f9a8d4',
-    shadowColor: colors.purple.hotPink,
-  },
-  candyJokerName: {
-    color: '#be185d',
-  },
-  candyJokerDescription: {
-    color: colors.purple.hotPink,
-  },
-  candySkipButton: {
-    backgroundColor: '#f3e8ff',
-    borderColor: '#c084fc',
-  },
-  candySkipButtonText: {
-    color: '#a855f7',
-  },
-
-  // Gym Theme (Athletic)
-  gymContainer: {
-    backgroundColor: '#1a2332',
-  },
-  gymTitle: {
-    color: colors.white,
-    textShadowColor: colors.orange.primary,
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  gymSubtitle: {
-    color: colors.white,
-  },
-  gymGenerateButton: {
-    backgroundColor: colors.green.darkBg,
-    borderColor: colors.orange.primary,
-  },
-  gymGenerateButtonText: {
-    color: colors.white,
-  },
-  gymJokerCard: {
-    backgroundColor: '#0f1419',
-    borderColor: colors.orange.primary,
-    shadowColor: colors.orange.primary,
-  },
-  gymJokerName: {
-    color: colors.orange.primary,
-  },
-  gymJokerDescription: {
-    color: colors.white,
-  },
-  gymSkipButton: {
-    backgroundColor: colors.brown.secondary,
-    borderColor: '#daa520',
-  },
-  gymSkipButtonText: {
-    color: colors.white,
-  },
-
-  // Art Theme (Creative/Colorful)
-  artContainer: {
-    backgroundColor: '#fff8e1',
-  },
-  artTitle: {
-    color: '#ff6f00',
-    textShadowColor: '#ffb74d',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  artSubtitle: {
-    color: '#f57c00',
-  },
-  artGenerateButton: {
-    backgroundColor: '#ffcc80',
-    borderColor: '#ff9800',
-  },
-  artGenerateButtonText: {
-    color: '#e65100',
-  },
-  artJokerCard: {
-    backgroundColor: '#fff3e0',
-    borderColor: '#ffb74d',
-    shadowColor: '#ff9800',
-  },
-  artJokerName: {
-    color: '#f57c00',
-  },
-  artJokerDescription: {
-    color: '#ff6f00',
-  },
-  artSkipButton: {
-    backgroundColor: '#ffe0b2',
-    borderColor: '#ffb74d',
-  },
-  artSkipButtonText: {
-    color: '#e65100',
-  },
-
-  // Logic Theme (Puzzle/Brain)
-  logicContainer: {
-    backgroundColor: '#f3e5f5',
-  },
-  logicTitle: {
-    color: '#6a1b9a',
-    textShadowColor: '#ab47bc',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  logicSubtitle: {
-    color: '#8e24aa',
-  },
-  logicGenerateButton: {
-    backgroundColor: '#ce93d8',
-    borderColor: '#ab47bc',
-  },
-  logicGenerateButtonText: {
-    color: '#4a148c',
-  },
-  logicJokerCard: {
-    backgroundColor: '#fce4ec',
-    borderColor: '#ba68c8',
-    shadowColor: '#9c27b0',
-  },
-  logicJokerName: {
-    color: '#7b1fa2',
-  },
-  logicJokerDescription: {
-    color: '#8e24aa',
-  },
-  logicSkipButton: {
-    backgroundColor: '#e1bee7',
-    borderColor: '#ba68c8',
-  },
-  logicSkipButtonText: {
-    color: '#6a1b9a',
-  },
-
-  // Recess Theme (Playful/Fun)
-  recessContainer: {
-    backgroundColor: '#fff0f5',
-  },
-  recessTitle: {
-    color: '#c2185b',
-    textShadowColor: '#f06292',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  recessSubtitle: {
-    color: '#d81b60',
-  },
-  recessGenerateButton: {
-    backgroundColor: '#f8bbd0',
-    borderColor: '#ec407a',
-  },
-  recessGenerateButtonText: {
-    color: '#880e4f',
-  },
-  recessJokerCard: {
-    backgroundColor: '#fce4ec',
-    borderColor: '#f06292',
-    shadowColor: '#ec407a',
-  },
-  recessJokerName: {
-    color: '#c2185b',
-  },
-  recessJokerDescription: {
-    color: '#d81b60',
-  },
-  recessSkipButton: {
-    backgroundColor: '#f8bbd0',
-    borderColor: '#f06292',
-  },
-  recessSkipButtonText: {
-    color: '#ad1457',
-  },
-
-  // Geography Theme (Earth/Nature)
-  geographyContainer: {
-    backgroundColor: '#e0f2f1',
-  },
-  geographyTitle: {
-    color: '#00695c',
-    textShadowColor: '#4db6ac',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  geographySubtitle: {
-    color: '#00897b',
-  },
-  geographyGenerateButton: {
-    backgroundColor: '#80cbc4',
-    borderColor: '#26a69a',
-  },
-  geographyGenerateButtonText: {
-    color: '#004d40',
-  },
-  geographyJokerCard: {
-    backgroundColor: '#e0f2f1',
-    borderColor: '#4db6ac',
-    shadowColor: '#26a69a',
-  },
-  geographyJokerName: {
-    color: '#00796b',
-  },
-  geographyJokerDescription: {
-    color: '#00897b',
-  },
-  geographySkipButton: {
-    backgroundColor: '#b2dfdb',
-    borderColor: '#4db6ac',
-  },
-  geographySkipButtonText: {
-    color: '#00695c',
+  unifiedGenerateButtonText: {
+    color: '#d4af37',
   },
 });

@@ -95,7 +95,7 @@ export default function NamePromptModal({
       modalStyle={styles.modalContainer}
     >
       <>
-        <Text style={styles.subtitle}>What's your name?</Text>
+        <Text style={styles.subtitle}>What&apos;s your name?</Text>
 
         <TextInput
           style={[styles.textInput, validationError && styles.textInputError]}

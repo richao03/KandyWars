@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import ReAnimated, {
   Easing,
+  cancelAnimation,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
@@ -98,6 +99,11 @@ const AnimatedMoneyCounter = ({
       animatedValue.value = startValue;
       setDisplayText(`${prefix}${formatCurrency(startValue)}`);
     }
+    // Cancel any in-flight animation on unmount so the worklet doesn't keep
+    // running after the parent EventModal swaps events.
+    return () => {
+      cancelAnimation(animatedValue);
+    };
   }, [isActive, startValue, endValue, duration]);
 
   useAnimatedReaction(
@@ -206,9 +212,10 @@ const EventModal = React.memo(function EventModal() {
       if (currentEvent.category === 'bad') {
         // Trigger warning haptic feedback and negative sound for negative events
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setTimeout(() => {
+        const negSoundTimeout = setTimeout(() => {
           SoundEffects.playNegativeSound();
         }, 300);
+        animationTimeouts.current.push(negSoundTimeout);
 
         // For BAD events: Immediate appearance with shake
         fadeAnim.value = 1;
@@ -239,9 +246,10 @@ const EventModal = React.memo(function EventModal() {
           // For other bad events, enforce 1 second minimum display time
           setCanDismiss(false);
           setShowMoneyLoss(false);
-          setTimeout(() => {
+          const dismissTimeout = setTimeout(() => {
             setCanDismiss(true);
           }, 1000);
+          animationTimeouts.current.push(dismissTimeout);
         }
 
         // Shake animation for 0.5 seconds (runs on UI thread via Reanimated)
@@ -304,6 +312,12 @@ const EventModal = React.memo(function EventModal() {
       // Clear any running animation timeouts
       animationTimeouts.current.forEach((timeout) => clearTimeout(timeout));
       animationTimeouts.current = [];
+      // Cancel running UI-thread animations so completion callbacks don't fire
+      // against stale state on the next event (worklet -> runOnJS leak).
+      cancelAnimation(moneyValue);
+      cancelAnimation(shakeAnim);
+      cancelAnimation(fadeAnim);
+      cancelAnimation(scaleAnim);
     };
   }, [currentEvent]);
 
@@ -335,12 +349,13 @@ const EventModal = React.memo(function EventModal() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     // Auto-dismiss after a short delay
-    setTimeout(() => {
+    const detentionTimeout = setTimeout(() => {
       setShowDetentionDiscovery(false);
       setDetentionChoices([]);
       setDetentionChosen(false);
       dismissEvent();
     }, 1200);
+    animationTimeouts.current.push(detentionTimeout);
   }, [detentionChosen, addJoker, canAddPersistentJoker, dismissEvent]);
 
   const handleDismissCleanup = useCallback(() => {
@@ -359,16 +374,17 @@ const EventModal = React.memo(function EventModal() {
     // the useCallback closure may hold an outdated currentEvent.
     const event = currentEventRef.current;
 
-    // Check for Detention Discovery joker drop before fully dismissing
-    console.log('🎲 DETENTION CHECK:', {
-      hasEvent: !!event,
-      effect: event?.effect,
-      hasJokerDrop: event?.hasJokerDrop,
-      choicesCount: event?.detentionJokerChoices?.length ?? 0,
-    });
+    if (__DEV__) {
+      console.log('🎲 DETENTION CHECK:', {
+        hasEvent: !!event,
+        effect: event?.effect,
+        hasJokerDrop: event?.hasJokerDrop,
+        choicesCount: event?.detentionJokerChoices?.length ?? 0,
+      });
+    }
 
     if (event?.hasJokerDrop && event?.detentionJokerChoices?.length > 0) {
-      console.log('🎲 DETENTION: Showing joker selection!', event.detentionJokerChoices.map((j: any) => j.name));
+      if (__DEV__) console.log('🎲 DETENTION: Showing joker selection!', event.detentionJokerChoices.map((j: any) => j.name));
       setDetentionChoices(event.detentionJokerChoices);
       setShowDetentionDiscovery(true);
       setDetentionChosen(false);
@@ -388,13 +404,13 @@ const EventModal = React.memo(function EventModal() {
       return;
     }
 
-    // Fade out and scale down before dismissing
-    fadeAnim.value = withTiming(0, { duration: 300 }, (finished) => {
-      if (finished) {
-        runOnJS(handleDismissCleanup)();
-      }
-    });
+    // Fade out and scale down before dismissing.
+    // RE4-safe: invoke cleanup via JS-side timeout instead of withTiming
+    // callback (UI-thread worklet callback crashes when calling non-worklet
+    // functions like the JS-side cleanup).
+    fadeAnim.value = withTiming(0, { duration: 300 });
     scaleAnim.value = withTiming(0.8, { duration: 300 });
+    setTimeout(handleDismissCleanup, 300);
   }, [canDismiss, handleDismissCleanup]);
 
   const overlayAnimatedStyle = useAnimatedStyle(() => ({
@@ -409,9 +425,9 @@ const EventModal = React.memo(function EventModal() {
   }));
 
   // Show Detention Discovery joker selection overlay
-  console.log('🎲 DETENTION RENDER CHECK:', { showDetentionDiscovery, choicesLength: detentionChoices.length, currentEventExists: !!currentEvent });
+  if (__DEV__) console.log('🎲 DETENTION RENDER CHECK:', { showDetentionDiscovery, choicesLength: detentionChoices.length, currentEventExists: !!currentEvent });
   if (showDetentionDiscovery && detentionChoices.length > 0) {
-    console.log('🎲 DETENTION: Rendering joker selection UI!');
+    if (__DEV__) console.log('🎲 DETENTION: Rendering joker selection UI!');
     return (
       <View
         style={[styles.modalOverlay, { opacity: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)' }]}
@@ -440,35 +456,26 @@ const EventModal = React.memo(function EventModal() {
                 style={{ maxHeight: 400 }}
                 contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
               >
-                {detentionChoices.map((joker) => {
-                  const effects = getJokerEffectsAtLevel(joker, 1);
-                  const isChosen = detentionChosen;
-                  return (
-                    <TouchableOpacity
-                      key={joker.id.toString()}
-                      onPress={() => handleDetentionClaim(joker)}
-                      disabled={detentionChosen}
-                      activeOpacity={0.7}
-                    >
-                      <PixelBorder
-                        borderColor={isChosen ? '#22c55e' : '#d4af37'}
-                        borderWidth={3}
-                        backgroundColor="rgba(0, 30, 15, 0.8)"
-                        innerPadding={12}
-                      >
-                        <Text style={styles.detentionJokerName}>
-                          {joker.name}
-                        </Text>
-                        <Text style={styles.detentionJokerDesc}>
-                          {joker.description}
-                        </Text>
-                        <Text style={styles.detentionJokerType}>
-                          {joker.type === 'one-time' ? 'Instant' : 'Aura (Persistent)'}
-                        </Text>
-                      </PixelBorder>
-                    </TouchableOpacity>
-                  );
-                })}
+                {detentionChoices.map((joker) => (
+                  <JokerCard
+                    key={joker.id.toString()}
+                    joker={{
+                      id: Number(joker.id),
+                      name: joker.name,
+                      type: joker.type === 'one-time' ? 'one-time' : 'persistent',
+                      flavorText: (joker as any).flavorText || '',
+                      description: joker.description,
+                    }}
+                    isAfterSchool={false}
+                    isCompact={true}
+                    showOwned={false}
+                    disableActivation={true}
+                    onPress={
+                      detentionChosen ? undefined : () => handleDetentionClaim(joker)
+                    }
+                    selectionDisabled={detentionChosen}
+                  />
+                ))}
               </ScrollView>
 
               {detentionChosen && (

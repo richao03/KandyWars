@@ -10,18 +10,31 @@ import {
   View,
 } from 'react-native';
 
+import { CANDY_NAMES } from '../../src/constants/candyRegistry';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
-import { CANDY_NAMES, CANDY_REGISTRY } from '../../src/constants/candyRegistry';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
-import { STANDARDIZED_JOKERS, getJokerDescription } from '../../src/utils/jokerEffectEngine';
+import { useAppSelector } from '../../src/store/hooks';
+import { useCandySales } from '../../src/hooks/useCandySales';
+import { selectJokerStats } from '../../src/store/slices/jokerStatsSlice';
+import { triggerTieredHaptic } from '../../src/utils/hapticTier';
+import {
+  STANDARDIZED_JOKERS,
+  getJokerDescription,
+  getLiveJokerValueText,
+} from '../../src/utils/jokerEffectEngine';
+import { JuiceController } from '../../src/utils/juiceController';
 import { formatCurrency } from '../../src/utils/priceUtils';
+import { playJokerChip } from '../../src/utils/soundEffects';
+import { SparkController } from '../../src/utils/sparkController';
+import { getWalletPositionOrDefault } from '../../src/utils/walletPositionStore';
+import { JOKER_ICON_MAP } from '../../utils/jokerIcons';
 import ConfirmationModal from './ConfirmationModal';
-import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
+import PressableScale from './PressableScale';
 import TextWithEmojis from './TextWithEmojis';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -45,6 +58,14 @@ interface JokerCardProps {
   debugMode?: boolean;
   /** Number of covered candy types (for Combo Platter / Triple Threat synergy badge) */
   coveredTypeCount?: number;
+  /** Reward/selection mode: tap-to-select callback (paired with disableActivation). */
+  onPress?: () => void;
+  /** Reward/selection mode: render with green border to indicate this card is the chosen one. */
+  isSelected?: boolean;
+  /** Reward/selection mode: dim the card and ignore taps (e.g. aura slots full). */
+  selectionDisabled?: boolean;
+  /** Override the inner card container style (e.g. to remove minHeight, set aspectRatio). */
+  containerStyle?: any;
   onShowConfirmation?: (
     title: string,
     message: string,
@@ -70,6 +91,10 @@ function JokerCard({
   disableActivation = false,
   debugMode = false,
   coveredTypeCount,
+  onPress,
+  isSelected = false,
+  selectionDisabled = false,
+  containerStyle,
   onShowConfirmation,
   onShowCandySelector,
   onTriggerEvent,
@@ -178,6 +203,41 @@ function JokerCard({
   // Prevent multiple rapid activations
   const isActivating = useRef(false);
 
+  // Ref to outer card wrapper for measuring position (used for money arc to wallet HUD)
+  const cardContainerRef = useRef<View>(null);
+
+  /**
+   * Fire the standard activation feedback sequence (haptic + sound + gold flash).
+   * When `moneyGranted` is provided, also fire a gold arc from the card to the
+   * wallet HUD in the top-right corner of the screen.
+   *
+   * Call this at the moment a USE activation is COMMITTED (post-confirmation),
+   * never on the initial tap or on cancellation.
+   */
+  const fireActivationFeedback = useCallback((moneyGranted?: number) => {
+    triggerTieredHaptic(0.9, 'success');
+    playJokerChip(0);
+    JuiceController.flash({
+      color: '#FFD700',
+      maxOpacity: 0.35,
+      duration: 280,
+    });
+
+    if (moneyGranted && moneyGranted > 0 && cardContainerRef.current) {
+      // Wallet HUD center position — set by GameHUD on layout.
+      // Falls back to approximate top-left HUD position if unmeasured.
+      const target = getWalletPositionOrDefault(SCREEN_WIDTH);
+      cardContainerRef.current.measureInWindow((x, y, width, height) => {
+        SparkController.arc({
+          from: { x: x + width / 2, y: y + height / 2 },
+          to: target,
+          tier: 'gold',
+          symbol: `+$${moneyGranted}`,
+        });
+      });
+    }
+  }, []);
+
   const handleActivate = useCallback(() => {
     // For copied jokers, use originalId for activation checks
     const activationId = (joker as any).originalId || joker.id;
@@ -203,10 +263,11 @@ function JokerCard({
     }
 
     if (isActivating.current) {
-      if (__DEV__) console.log(
-        '🃏 Activation already in progress, ignoring duplicate call for:',
-        joker.name
-      );
+      if (__DEV__)
+        console.log(
+          '🃏 Activation already in progress, ignoring duplicate call for:',
+          joker.name
+        );
       return;
     }
 
@@ -220,7 +281,14 @@ function JokerCard({
       joker.type === 'one-time' &&
       usedTodayJokerIds.includes(activationId.toString())
     ) {
-      if (__DEV__) console.log('🚫 Joker already used today:', joker.name, 'ID:', joker.id);
+      if (__DEV__)
+        console.log(
+          '🚫 Joker already used today:',
+          joker.name,
+          'ID:',
+          joker.id
+        );
+      triggerTieredHaptic(0, 'warning');
       showAlert(
         'Already Used',
         'This instant joker has already been used today. It will be available again tomorrow!',
@@ -233,12 +301,13 @@ function JokerCard({
       console.log('✅ Joker NOT in used list, proceeding with activation');
     }
     isActivating.current = true;
-    if (__DEV__) console.log(
-      '🃏 handleActivate called for joker:',
-      joker.name,
-      'ID:',
-      joker.id
-    );
+    if (__DEV__)
+      console.log(
+        '🃏 handleActivate called for joker:',
+        joker.name,
+        'ID:',
+        joker.id
+      );
 
     // Reset the flag after a short delay
     setTimeout(() => {
@@ -283,7 +352,7 @@ function JokerCard({
       // Show confirmation for Bake Sale
       showConfirm(
         'Bake Sale',
-        'Cash rules everything around me! Instantly gain $3000?',
+        'Cash Rules Everything Around Me! Instantly gain $3000?',
         '🧁',
         () => handleBakeSale(),
         'Collect Money!',
@@ -292,14 +361,16 @@ function JokerCard({
       );
     } else {
       // Log unhandled instant joker activation
-      if (__DEV__) console.warn(
-        '⚠️ Unhandled instant joker activation:',
-        joker.name,
-        'ID:',
-        joker.id,
-        'Effect:',
-        joker.effect
-      );
+      if (__DEV__)
+        console.warn(
+          '⚠️ Unhandled instant joker activation:',
+          joker.name,
+          'ID:',
+          joker.id,
+          'Effect:',
+          joker.effect
+        );
+      triggerTieredHaptic(0, 'warning');
       showAlert(
         'Not Implemented',
         `The activation for "${joker.name}" is not yet implemented.`,
@@ -354,9 +425,10 @@ function JokerCard({
     // Get current target candy price for conversion
     const targetPrice =
       gameData.candyPrices[targetCandyType]?.[periodCount] || 0;
-    if (__DEV__) console.log(
-      `Master of Trade: Target price for ${targetCandyType}: ${targetPrice}`
-    );
+    if (__DEV__)
+      console.log(
+        `Master of Trade: Target price for ${targetCandyType}: ${targetPrice}`
+      );
 
     // Use the dedicated convertCandyType function (bypasses inventory limits for 1:1 conversion)
     const conversionSuccess = convertCandyType(
@@ -371,9 +443,10 @@ function JokerCard({
       return;
     }
 
-    if (__DEV__) console.log(
-      `Master of Trade: Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`
-    );
+    if (__DEV__)
+      console.log(
+        `Master of Trade: Successfully converted ${sourceInventoryItem.quantity} ${selectedSourceCandy} to ${targetCandyType}`
+      );
 
     showAlert(
       'Trade Completed!',
@@ -407,22 +480,27 @@ function JokerCard({
 
     try {
       // Mark the joker as used today FIRST to prevent double-activation
-      if (__DEV__) console.log(
-        '🪙 Roman Coin: Marking joker as used, ID:',
-        joker.id,
-        'Type:',
-        typeof joker.id
-      );
+      if (__DEV__)
+        console.log(
+          '🪙 Roman Coin: Marking joker as used, ID:',
+          joker.id,
+          'Type:',
+          typeof joker.id
+        );
       // Use originalId for copies so all copies share the same "used" status
       const activationId = (joker as any).originalId || joker.id;
       markJokerUsedToday(activationId.toString());
-      if (__DEV__) console.log(
-        '🪙 Roman Coin: markJokerUsedToday called, waiting for state update...'
-      );
+      if (__DEV__)
+        console.log(
+          '🪙 Roman Coin: markJokerUsedToday called, waiting for state update...'
+        );
 
       // Add $200 to wallet
       if (__DEV__) console.log('🪙 Roman Coin: Adding $2000 to wallet');
       addMoney(2000);
+
+      // Fire activation feedback (commit point) — money-granting, so arc flies to wallet HUD
+      fireActivationFeedback(2000);
 
       if (__DEV__) console.log('🪙 Roman Coin: Showing success alert');
       showAlert(
@@ -465,6 +543,9 @@ function JokerCard({
         console.log('🗣️ Pursuasion: Effect activated for period', periodCount);
       }
 
+      // Fire activation feedback (commit point) — no direct money grant, so no arc
+      fireActivationFeedback();
+
       // Show alert AFTER marking joker as used
       showAlert(
         'Pursuasion Activated!',
@@ -491,9 +572,12 @@ function JokerCard({
       addMoney(3000);
       if (__DEV__) console.log('🧁 Bake Sale: Added $3000 to wallet');
 
+      // Fire activation feedback (commit point) — money-granting, so arc flies to wallet HUD
+      fireActivationFeedback(3000);
+
       showAlert(
         'Bake Sale Success!',
-        'You collected $3000 from your bake sale! Cash rules everything around me!',
+        'You collected $3000 from your bake sale! Cash Rules Everything Around Me!',
         '🧁'
       );
     } catch (error) {
@@ -502,18 +586,43 @@ function JokerCard({
     }
   };
 
+  const jokerLevel = (joker as any).level ?? 1;
+  const LEVEL_COLORS = { 1: '#22c55e', 2: '#3b82f6', 3: '#a855f7' } as const;
+  const levelColor = LEVEL_COLORS[jokerLevel as 1 | 2 | 3] || LEVEL_COLORS[1];
+  const standardizedJoker = STANDARDIZED_JOKERS.find(
+    (sj) => sj.id === joker.id
+  );
+  const maxLevel = standardizedJoker?.maxLevel ?? 1;
+  const isLevelable = maxLevel > 1;
+
+  // Live "(currently +30%)" text for variable jokers (Trade Routes,
+  // Compound Interest, Reputation, Street Smarts, Clearance Sale, Momentum,
+  // Hoarder, Penny Wise, Survivor) — null for non-variable jokers or
+  // zero-counter state. Momentum's counter lives in candySalesSlice so it's
+  // sourced via useCandySales().
+  const jokerStats = useAppSelector(selectJokerStats);
+  const { consecutivePeriodSales } = useCandySales();
+  const liveValueText = getLiveJokerValueText(joker.id, jokerLevel, {
+    jokerStats,
+    consecutivePeriodSales: consecutivePeriodSales(),
+  });
+
   const typeColor = joker.type === 'persistent' ? '#0071E3' : '#dc2626';
   const typeEmoji = joker.type === 'persistent' ? '🔮' : '⚡';
-  const typeText = joker.type === 'persistent'
-    ? 'Aura'
-    : usedTodayJokerIds.includes(joker.id.toString())
-      ? 'Used'
-      : 'Instant';
-  const flavorText = joker.flavorText
-    || STANDARDIZED_JOKERS.find((sj) => sj.id === joker.id)?.flavorText
-    || 'Mysterious power awaits...';
+  const typeText =
+    joker.type === 'persistent'
+      ? 'Aura'
+      : usedTodayJokerIds.includes(joker.id.toString())
+        ? 'Used'
+        : 'Instant';
+  const flavorText =
+    joker.flavorText ||
+    STANDARDIZED_JOKERS.find((sj) => sj.id === joker.id)?.flavorText ||
+    'Mysterious power awaits...';
 
-  const CardWrapper = onLongPress || debugMode ? TouchableOpacity : View;
+  // PressableScale for press-down spring feedback (I3 game-feel)
+  const CardWrapper =
+    onLongPress || debugMode || onPress ? PressableScale : View;
 
   const handleDebugAdd = useCallback(() => {
     if (debugMode && !showOwned) {
@@ -529,11 +638,17 @@ function JokerCard({
     }
   }, [debugMode, showOwned, joker, addJoker, onShowConfirmation]);
 
-  const cardWrapperProps = onLongPress
-    ? { onLongPress, activeOpacity: 0.8 }
-    : debugMode
-      ? { onPress: handleDebugAdd, activeOpacity: 0.8 }
-      : {};
+  const cardWrapperProps = onPress
+    ? {
+        onPress: selectionDisabled ? undefined : onPress,
+        activeOpacity: selectionDisabled ? 1 : 0.8,
+        disabled: selectionDisabled,
+      }
+    : onLongPress
+      ? { onLongPress, activeOpacity: 0.8 }
+      : debugMode
+        ? { onPress: handleDebugAdd, activeOpacity: 0.8 }
+        : {};
 
   // Check if this instant joker has been used today
   const isUsedToday =
@@ -542,85 +657,169 @@ function JokerCard({
 
   return (
     <>
-      <PixelBorder borderColor="#d4af37" borderWidth={3} innerPadding={0}>
-        <CardWrapper style={styles.cardContainer} {...cardWrapperProps}>
-          {/* Header Section */}
-          <View style={styles.headerSection}>
-            <Text style={styles.jokerName}>{joker.name}</Text>
-            {(() => {
-              const standardized = STANDARDIZED_JOKERS.find(sj => sj.id === joker.id);
-              const maxLevel = standardized?.maxLevel ?? 1;
-              const jokerLevel = (joker as any).level ?? 1;
-              if (maxLevel > 1) {
-                return (
+      <View ref={cardContainerRef} collapsable={false}>
+        <PixelBorder
+          borderColor={isSelected ? '#10b981' : '#d4af37'}
+          borderWidth={3}
+          innerPadding={0}
+        >
+          <CardWrapper
+            style={[
+              styles.cardContainer,
+              selectionDisabled && { opacity: 0.4 },
+              containerStyle,
+            ]}
+            {...cardWrapperProps}
+          >
+            {/* Background icon */}
+            {JOKER_ICON_MAP[joker.name] && (
+              <Image
+                source={JOKER_ICON_MAP[joker.name]}
+                style={styles.backgroundIcon}
+                resizeMode="contain"
+              />
+            )}
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <>
+                <Text style={styles.jokerName}>{joker.name}</Text>
+                {(isLevelable && (
                   <View style={styles.levelBadgeContainer}>
-                    {[1, 2, 3].map(i => (
+                    {[1, 2, 3].map((i) => (
                       <View
                         key={i}
                         style={[
                           styles.levelDot,
-                          i <= jokerLevel ? styles.levelDotFilled : styles.levelDotEmpty,
+                          i <= jokerLevel
+                            ? {
+                                backgroundColor: LEVEL_COLORS[i as 1 | 2 | 3],
+                                shadowColor: LEVEL_COLORS[i as 1 | 2 | 3],
+                                shadowOffset: { width: 0, height: 0 },
+                                shadowOpacity: 0.8,
+                                shadowRadius: 3,
+                              }
+                            : styles.levelDotEmpty,
                         ]}
                       />
                     ))}
                   </View>
+                )) ||
+                  (showOwned && <View style={styles.ownedIndicator} />)}
+              </>
+            </View>
+
+            {/* Type Badge and Play Card Row */}
+            <View style={styles.badgeRow}>
+              <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
+                <TextWithEmojis style={styles.typeText} imageSize={12}>
+                  {`${typeEmoji} ${typeText}`}
+                </TextWithEmojis>
+              </View>
+
+              {joker.type === 'one-time' &&
+                !disableActivation &&
+                !isAfterSchool &&
+                !isUsedToday && (
+                  // PressableScale for press-down spring feedback (I3 game-feel)
+                  <PressableScale
+                    style={styles.useButton}
+                    onPress={handleActivate}
+                  >
+                    <Text style={styles.useButtonText}>USE</Text>
+                  </PressableScale>
+                )}
+            </View>
+
+            {/* Main Content */}
+            <View style={styles.contentSection}>
+              {(() => {
+                const desc = (
+                  getJokerDescription(joker.id, jokerLevel) || joker.description
+                ).replace(/^\[(?:xMult|\+Profit)\]\s*/, '');
+                const liveSuffix = liveValueText ? ` (${liveValueText})` : '';
+                if (!isLevelable) {
+                  return (
+                    <Text style={styles.jokerDescription}>
+                      {desc}
+                      {liveSuffix}
+                    </Text>
+                  );
+                }
+                // Color only the leading numeric value (e.g., "+0.5", "3x", "$5k", "50%")
+                const match = desc.match(/^([+\-$]?\d+\.?\d*[xk%]?)/);
+                if (!match) {
+                  return (
+                    <Text style={styles.jokerDescription}>
+                      {desc}
+                      {liveSuffix}
+                    </Text>
+                  );
+                }
+                return (
+                  <Text style={styles.jokerDescription}>
+                    <Text style={{ color: levelColor, fontWeight: '700' }}>
+                      {match[1]}
+                    </Text>
+                    {desc.slice(match[1].length)}
+                    {liveSuffix}
+                  </Text>
                 );
-              }
-              return null;
-            })()}
-            {showOwned && <View style={styles.ownedIndicator} />}
-          </View>
-
-          {/* Type Badge and Play Card Row */}
-          <View style={styles.badgeRow}>
-            <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-              <TextWithEmojis style={styles.typeText} imageSize={12}>
-                {`${typeEmoji} ${typeText}`}
-              </TextWithEmojis>
+              })()}
             </View>
 
-            {joker.type === 'one-time' &&
-              !disableActivation &&
-              !isAfterSchool &&
-              !isUsedToday && (
-                <TouchableOpacity
-                  style={styles.useButton}
-                  onPress={handleActivate}
+            {/* Synergy Badge for Combo Platter / Triple Threat */}
+            {coveredTypeCount !== undefined &&
+              joker.id === JOKER_IDS.COMBO_PLATTER && (
+                <View
+                  style={[
+                    styles.synergyBadge,
+                    coveredTypeCount >= 2
+                      ? styles.synergyReady
+                      : styles.synergyPending,
+                  ]}
                 >
-                  <Text style={styles.useButtonText}>USE</Text>
-                </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.synergyText,
+                      coveredTypeCount >= 2 && styles.synergyTextReady,
+                    ]}
+                  >
+                    {coveredTypeCount >= 2
+                      ? `${coveredTypeCount}/2 types \u2713`
+                      : `${coveredTypeCount}/2 types needed`}
+                  </Text>
+                </View>
               )}
-          </View>
+            {coveredTypeCount !== undefined &&
+              joker.id === JOKER_IDS.TRIPLE_THREAT && (
+                <View
+                  style={[
+                    styles.synergyBadge,
+                    coveredTypeCount >= 3
+                      ? styles.synergyReady
+                      : styles.synergyPending,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.synergyText,
+                      coveredTypeCount >= 3 && styles.synergyTextReady,
+                    ]}
+                  >
+                    {coveredTypeCount >= 3
+                      ? `${coveredTypeCount}/3 types \u2713`
+                      : `${coveredTypeCount}/3 types needed`}
+                  </Text>
+                </View>
+              )}
 
-          {/* Main Content */}
-          <View style={styles.contentSection}>
-            <Text style={styles.jokerDescription}>
-              {getJokerDescription(joker.id, (joker as any).level ?? 1) || joker.description}
-            </Text>
-          </View>
-
-          {/* Synergy Badge for Combo Platter / Triple Threat */}
-          {coveredTypeCount !== undefined && joker.id === JOKER_IDS.COMBO_PLATTER && (
-            <View style={[styles.synergyBadge, coveredTypeCount >= 2 ? styles.synergyReady : styles.synergyPending]}>
-              <Text style={[styles.synergyText, coveredTypeCount >= 2 && styles.synergyTextReady]}>
-                {coveredTypeCount >= 2 ? `${coveredTypeCount}/2 types \u2713` : `${coveredTypeCount}/2 types needed`}
-              </Text>
+            {/* Footer Section */}
+            <View style={styles.footerSection}>
+              <Text style={styles.jokerFlavorText}>{flavorText}</Text>
             </View>
-          )}
-          {coveredTypeCount !== undefined && joker.id === JOKER_IDS.TRIPLE_THREAT && (
-            <View style={[styles.synergyBadge, coveredTypeCount >= 3 ? styles.synergyReady : styles.synergyPending]}>
-              <Text style={[styles.synergyText, coveredTypeCount >= 3 && styles.synergyTextReady]}>
-                {coveredTypeCount >= 3 ? `${coveredTypeCount}/3 types \u2713` : `${coveredTypeCount}/3 types needed`}
-              </Text>
-            </View>
-          )}
-
-          {/* Footer Section */}
-          <View style={styles.footerSection}>
-            <Text style={styles.jokerFlavorText}>{flavorText}</Text>
-          </View>
-        </CardWrapper>
-      </PixelBorder>
+          </CardWrapper>
+        </PixelBorder>
+      </View>
 
       {/* Candy Conversion Step 1: Select Source Modal */}
       <Modal
@@ -796,6 +995,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minHeight: 160,
     justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  backgroundIcon: {
+    position: 'absolute',
+    right: -10,
+    bottom: -10,
+    width: 120,
+    height: 120,
+    opacity: 0.25,
   },
   headerSection: {
     flexDirection: 'row',
@@ -843,13 +1051,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  levelDotFilled: {
-    backgroundColor: '#fbbf24',
-    shadowColor: '#fbbf24',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 3,
-  },
+  // levelDotFilled colors now inlined per level (green/blue/purple)
   levelDotEmpty: {
     backgroundColor: '#555',
     opacity: 0.4,

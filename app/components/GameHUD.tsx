@@ -1,6 +1,6 @@
 import { Marquee } from '@animatereactnative/marquee';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -10,9 +10,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
-import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
-import { useWallet } from '../../src/hooks/useWallet';
+import { useAppSelector } from '../../src/store/hooks';
+import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
+import { selectBalance, selectStashedAmount } from '../../src/store/slices/walletSlice';
+import { selectDay, selectPeriod, selectCurrentLocation } from '../../src/store/slices/gameSlice';
+import { SparkController } from '../../src/utils/sparkController';
+import { triggerTieredHaptic } from '../../src/utils/hapticTier';
+import { setWalletPosition } from '../../src/utils/walletPositionStore';
 import { EMOJI_IMAGES, EMOJI_TO_IMAGE_MAP } from '../../utils/eventImages';
 import PixelBorder from './PixelBorder';
 import StatusIndicators from './StatusIndicators';
@@ -116,10 +121,27 @@ function GameHUD({
   onWalletLayout,
   onPiggyBankLayout,
 }: GameHUDProps) {
-  const { balance, stashedAmount } = useWallet();
-  const { day, period, currentLocation } = useGame();
+  // Direct atomic selectors instead of fat useWallet/useGame hooks — each of those
+  // pulls ~10+ redux subscriptions that would force GameHUD to re-render on unrelated
+  // wallet/game state changes. Narrow reads keep GameHUD rerenders tied to what it actually displays.
+  const balance = useAppSelector(selectBalance);
+  const stashedAmount = useAppSelector(selectStashedAmount);
+  const day = useAppSelector(selectDay);
+  const period = useAppSelector(selectPeriod);
+  const currentLocation = useAppSelector(selectCurrentLocation);
   const { getTotalInventoryCount, getInventoryLimit } = useInventory();
   const { text, isHint, eventType } = useFlavorText();
+
+  // reduceMotion gate for arc/punch/flash
+  const reduceMotion = useAppSelector(selectReduceMotion);
+
+  // Scale-punch shared value for wallet HUD
+  const walletScalePunch = useSharedValue(1);
+  // Gold flash opacity for wallet border
+  const walletGoldFlash = useSharedValue(0);
+
+  // Wallet HUD screen position for arc target
+  const walletHudPosition = useRef<{ x: number; y: number } | null>(null);
 
   // Animation state for money change indicator
   const [moneyChange, setMoneyChange] = useState<number | null>(null);
@@ -144,12 +166,18 @@ function GameHUD({
   const piggyBankRef = useRef<View>(null);
 
   const handleWalletLayout = useCallback(() => {
-    if (onWalletLayout && walletRef.current) {
+    if (walletRef.current) {
       // Delay measurement to ensure layout is finalized
       requestAnimationFrame(() => {
         walletRef.current?.measureInWindow((x, y, width, height) => {
           if (__DEV__) console.log(`📖 Wallet measured: x=${x}, y=${y}, w=${width}, h=${height}`);
-          if (width > 0 && height > 0) onWalletLayout({ x, y, width, height });
+          if (width > 0 && height > 0) {
+            // Cache center of wallet HUD for arc target
+            const center = { x: x + width / 2, y: y + height / 2 };
+            walletHudPosition.current = center;
+            setWalletPosition(center);
+            if (onWalletLayout) onWalletLayout({ x, y, width, height });
+          }
         });
       });
     }
@@ -210,10 +238,13 @@ function GameHUD({
       opacity.value = withSequence(
         withTiming(1, { duration: 200 }),
         withTiming(1, { duration: 1000 }),
-        withTiming(0, { duration: 300 }, () => {
-          runOnJS(setMoneyChange)(null);
-        })
+        withTiming(0, { duration: 300 })
       );
+      // Clear the indicator after the opacity fade completes. Using a plain
+      // setTimeout avoids the withTiming callback form, which under
+      // Reanimated 4 runs as a UI-thread worklet and was crashing the app
+      // (SIGABRT in worklets::AnimationFrameBatchinator::flush).
+      setTimeout(() => setMoneyChange(null), 1500);
 
       scale.value = withSequence(
         withSpring(1.2, { damping: 12, stiffness: 200 }),
@@ -230,6 +261,29 @@ function GameHUD({
         withTiming(-4, { duration: 50 }),
         withTiming(0, { duration: 50 })
       );
+
+      // Balance increase: fire arc receipt + scale-punch + gold flash
+      if (change > 0 && !reduceMotion) {
+        // Scale-punch: 1.0 → 1.1 → 1.0 spring, ~200ms
+        walletScalePunch.value = withSequence(
+          withSpring(1.1, { damping: 12, stiffness: 500, mass: 0.5 }),
+          withSpring(1.0, { damping: 15, stiffness: 300, mass: 0.5 })
+        );
+
+        // Gold border flash: 300ms opacity pulse
+        walletGoldFlash.value = withSequence(
+          withTiming(1, { duration: 80 }),
+          withTiming(0.6, { duration: 120 }),
+          withTiming(0, { duration: 100 })
+        );
+
+        // Haptic feedback for money received
+        triggerTieredHaptic(0.5, 'success');
+
+        // (Removed: spark arc from screen-mid → wallet HUD. The modal already
+        //  has its own scoring cascade + cash-register; the extra "+$XX flying
+        //  to the wallet pill" felt redundant.)
+      }
     }
 
     previousBalance.current = balance;
@@ -263,10 +317,9 @@ function GameHUD({
       stashedOpacity.value = withSequence(
         withTiming(1, { duration: 200 }),
         withTiming(1, { duration: 1000 }),
-        withTiming(0, { duration: 300 }, () => {
-          runOnJS(setStashedChange)(null);
-        })
+        withTiming(0, { duration: 300 })
       );
+      setTimeout(() => setStashedChange(null), 1500);
 
       stashedScale.value = withSequence(
         withSpring(1.2, { damping: 12, stiffness: 200 }),
@@ -297,6 +350,16 @@ function GameHUD({
   // Animated style for wallet shake
   const animatedWalletStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
+  }));
+
+  // Animated style for wallet scale-punch
+  const animatedWalletScalePunch = useAnimatedStyle(() => ({
+    transform: [{ scale: walletScalePunch.value }],
+  }));
+
+  // Animated style for gold flash border overlay
+  const animatedGoldFlash = useAnimatedStyle(() => ({
+    opacity: walletGoldFlash.value,
   }));
 
   // Animated style for stashed change indicator
@@ -427,19 +490,25 @@ function GameHUD({
         <Animated.View
           style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}
         >
+          <Animated.View style={animatedWalletScalePunch}>
           <View ref={walletRef} onLayout={handleWalletLayout} collapsable={false}>
           <PixelBorder
             borderColor="#4a7c4a"
             borderWidth={3}
             backgroundColor="#d4f6d4"
             innerPadding={0}
-            style={{ overflow: 'visible' }}
+            style={styles.overflowVisible}
           >
             <View style={[styles.statBox, styles.cashBox]}>
               <Text style={statTitleStyle}>Wallet</Text>
               <Text style={styles.cashAmount}>
                 ${formatCurrency(balance || 0)}
               </Text>
+              {/* Gold flash border overlay on balance increase */}
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.goldFlashOverlay, animatedGoldFlash]}
+              />
 
               {/* Animated money change indicator */}
               {moneyChange !== null && (
@@ -463,6 +532,7 @@ function GameHUD({
             </View>
           </PixelBorder>
           </View>
+          </Animated.View>
         </Animated.View>
 
         <Animated.View style={[{ flex: 1 }, animatedPiggyBankStyle]}>
@@ -472,7 +542,7 @@ function GameHUD({
             borderWidth={3}
             backgroundColor="#ffd6e8"
             innerPadding={0}
-            style={{ overflow: 'visible' }}
+            style={styles.overflowVisible}
           >
             <View style={[styles.statBox, styles.piggyBox]}>
               <Text style={statTitleStyle}>Piggy Bank</Text>
@@ -504,13 +574,13 @@ function GameHUD({
           </View>
         </Animated.View>
 
-        <View style={{ flex: 1 }}>
+        <View style={styles.flex1}>
           <PixelBorder
             borderColor="#5c7cb8"
             borderWidth={3}
             backgroundColor="#d6e8ff"
             innerPadding={0}
-            style={{ flex: 1 }}
+            style={styles.flex1}
           >
             {inventoryWrapper ? (
               inventoryWrapper(
@@ -607,6 +677,8 @@ function GameHUD({
 export default React.memo(GameHUD);
 
 const styles = StyleSheet.create({
+  overflowVisible: { overflow: 'visible' },
+  flex1: { flex: 1 },
   container: {
     backgroundColor: 'rgba(254, 247, 227, 0.6)', // Warm cream paper background
     paddingHorizontal: 16,
@@ -799,5 +871,13 @@ const styles = StyleSheet.create({
   moneyLoss: {
     color: '#dc2626',
     textShadowColor: '#dc2626',
+  },
+  goldFlashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    pointerEvents: 'none',
   },
 });

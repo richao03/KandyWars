@@ -1030,7 +1030,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="recess"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -1169,7 +1168,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         leftInfo={`Stage ${stage}/3`}
         centerInfo={`Losses:${losses}/4`}
         rightInfo={`Wins:${wins}/3 `}
-        theme="recess"
       />
 
       {/* Game Area */}
@@ -1197,7 +1195,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           showComputerPreview &&
           computerChoice && (
             <View style={styles.previewContainer}>
-              <Text style={styles.previewTitle}>Computer's Choice!</Text>
+              <Text style={styles.previewTitle}>Computer&apos;s Choice!</Text>
               <View style={styles.previewGestureContainer}>
                 <Image
                   source={GESTURE_IMAGES[computerChoice]}

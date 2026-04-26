@@ -8,11 +8,13 @@ import {
   Image,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
@@ -35,6 +37,18 @@ import {
   clearCachedUserObject,
   updateCachedUserObject,
 } from '../../src/store/slices/userObjectSlice';
+import {
+  setSoundVolume,
+  setMusicVolume,
+  selectSoundVolume,
+  selectMusicVolume,
+} from '../../src/store/slices/settingsSlice';
+import {
+  toggleReduceMotion,
+  selectReduceMotion,
+} from '../../src/store/slices/juiceSettingsSlice';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import { MusicController } from '../../src/utils/musicController';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
@@ -51,6 +65,9 @@ function Settings() {
   const { resetPlaythrough } = useDailyStats();
   const dispatch = useAppDispatch();
   const cachedUser = useAppSelector((state) => state.userObject.cachedUser);
+  const soundVolume = useAppSelector(selectSoundVolume);
+  const musicVolume = useAppSelector(selectMusicVolume);
+  const reduceMotion = useAppSelector(selectReduceMotion);
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
@@ -523,6 +540,85 @@ function Settings() {
         </PixelBorder>
 
         <PixelBorder
+          borderColor="#b088f9"
+          borderWidth={4}
+          backgroundColor="#d9c4ff"
+          innerPadding={24}
+          style={styles.sectionWrapper}
+        >
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🔊 Audio</Text>
+
+            <View style={styles.volumeRow}>
+              <Text style={styles.volumeLabel}>Music</Text>
+              <Slider
+                style={styles.volumeSlider}
+                minimumValue={0}
+                maximumValue={1}
+                step={0.05}
+                value={musicVolume}
+                onValueChange={(val: number) => {
+                  dispatch(setMusicVolume(val));
+                  MusicController.setVolume(val);
+                }}
+                minimumTrackTintColor="#b088f9"
+                maximumTrackTintColor="#ccc"
+                thumbTintColor="#7c3aed"
+              />
+              <Text style={styles.volumeValue}>{Math.round(musicVolume * 100)}%</Text>
+            </View>
+
+            <View style={styles.volumeRow}>
+              <Text style={styles.volumeLabel}>SFX</Text>
+              <Slider
+                style={styles.volumeSlider}
+                minimumValue={0}
+                maximumValue={1}
+                step={0.05}
+                value={soundVolume}
+                onValueChange={(val: number) => {
+                  dispatch(setSoundVolume(val));
+                  SoundEffects.setVolume(val);
+                }}
+                minimumTrackTintColor="#b088f9"
+                maximumTrackTintColor="#ccc"
+                thumbTintColor="#7c3aed"
+              />
+              <Text style={styles.volumeValue}>{Math.round(soundVolume * 100)}%</Text>
+            </View>
+          </View>
+        </PixelBorder>
+
+        <PixelBorder
+          borderColor="#80d4f0"
+          borderWidth={4}
+          backgroundColor="#c2ecfa"
+          innerPadding={24}
+          style={styles.sectionWrapper}
+        >
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>♿ Accessibility</Text>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTextContainer}>
+                <Text style={styles.toggleLabel}>Reduce Motion</Text>
+                <Text style={styles.toggleDescription}>
+                  Simpler animations and flashes
+                </Text>
+              </View>
+              <Switch
+                value={reduceMotion}
+                onValueChange={(_val: boolean) => {
+                  dispatch(toggleReduceMotion());
+                }}
+                trackColor={{ false: '#ccc', true: '#80d4f0' }}
+                thumbColor={reduceMotion ? '#0099cc' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+        </PixelBorder>
+
+        <PixelBorder
           borderColor="#ff85c0"
           borderWidth={4}
           backgroundColor="#ffb3d9"
@@ -753,6 +849,20 @@ function Settings() {
                   <Text style={styles.debugButtonText}>🎮 Minigame Picker</Text>
                 </TouchableOpacity>
               </PixelBorder>
+              <View style={{ height: 8 }} />
+              <PixelBorder
+                borderColor="#a855f7"
+                borderWidth={3}
+                backgroundColor="#f3e8ff"
+                innerPadding={0}
+              >
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={() => router.push('/debug-tier-preview' as any)}
+                >
+                  <Text style={styles.debugButtonText}>🎨 Sale Tier Preview</Text>
+                </TouchableOpacity>
+              </PixelBorder>
             </View>
           </PixelBorder>
         )}
@@ -818,6 +928,31 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 0.6)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  volumeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  volumeLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4a2080',
+    fontFamily: 'PixeloidMono',
+    width: 50,
+  },
+  volumeSlider: {
+    flex: 1,
+    height: 40,
+    marginHorizontal: 8,
+  },
+  volumeValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4a2080',
+    fontFamily: 'PixeloidMono',
+    width: 40,
+    textAlign: 'right',
   },
   buttonWrapper: {
     marginBottom: 10,
@@ -971,6 +1106,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  toggleTextContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#005f80',
+    fontFamily: 'PixeloidMono',
+    marginBottom: 2,
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: '#3a6b7a',
+    fontFamily: 'PixeloidMono',
+    fontStyle: 'italic',
   },
   debugButton: {
     paddingVertical: 12,

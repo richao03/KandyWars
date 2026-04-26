@@ -359,20 +359,6 @@ export default function StoryScreen() {
 
   const storyLines = getStoryLines(dogBreed, formatNumber(adoptionFee));
 
-  // Early return if story data is invalid
-  if (!storyLines || storyLines.length === 0) {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#000000" />
-        <View style={styles.textContainer}>
-          <Text style={styles.storyText}>
-            Error: No story available. Please restart the game.
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
@@ -703,6 +689,20 @@ export default function StoryScreen() {
     transform: [{ scale: glowScale.value }],
     opacity: glowOpacity.value,
   }));
+
+  // Early return if story data is invalid (after all hooks to preserve hook order)
+  if (!storyLines || storyLines.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <View style={styles.textContainer}>
+          <Text style={styles.storyText}>
+            Error: No story available. Please restart the game.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   // Render styled text with colors
   const renderStyledText = () => {

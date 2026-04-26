@@ -59,7 +59,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
   });
 
   describe('Rare Rarity Hall Passes', () => {
-    it('Junior Genius - +1000% allowance (Win with $100k+ profit)', () => {
+    it('Junior Genius - All jokers start at Level 2 (Win with $100k+ profit)', () => {
       const store = createStoreWithEffects({
         hallPasses: ['junior_genius'],
         period: 0,
@@ -71,20 +71,13 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       expect(pass?.name).toBe('Junior Genius');
       expect(pass?.rarity).toBe('magical');
       expect(pass?.unlockRequirement).toBe('Win the game with $100,000+ profit');
-      expect(pass?.effects[0].type).toBe('allowance_bonus');
-      expect(pass?.effects[0].value).toBe(1000);
-
-      // Test effect application
-      const baseAllowance = 50;
-      const hallPassEffects = selectSelectedHallPassEffects(store.getState());
-      const finalAllowance = HallPassUtils.applyAllowanceBonus(baseAllowance, hallPassEffects);
-
-      expect(finalAllowance).toBe(550); // 50 * (1 + 1000/100) = 50 * 11
+      expect(pass?.effects[0].type).toBe('special');
+      expect(pass?.effects[0].value).toBe(2);
     });
   });
 
   describe('Epic Rarity Hall Passes', () => {
-    it('Senior Executive - +15% sale + +10 inventory (Win 5 times)', () => {
+    it('Senior Executive - Start with $2000 (Win 5 times)', () => {
       const store = createStoreWithEffects({
         hallPasses: ['senior_executive'],
         period: 0,
@@ -95,24 +88,9 @@ describe('All Hall Passes - Comprehensive Tests', () => {
 
       expect(pass?.name).toBe('Senior Executive');
       expect(pass?.rarity).toBe('rare');
-      expect(pass?.effects).toHaveLength(2);
-
-      const saleEffect = pass?.effects.find((e) => e.type === 'sale_price_bonus');
-      const inventoryEffect = pass?.effects.find((e) => e.type === 'inventory_bonus');
-
-      expect(saleEffect?.value).toBe(15);
-      expect(inventoryEffect?.value).toBe(10);
-
-      // Test both effects
-      const hallPassEffects = selectSelectedHallPassEffects(store.getState());
-
-      const basePrice = 100;
-      const finalPrice = HallPassUtils.applySalePriceBonus(basePrice, hallPassEffects);
-      expect(finalPrice).toBe(115);
-
-      const baseInventory = 20;
-      const finalInventory = HallPassUtils.applyInventoryBonus(baseInventory, hallPassEffects);
-      expect(finalInventory).toBe(30);
+      expect(pass?.effects).toHaveLength(1);
+      expect(pass?.effects[0].type).toBe('special');
+      expect(pass?.effects[0].value).toBe(2000);
     });
 
     it('Valedictorian Vendor - +1 joker selection (Play all minigames)', () => {
@@ -351,17 +329,17 @@ describe('All Hall Passes - Comprehensive Tests', () => {
 
     it('should combine different effect types', () => {
       const store = createStoreWithEffects({
-        hallPasses: ['senior_executive'], // +15% sale + +10 inventory
+        hallPasses: ['candy_kingpin'], // +25% sale + +100% allowance
       });
 
       const hallPassEffects = selectSelectedHallPassEffects(store.getState());
       expect(hallPassEffects.length).toBe(2);
 
       const saleEffect = hallPassEffects.find((e) => e.type === 'sale_price_bonus');
-      const inventoryEffect = hallPassEffects.find((e) => e.type === 'inventory_bonus');
+      const allowanceEffect = hallPassEffects.find((e) => e.type === 'allowance_bonus');
 
       expect(saleEffect).toBeDefined();
-      expect(inventoryEffect).toBeDefined();
+      expect(allowanceEffect).toBeDefined();
     });
   });
 
@@ -502,7 +480,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const allPasses = selectAllHallPasses(store.getState());
 
       console.log(`Total hall passes: ${allPasses.length}`);
-      expect(allPasses.length).toBe(17); // Exactly 17 hall passes
+      expect(allPasses.length).toBe(18); // Exactly 18 hall passes
     });
 
     it('should have proper rarity distribution', () => {

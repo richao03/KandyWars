@@ -4,6 +4,12 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useWallet } from '../src/hooks/useWallet';
+import { selectDay } from '../src/store/slices/gameSlice';
+import {
+  addJoker,
+  selectJokers,
+  upgradeJoker,
+} from '../src/store/slices/jokerSlice';
 import {
   consumeEffect,
   generateDailyJoker,
@@ -19,14 +25,14 @@ import {
   selectOwnedLevel,
   selectPurchaseCount,
 } from '../src/store/slices/merchantSlice';
-import { addJoker, upgradeJoker, selectJokers } from '../src/store/slices/jokerSlice';
 import { STANDARDIZED_JOKERS } from '../src/utils/jokerEffectEngine';
-import { selectDay } from '../src/store/slices/gameSlice';
 import { formatNumber } from '../src/utils/priceUtils';
 import FastModal from './components/FastModal';
 import GameHUD from './components/GameHUD';
+import JokerCard from './components/JokerCard';
 import PixelBorder from './components/PixelBorder';
 import PressableButton from './components/PressableButton';
+import PressableScale from './components/PressableScale';
 
 // Lazy load the StashMoneyModal
 const StashMoneyModal = lazy(() => import('./components/StashMoneyModal'));
@@ -118,18 +124,23 @@ const MerchantItemButton = React.memo(function MerchantItemButton({
   const shouldShowActivation = hasActiveEffect;
 
   return (
-    <PressableButton
+    // PressableScale for press-down spring feedback (I3 game-feel)
+    <PressableScale
       onPress={() =>
         isDroneActivation
           ? onActivate(itemId)
           : onPress(itemId, price, canPurchase, ownedLevel)
       }
+      style={styles.itemButtonWrapper}
+    >
+    <PressableButton
+      onPress={undefined}
       shadowColor={itemColor.border}
       shadowOffset={{ width: 0, height: 4 }}
       shadowOpacity={0.5}
       shadowRadius={6}
       elevation={8}
-      style={styles.itemButtonWrapper}
+      style={{ flex: 1 }}
     >
       <View style={styles.itemContainer}>
         <Image source={MERCHANT_ICONS[itemId]} style={styles.itemIcon} />
@@ -172,6 +183,7 @@ const MerchantItemButton = React.memo(function MerchantItemButton({
         </View>
       </View>
     </PressableButton>
+    </PressableScale>
   );
 });
 
@@ -339,7 +351,12 @@ const ItemInfoModal = React.memo(function ItemInfoModal({
 const DailyJokerSection = React.memo(function DailyJokerSection({
   onPurchase,
 }: {
-  onPurchase: (jokerId: number, jokerName: string, price: number, ownedLevel: number) => void;
+  onPurchase: (
+    jokerId: number,
+    jokerName: string,
+    price: number,
+    ownedLevel: number
+  ) => void;
 }) {
   const dailyJoker = useSelector(selectDailyJoker);
   const jokers = useSelector(selectJokers);
@@ -361,7 +378,7 @@ const DailyJokerSection = React.memo(function DailyJokerSection({
 
   if (ownedLevel === 0) {
     price = 5000;
-    badgeText = 'NEW';
+    badgeText = '';
     badgeColor = '#22c55e';
   } else if (ownedLevel === 1) {
     price = 5000;
@@ -381,65 +398,75 @@ const DailyJokerSection = React.memo(function DailyJokerSection({
   const canAfford = balance >= price;
   const canBuy = canAfford && !isMaxed && !dailyJoker.purchased;
 
+  // Build a JokerCard-compatible joker from the standardized definition.
+  const standardized = STANDARDIZED_JOKERS.find(
+    (sj) => sj.id.toString() === dailyJoker.jokerId.toString()
+  );
+  const cardJoker = standardized
+    ? {
+        id: Number(standardized.id),
+        name: standardized.name,
+        type: (standardized.type === 'one-time' ? 'one-time' : 'persistent') as
+          | 'one-time'
+          | 'persistent',
+        flavorText: standardized.flavorText || '',
+        description: standardized.description,
+      }
+    : {
+        id: Number(dailyJoker.jokerId),
+        name: dailyJoker.jokerName,
+        type: 'persistent' as const,
+        flavorText: '',
+        description: dailyJoker.jokerDescription,
+      };
+
   return (
     <View style={styles.dailyJokerContainer}>
-      <Text style={styles.dailyJokerTitle}>Joker of the Day</Text>
-      <PressableButton
-        onPress={() => {
-          if (canBuy) {
-            onPurchase(dailyJoker.jokerId, dailyJoker.jokerName, price, ownedLevel);
+      <View style={styles.dailyJokerTitleRow}>
+        <Text style={styles.dailyJokerTitle}>Joker of the Day</Text>
+        {!isMaxed && !dailyJoker.purchased && (
+          <Text
+            style={[
+              styles.dailyJokerInlinePrice,
+              !canAfford && styles.cannotAffordPrice,
+            ]}
+          >
+            ${formatNumber(price)}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.dailyJokerCardWrapper}>
+        {/* PressableScale for press-down spring feedback (I3 game-feel) — via JokerCard onPress CardWrapper */}
+        <JokerCard
+          joker={cardJoker}
+          isAfterSchool={true}
+          isCompact={true}
+          disableActivation={true}
+          onPress={
+            canBuy
+              ? () =>
+                  onPurchase(
+                    dailyJoker.jokerId,
+                    dailyJoker.jokerName,
+                    price,
+                    ownedLevel
+                  )
+              : undefined
           }
-        }}
-        disabled={!canBuy}
-        shadowColor="#faad14"
-        shadowOffset={{ width: 0, height: 4 }}
-        shadowOpacity={0.5}
-        shadowRadius={6}
-        elevation={8}
-        style={styles.dailyJokerButtonWrapper}
-      >
-        <PixelBorder
-          borderColor={dailyJoker.purchased ? '#666' : '#faad14'}
-          borderWidth={3}
-          backgroundColor={dailyJoker.purchased ? '#333' : '#3a2a1a'}
-          innerPadding={0}
-        >
-          <View style={styles.dailyJokerContent}>
-            <View style={styles.dailyJokerHeader}>
-              <Text style={styles.dailyJokerName}>{dailyJoker.jokerName}</Text>
-              <View
-                style={[
-                  styles.dailyJokerBadge,
-                  { backgroundColor: dailyJoker.purchased ? '#666' : badgeColor },
-                ]}
-              >
-                <Text style={styles.dailyJokerBadgeText}>
-                  {dailyJoker.purchased ? 'SOLD' : badgeText}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.dailyJokerDescription} numberOfLines={2}>
-              {dailyJoker.jokerDescription}
-            </Text>
-            <View style={styles.dailyJokerFooter}>
-              {dailyJoker.purchased ? (
-                <Text style={styles.dailyJokerSoldText}>Purchased</Text>
-              ) : isMaxed ? (
-                <Text style={styles.dailyJokerMaxText}>Already at max level</Text>
-              ) : (
-                <Text
-                  style={[
-                    styles.dailyJokerPrice,
-                    !canAfford && styles.cannotAffordPrice,
-                  ]}
-                >
-                  ${formatNumber(price)}
-                </Text>
-              )}
-            </View>
+          selectionDisabled={!canBuy}
+          containerStyle={styles.dailyJokerSquareContainer}
+        />
+        {dailyJoker.purchased && (
+          <View style={styles.dailyJokerSoldOverlay}>
+            <Text style={styles.dailyJokerSoldOverlayText}>SOLD</Text>
           </View>
-        </PixelBorder>
-      </PressableButton>
+        )}
+      </View>
+
+      {isMaxed && !dailyJoker.purchased && (
+        <Text style={styles.dailyJokerMaxText}>Already at max level</Text>
+      )}
     </View>
   );
 });
@@ -506,7 +533,8 @@ export default function MerchantShopPage() {
 
   const handleActivateDrone = useCallback((itemId: MerchantItemType) => {
     if (itemId === 'air_delivery_drone') {
-      if (__DEV__) console.log('✈️ Activating Air Delivery Drone - opening stash modal');
+      if (__DEV__)
+        console.log('✈️ Activating Air Delivery Drone - opening stash modal');
       setStashMoneyModalVisible(true);
     }
   }, []);
@@ -520,9 +548,7 @@ export default function MerchantShopPage() {
 
       if (ownedLevel === 0) {
         // New joker - find it from STANDARDIZED_JOKERS and add it
-        const standardJoker = STANDARDIZED_JOKERS.find(
-          (j) => j.id === jokerId
-        );
+        const standardJoker = STANDARDIZED_JOKERS.find((j) => j.id === jokerId);
         if (standardJoker) {
           dispatch(
             addJoker({
@@ -603,7 +629,8 @@ export default function MerchantShopPage() {
   const handleMoneyStashed = useCallback(() => {
     // Consume the Air Delivery Drone after using it
     dispatch(consumeEffect({ itemId: 'air_delivery_drone' }));
-    if (__DEV__) console.log('✈️ Air Delivery Drone consumed after depositing money');
+    if (__DEV__)
+      console.log('✈️ Air Delivery Drone consumed after depositing money');
     setStashMoneyModalVisible(false);
   }, [dispatch]);
 
@@ -617,9 +644,6 @@ export default function MerchantShopPage() {
           customLocationText="Shhhh..."
           onInventoryPress={() => setInventoryModalVisible(true)}
         />
-        <View style={styles.header}>
-          <Text style={styles.subtitle}>{randomSubtitle}</Text>
-        </View>
 
         <DailyJokerSection onPurchase={handleDailyJokerPurchase} />
 
@@ -712,9 +736,10 @@ export default function MerchantShopPage() {
             visible={stashMoneyModalVisible}
             onClose={() => {
               // If user backs out without depositing, don't consume the drone
-              if (__DEV__) console.log(
-                '✈️ User backed out of drone deposit - not consuming drone'
-              );
+              if (__DEV__)
+                console.log(
+                  '✈️ User backed out of drone deposit - not consuming drone'
+                );
               setStashMoneyModalVisible(false);
             }}
             onConfirm={handleMoneyStashed}
@@ -930,44 +955,74 @@ const styles = StyleSheet.create({
   },
   // Daily Joker styles
   dailyJokerContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 8,
+    paddingHorizontal: 10,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  dailyJokerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 6,
+    marginTop: 6,
   },
   dailyJokerTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#FFD700',
     fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-    marginBottom: 6,
     textShadowColor: '#000',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  dailyJokerButtonWrapper: {
-    width: '100%',
+  dailyJokerInlinePrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4ade80',
+    fontFamily: 'PixeloidMono',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  dailyJokerContent: {
-    padding: 12,
-  },
-  dailyJokerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  dailyJokerCardWrapper: {
+    position: 'relative',
+    width: 180,
+    height: 130,
     marginBottom: 4,
   },
-  dailyJokerName: {
-    fontSize: 16,
+  dailyJokerSquareContainer: {
+    minHeight: undefined,
+    height: '100%',
+    padding: 6,
+  },
+  dailyJokerSoldOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  dailyJokerSoldOverlayText: {
+    color: '#fff',
+    fontSize: 28,
     fontWeight: '700',
-    color: '#FFD700',
     fontFamily: 'PixeloidMono',
-    flex: 1,
+    letterSpacing: 4,
+  },
+  dailyJokerBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 6,
   },
   dailyJokerBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
-    marginLeft: 8,
   },
   dailyJokerBadgeText: {
     fontSize: 10,
@@ -975,31 +1030,12 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: 'PixeloidMono',
   },
-  dailyJokerDescription: {
-    fontSize: 11,
-    color: '#d4d4d4',
-    fontFamily: 'PixeloidMono',
-    marginBottom: 6,
-  },
-  dailyJokerFooter: {
-    alignItems: 'flex-end',
-  },
-  dailyJokerPrice: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4ade80',
-    fontFamily: 'PixeloidMono',
-  },
-  dailyJokerSoldText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    fontFamily: 'PixeloidMono',
-  },
   dailyJokerMaxText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#fbbf24',
     fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

@@ -112,7 +112,7 @@ export default function AvailableJokersModal({
                     { color: themeColors.textColor },
                   ]}
                 >
-                  You've discovered every available joker!
+                  You&apos;ve discovered every available joker!
                 </Text>
               </PixelBorder>
             )}

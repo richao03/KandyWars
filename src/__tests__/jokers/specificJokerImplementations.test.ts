@@ -195,7 +195,7 @@ describe('Specific Joker Implementations', () => {
     });
   });
 
-  describe('The Good Old Days Joker', () => {
+  describe('Shrinking Glass Joker', () => {
     it('should apply 50% discount to deli prices', () => {
       const originalDeliPrice = 8.50;
       const discountMultiplier = 0.5;
@@ -241,7 +241,7 @@ describe('Specific Joker Implementations', () => {
       expect(JOKER_IDS.COMBO_PLATTER).toBeDefined();
       expect(JOKER_IDS.COCOA_FUTURES).toBeDefined();
       expect(JOKER_IDS.HOME_MADE).toBeDefined();
-      expect(JOKER_IDS.THE_GOOD_OLD_DAYS).toBeDefined();
+      expect(JOKER_IDS.SHRINKING_GLASS).toBeDefined();
       expect(JOKER_IDS.SOUR_LOGIC).toBeDefined();
       expect(JOKER_IDS.SAFE_HOUSE).toBeDefined();
     });

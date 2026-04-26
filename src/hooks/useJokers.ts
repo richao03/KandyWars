@@ -32,6 +32,27 @@ import { addBalance } from '../store/slices/walletSlice';
 import { trackJokerObtained } from '../store/slices/localAnalyticsSlice';
 import { JOKER_IDS } from '../constants/jokerIds';
 import { selectDay } from '../store/slices/gameSlice';
+import {
+  setStat,
+  selectJokerStats,
+  type JokerStats,
+} from '../store/slices/jokerStatsSlice';
+import { incrementMaxInventory } from '../store/slices/inventorySlice';
+
+// Variable jokers → corresponding counter field in jokerStatsSlice. When a
+// variable joker is sold, its counter is reset to 0 so re-buying starts fresh
+// (per "lose all effects when sold" semantics). Trade Routes additionally
+// reverts its accumulated inventoryLimit bonus — see sellJokerAction.
+const VARIABLE_JOKER_TO_STAT: Record<number, keyof JokerStats> = {
+  [JOKER_IDS.TRADE_ROUTES]: 'tradeRoutesPeriods',
+  [JOKER_IDS.COMPOUND_INTEREST]: 'compoundInterestDays',
+  [JOKER_IDS.REPUTATION]: 'reputationTypesSold',
+  [JOKER_IDS.STREET_SMARTS]: 'streetSmartsEventsSurvived',
+  [JOKER_IDS.CLEARANCE_SALE]: 'clearanceSaleLosses',
+  [JOKER_IDS.HOARDER]: 'hoarderMaxHits',
+  [JOKER_IDS.PENNY_WISE]: 'pennyWiseStashes',
+  [JOKER_IDS.SURVIVOR]: 'survivorCandiesMelted',
+};
 
 export interface Joker {
   id: number | string;
@@ -61,7 +82,9 @@ export const useJokers = () => {
   const activeEffects = useAppSelector(selectJokerActiveEffects);
   const computedInventoryLimit = useAppSelector(selectComputedInventoryLimit);
   const hallPassModifiers = useAppSelector(state => state.hallPassModifiers);
+  const selectedPassIds = useAppSelector(state => state.hallPass.selectedPassIds ?? []);
   const usedTodayJokerIds = useAppSelector(selectUsedTodayJokerIds);
+  const jokerStats = useAppSelector(selectJokerStats);
   const persistentJokerCount = useAppSelector(selectPersistentJokerCount);
   const periodCount = useAppSelector(state => state.game.periodCount);
   const day = useAppSelector(selectDay);
@@ -95,15 +118,20 @@ export const useJokers = () => {
       if (__DEV__) console.log(`🔧 Vacuum Sealer: Current=${currentTotal}, Target=${targetTotal}, Setting bonus=${bonus} (base ${baseInventory} + bonus ${bonus} + hallPass ${hallPassModifiers.inventoryBonusSlots} = ${targetTotal})`);
     }
 
+    // Junior Genius: new jokers start at level 2 instead of 1
+    const jokerToDispatch = selectedPassIds.includes('junior_genius') && (joker.level === 1 || !joker.level)
+      ? { ...joker, level: 2 }
+      : joker;
+
     // Add the joker to the list
-    dispatch(addJoker(joker));
+    dispatch(addJoker(jokerToDispatch));
 
     // Track joker obtained locally (will be synced to Firebase at game end)
     if (source === 'minigame' && joker.name) {
       if (__DEV__) console.log('📊 Local: Tracking joker obtained -', joker.name);
       dispatch(trackJokerObtained(joker.name));
     }
-  }, [dispatch, computedInventoryLimit, hallPassModifiers.inventoryBonusSlots, periodCount]);
+  }, [dispatch, computedInventoryLimit, hallPassModifiers.inventoryBonusSlots, periodCount, selectedPassIds]);
 
   const removeJokerAction = useCallback((jokerId: string | number) => {
     dispatch(removeJoker(typeof jokerId === 'string' ? jokerId : jokerId.toString()));
@@ -118,6 +146,24 @@ export const useJokers = () => {
     const level = joker.level ?? 1;
     const sellValue = level <= 1 ? 500 : level === 2 ? 5000 : 15000;
 
+    // "Lose all effects" — for variable jokers, reset their counter so the
+    // accrued bonus is forfeited. For Trade Routes specifically, also revert
+    // the accumulated inventoryLimit bonus (since that one is dispatched into
+    // inventorySlice.maxInventory each period rather than being a derived
+    // computedEffect).
+    const numericId = Number(joker.id);
+    const statKey = VARIABLE_JOKER_TO_STAT[numericId];
+    if (statKey) {
+      if (numericId === JOKER_IDS.TRADE_ROUTES) {
+        const periods = jokerStats.tradeRoutesPeriods;
+        if (periods > 0) {
+          const slotsPerPeriod = level === 3 ? 4 : level === 2 ? 3 : 2;
+          dispatch(incrementMaxInventory(-(slotsPerPeriod * periods)));
+        }
+      }
+      dispatch(setStat({ stat: statKey, value: 0 }));
+    }
+
     dispatch(sellJoker(id));
     dispatch(addBalance(sellValue));
 
@@ -129,7 +175,7 @@ export const useJokers = () => {
     }));
 
     if (__DEV__) console.log(`💰 Sold joker ${joker.name} (Lv${level}) for $${sellValue}`);
-  }, [dispatch, jokers, periodCount, day]);
+  }, [dispatch, jokers, periodCount, day, jokerStats]);
 
   // Sixth Sense joker grants +1 aura slot
   const hasSixthSense = jokers.some(

@@ -21,13 +21,13 @@ Hall passes are **permanent unlockable modifiers** that persist across games. Pl
 |------|--------|---------|
 | **Valedictorian Vendor** | Play every minigame at least once | +1 extra joker at selection screen |
 | **Maximalist** | Deposit your entire wallet 4 times in one game | +1000% daily allowance |
-| **Junior Genius** | Win with $100,000+ profit | +1000% daily allowance |
+| **Junior Genius** | Win with $100,000+ profit | All jokers obtained start at Level 2 |
 
 ### Rare (Blue)
 
 | Pass | Unlock | Effects |
 |------|--------|---------|
-| **Senior Executive** | Win the game 5 times | +75% profit bonus, +10 inventory slots |
+| **Senior Executive** | Win the game 5 times | Start with $2,000 instead of $20 |
 | **Finance Club** | Win with $35,000+ in the piggy bank | 10% of previous day's profit added to daily allowance |
 | **Forged Pass** | Win with 8+ jokers | +1 reroll in joker selection |
 
@@ -46,7 +46,7 @@ Hall passes are **permanent unlockable modifiers** that persist across games. Pl
 | **Minimalist Master** | Win without using any jokers | +150% profit bonus |
 | **High Roller** | Win and sell over 1,000 units of candy | +150% profit bonus, +15 inventory slots |
 | **Perfect Scholar** | Win on difficulty level 6 | +1000% daily allowance |
-| **Time Crunch** | Win with 50%+ profit from periods 1–4 | Only 6 periods/day, but +400% profit bonus |
+| **Time Crunch** | Win with 50%+ profit from periods 1–4 | Start with medium candy unlocked |
 | **Final Exam** | Win with 50%+ profit from periods 7–8 | Period 8 = 15x profit, periods 1–7 = -75% profit |
 | **Speedrun Champion** | Win with fewer than 20 total sales | +100% sales profit |
 
@@ -56,7 +56,7 @@ Hall passes are **permanent unlockable modifiers** that persist across games. Pl
 
 ## Mutual Exclusivity
 
-**Time Crunch** and **Final Exam** cannot be selected together. Selecting one auto-deselects the other.
+No mutual exclusions currently.
 
 ---
 
@@ -68,7 +68,7 @@ Hall pass effects fall into 5 categories:
 |------|----------|---------|
 | `sale_price_bonus` | Additive | Not a Freshman (+10), Senior Executive (+15), Candy Kingpin (+25) |
 | `inventory_bonus` | Additive | Sophomore Swagger (+15), Senior Executive (+10), High Roller (+15) |
-| `allowance_bonus` | Additive (%) | Junior Genius (+1000%), Candy Kingpin (+100%) |
+| `allowance_bonus` | Additive (%) | Maximalist (+1000%), Candy Kingpin (+100%) |
 | `joker_bonus` | Additive | Valedictorian Vendor (+1) |
 | `special` | Varies | Finance Club, Teacher's Pet, Time Crunch, Final Exam, etc. |
 
@@ -98,9 +98,9 @@ interface HallPassModifiers {
 ```
 
 Special passes get converted during computation:
-- **Time Crunch**: +80 to `salePriceBonusPercent` (displayed as +400%)
 - **Speedrun Champion**: +20 to `salePriceBonusPercent` (displayed as +100%)
 - **Forged Pass**: +1 to `rerollBonusCount`
+- **Time Crunch**: Dispatches `unlockMediumCandies()` at game start (no modifier)
 
 ---
 
@@ -116,7 +116,7 @@ At the start of each day, 10% of the current wallet balance is automatically tra
 When a STASH_LOCKED event fires, only 25% of the player's candy is confiscated instead of the full 100%. Checked in the event handler.
 
 ### Time Crunch
-Reduces periods per day from 8 to 6, but all sales get a +400% profit bonus. Fewer opportunities but much higher payoff per sale.
+Starts the game with medium candy already unlocked (normally unlocked Day 2 at $500). Applied in `SugarWarsTitleScreen.tsx` at game init by dispatching `unlockMediumCandies()`.
 
 ### Final Exam
 Completely reshapes the day:

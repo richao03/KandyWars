@@ -970,7 +970,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="economy"
         onComplete={onComplete}
         rewardTier={rewardLevel}
         completionLevel={rewardLevel}
@@ -1110,7 +1109,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             .map((item) => CATALOG[item as Item])
             .join('')}`}
           rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
-          theme="economy"
         />
 
         {/* Slots - 2 rows of 3 */}
@@ -1255,7 +1253,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           onClose={hideModal}
           onConfirm={modal.onConfirm}
           showCancelButton={modal.showCancelButton}
-          theme="school"
         />
       </View>
     </GestureHandlerRootView>

@@ -725,7 +725,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     return (
       <JokerSelection
         jokers={STANDARDIZED_JOKERS}
-        theme="art"
         onComplete={onComplete}
         rewardTier={completedLevel as 1 | 2 | 3}
         completionLevel={completedLevel as 1 | 2 | 3}
@@ -877,7 +876,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             leftInfo={`Level ${stage}/3`}
             centerInfo={' '}
             rightInfo={`Tries: ${mistakesLeft}/5`}
-            theme="gym"
           />
 
           {/* Color Key - shows the correct path sequence */}

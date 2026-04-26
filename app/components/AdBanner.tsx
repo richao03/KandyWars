@@ -54,7 +54,7 @@ const AD_UNITS = {
   STANDARD_BANNER: {
     ios: __DEV__
       ? TestIds?.BANNER || TEST_AD_UNIT
-      : 'ca-app-pub-1627354972629832~6967053316', // Replace with your iOS ad unit ID
+      : 'ca-app-pub-1627354972629832/2334523799', // Replace with your iOS ad unit ID
     android: __DEV__
       ? TestIds?.BANNER || TEST_AD_UNIT
       : 'ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-ANDROID-320x50', // Replace with your Android ad unit ID

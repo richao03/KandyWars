@@ -125,30 +125,18 @@ export class HallPassUtils {
   }
 
   /**
-   * Apply Time Crunch hall pass multiplier (4x sales profit)
-   */
-  static applyTimeCrunchMultiplier(basePrice: number, selectedPassIds: string[]): number {
-    if (selectedPassIds.includes('time_crunch')) {
-      if (__DEV__) console.log(`⏱️ Time Crunch: ${basePrice} × 4 = ${basePrice * 4}`);
-      return basePrice * 4;
-    }
-    return basePrice;
-  }
-
-  /**
-   * Apply Final Exam period-specific multipliers (15x for period 8, -75% for periods 1-7)
-   * Note: With Time Crunch, 6 periods/day, so final period is 6 instead of 8
+   * Apply Final Exam period-specific multipliers (15x for last period, -75% for others)
    */
   static applyFinalExamMultiplier(basePrice: number, selectedPassIds: string[], period: number): number {
     if (selectedPassIds.includes('final_exam')) {
-      const periodsPerDay = selectedPassIds.includes('time_crunch') ? 6 : 8;
-      const periodInDay = ((period - 1) % periodsPerDay) + 1; // Get period within day (1-6 or 1-8)
+      const periodsPerDay = 8;
+      const periodInDay = ((period - 1) % periodsPerDay) + 1;
       if (periodInDay === periodsPerDay) {
         if (__DEV__) console.log(`📝 Final Exam (Period ${periodInDay}/${periodsPerDay}): ${basePrice} × 15 = ${basePrice * 15}`);
         return basePrice * 15;
       } else {
         if (__DEV__) console.log(`📝 Final Exam (Period ${periodInDay}/${periodsPerDay}): ${basePrice} × 0.25 = ${basePrice * 0.25}`);
-        return basePrice * 0.25; // -75% = multiply by 0.25
+        return basePrice * 0.25;
       }
     }
     return basePrice;

@@ -45,7 +45,7 @@ export default function SleepConfirmModal({
           </Text>
 
           <Text style={styles.warningText}>
-            Make sure you've done everything you wanted today!
+            Make sure you&apos;ve done everything you wanted today!
           </Text>
 
           <PixelBorder

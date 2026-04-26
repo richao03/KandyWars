@@ -100,9 +100,9 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     unlockRequirement: 'Win the game with $100,000+ profit',
     effects: [
       {
-        type: 'allowance_bonus',
-        value: 1000,
-        description: '+1000% daily allowance',
+        type: 'special',
+        value: 2,
+        description: 'All jokers obtained start at Level 2',
       },
     ],
     rarity: 'magical',
@@ -116,14 +116,9 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     unlockRequirement: 'Win the game 5 times',
     effects: [
       {
-        type: 'sale_price_bonus',
-        value: 15, //15 * 5 = 75
-        description: '+75% profit bonus on candy sales',
-      },
-      {
-        type: 'inventory_bonus',
-        value: 10,
-        description: '+10 inventory slots',
+        type: 'special',
+        value: 2000,
+        description: 'Start the game with $2,000 instead of $200',
       },
     ],
     rarity: 'rare',
@@ -259,14 +254,13 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'time_crunch',
     name: 'Time Crunch',
-    description: 'Less time, more intensity.',
+    description: "Ain't nobody got time for that",
     unlockRequirement: 'Win the game with 50%+ profit from periods 1-4',
     effects: [
       {
         type: 'special',
-        value: 6,
-        description:
-          'Only 6 periods per day instead of 8, but +400% profit bonus',
+        value: 1,
+        description: 'Start the game with medium candy unlocked',
       },
     ],
     rarity: 'legendary',
@@ -290,12 +284,26 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     id: 'speedrun_champion',
     name: 'Speedrun Champion',
     description: 'Why make more sale if little sale get job done',
-    unlockRequirement: 'Win the game with less than 20 total sales',
+    unlockRequirement: 'Win a run with a single sale over $10,000',
     effects: [
       {
         type: 'special',
         value: 2,
         description: '+100% sales profit',
+      },
+    ],
+    rarity: 'legendary',
+  },
+  {
+    id: 'lunchroom_monopoly',
+    name: 'Lunchroom Monopoly',
+    description: 'Cafeteria sales print money, but the lunch lady needs a break after each one.',
+    unlockRequirement: 'Make 50 lifetime Cafeteria sales',
+    effects: [
+      {
+        type: 'special',
+        value: 6,
+        description: 'Cafeteria sales 6x profit (+500%); every other location −50%. Cafeteria locked for 2 periods after each visit.',
       },
     ],
     rarity: 'legendary',
@@ -470,8 +478,8 @@ const hallPassSlice = createSlice({
       );
 
       // Mutually exclusive pass groups
-      const mutuallyExclusiveGroups = [
-        ['time_crunch', 'final_exam'], // Can't have both Time Crunch and Final Exam
+      const mutuallyExclusiveGroups: string[][] = [
+        // No mutual exclusions currently
       ];
 
       // Check if selecting this pass would conflict with any mutually exclusive passes

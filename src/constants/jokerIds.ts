@@ -20,7 +20,7 @@ export const JOKER_IDS = {
   ODD_TODD: 30,
   COCOA_FUTURES: 23,
   SAFE_HOUSE: 67,
-  THE_GOOD_OLD_DAYS: 24,
+  SHRINKING_GLASS: 24,
   BEAR_MARKET: 19,
   MARKET_MANIPULATION: 20,
   DEPOSIT_BONUS: 22,
@@ -59,7 +59,7 @@ export const JOKER_IDS = {
   INFLATION: 76,
   LUCKY_CHARM: 77,
   BULLY_BAIT: 78,
-  TEACHERS_SPY: 79,
+  TEACHERS_PET: 79,
   CLASS_CLOWN: 80,
   DETENTION_DODGE: 81,
   COLLECTOR: 82,
@@ -74,6 +74,10 @@ export const JOKER_IDS = {
   PEAK_HOURS: 91,
   PATIENCE_PAYS: 92,
   SPARE_CHANGE: 93,
+  DEEP_FREEZE: 94,
+  HOARDER: 95,
+  PENNY_WISE: 96,
+  SURVIVOR: 97,
 } as const;
 
 // Reverse mapping for getting name from ID
@@ -94,7 +98,7 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.ODD_TODD]: 'Odd Todd',
   [JOKER_IDS.COCOA_FUTURES]: 'Cocoa Futures',
   [JOKER_IDS.SAFE_HOUSE]: 'Safe House',
-  [JOKER_IDS.THE_GOOD_OLD_DAYS]: 'The Good Old Days',
+  [JOKER_IDS.SHRINKING_GLASS]: 'Shrinking Glass',
   [JOKER_IDS.BEAR_MARKET]: 'Bear Market',
   [JOKER_IDS.MARKET_MANIPULATION]: 'Market Manipulation',
   [JOKER_IDS.DEPOSIT_BONUS]: 'Deposit Bonus',
@@ -135,7 +139,7 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.INFLATION]: 'Inflation',
   [JOKER_IDS.LUCKY_CHARM]: 'Lucky Charm',
   [JOKER_IDS.BULLY_BAIT]: 'Bully Bait',
-  [JOKER_IDS.TEACHERS_SPY]: "Teacher's Spy",
+  [JOKER_IDS.TEACHERS_PET]: "Teacher's Pet",
   [JOKER_IDS.CLASS_CLOWN]: 'Class Clown',
   [JOKER_IDS.DETENTION_DODGE]: 'Detention Dodge',
   [JOKER_IDS.COLLECTOR]: 'Collector',
@@ -150,6 +154,10 @@ export const JOKER_NAMES: Record<number, string> = {
   [JOKER_IDS.PEAK_HOURS]: 'Peak Hours',
   [JOKER_IDS.PATIENCE_PAYS]: 'Patience Pays',
   [JOKER_IDS.SPARE_CHANGE]: 'Spare Change',
+  [JOKER_IDS.DEEP_FREEZE]: 'Deep Freeze',
+  [JOKER_IDS.HOARDER]: 'Hoarder',
+  [JOKER_IDS.PENNY_WISE]: 'Penny Wise',
+  [JOKER_IDS.SURVIVOR]: 'Survivor',
 };
 
 // Helper function to check if a joker has a specific ID

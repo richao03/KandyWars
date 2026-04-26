@@ -106,16 +106,17 @@ describe('Sale Calculations', () => {
     });
   });
 
-  describe('[xMult] Multipliers (multiplier bucket)', () => {
-    it('Even Stevens should multiply when inventory limit is even', () => {
+  describe('[+Profit] Conditional profit boosts (boost bucket)', () => {
+    it('Even Stevens should boost profit when inventory limit is even', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
         inventoryLimit: 30, // even
-        jokers: [makeTestJoker(JOKER_IDS.EVEN_STEVENS, 1)], // 1.5x
+        jokers: [makeTestJoker(JOKER_IDS.EVEN_STEVENS, 1)], // 1.5x boost
       });
-      // multiplier = 1 + 0.5 = 1.5
-      // totalGain = 500 + (500 * 1.5) = 500 + 750 = 1250
-      expect(result.jokerMultiplier).toBe(1.5);
+      // profitBoost = 1 + 0.5 = 1.5 (amount - 1 added)
+      // boostedProfit = 500 * 1.5 = 750
+      // totalGain = purchaseValue + boostedProfit = 500 + 750 = 1250
+      expect(result.jokerMultiplier).toBe(1);
       expect(result.totalGain).toBe(1250);
     });
 
@@ -129,13 +130,14 @@ describe('Sale Calculations', () => {
       expect(result.totalGain).toBe(1000);
     });
 
-    it('Early Bird should multiply on first sale of day', () => {
+    it('Early Bird should boost profit on first sale of day', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
         hasEarlySaleToday: false,
         jokers: [makeTestJoker(JOKER_IDS.EARLY_BIRD, 1)],
       });
-      expect(result.jokerMultiplier).toBe(1.5);
+      expect(result.jokerMultiplier).toBe(1);
+      expect(result.totalGain).toBe(1250);
     });
 
     it('Early Bird should NOT multiply if already sold today', () => {
@@ -167,7 +169,7 @@ describe('Sale Calculations', () => {
       expect(result.jokerMultiplier).toBe(1);
     });
 
-    it('Variety Pack should multiply with 3+ candy types in inventory', () => {
+    it('Variety Pack should boost profit with 3+ candy types in inventory', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
         jokers: [makeTestJoker(JOKER_IDS.VARIETY_PACK, 1)],
@@ -176,7 +178,8 @@ describe('Sale Calculations', () => {
           { name: 'Gummy Bears', quantity: 5 },    // gummy + chewy
         ], // 4 types: chocolate, hard_candy, gummy, chewy
       });
-      expect(result.jokerMultiplier).toBe(1.5);
+      expect(result.jokerMultiplier).toBe(1);
+      expect(result.totalGain).toBe(1250);
     });
 
     it('Variety Pack should NOT multiply with < 3 candy types', () => {
@@ -225,22 +228,22 @@ describe('Sale Calculations', () => {
     });
   });
 
-  describe('Boost + Multiplier stacking', () => {
-    it('should apply boost first, then multiplier', () => {
+  describe('Profit boost stacking', () => {
+    it('should stack additively when multiple boosts apply', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
-        inventoryLimit: 30,
+        inventoryLimit: 30, // even → Even Stevens condition met
         jokers: [
-          makeTestJoker(JOKER_IDS.COCOA_FUTURES, 1), // [+Profit] +0.5
-          makeTestJoker(JOKER_IDS.EVEN_STEVENS, 1),   // [xMult] +0.5
+          makeTestJoker(JOKER_IDS.COCOA_FUTURES, 1), // [+Profit] type boost +0.5
+          makeTestJoker(JOKER_IDS.EVEN_STEVENS, 1),   // [+Profit] conditional boost +0.5
         ],
       });
-      // profitBoost = 1 + 0.5 = 1.5
-      // boostedProfit = 500 * 1.5 = 750
-      // multiplier = 1 + 0.5 = 1.5
-      // finalProfit = 750 * 1.5 = 1125
-      // totalGain = 500 + 1125 = 1625
-      expect(result.totalGain).toBe(1625);
+      // profitBoost = 1 + 0.5 (cocoa, chocolate match) + 0.5 (even stevens) = 2.0
+      // boostedProfit = 500 * 2.0 = 1000
+      // multiplier = 1
+      // totalGain = purchaseValue + boostedProfit = 500 + 1000 = 1500
+      expect(result.jokerMultiplier).toBe(1);
+      expect(result.totalGain).toBe(1500);
     });
   });
 
@@ -260,16 +263,17 @@ describe('Sale Calculations', () => {
   });
 
   describe('Golden Hour', () => {
-    it('should multiply in last 2 periods of day', () => {
+    it('should boost profit in last 2 periods of day', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
         period: 7,
         periodsPerDay: 8, // period >= periodsPerDay - 1 → 7 >= 7
-        jokers: [makeTestJoker(JOKER_IDS.GOLDEN_HOUR, 1)], // 1.5x
+        jokers: [makeTestJoker(JOKER_IDS.GOLDEN_HOUR, 1)], // 1.5x boost
       });
-      // multiplier = 1 + 0.5 = 1.5
-      // totalGain = 500 + (500 * 1.5) = 1250
-      expect(result.jokerMultiplier).toBe(1.5);
+      // profitBoost = 1 + 0.5 = 1.5
+      // boostedProfit = 500 * 1.5 = 750
+      // totalGain = purchaseValue + boostedProfit = 500 + 750 = 1250
+      expect(result.jokerMultiplier).toBe(1);
       expect(result.totalGain).toBe(1250);
     });
 
@@ -309,39 +313,62 @@ describe('Sale Calculations', () => {
   });
 
   describe('Bulk Discount', () => {
-    it('should boost profit when quantity >= bulk threshold', () => {
+    it('should boost profit when quantity >= 20 (fixed threshold, L1)', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
-        quantity: 10, // >= 5 (lv1 threshold)
+        quantity: 20, // meets fixed threshold
         jokers: [makeTestJoker(JOKER_IDS.BULK_DISCOUNT, 1)], // 1.5x profit boost
       });
       // profitBoost = 1 + 0.5 = 1.5
-      // boostedProfit = 500 * 1.5 = 750
-      // totalGain = 500 + 750 = 1250
-      expect(result.totalGain).toBe(1250);
+      // totalProfit = (100 - 50) * 20 = 1000
+      // boostedProfit = 1000 * 1.5 = 1500
+      // totalGain = purchaseValue (1000) + boostedProfit (1500) = 2500
+      expect(result.totalGain).toBe(2500);
     });
 
-    it('should NOT boost profit when quantity < bulk threshold', () => {
+    it('should NOT boost profit when quantity < 20 (L1)', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
-        quantity: 3, // < 5 (lv1 threshold)
+        quantity: 19, // under threshold
         jokers: [makeTestJoker(JOKER_IDS.BULK_DISCOUNT, 1)],
       });
-      // profit = (100 - 50) * 3 = 150, no boost
-      // totalGain = 150 + 150 = 300
-      expect(result.totalGain).toBe(300);
+      // profit = (100 - 50) * 19 = 950, no boost
+      // totalGain = 950 + 950 = 1900
+      expect(result.totalGain).toBe(1900);
+    });
+
+    it('threshold stays 20 at all levels (boost scales, threshold does not)', () => {
+      const lv3 = calculateSaleTotal({
+        ...baseSaleParams,
+        quantity: 20,
+        jokers: [makeTestJoker(JOKER_IDS.BULK_DISCOUNT, 3)], // 3x profit boost at L3
+      });
+      // profitBoost = 1 + (3 - 1) = 3
+      // totalProfit = 1000, boostedProfit = 1000 * 3 = 3000
+      // totalGain = 1000 + 3000 = 4000
+      expect(lv3.totalGain).toBe(4000);
+
+      const lv3UnderThreshold = calculateSaleTotal({
+        ...baseSaleParams,
+        quantity: 19,
+        jokers: [makeTestJoker(JOKER_IDS.BULK_DISCOUNT, 3)],
+      });
+      // no boost — threshold not met
+      expect(lv3UnderThreshold.totalGain).toBe(1900);
     });
   });
 
   describe('Underdog', () => {
-    it('should multiply when cash is below threshold', () => {
+    it('should boost profit when cash is below threshold', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
         currentCash: 1000, // < 5000 (lv1 threshold)
-        jokers: [makeTestJoker(JOKER_IDS.UNDERDOG, 1)], // 1.5x
+        jokers: [makeTestJoker(JOKER_IDS.UNDERDOG, 1)], // 1.5x boost
       });
-      // multiplier = 1 + 0.5 = 1.5
-      expect(result.jokerMultiplier).toBe(1.5);
+      // profitBoost = 1 + 0.5 = 1.5
+      // boostedProfit = 500 * 1.5 = 750
+      // totalGain = purchaseValue + boostedProfit = 500 + 750 = 1250
+      expect(result.jokerMultiplier).toBe(1);
       expect(result.totalGain).toBe(1250);
     });
 

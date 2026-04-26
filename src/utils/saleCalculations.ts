@@ -36,6 +36,12 @@ interface SaleCalculationParams {
   compoundInterestDays?: number; // For Compound Interest — days held
   reputationTypesSold?: number; // For Reputation — unique candy types sold ever
   streetSmartsEventsSurvived?: number; // For Street Smarts — events survived count
+  hoarderMaxHits?: number; // For Hoarder — times inventory hit max
+  pennyWiseStashes?: number; // For Penny Wise — times money was stashed
+  survivorCandiesMelted?: number; // For Survivor — candy batches melted
+  selectedPassIds?: string[]; // For Final Exam period-specific multiplier
+  currentLocation?: string; // For Lunchroom Monopoly location-specific multiplier
+  previousLocation?: string; // For Class Clown — compare vs current to boost on location change
 }
 
 interface SaleCalculationResult {
@@ -85,6 +91,12 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     compoundInterestDays = 0,
     reputationTypesSold = 0,
     streetSmartsEventsSurvived = 0,
+    hoarderMaxHits = 0,
+    pennyWiseStashes = 0,
+    survivorCandiesMelted = 0,
+    selectedPassIds = [],
+    currentLocation = '',
+    previousLocation = '',
   } = params;
 
   const bonusBreakdown: Array<{
@@ -227,10 +239,170 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     });
   }
 
+  // Penny Wise — profit % per time money was stashed
+  for (const joker of jokers) {
+    const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
+    const level = joker.level ?? 1;
+    const effects = getJokerEffectsAtLevel(jokerId, level);
+    for (const effect of effects) {
+      if (effect.target === 'penny_wise_boost' && pennyWiseStashes > 0) {
+        const pennyWiseBonus = effect.amount * pennyWiseStashes;
+        profitBoost += pennyWiseBonus;
+        bonusBreakdown.push({
+          emoji: _getJokerEmoji(jokerId),
+          name: _getJokerName(jokerId),
+          multiplier: 1,
+          flatBonus: totalProfit * pennyWiseBonus,
+        });
+      }
+    }
+  }
+
+  // Conditional profit boosts (Even Stevens, Golden Hour — converted from mult)
+  for (const joker of jokers) {
+    const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
+    const level = joker.level ?? 1;
+    const effects = getJokerEffectsAtLevel(jokerId, level);
+    for (const effect of effects) {
+      if (effect.target === 'conditional_profit_boost') {
+        let conditionMet = false;
+        if (effect.conditions?.inventoryParity === 'even' && inventoryLimit % 2 === 0) {
+          conditionMet = true;
+        }
+        if (effect.conditions?.period === -1 && period >= periodsPerDay - 1) {
+          conditionMet = true;
+        }
+        if (conditionMet) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Early Bird — first sale of day profit boost
+      if (effect.target === 'first_sale_profit_boost') {
+        if (hasEarlySaleToday === false) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Underdog — cash below threshold profit boost
+      if (effect.target === 'cash_under_profit_boost' && effect.conditions?.cashBelow) {
+        if (currentCash < effect.conditions.cashBelow) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Variety Pack — 3+ candy types in inventory profit boost
+      if (effect.target === 'variety_pack_profit_boost') {
+        const typesInInventory = new Set<string>();
+        for (const item of inventory) {
+          const def = getCandyDefinition(item.name);
+          def?.types.forEach((t) => typesInInventory.add(t));
+        }
+        if (typesInInventory.size >= 3) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Peak Hours — profit boost during periods 3-5
+      if (effect.target === 'peak_hours_profit_boost') {
+        if (period >= 3 && period <= 5) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Compound Interest — scaling profit boost over days
+      if (effect.target === 'compound_interest_profit_boost') {
+        if (compoundInterestDays > 0) {
+          profitBoost += (effect.amount - 1);
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: effect.amount,
+            flatBonus: totalProfit * (effect.amount - 1),
+          });
+        }
+      }
+
+      // Reputation — profit boost per unique candy type sold
+      if (effect.target === 'reputation_profit_boost') {
+        if (reputationTypesSold > 0) {
+          const reputationBonus = effect.amount * reputationTypesSold;
+          profitBoost += reputationBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + reputationBonus,
+            flatBonus: totalProfit * reputationBonus,
+          });
+        }
+      }
+
+      // Momentum — profit boost per consecutive sale period
+      if (effect.target === 'momentum_profit_boost') {
+        if (consecutivePeriodSales > 0) {
+          const momentumBonus = effect.amount * consecutivePeriodSales;
+          profitBoost += momentumBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + momentumBonus,
+            flatBonus: totalProfit * momentumBonus,
+          });
+        }
+      }
+
+      // Class Clown — profit boost when current location differs from the previous period's.
+      // If there's no previous location recorded (first period of run), treat as "changed".
+      if (effect.target === 'location_change_boost') {
+        const locationChanged =
+          !previousLocation || previousLocation !== currentLocation;
+        if (locationChanged) {
+          profitBoost += effect.amount;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + effect.amount,
+            flatBonus: totalProfit * effect.amount,
+          });
+        }
+      }
+    }
+  }
+
   const boostedProfit = totalProfit * profitBoost;
 
   // === STEP 3: Multipliers (size, conditional, one-time) ===
-  // Size, Even/Odd, Golden Hour stack additively: 1x base + (1.5-1) + (1.5-1) = 2x
+  // Size, Odd Todd stack additively: 1x base + (1.5-1) = 1.5x
   // Pursuasion stacks additively too: 2x adds 1.0
   let multiplier = 1; // starts at 1x (no multiplier)
 
@@ -252,18 +424,11 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Conditional multipliers (Even Stevens, Odd Todd, Golden Hour)
+      // Conditional multipliers (Odd Todd)
       if (effect.target === 'conditional_multiplier') {
         let conditionMet = false;
 
-        if (effect.conditions?.inventoryParity === 'even' && inventoryLimit % 2 === 0) {
-          conditionMet = true;
-        }
         if (effect.conditions?.inventoryParity === 'odd' && inventoryLimit % 2 === 1) {
-          conditionMet = true;
-        }
-        // Golden Hour: last 2 periods of the day (period flag = -1)
-        if (effect.conditions?.period === -1 && period >= periodsPerDay - 1) {
           conditionMet = true;
         }
 
@@ -287,19 +452,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         });
       }
 
-      // Early Bird — first sale of day multiplier
-      if (effect.target === 'first_sale_boost') {
-        if (hasEarlySaleToday === false) {
-          multiplier += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-          });
-        }
-      }
-
-      // Underdog / Broke and Hungry — cash below threshold multiplier
+      // Broke and Hungry — cash below threshold multiplier
       if (effect.target === 'cash_under_boost' && effect.conditions?.cashBelow) {
         if (currentCash < effect.conditions.cashBelow) {
           multiplier += (effect.amount - 1);
@@ -323,22 +476,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Variety Pack — 3+ candy types in inventory multiplier
-      if (effect.target === 'variety_pack_boost') {
-        const typesInInventory = new Set<string>();
-        for (const item of inventory) {
-          const def = getCandyDefinition(item.name);
-          def?.types.forEach((t) => typesInInventory.add(t));
-        }
-        if (typesInInventory.size >= 3) {
-          multiplier += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-          });
-        }
-      }
+      // (Variety Pack moved to profit boost section)
 
       // Size multipliers — Mint Condition (small), King Size (big), Medium Rare (medium)
       if (effect.target === 'size_multiplier' && effect.conditions?.candySize) {
@@ -382,9 +520,14 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         });
       }
 
-      // All In — big multiplier when cash < threshold
+      // All In — big multiplier when selling entire stack AND cash is low.
+      // Both gates must be met: threshold (level-scaled) and stack-empties-out.
       if (effect.target === 'all_in_boost' && effect.conditions?.cashBelow) {
-        if (currentCash < effect.conditions.cashBelow) {
+        const ownedQty =
+          inventory.find((item) => item.name === candyName)?.quantity ?? 0;
+        const sellingFullStack =
+          !effect.conditions?.requiresFullStack || quantity >= ownedQty;
+        if (currentCash < effect.conditions.cashBelow && sellingFullStack) {
           multiplier += (effect.amount - 1);
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
@@ -430,21 +573,11 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Momentum — bonus per consecutive sale period
-      if (effect.target === 'momentum_boost') {
-        if (consecutivePeriodSales > 0) {
-          const momentumBonus = effect.amount * consecutivePeriodSales;
-          multiplier += momentumBonus;
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: 1 + momentumBonus,
-          });
-        }
-      }
+      // (Momentum moved to profit boost section)
 
       // Diversifier — bonus when selling 3+ types same period
       if (effect.target === 'diversifier_boost') {
+        if (__DEV__) console.log('🌈 DIVERSIFIER CALC:', { uniqueTypesSoldThisPeriod, threshold: 3, amount: effect.amount, willApply: uniqueTypesSoldThisPeriod >= 3 });
         if (uniqueTypesSoldThisPeriod >= 3) {
           multiplier += (effect.amount - 1);
           bonusBreakdown.push({
@@ -455,17 +588,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Peak Hours — bonus during periods 3-5
-      if (effect.target === 'peak_hours_boost') {
-        if (period >= 3 && period <= 5) {
-          multiplier += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-          });
-        }
-      }
+      // (Peak Hours moved to profit boost section)
 
       // Patience Pays — bonus when no sale previous period
       if (effect.target === 'patience_pays_boost') {
@@ -517,31 +640,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Compound Interest — scaling multiplier over days
-      if (effect.target === 'compound_interest_boost') {
-        if (compoundInterestDays > 0) {
-          // Base amount scales with days held (already includes base from factory)
-          multiplier += (effect.amount - 1);
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-          });
-        }
-      }
-
-      // Reputation — multiplier per unique candy type sold
-      if (effect.target === 'reputation_boost') {
-        if (reputationTypesSold > 0) {
-          const reputationBonus = effect.amount * reputationTypesSold;
-          multiplier += reputationBonus;
-          bonusBreakdown.push({
-            emoji: _getJokerEmoji(jokerId),
-            name: _getJokerName(jokerId),
-            multiplier: 1 + reputationBonus,
-          });
-        }
-      }
+      // (Compound Interest and Reputation moved to profit boost section)
 
       // Street Smarts — bonus per event survived
       if (effect.target === 'street_smarts_boost') {
@@ -552,6 +651,34 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
             multiplier: 1 + streetSmartsBonus,
+          });
+        }
+      }
+
+      // Hoarder — mult per time inventory hit max
+      if (effect.target === 'hoarder_boost') {
+        if (hoarderMaxHits > 0) {
+          const hoarderBonus = effect.amount * hoarderMaxHits;
+          multiplier += hoarderBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + hoarderBonus,
+          });
+        }
+      }
+
+
+
+      // Survivor — mult per candy batch melted
+      if (effect.target === 'survivor_boost') {
+        if (survivorCandiesMelted > 0) {
+          const survivorBonus = effect.amount * survivorCandiesMelted;
+          multiplier += survivorBonus;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + survivorBonus,
           });
         }
       }
@@ -606,9 +733,52 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     });
   }
 
+  // === STEP 4b: Final Exam hall pass (period-specific multiplier) ===
+  let finalExamMultiplier = 1;
+  if (selectedPassIds.includes('final_exam')) {
+    const effectivePeriodsPerDay = periodsPerDay;
+    if (period === effectivePeriodsPerDay) {
+      // Last period: 15x profit
+      finalExamMultiplier = 15;
+      bonusBreakdown.push({
+        emoji: '📝',
+        name: 'Final Exam (Last Period)',
+        multiplier: 15,
+      });
+    } else {
+      // All other periods: -75% profit (0.25x)
+      finalExamMultiplier = 0.25;
+      bonusBreakdown.push({
+        emoji: '📝',
+        name: 'Final Exam (Penalty)',
+        multiplier: 0.25,
+      });
+    }
+  }
+
+  // === STEP 4c: Lunchroom Monopoly hall pass (location-specific multiplier) ===
+  let lunchroomMonopolyMultiplier = 1;
+  if (selectedPassIds.includes('lunchroom_monopoly')) {
+    if (currentLocation === 'cafeteria') {
+      lunchroomMonopolyMultiplier = 6; // +500%
+      bonusBreakdown.push({
+        emoji: '🍽️',
+        name: 'Lunchroom Monopoly (Cafeteria)',
+        multiplier: 6,
+      });
+    } else {
+      lunchroomMonopolyMultiplier = 0.5; // −50%
+      bonusBreakdown.push({
+        emoji: '🍽️',
+        name: 'Lunchroom Monopoly (Off-Site)',
+        multiplier: 0.5,
+      });
+    }
+  }
+
   // === STEP 5: Final calculation ===
-  // finalProfit = boostedProfit × multiplier
-  const finalProfit = boostedProfit * multiplier;
+  const finalProfit =
+    boostedProfit * multiplier * finalExamMultiplier * lunchroomMonopolyMultiplier;
   const purchaseValue = purchasePrice * quantity;
   // If selling at a loss (current price < purchase price), player gets current market value
   const marketValue = basePrice * quantity;
