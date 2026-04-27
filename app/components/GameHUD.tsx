@@ -21,7 +21,7 @@ import { setWalletPosition } from '../../src/utils/walletPositionStore';
 import { EMOJI_IMAGES, EMOJI_TO_IMAGE_MAP } from '../../utils/eventImages';
 import PixelBorder from './PixelBorder';
 import StatusIndicators from './StatusIndicators';
-import { formatCurrency } from '../../src/utils/priceUtils';
+import { formatCurrency, formatCurrencyCompact } from '../../src/utils/priceUtils';
 
 // Pre-computed regex for emoji matching (EMOJI_TO_IMAGE_MAP is static)
 const emojiPattern = Object.keys(EMOJI_TO_IMAGE_MAP)
@@ -501,9 +501,27 @@ function GameHUD({
           >
             <View style={[styles.statBox, styles.cashBox]}>
               <Text style={statTitleStyle}>Wallet</Text>
-              <Text style={styles.cashAmount}>
-                ${formatCurrency(balance || 0)}
-              </Text>
+              {(() => {
+                const walletText = `$${formatCurrencyCompact(balance || 0)}`;
+                // Stepped font shrink so the text never overflows the pill.
+                // PixeloidMono is fixed-width, so length-based steps are reliable.
+                const len = walletText.length;
+                const fontSize =
+                  len <= 9 ? 16 :
+                  len <= 11 ? 14 :
+                  len <= 13 ? 12 :
+                  len <= 15 ? 11 : 10;
+                return (
+                  <Text
+                    style={[styles.cashAmount, { fontSize, lineHeight: fontSize }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                  >
+                    {walletText}
+                  </Text>
+                );
+              })()}
               {/* Gold flash border overlay on balance increase */}
               <Animated.View
                 pointerEvents="none"

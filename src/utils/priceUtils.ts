@@ -67,6 +67,18 @@ export const formatCurrency = (amount: number): string => {
 };
 
 /**
+ * Like `formatCurrency` but drops the decimal portion once the value is
+ * "big enough" — used for HUD pills where horizontal space is tight.
+ * Below $10,000 → "1,234.56". At $10,000+ → "10,234".
+ */
+export const formatCurrencyCompact = (amount: number): string => {
+  const abs = Math.abs(amount);
+  if (abs < 10000) return formatCurrency(amount);
+  const whole = Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return amount < 0 ? `-${whole}` : whole;
+};
+
+/**
  * Formats an integer with commas, no decimal places.
  * For whole-number displays like unlock costs, quantities, etc.
  *

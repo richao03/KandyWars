@@ -863,6 +863,20 @@ function Settings() {
                   <Text style={styles.debugButtonText}>🎨 Sale Tier Preview</Text>
                 </TouchableOpacity>
               </PixelBorder>
+
+              <PixelBorder
+                borderColor="#7c3aed"
+                borderWidth={3}
+                backgroundColor="#f3e8ff"
+                innerPadding={0}
+              >
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={() => router.push('/debug-jokers' as any)}
+                >
+                  <Text style={styles.debugButtonText}>🃏 Joker Picker</Text>
+                </TouchableOpacity>
+              </PixelBorder>
             </View>
           </PixelBorder>
         )}

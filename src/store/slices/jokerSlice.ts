@@ -13,8 +13,9 @@ interface Joker {
   level?: number;
 }
 
-// Max number of persistent (aura) jokers that can be active at once
-export const MAX_PERSISTENT_SLOTS = 5;
+// Max number of persistent (aura) jokers that can be active at once.
+// Set to Infinity to effectively remove the cap.
+export const MAX_PERSISTENT_SLOTS = Infinity;
 
 // Helper to determine if a joker is persistent based on STANDARDIZED_JOKERS data
 function isJokerPersistent(joker: Joker): boolean {

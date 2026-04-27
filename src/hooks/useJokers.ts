@@ -177,16 +177,14 @@ export const useJokers = () => {
     if (__DEV__) console.log(`💰 Sold joker ${joker.name} (Lv${level}) for $${sellValue}`);
   }, [dispatch, jokers, periodCount, day, jokerStats]);
 
-  // Sixth Sense joker grants +1 aura slot
-  const hasSixthSense = jokers.some(
-    j => j.id === JOKER_IDS.SIXTH_SENSE.toString() || j.id === JOKER_IDS.SIXTH_SENSE
-  );
-  const effectiveMaxSlots = MAX_PERSISTENT_SLOTS + (hasSixthSense ? 1 : 0);
+  // Joker slot limit was removed — players can hold any number of persistent
+  // jokers. `canAddPersistentJoker` always returns true; `maxPersistentSlots`
+  // is exposed for UI compatibility but is effectively unbounded.
+  const effectiveMaxSlots = MAX_PERSISTENT_SLOTS;
 
-  // Check if a persistent joker can be added (slot limit)
   const canAddPersistentJoker = useCallback((): boolean => {
-    return persistentJokerCount < effectiveMaxSlots;
-  }, [persistentJokerCount, effectiveMaxSlots]);
+    return true;
+  }, []);
 
   // Check if a specific joker is persistent
   const isJokerPersistentCheck = useCallback((joker: any): boolean => {

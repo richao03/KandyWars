@@ -45,7 +45,8 @@ export type EffectTarget =
   | 'cash_under_boost' // Underdog & Broke and Hungry — cash below threshold
   | 'variety_pack_boost' // Variety Pack — 3+ candy types in inventory
   | 'extra_joker_choice' // Extra Credit — +1 joker choice after minigame
-  | 'extra_aura_slot' // Sixth Sense — +1 persistent joker slot
+  | 'extra_aura_slot' // (deprecated — kept for any legacy persisted state)
+  | 'lucky_proc_mult' // Sixth Sense — % chance per sale to add a flat multiplier bonus
   | 'loan_shark_income' // Loan Shark — daily income
   | 'loan_shark_debt' // Loan Shark — end-of-day debt repayment
   | 'glass_cannon_boost' // Glass Cannon — huge one-time multiplier, destroys a joker
@@ -111,6 +112,7 @@ export interface JokerEffect {
     cashBelow?: number; // Underdog/Broke and Hungry: cash threshold
     maxProfitPerUnit?: number;
     requiresFullStack?: boolean; // All In: sale must be the entire owned stack of this candy
+    chance?: number; // Probability 0..1 that the effect procs (used by lucky_proc_mult)
   };
 }
 
@@ -1100,13 +1102,14 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 56: Sixth Sense — +1 aura slot, not upgradeable
+    // 56: Sixth Sense — 10% chance per sale to add +6 mult, not upgradeable
     56: (_lv) => [
       {
-        target: 'extra_aura_slot',
+        target: 'lucky_proc_mult',
         operation: 'add',
-        amount: 1,
+        amount: 6,
         duration: 'persistent',
+        conditions: { chance: 0.1 },
       },
     ],
 
@@ -1979,7 +1982,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 1,
       flavorText: 'I see dead... jokers?',
-      description: '+1 aura slot (hold 6 instead of 5)',
+      description: '10% chance per sale to add +6 mult',
     },
     JOKER_EFFECT_FACTORIES[56]
   ),

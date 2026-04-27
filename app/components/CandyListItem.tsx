@@ -106,21 +106,17 @@ const CandyListItem = React.memo(function CandyListItem({
   // Memoize badge JSX — candyDef is static per candy name, never changes
   const badges = useMemo(() => {
     if (!candyDef) return null;
-    return (
-      <View style={styles.badgeRow}>
-        {candyDef.types.map((type) => (
-          <View
-            key={type}
-            style={[
-              styles.typeBadge,
-              { backgroundColor: TYPE_COLORS[type] || '#888' },
-            ]}
-          >
-            <Text style={styles.badgeText}>{CANDY_TYPE_LABELS[type]}</Text>
-          </View>
-        ))}
+    return candyDef.types.map((type) => (
+      <View
+        key={type}
+        style={[
+          styles.typeBadge,
+          { backgroundColor: TYPE_COLORS[type] || '#888' },
+        ]}
+      >
+        <Text style={styles.badgeText}>{CANDY_TYPE_LABELS[type]}</Text>
       </View>
-    );
+    ));
   }, [candyDef]);
 
   return (
@@ -149,9 +145,11 @@ const CandyListItem = React.memo(function CandyListItem({
                     <Text style={styles.ownedText}>{item.quantityOwned}</Text>
                   </View>
                 )}
+              </View>
+              <View style={styles.badgeRow}>
+                {badges}
                 {freshnessDots}
               </View>
-              {badges}
             </View>
             <View style={styles.candyPriceRow}>
               <Text style={styles.price}>

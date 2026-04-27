@@ -126,6 +126,20 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     bonusBreakdown.push({ emoji: '📣', name: 'Influencer Shoutout', multiplier: 1, flatBonus: totalProfit * 2.0 });
   }
 
+  // Street Cred merchant item — +10% profit boost per level (max 5 levels = +50%)
+  const streetCredEffect = merchantEffects.find((e: any) => e.itemId === 'street_cred');
+  const streetCredLevel = streetCredEffect?.level ?? 0;
+  if (streetCredLevel > 0) {
+    const streetCredBoost = streetCredLevel * 0.1;
+    profitBoost += streetCredBoost;
+    bonusBreakdown.push({
+      emoji: '🌟',
+      name: 'Street Cred',
+      multiplier: 1,
+      flatBonus: totalProfit * streetCredBoost,
+    });
+  }
+
   // Collect flat bonus jokers (sell_flat_bonus)
   for (const joker of jokers) {
     const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
@@ -670,6 +684,19 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
 
 
 
+      // Sixth Sense — chance-based flat multiplier proc
+      if (effect.target === 'lucky_proc_mult') {
+        const chance = effect.conditions?.chance ?? 0;
+        if (chance > 0 && Math.random() < chance) {
+          multiplier += effect.amount;
+          bonusBreakdown.push({
+            emoji: _getJokerEmoji(jokerId),
+            name: _getJokerName(jokerId),
+            multiplier: 1 + effect.amount,
+          });
+        }
+      }
+
       // Survivor — mult per candy batch melted
       if (effect.target === 'survivor_boost') {
         if (survivorCandiesMelted > 0) {
@@ -840,6 +867,7 @@ function _getJokerEmoji(id: number): string {
     [JOKER_IDS.PATIENCE_PAYS]: '🧘',
     [JOKER_IDS.COLLECTOR]: '🗂️',
     [JOKER_IDS.MINIMALIST]: '✨',
+    [JOKER_IDS.SIXTH_SENSE]: '🔮',
   };
   return emojiMap[id] || '🃏';
 }
@@ -887,6 +915,7 @@ function _getJokerName(id: number): string {
     [JOKER_IDS.PATIENCE_PAYS]: 'Patience Pays',
     [JOKER_IDS.COLLECTOR]: 'Collector',
     [JOKER_IDS.MINIMALIST]: 'Minimalist',
+    [JOKER_IDS.SIXTH_SENSE]: 'Sixth Sense',
   };
   return nameMap[id] || 'Joker';
 }

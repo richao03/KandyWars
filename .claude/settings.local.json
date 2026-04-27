@@ -63,7 +63,8 @@
       "Bash(cp /Users/Richao/KandyWarz/candyWarz/.claude/hooks/prefer-lsp.py ~/.claude/hooks/prefer-lsp.py)",
       "Read(//Users/Richao/.claude/**)",
       "Bash(git -C /Users/Richao/KandyWarz/candyWarz log --all --oneline -30)",
-      "Bash(git -C /Users/Richao/KandyWarz/candyWarz status --porcelain)"
+      "Bash(git -C /Users/Richao/KandyWarz/candyWarz status --porcelain)",
+      "Bash(npx ts-node *)"
     ],
     "deny": [],
     "ask": []

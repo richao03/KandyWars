@@ -79,6 +79,7 @@ export const JOKER_ICON_MAP: Record<string, any> = {
   Hoarder: require('../assets/images/emojis/backpack.png'),
   'Penny Wise': require('../assets/images/emojis/cent.png'),
   Survivor: require('../assets/images/emojis/fire.png'),
-  'Influencer Shoutout': require('../assets/images/emojis/talkingHead.png'),
+  'Influencer Shoutout': require('../assets/images/icons/influencerShoutout.png'),
+  'Street Cred': require('../assets/images/icons/streetCred.png'),
   'Hall Pass': require('../assets/images/emojis/hallpass.png'),
 };

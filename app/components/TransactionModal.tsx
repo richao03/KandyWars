@@ -136,6 +136,12 @@ type Props = {
   };
 };
 
+/** Format a number for the cascade arc symbol: strip if whole, else max 2 decimals. */
+function formatSparkNumber(n: number): string {
+  if (Number.isInteger(n)) return String(n);
+  return Number(n.toFixed(2)).toString();
+}
+
 function TransactionModal({
   visible,
   onClose,
@@ -605,8 +611,8 @@ function TransactionModal({
           const iconRef = jokerIconRefs.current[`${bonus.name}-${i}`];
           const arcSymbol =
             bonus.bucket === 'boost'
-              ? `+$${bonus.flatBonus ?? 0}`
-              : `×${bonus.multiplier.toFixed(1)}`;
+              ? `+$${formatSparkNumber(bonus.flatBonus ?? 0)}`
+              : `×${formatSparkNumber(bonus.multiplier)}`;
           const ARC_TRAVEL = 180; // horizontal distance the arc covers
           const arcEndY = breakdownPos
             ? breakdownPos.y + breakdownPos.h / 2
@@ -1242,6 +1248,29 @@ function TransactionModal({
                           </Text>
                         </View>
                       )}
+                      {candy.averagePrice !== null && (
+                        <View style={styles.priceRow}>
+                          <Text style={styles.priceLabel}>
+                            Profit (before jokers):
+                          </Text>
+                          {(() => {
+                            const baseProfit =
+                              (candy.cost - candy.averagePrice) * quantity;
+                            const isPositive = baseProfit >= 0;
+                            return (
+                              <Text
+                                style={[
+                                  styles.priceValue,
+                                  { color: isPositive ? '#22c55e' : '#ef4444' },
+                                ]}
+                              >
+                                {isPositive ? '+' : '-'}$
+                                {formatCurrency(Math.abs(baseProfit))}
+                              </Text>
+                            );
+                          })()}
+                        </View>
+                      )}
                     </>
                   ) : (
                     <>
@@ -1419,7 +1448,13 @@ function TransactionModal({
                           { color: colors.green.success },
                         ]}
                       >
-                        ${formatCurrency(displayProfit)}
+                        {(() => {
+                          const base = saleResult.totalProfit;
+                          const pct = base > 0
+                            ? Math.round((displayProfit / base - 1) * 100)
+                            : 0;
+                          return `+${pct}%`;
+                        })()}
                       </Text>
                     </View>
 

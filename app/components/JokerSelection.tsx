@@ -796,7 +796,7 @@ export default function JokerSelection({
                 : 'You mastered all 3 levels!'}
         </Text>
         <Text style={[styles.slotCounter, themeStyles.subtitle]}>
-          Aura Slots: {persistentJokerCount}/{maxPersistentSlots}
+          Aura Jokers: {persistentJokerCount}
         </Text>
       </View>
 

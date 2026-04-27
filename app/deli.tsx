@@ -82,6 +82,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'candy' | 'joker'>('candy');
+  const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'big'>('all');
 
   // Trivia modal
   const [showTrivia, setShowTrivia] = useState(false);
@@ -414,8 +415,36 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
 
         {/* Content Area */}
         {activeTab === 'candy' ? (
+          <>
+            <View style={styles.sizeChipRow}>
+              {(['all', 'small', 'medium', 'big'] as const).map((id) => {
+                const isActive = sizeFilter === id;
+                const label = id === 'all' ? 'All' : id[0].toUpperCase() + id.slice(1);
+                return (
+                  <TouchableOpacity
+                    key={id}
+                    onPress={() => setSizeFilter(id)}
+                    style={[styles.sizeChip, isActive && styles.sizeChipActive]}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.sizeChipText,
+                        isActive && styles.sizeChipTextActive,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           <FlatList
-            data={candies}
+            data={
+              sizeFilter === 'all'
+                ? candies
+                : candies.filter((c) => c.size === sizeFilter)
+            }
             keyExtractor={(item) => item.name}
             contentContainerStyle={styles.list}
             renderItem={({ item, index }) => (
@@ -471,6 +500,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
               </View>
             )}
           />
+          </>
         ) : (
           <DeliJokerShop
             deliJokerIds={shopkeeper.deliJokerIds}
@@ -616,6 +646,37 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: colors.white,
+  },
+  // Size filter chips
+  sizeChipRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 0,
+    paddingTop: 6,
+    paddingBottom: 6,
+    gap: 6,
+  },
+  sizeChip: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#ff6b35',
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+  },
+  sizeChipActive: {
+    backgroundColor: '#ff6b35',
+    borderColor: '#b94714',
+  },
+  sizeChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#b94714',
+    fontFamily: 'PixeloidMono',
+  },
+  sizeChipTextActive: {
+    color: '#fff',
   },
   // Candy list
   list: {

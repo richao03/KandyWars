@@ -356,11 +356,12 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(1);
     });
 
-    it('Sixth Sense (ID: 56) - +1 aura slot', () => {
+    it('Sixth Sense (ID: 56) - 10% chance for +6 mult', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 56);
       expect(joker?.name).toBe('Sixth Sense');
-      expect(joker?.effects[0].target).toBe('extra_aura_slot');
-      expect(joker?.effects[0].amount).toBe(1);
+      expect(joker?.effects[0].target).toBe('lucky_proc_mult');
+      expect(joker?.effects[0].amount).toBe(6);
+      expect(joker?.effects[0].conditions?.chance).toBeCloseTo(0.1, 5);
     });
   });
 
@@ -496,6 +497,7 @@ describe('All Jokers - Comprehensive Tests', () => {
         'cash_under_boost',
         'extra_joker_choice',
         'extra_aura_slot',
+        'lucky_proc_mult',
         'loan_shark_income',
         'loan_shark_debt',
         'glass_cannon_boost',
