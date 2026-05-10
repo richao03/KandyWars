@@ -1,6 +1,8 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { useAppSelector } from '../../src/store/hooks';
+import { selectTutorialStep } from '../../src/store/slices/tutorialSlice';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import TextWithEmojis from './TextWithEmojis';
@@ -30,17 +32,31 @@ const MarketActionButtons = React.memo(function MarketActionButtons({
   onNextPeriodLayout,
 }: MarketActionButtonsProps) {
   const nextPeriodRef = useRef<View>(null);
+  const tutorialStep = useAppSelector(selectTutorialStep);
 
-  const handleNextPeriodLayout = useCallback(() => {
-    if (onNextPeriodLayout && nextPeriodRef.current) {
+  const measureNextPeriod = useCallback(() => {
+    if (!onNextPeriodLayout || !nextPeriodRef.current) return;
+    // Two animation frames so layout fully settles on slower devices and
+    // after sibling content (HUD, banners, hints) finishes its own pass.
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         nextPeriodRef.current?.measureInWindow((x, y, width, height) => {
           if (__DEV__) console.log(`📖 NextPeriod measured: x=${x}, y=${y}, w=${width}, h=${height}`);
           if (width > 0 && height > 0) onNextPeriodLayout({ x, y, width, height });
         });
       });
-    }
+    });
   }, [onNextPeriodLayout]);
+
+  const handleNextPeriodLayout = measureNextPeriod;
+
+  // Re-measure whenever the tutorial step changes. The button's window position
+  // can shift between mount and the moment a tutorial step needs it (e.g. lunch
+  // banner appears, FirstTimeHint dismisses), so onLayout alone leaves stale
+  // coords cached on devices where the relayout doesn't trigger another pass.
+  useEffect(() => {
+    if (tutorialStep > 0) measureNextPeriod();
+  }, [tutorialStep, measureNextPeriod]);
   // Calculate lunch period dynamically (period 3 for 6-period days, period 4 for 8-period days)
   const lunchPeriod = Math.floor(periodsPerDay / 2);
   const isGoToLunch = period === lunchPeriod && !showLunchMinigames;

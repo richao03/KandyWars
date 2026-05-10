@@ -93,20 +93,20 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       expect(pass?.effects[0].value).toBe(2000);
     });
 
-    it('Valedictorian Vendor - +1 joker selection (Play all minigames)', () => {
+    it('The Valedictorian - 50% chance to skip a minigame and get a joker reward', () => {
       const store = createStoreWithEffects({
-        hallPasses: ['valedictorian_vendor'],
+        hallPasses: ['the_valedictorian'],
         period: 0,
       });
 
       const passes = selectAllHallPasses(store.getState());
-      const pass = passes.find((p) => p.id === 'valedictorian_vendor');
+      const pass = passes.find((p) => p.id === 'the_valedictorian');
 
-      expect(pass?.name).toBe('Valedictorian Vendor');
+      expect(pass?.name).toBe('The Valedictorian');
       expect(pass?.rarity).toBe('magical');
       expect(pass?.unlockRequirement).toBe('Play every single minigame at least once');
-      expect(pass?.effects[0].type).toBe('joker_bonus');
-      expect(pass?.effects[0].value).toBe(1);
+      expect(pass?.effects[0].type).toBe('minigame_skip_chance');
+      expect(pass?.effects[0].value).toBe(0.5);
     });
 
     it('Forged Pass - +1 reroll in joker selection (Win with 8+ jokers)', () => {
@@ -233,7 +233,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       expect(inventoryEffect?.value).toBe(15);
     });
 
-    it('Perfect Scholar - +100% allowance (Win on difficulty 6)', () => {
+    it('Perfect Scholar - 75% chance to skip a minigame (Play 75 minigames lifetime)', () => {
       const store = createStoreWithEffects({
         hallPasses: ['perfect_scholar'],
         period: 0,
@@ -244,9 +244,9 @@ describe('All Hall Passes - Comprehensive Tests', () => {
 
       expect(pass?.name).toBe('Perfect Scholar');
       expect(pass?.rarity).toBe('legendary');
-      expect(pass?.unlockRequirement).toBe('Win the game on difficulty level 6');
-      expect(pass?.effects[0].type).toBe('allowance_bonus');
-      expect(pass?.effects[0].value).toBe(1000);
+      expect(pass?.unlockRequirement).toBe('Play 75 minigames (lifetime)');
+      expect(pass?.effects[0].type).toBe('minigame_skip_chance');
+      expect(pass?.effects[0].value).toBe(0.75);
     });
   });
 
@@ -465,6 +465,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
         'inventory_bonus',
         'allowance_bonus',
         'joker_bonus',
+        'minigame_skip_chance',
         'special',
       ];
 
@@ -502,6 +503,74 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       expect(rarities.rare).toBeGreaterThan(0);
       expect(rarities.epic).toBeGreaterThan(0);
       expect(rarities.legendary).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Previously Untested Hall Passes', () => {
+    it('Maximalist - +1000% allowance (Deposit entire wallet 4x in one game)', () => {
+      const store = createStoreWithEffects({
+        hallPasses: ['maximalist'],
+        period: 0,
+      });
+
+      const passes = selectAllHallPasses(store.getState());
+      const pass = passes.find((p) => p.id === 'maximalist');
+
+      expect(pass).toBeDefined();
+      expect(pass?.name).toBe('Maximalist');
+      expect(pass?.rarity).toBe('magical');
+      expect(pass?.unlockRequirement).toBe(
+        'Deposit your entire wallet 4 times in one game'
+      );
+      expect(pass?.effects[0].type).toBe('allowance_bonus');
+      expect(pass?.effects[0].value).toBe(1000);
+
+      // Functional check: allowance bonus should apply through HallPassUtils
+      const baseAllowance = 50;
+      const hallPassEffects = selectSelectedHallPassEffects(store.getState());
+      const finalAllowance = HallPassUtils.applyAllowanceBonus(
+        baseAllowance,
+        hallPassEffects
+      );
+      // 50 * (1 + 1000/100) = 50 * 11 = 550
+      expect(finalAllowance).toBe(550);
+    });
+
+    it('Inheritance - 10% wallet → piggy bank daily (Win with $50k+ in piggy bank)', () => {
+      const store = createStoreWithEffects({
+        hallPasses: ['inheritance'],
+        period: 0,
+      });
+
+      const passes = selectAllHallPasses(store.getState());
+      const pass = passes.find((p) => p.id === 'inheritance');
+
+      expect(pass).toBeDefined();
+      expect(pass?.name).toBe('Inheritance');
+      expect(pass?.rarity).toBe('epic');
+      expect(pass?.unlockRequirement).toBe(
+        'Win the game with $50,000+ in the piggy bank'
+      );
+      expect(pass?.effects[0].type).toBe('special');
+      expect(pass?.effects[0].value).toBe(10);
+      expect(pass?.effects[0].description).toContain('piggy bank');
+    });
+
+    it('Joker Monopoly - 90% chance to skip a minigame (Win 100 minigames lifetime)', () => {
+      const store = createStoreWithEffects({
+        hallPasses: ['joker_monopoly'],
+        period: 0,
+      });
+
+      const passes = selectAllHallPasses(store.getState());
+      const pass = passes.find((p) => p.id === 'joker_monopoly');
+
+      expect(pass).toBeDefined();
+      expect(pass?.name).toBe('Joker Monopoly');
+      expect(pass?.rarity).toBe('legendary');
+      expect(pass?.unlockRequirement).toBe('Win 100 minigames (lifetime)');
+      expect(pass?.effects[0].type).toBe('minigame_skip_chance');
+      expect(pass?.effects[0].value).toBe(0.9);
     });
   });
 });

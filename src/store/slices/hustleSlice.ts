@@ -1,7 +1,9 @@
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { resetGame } from './gameSlice';
 import seedrandom from 'seedrandom';
-import { CANDY_NAMES } from '../../constants/candyRegistry';
+import { getCandiesBySize } from '../../constants/candyRegistry';
+
+const SMALL_CANDY_NAMES = getCandiesBySize('small').map((c) => c.name);
 
 // Locations available for hustles (excludes 'the connect' special location)
 const HUSTLE_LOCATIONS = [
@@ -44,9 +46,14 @@ const hustleSlice = createSlice({
   reducers: {
     generateHustles: (
       state,
-      action: PayloadAction<{ seed: string; day: number; periodsPerDay: number }>
+      action: PayloadAction<{
+        seed: string;
+        day: number;
+        periodsPerDay: number;
+        unlockedCandies?: string[];
+      }>
     ) => {
-      const { seed, day, periodsPerDay } = action.payload;
+      const { seed, day, periodsPerDay, unlockedCandies } = action.payload;
 
       // No hustles on Day 1 — give player time to learn
       if (day <= 1) {
@@ -88,8 +95,13 @@ const hustleSlice = createSlice({
         } while (usedLocations.has(location) && attempts < 10);
         usedLocations.add(location);
 
-        // Random candy from the full candy list
-        const candyName = pickRandom(CANDY_NAMES);
+        // Random candy from the unlocked list (falls back to small candies — the
+        // always-available tier — if the caller didn't provide a list).
+        const candidateCandies =
+          unlockedCandies && unlockedCandies.length > 0
+            ? unlockedCandies
+            : SMALL_CANDY_NAMES;
+        const candyName = pickRandom(candidateCandies);
 
         // Quantity scales with day: 5-15 base, +2 per day after day 2
         const baseQty = Math.floor(rng() * 11) + 5; // 5-15

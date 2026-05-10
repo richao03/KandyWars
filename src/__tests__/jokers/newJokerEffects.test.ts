@@ -217,21 +217,51 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
     });
 
-    describe('Lucky 7 (84) — selling exactly 7', () => {
-      it('should trigger 7x when quantity === 7', () => {
+    describe('Lucky 7 (84) — every 7th period', () => {
+      // Trigger condition: (periodCount + 1) % 7 === 0, i.e. absolute period 7, 14, 21, ...
+      // periodCount is 0-indexed; period N has periodCount N - 1.
+
+      it('should trigger +2 mult on period 7 at level 1 (periodCount = 6)', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          quantity: 7,
+          periodCount: 6,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
-        // multiplier = 1 + (7 - 1) = 7
-        expect(result.jokerMultiplier).toBe(7);
+        expect(result.jokerMultiplier).toBe(3); // 1 + 2
       });
 
-      it('should NOT trigger when quantity !== 7', () => {
+      it('should trigger +3 mult on period 14 at level 2 (periodCount = 13)', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          quantity: 6,
+          periodCount: 13,
+          jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 2)],
+        });
+        expect(result.jokerMultiplier).toBe(4); // 1 + 3
+      });
+
+      it('should trigger +4 mult on period 21 at level 3 (periodCount = 20)', () => {
+        const result = calculateSaleTotal({
+          ...baseSaleParams,
+          periodCount: 20,
+          jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 3)],
+        });
+        expect(result.jokerMultiplier).toBe(5); // 1 + 4
+      });
+
+      it('should NOT trigger on a non-multiple-of-7 period', () => {
+        const result = calculateSaleTotal({
+          ...baseSaleParams,
+          periodCount: 5, // period 6
+          jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
+        });
+        expect(result.jokerMultiplier).toBe(1);
+      });
+
+      it('quantity does NOT affect Lucky 7 (no longer count-based)', () => {
+        const result = calculateSaleTotal({
+          ...baseSaleParams,
+          quantity: 7, // legacy expectation: would have fired
+          periodCount: 5, // not a 7th period
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
         expect(result.jokerMultiplier).toBe(1);
@@ -696,25 +726,25 @@ describe('New Joker Effects (IDs 57-93)', () => {
     });
 
     describe('Lucky 7 L1 vs L3', () => {
-      it('L1 should give 7x, L3 should give 15x', () => {
+      it('L1 adds +2 mult on period 7, L3 adds +4 mult', () => {
         const effectsL1 = getJokerEffectsAtLevel(JOKER_IDS.LUCKY_7, 1);
         const effectsL3 = getJokerEffectsAtLevel(JOKER_IDS.LUCKY_7, 3);
-        expect(effectsL1[0].amount).toBe(7);
-        expect(effectsL3[0].amount).toBe(15);
+        expect(effectsL1[0].amount).toBe(2);
+        expect(effectsL3[0].amount).toBe(4);
 
         const resultL1 = calculateSaleTotal({
           ...baseSaleParams,
-          quantity: 7,
+          periodCount: 6, // absolute period 7
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
         const resultL3 = calculateSaleTotal({
           ...baseSaleParams,
-          quantity: 7,
+          periodCount: 6,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 3)],
         });
-        // L1: multiplier = 7, L3: multiplier = 15
-        expect(resultL1.jokerMultiplier).toBe(7);
-        expect(resultL3.jokerMultiplier).toBe(15);
+        // L1: multiplier = 1 + 2 = 3, L3: multiplier = 1 + 4 = 5
+        expect(resultL1.jokerMultiplier).toBe(3);
+        expect(resultL3.jokerMultiplier).toBe(5);
         expect(resultL3.totalGain).toBeGreaterThan(resultL1.totalGain);
       });
     });

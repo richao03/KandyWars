@@ -1,16 +1,19 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { useGame } from '../src/hooks/useGame';
+import { useMinigameTracking } from '../src/hooks/useMinigameTracking';
 import EconomyGame from './minigames/EconomyGame';
 
 export default function EconomyGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
+  const { trackMinigameWon } = useMinigameTracking();
 
   const navigateBack = () => {
     router.back();
   };
 
   const handleGameComplete = () => {
+    trackMinigameWon('economy');
     if (__DEV__) console.log('Economy game completed! Context:', minigameContext);
 
     if (minigameContext === 'after-school') {

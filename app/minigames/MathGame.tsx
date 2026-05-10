@@ -20,12 +20,12 @@ import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MathGameProps {
@@ -50,7 +50,6 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const [matchesCompleted, setMatchesCompleted] = useState(0);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [jokerRewardTier, setJokerRewardTier] = useState(0); // Track joker reward tier for selection
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false); // Show available jokers modal
 
   // Number sequences
   const [numbersSequence, setNumbersSequence] = useState<number[]>([]);
@@ -88,15 +87,17 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   const TOTAL_NUMBER_WIDTH = NUMBER_WIDTH + NUMBER_SPACING;
   const SCROLL_SPEED = 1; // pixels per interval (16ms)
 
-  // Level configurations (speeds reduced by 25% for better playability)
+  // Level configurations. Levels 2 and 3 are slowed by an additional 30% on
+  // top of the earlier 25% pass — the late-game pace was too punishing.
+  // L1 unchanged so the on-ramp still feels familiar.
   const getLevelConfig = (levelNum: number) => {
     switch (levelNum) {
       case 1:
         return { speed: 1.0, requiredMatches: 10 };
       case 2:
-        return { speed: 1.35, requiredMatches: 15 };
+        return { speed: 0.945, requiredMatches: 15 }; // was 1.35
       case 3:
-        return { speed: 1.875, requiredMatches: 15 };
+        return { speed: 1.3125, requiredMatches: 15 }; // was 1.875
       default:
         return { speed: 0.75, requiredMatches: 10 };
     }
@@ -309,7 +310,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
         // Show completion modal for the set
         // Mark this level as completed
-        if (__DEV__) console.log(`🎯 MathGame: Setting completedLevel to ${level}`);
+        if (__DEV__)
+          console.log(`🎯 MathGame: Setting completedLevel to ${level}`);
         setCompletedLevel(level);
         setJokerRewardTier(level);
 
@@ -526,7 +528,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Math Challenge!</Text>
+          <Text style={styles.instructionsTitle}>Add to 10!</Text>
 
           <PixelBorder
             borderColor="#f5f5dc"
@@ -535,7 +537,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
             innerPadding={20}
             style={{ marginBottom: 20, width: '90%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Play:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
@@ -572,63 +574,30 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
               </View>
             </PixelBorder>
           </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#0d2818"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#2d5a3e"
-              borderWidth={3}
-              backgroundColor="#0d2818"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        {/* Available Jokers Modal */}
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#f5f5dc',
-            backgroundColor: '#0d2818',
-            headerColor: '#2d4a3e',
-            textColor: '#f5f5dc',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -637,7 +606,8 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
   return (
     <View style={styles.container}>
       <MinigameHUD
-        title="Math Challenge"
+        theme="math"
+        title="Add to 10!"
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
         centerInfo={`🎯: ${matchedIndices.length}/${getLevelConfig(level).requiredMatches}`}

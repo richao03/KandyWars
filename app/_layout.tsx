@@ -1,7 +1,8 @@
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { InteractionManager, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
@@ -20,6 +21,9 @@ import {
   selectReduceMotion,
 } from '../src/store/slices/juiceSettingsSlice';
 import Constants from 'expo-constants';
+
+// Lazy-load AdBanner so it doesn't block the initial render.
+const AdBanner = lazy(() => import('./components/AdBanner'));
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -107,6 +111,8 @@ export default function RootLayout() {
             <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
               <GestureHandlerRootView style={{ flex: 1 }}>
                 <ScreenFX>
+                <View style={{ flex: 1 }}>
+                <GlobalAdBanner />
                 <Stack
                   screenOptions={{
                     animation: 'none',
@@ -193,6 +199,7 @@ export default function RootLayout() {
                         }}
                       />
                 </Stack>
+                </View>
                 </ScreenFX>
                 <JuiceLayer />
               </GestureHandlerRootView>
@@ -220,6 +227,29 @@ function HapticRegistrar() {
     registerHapticSettingsGetter(() => ({ reduceMotion, haptics }));
   }, [reduceMotion, haptics]);
   return null;
+}
+
+/**
+ * GlobalAdBanner — renders the AdMob banner at the top of the screen tree
+ * for every route. Visibility on title-screen routes is handled inside
+ * AdBanner via AdVisibilityContext (it stays mounted but display:none for
+ * smooth transitions). Render is deferred via InteractionManager so it
+ * doesn't block initial app paint.
+ */
+function GlobalAdBanner() {
+  const [shouldRender, setShouldRender] = useState(false);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      setShouldRender(true);
+    });
+    return () => task.cancel();
+  }, []);
+  if (!shouldRender) return null;
+  return (
+    <Suspense fallback={<View style={{ height: 50, backgroundColor: '#000' }} />}>
+      <AdBanner />
+    </Suspense>
+  );
 }
 
 /**

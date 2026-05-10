@@ -166,13 +166,13 @@ describe('All Jokers - Comprehensive Tests', () => {
       expect(joker?.effects[0].amount).toBe(1.5);
     });
 
-    it('Triple Threat (ID: 18) - +2x when 3+ candy types covered by jokers', () => {
+    it('Triple Threat (ID: 18) - +1 mult on every 3rd sale (level 1)', () => {
       const joker = STANDARDIZED_JOKERS.find((j) => j.id === 18);
       expect(joker?.name).toBe('Triple Threat');
       expect(joker?.type).toBe('persistent');
       expect(joker?.effects[0].target).toBe('triple_threat_boost');
       expect(joker?.effects[0].operation).toBe('add');
-      expect(joker?.effects[0].amount).toBe(2);
+      expect(joker?.effects[0].amount).toBe(1);
     });
 
     it('Pursuasion (ID: 48) - 2x next sale', () => {

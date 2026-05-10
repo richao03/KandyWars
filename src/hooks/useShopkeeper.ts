@@ -9,6 +9,8 @@ import {
   rerollDeliJoker,
   updateQuestProgress,
   acknowledgeQuestReward,
+  acceptNightlyQuest,
+  rerollNightlyQuest,
   setMood,
   resetDailyShopkeeperState,
   applyEndOfRunBonus,
@@ -22,6 +24,9 @@ import {
   selectNightlyQuest,
   selectNightlyQuestCompleted,
   selectPendingQuestReward,
+  selectNightlyQuestAccepted,
+  selectLastQuestRerollDay,
+  NIGHTLY_QUEST_REROLL_COST,
   selectTriviaAnsweredToday,
   selectTriviaCorrectToday,
   selectTodaysTriviaIds,
@@ -56,6 +61,8 @@ export const useShopkeeper = () => {
   const nightlyQuest = useAppSelector(selectNightlyQuest);
   const nightlyQuestCompleted = useAppSelector(selectNightlyQuestCompleted);
   const pendingQuestReward = useAppSelector(selectPendingQuestReward);
+  const nightlyQuestAccepted = useAppSelector(selectNightlyQuestAccepted);
+  const lastQuestRerollDay = useAppSelector(selectLastQuestRerollDay);
   const triviaAnsweredToday = useAppSelector(selectTriviaAnsweredToday);
   const triviaCorrectToday = useAppSelector(selectTriviaCorrectToday);
   const todaysTriviaIds = useAppSelector(selectTodaysTriviaIds);
@@ -153,6 +160,28 @@ export const useShopkeeper = () => {
     dispatch(acknowledgeQuestReward());
   }, [dispatch]);
 
+  const acceptQuest = useCallback(() => {
+    dispatch(acceptNightlyQuest());
+  }, [dispatch]);
+
+  const rerollQuest = useCallback(
+    (seed: string, day: number) => {
+      dispatch(rerollNightlyQuest({ seed, day }));
+    },
+    [dispatch]
+  );
+
+  const canRerollQuestToday = useCallback(
+    (currentDay: number): boolean => {
+      if (!nightlyQuest) return false;
+      if (nightlyQuestAccepted) return false;
+      if (nightlyQuestCompleted) return false;
+      if (lastQuestRerollDay === currentDay) return false;
+      return true;
+    },
+    [nightlyQuest, nightlyQuestAccepted, nightlyQuestCompleted, lastQuestRerollDay]
+  );
+
   const updateMood = useCallback(
     (newMood: 'normal' | 'happy' | 'mad') => {
       dispatch(setMood(newMood));
@@ -206,6 +235,9 @@ export const useShopkeeper = () => {
     nightlyQuest,
     nightlyQuestCompleted,
     pendingQuestReward,
+    nightlyQuestAccepted,
+    lastQuestRerollDay,
+    nightlyQuestRerollCost: NIGHTLY_QUEST_REROLL_COST,
     triviaAnsweredToday,
     triviaCorrectToday,
     canAnswerTrivia,
@@ -223,6 +255,9 @@ export const useShopkeeper = () => {
     reroll,
     trackQuestProgress,
     claimQuestReward,
+    acceptQuest,
+    rerollQuest,
+    canRerollQuestToday,
     updateMood,
     resetDaily,
     applyRunBonus,

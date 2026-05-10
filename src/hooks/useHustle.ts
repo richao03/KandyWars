@@ -18,8 +18,13 @@ export const useHustle = () => {
   const completedHustleIds = useAppSelector(selectCompletedHustleIds);
 
   const generateHustlesAction = useCallback(
-    (seed: string, day: number, periodsPerDay: number) => {
-      dispatch(generateHustles({ seed, day, periodsPerDay }));
+    (
+      seed: string,
+      day: number,
+      periodsPerDay: number,
+      unlockedCandies?: string[]
+    ) => {
+      dispatch(generateHustles({ seed, day, periodsPerDay, unlockedCandies }));
     },
     [dispatch]
   );

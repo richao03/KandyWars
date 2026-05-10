@@ -4,10 +4,13 @@ import {
   initializeMinigameTracking,
   initializeFromUserObject,
   markMinigamePlayed,
+  markMinigameWon,
   selectPlayedMinigames,
   selectMinigameCompletions,
   selectHasPlayedAllMinigames,
   selectMinigameProgress,
+  selectLifetimeMinigameCompletionsTotal,
+  selectLifetimeMinigameWinsTotal,
   MinigameType,
 } from '../store/slices/minigameTrackingSlice';
 import { updateCachedUserObject } from '../store/slices/userObjectSlice';
@@ -20,6 +23,8 @@ export const useMinigameTracking = () => {
   const minigameCompletions = useAppSelector(selectMinigameCompletions);
   const hasPlayedAllMinigames = useAppSelector(selectHasPlayedAllMinigames);
   const minigameProgress = useAppSelector(selectMinigameProgress);
+  const lifetimeMinigameCompletions = useAppSelector(selectLifetimeMinigameCompletionsTotal);
+  const lifetimeMinigameWins = useAppSelector(selectLifetimeMinigameWinsTotal);
 
   // Initialize minigame tracking from cached user object (Firebase data)
   useEffect(() => {
@@ -33,6 +38,11 @@ export const useMinigameTracking = () => {
       }
     }
   }, [dispatch, minigameState.isLoaded, cachedUserObject]);
+
+  const trackMinigameWon = useCallback((minigame: MinigameType) => {
+    if (__DEV__) console.log(`🏆 Minigame won: ${minigame}`);
+    dispatch(markMinigameWon(minigame));
+  }, [dispatch]);
 
   const trackMinigamePlayed = useCallback((minigame: MinigameType) => {
     if (__DEV__) console.log(`🎮 Minigame played: ${minigame}`);
@@ -54,7 +64,7 @@ export const useMinigameTracking = () => {
     if (__DEV__) console.log(`📊 Minigame progress: ${newProgress.played}/${newProgress.total} played`);
 
     if (newProgress.played === newProgress.total) {
-      if (__DEV__) console.log('🎉 All minigames completed! Valedictorian Vendor Hall Pass should be unlocked.');
+      if (__DEV__) console.log('🎉 All minigames played at least once! The Valedictorian Hall Pass eligible.');
     }
   }, [dispatch, minigameProgress, playedMinigames, cachedUserObject]);
 
@@ -80,10 +90,13 @@ export const useMinigameTracking = () => {
     minigameCompletions,
     hasPlayedAllMinigames,
     minigameProgress,
+    lifetimeMinigameCompletions,
+    lifetimeMinigameWins,
     isLoaded: minigameState.isLoaded,
 
     // Actions
     trackMinigamePlayed,
+    trackMinigameWon,
 
     // Utilities
     hasPlayedMinigame,

@@ -12,6 +12,7 @@ import {
 
 import { CANDY_NAMES } from '../../src/constants/candyRegistry';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
+import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
@@ -110,6 +111,7 @@ function JokerCard({
   const { periodCount, revertToPreviousPeriod, incrementPeriod, jumpToPeriod } =
     useGame();
   const { gameData, modifyCandyPrice, getOriginalCandyPrice } = useSeed();
+  const { activateDetentionDodge } = useEventHandler();
   const {
     inventory,
     removeFromInventory,
@@ -239,8 +241,10 @@ function JokerCard({
   }, []);
 
   const handleActivate = useCallback(() => {
-    // For copied jokers, use originalId for activation checks
-    const activationId = (joker as any).originalId || joker.id;
+    // For copied jokers, use originalId for activation checks.
+    // Coerce to a number — joker.id can arrive as a string from some persistence
+    // paths, and the strict-equal checks below compare against numeric JOKER_IDS.
+    const activationId = Number((joker as any).originalId ?? joker.id);
 
     if (__DEV__) {
       console.log(
@@ -356,6 +360,41 @@ function JokerCard({
         '🧁',
         () => handleBakeSale(),
         'Collect Money!',
+        'Cancel',
+        () => {}
+      );
+    } else if (activationId === JOKER_IDS.MARKET_CRASH) {
+      const level = (joker as any).level ?? 1;
+      const mult = level === 3 ? 0.3 : level === 2 ? 0.4 : 0.5;
+      const pct = Math.round((1 - mult) * 100);
+      showConfirm(
+        'Market Crash',
+        `Crash all candy prices by ${pct}% for this period?`,
+        '📉',
+        () => handleMarketCrash(mult),
+        'Crash It',
+        'Cancel',
+        () => {}
+      );
+    } else if (activationId === JOKER_IDS.INFLATION) {
+      const level = (joker as any).level ?? 1;
+      const mult = level === 3 ? 4 : level === 2 ? 3 : 2;
+      showConfirm(
+        'Inflation',
+        `Multiply all candy prices by ${mult}x for this period?`,
+        '📈',
+        () => handleInflation(mult),
+        'Inflate',
+        'Cancel',
+        () => {}
+      );
+    } else if (activationId === JOKER_IDS.DETENTION_DODGE) {
+      showConfirm(
+        'Detention Dodge',
+        'Dodge all events for the rest of today?',
+        '🏃',
+        () => handleDetentionDodge(),
+        'Dodge',
         'Cancel',
         () => {}
       );
@@ -583,6 +622,70 @@ function JokerCard({
     } catch (error) {
       console.error('🧁 Bake Sale: Error during activation:', error);
       showAlert('Error', 'An error occurred while activating Bake Sale', '❌');
+    }
+  };
+
+  // Apply a flat multiplier to every candy's price for the current period.
+  // Used by Market Crash (mult < 1) and Inflation (mult > 1).
+  const applyAllCandyPriceMultiplier = (mult: number) => {
+    const candyPrices = gameData?.candyPrices;
+    if (!candyPrices) return;
+    for (const candyType of Object.keys(candyPrices)) {
+      const original = candyPrices[candyType]?.[periodCount];
+      if (typeof original !== 'number') continue;
+      modifyCandyPrice(candyType, Math.max(1, Math.round(original * mult)), periodCount);
+    }
+  };
+
+  const handleMarketCrash = async (mult: number) => {
+    try {
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      applyAllCandyPriceMultiplier(mult);
+      fireActivationFeedback();
+      const pct = Math.round((1 - mult) * 100);
+      showAlert(
+        'Market Crashed!',
+        `All candy prices dropped ${pct}% this period. Buy the dip!`,
+        '📉'
+      );
+    } catch (error) {
+      console.error('📉 Market Crash: Error during activation:', error);
+      showAlert('Error', 'An error occurred while activating Market Crash', '❌');
+    }
+  };
+
+  const handleInflation = async (mult: number) => {
+    try {
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      applyAllCandyPriceMultiplier(mult);
+      fireActivationFeedback();
+      showAlert(
+        'Inflation Hits!',
+        `All candy prices multiplied ${mult}x this period.`,
+        '📈'
+      );
+    } catch (error) {
+      console.error('📈 Inflation: Error during activation:', error);
+      showAlert('Error', 'An error occurred while activating Inflation', '❌');
+    }
+  };
+
+  const handleDetentionDodge = async () => {
+    try {
+      const activationId = (joker as any).originalId || joker.id;
+      markJokerUsedToday(activationId.toString());
+      activateDetentionDodge();
+      fireActivationFeedback();
+      showAlert(
+        'Detention Dodged!',
+        "You're invisible to events for the rest of today.",
+        '🏃'
+      );
+    } catch (error) {
+      console.error('🏃 Detention Dodge: Error during activation:', error);
+      showAlert('Error', 'An error occurred while activating Detention Dodge', '❌');
     }
   };
 

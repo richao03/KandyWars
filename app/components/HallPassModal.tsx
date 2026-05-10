@@ -247,6 +247,16 @@ export default function HallPassModal({
                 >
                   {pass.description}
                 </Text>
+                {isUnlocked && (
+                  <Text
+                    style={[
+                      styles.unlockRequirement,
+                      styles.unlockRequirementLocked,
+                    ]}
+                  >
+                    Unlocked: {pass.unlockRequirement}
+                  </Text>
+                )}
 
                 <View style={styles.effectsContainer}>
                   <Text style={styles.effectsTitle}>Effects:</Text>
@@ -291,25 +301,25 @@ export default function HallPassModal({
                       backgroundColor: colors.offWhite,
                     }}
                   >
-                    <Image
-                      source={require('../../assets/images/emojis/lock.png')}
-                      style={{
-                        width: 40,
-                        height: 40,
-                        resizeMode: 'contain',
-                        marginRight: 6,
-                      }}
-                    />
-                    (
+                    {!isUnlocked && (
+                      <Image
+                        source={require('../../assets/images/emojis/lock.png')}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          resizeMode: 'contain',
+                          marginRight: 6,
+                        }}
+                      />
+                    )}
                     <Text
                       style={[
                         styles.unlockRequirement,
-                        !isUnlocked && styles.unlockRequirementLocked,
+                        styles.unlockRequirementLocked,
                       ]}
                     >
                       {pass.unlockRequirement}
                     </Text>
-                    )
                   </View>
                 )}
               </View>

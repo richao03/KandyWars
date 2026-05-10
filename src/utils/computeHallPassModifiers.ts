@@ -18,6 +18,7 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
     jokerBonusCount: 0,
     rerollBonusCount: 0,
     salesMultiplier: 1, // Default 1x (no multiplier)
+    minigameSkipChance: 0, // 0..1 — set to MAX of selected passes' values
   };
 
   // Accumulate effects from all selected passes
@@ -49,6 +50,15 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
           break;
         case 'joker_bonus':
           modifiers.jokerBonusCount += effect.value;
+          break;
+        case 'minigame_skip_chance':
+          // Stack as MAX, not sum — multiple skip-passes share a single roll
+          // at the highest probability. Otherwise three passes would push
+          // skip near-100% with little distinction between tiers.
+          modifiers.minigameSkipChance = Math.max(
+            modifiers.minigameSkipChance,
+            effect.value
+          );
           break;
         case 'special':
           // Special effects are handled by hall pass ID above

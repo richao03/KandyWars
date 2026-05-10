@@ -6,6 +6,9 @@ import {
   Text,
   View,
 } from 'react-native';
+// Window dimensions used only for textBox sizing; the overlay/background fill
+// their parent via flex:1 so centering matches the visible Tabs content area
+// (below the ad banner + HUD), not the full window.
 import colors from '../../src/constants/colors';
 import { GAME_TIPS } from '../../src/constants/gameTips';
 import { useTabBar } from '../../src/hooks/useTabBar';
@@ -16,7 +19,7 @@ interface SchoolsOutModalProps {
   onComplete: () => void;
 }
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function SchoolsOutModal({
   visible,
@@ -83,8 +86,7 @@ const styles = StyleSheet.create({
     elevation: 1000, // Android elevation
   },
   backgroundImage: {
-    width: width,
-    height: height,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

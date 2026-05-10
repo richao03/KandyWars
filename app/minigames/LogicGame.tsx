@@ -9,21 +9,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-import AvailableJokersModal from '../components/AvailableJokersModal';
-import colors from '../../src/constants/colors';
-
 
 interface Attempt {
   candies: string[];
@@ -88,7 +87,6 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   const [gameComplete, setGameComplete] = useState(false);
   const [allLevelsComplete, setAllLevelsComplete] = useState(false);
   const [maxAttempts] = useState(6);
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Start game
   const startGame = () => {
@@ -121,7 +119,8 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     const shuffled = [...candyTypes].sort(() => Math.random() - 0.5);
     const code = shuffled.slice(0, 4);
     setSecretCode(code);
-    if (__DEV__) console.log(`Level ${level} secret code (for testing):`, code.join(''));
+    if (__DEV__)
+      console.log(`Level ${level} secret code (for testing):`, code.join(''));
   };
 
   // Initialize level - reset state and generate new code
@@ -313,7 +312,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     SoundEffects.playRandomPop();
     if (gameState === 'playing') {
       showModal(
-        'Leave Candy Riddle?',
+        'Leave Crack the Candy Code??',
         "If you leave now, you'll miss your chance to solve logic puzzles!",
         '🚪',
         () => {
@@ -355,7 +354,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Logic Study Session!</Text>
+          <Text style={styles.instructionsTitle}>Crack the Candy Code</Text>
 
           <PixelBorder
             borderColor="#666"
@@ -364,7 +363,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             innerPadding={20}
             style={{ marginBottom: 20, width: '100%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Solve:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1. </Text>
               <Text style={styles.stepText}>
@@ -385,21 +384,15 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             </View>
             <View style={styles.legendRow}>
               <View style={[styles.legendSquare, styles.correctCandy]} />
-              <Text style={styles.legendText}>
-                Green = Correct candy, correct position
-              </Text>
+              <Text style={styles.legendText}>= Correct candy & position</Text>
             </View>
             <View style={styles.legendRow}>
               <View style={[styles.legendSquare, styles.presentCandy]} />
-              <Text style={styles.legendText}>
-                Yellow = Candy is in sequence, wrong position
-              </Text>
+              <Text style={styles.legendText}>= Candy in wrong position</Text>
             </View>
             <View style={styles.legendRow}>
               <View style={[styles.legendSquare, styles.absentCandy]} />
-              <Text style={styles.legendText}>
-                Gray = Candy not in sequence
-              </Text>
+              <Text style={styles.legendText}>= Candy not in sequence</Text>
             </View>
           </PixelBorder>
 
@@ -421,62 +414,29 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#ff6ec7"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#ff1493"
-              borderWidth={3}
-              backgroundColor="#8b0060"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#ff6ec7',
-            backgroundColor: '#2d1b69',
-            headerColor: '#404040',
-            textColor: '#ff9a8b',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -493,8 +453,9 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         ]}
       >
         <MinigameHUD
-          title="Candy Riddle"
-          subtitle="Crack the secret candy code!"
+          theme="logic"
+          title="Crack the Candy Code"
+          subtitle="🟩=Correct 🟨=Wrong position"
           leftInfo={`Level ${level}/3`}
           centerInfo={' '}
           rightInfo={`Tries: ${attempts.length}/${maxAttempts}`}
@@ -510,7 +471,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           },
         ]}
       >
-        <ScrollView
+        <View
           style={styles.contentScrollView}
           contentContainerStyle={styles.contentScrollContainer}
           showsVerticalScrollIndicator={true}
@@ -525,6 +486,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
               <ScrollView
                 ref={scrollViewRef}
                 showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
                 contentContainerStyle={styles.attemptsScrollContent}
               >
                 {/* Previous attempts displayed inline */}
@@ -666,7 +628,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
               </TextWithEmojis>
             </TouchableOpacity>
           </View>
-        </ScrollView>
+        </View>
       </View>
 
       {/* Fixed Bottom Buttons */}
@@ -691,7 +653,10 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
             style={styles.instructionsButtonInner}
             onPress={handleForfeit}
           >
-            <TextWithEmojis style={styles.instructionsButtonText} imageSize={28}>
+            <TextWithEmojis
+              style={styles.instructionsButtonText}
+              imageSize={28}
+            >
               🚪 Leave
             </TextWithEmojis>
           </TouchableOpacity>
@@ -786,7 +751,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   attemptsScrollContainer: {
-    maxHeight: 248, // 4 rows * 50px height + 3 gaps * 12px + padding
+    height: 180, // Fixed height (4 rows). Inner ScrollView auto-scrolls to bottom when rows accumulate.
     marginBottom: 12,
   },
   attemptsScrollContent: {
@@ -795,8 +760,8 @@ const styles = StyleSheet.create({
   guessDisplay: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 6,
   },
   guessSlot: {
     width: 50,
@@ -811,34 +776,23 @@ const styles = StyleSheet.create({
   filledSlot: {
     borderColor: '#52c41a',
     backgroundColor: '#162312',
-    shadowColor: '#52c41a',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 4,
   },
   guessSlotText: {
     fontSize: 25,
     color: colors.white,
   },
   candyPalette: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  paletteLabel: {
-    fontSize: 14,
-    color: colors.gray.border,
-    fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
+
   candyOptions: {
     flexDirection: 'column',
-    gap: 8,
+    gap: 6,
   },
   candyRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   candyRowCompact: {
     gap: 4, // Reduce gap for level 3 (16 candies)

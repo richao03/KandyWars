@@ -1,7 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Animated } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import colors from '../../src/constants/colors';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
@@ -9,12 +15,12 @@ import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MemoryCard {
@@ -36,7 +42,12 @@ interface AnimatedFlipCardProps {
   style?: any;
 }
 
-function AnimatedFlipCard({ isFlipped, frontContent, backContent, style }: AnimatedFlipCardProps) {
+function AnimatedFlipCard({
+  isFlipped,
+  frontContent,
+  backContent,
+  style,
+}: AnimatedFlipCardProps) {
   // Initialize with the correct value based on initial isFlipped state
   const flipAnim = useRef(new Animated.Value(isFlipped ? 180 : 0)).current;
   const prevFlipped = useRef(isFlipped);
@@ -78,7 +89,11 @@ function AnimatedFlipCard({ isFlipped, frontContent, backContent, style }: Anima
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
-          { transform: [{ rotateY: frontInterpolate }], opacity: frontOpacity, backfaceVisibility: 'hidden' },
+          {
+            transform: [{ rotateY: frontInterpolate }],
+            opacity: frontOpacity,
+            backfaceVisibility: 'hidden',
+          },
         ]}
       >
         {frontContent}
@@ -86,7 +101,11 @@ function AnimatedFlipCard({ isFlipped, frontContent, backContent, style }: Anima
       <Animated.View
         style={[
           StyleSheet.absoluteFill,
-          { transform: [{ rotateY: backInterpolate }], opacity: backOpacity, backfaceVisibility: 'hidden' },
+          {
+            transform: [{ rotateY: backInterpolate }],
+            opacity: backOpacity,
+            backfaceVisibility: 'hidden',
+          },
         ]}
       >
         {backContent}
@@ -129,7 +148,6 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
   const [isGameActive, setIsGameActive] = useState(false);
   const [showingAllCards, setShowingAllCards] = useState(false);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
   const [isChecking, setIsChecking] = useState(false); // Prevent clicks during match checking
 
   // Ref to track flipped cards synchronously (prevents race conditions from rapid clicks)
@@ -218,7 +236,9 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         showingAllCards,
         isCheckingRef: isCheckingRef.current,
         flippedCardsRef: flippedCardsRef.current.length,
-        flippedCardsRefIds: flippedCardsRef.current.map(id => id.slice(0, 10)),
+        flippedCardsRefIds: flippedCardsRef.current.map((id) =>
+          id.slice(0, 10)
+        ),
       });
     }
 
@@ -242,9 +262,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
     // Use ref for synchronous check to prevent race conditions from rapid clicks
     // Check if card is already being flipped (in the ref) to prevent double-flipping
-    if (!card || card.isFlipped || card.isMatched ||
-        flippedCardsRef.current.includes(cardId) ||
-        flippedCardsRef.current.length >= 2) {
+    if (
+      !card ||
+      card.isFlipped ||
+      card.isMatched ||
+      flippedCardsRef.current.includes(cardId) ||
+      flippedCardsRef.current.length >= 2
+    ) {
       if (__DEV__) console.log('❌ BLOCKED: Card state check failed');
       return;
     }
@@ -253,7 +277,13 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     const newFlippedCards = [...flippedCardsRef.current, cardId];
     flippedCardsRef.current = newFlippedCards;
 
-    if (__DEV__) console.log('✅ FLIP ACCEPTED! Ref updated to:', newFlippedCards.length, 'cards:', newFlippedCards.map(id => id.slice(0, 10)));
+    if (__DEV__)
+      console.log(
+        '✅ FLIP ACCEPTED! Ref updated to:',
+        newFlippedCards.length,
+        'cards:',
+        newFlippedCards.map((id) => id.slice(0, 10))
+      );
 
     // Update state immediately (before sounds/haptics)
     setFlippedCards(newFlippedCards);
@@ -482,7 +512,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Computer Study Session!</Text>
+          <Text style={styles.instructionsTitle}>Hack the System</Text>
 
           <PixelBorder
             borderColor="#00d4ff"
@@ -491,7 +521,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             innerPadding={20}
             style={{ marginBottom: 20, width: '100%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Solve:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
@@ -530,62 +560,29 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#00d4ff"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#00d4ff"
-              borderWidth={3}
-              backgroundColor="#16213e"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-
-          <AvailableJokersModal
-            visible={showAvailableJokers}
-            onClose={() => setShowAvailableJokers(false)}
-            jokers={STANDARDIZED_JOKERS}
-            themeColors={{
-              borderColor: '#00d4ff',
-              backgroundColor: '#0a0e1a',
-              headerColor: '#16213e',
-              textColor: '#00ff41',
-            }}
-          />
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
+
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
+          }}
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -602,6 +599,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
         ]}
       >
         <MinigameHUD
+          theme="computer"
           title="Hack the System"
           subtitle="Match the tech pairs to infiltrate the network!"
           leftInfo={`Level ${level}/3`}

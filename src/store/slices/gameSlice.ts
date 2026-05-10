@@ -40,7 +40,6 @@ interface GameState {
   bulkEmpireStacks: number; // Bulk Empire: permanent +0.5x per stack
   bulkEmpireDailySales: number; // Bulk Empire: candy count for current day
   bulkEmpireLastDay: number; // Bulk Empire: last day stacks were checked
-  cafeteriaLockedUntil: number; // Lunchroom Monopoly: cafeteria unavailable until periodCount reaches this value
   showLunchMinigames: boolean; // UI flag: lunch minigames menu open (transient — blacklisted from redux-persist)
 }
 
@@ -69,7 +68,6 @@ const initialState: GameState = {
   bulkEmpireStacks: 0,
   bulkEmpireDailySales: 0,
   bulkEmpireLastDay: 1,
-  cafeteriaLockedUntil: 0,
   showLunchMinigames: false,
 };
 
@@ -169,21 +167,9 @@ const gameSlice = createSlice({
         period: newPeriodCount,
         location: 'home room',
       });
-      // Reset cafeteria lockout — each day starts fresh.
-      state.cafeteriaLockedUntil = 0;
       if (__DEV__) {
         console.log(
           `💾 New day started, period: ${newPeriodCount} (${periodsPerDay} periods/day) - Auto-save triggered`
-        );
-      }
-    },
-    // Lunchroom Monopoly: called when player visits the cafeteria.
-    // Locks the cafeteria for the next 2 periods (visit + 2 = +3 increment).
-    lockCafeteria: (state) => {
-      state.cafeteriaLockedUntil = state.periodCount + 3;
-      if (__DEV__) {
-        console.log(
-          `🍽️ Cafeteria locked until period ${state.cafeteriaLockedUntil} (current: ${state.periodCount})`
         );
       }
     },
@@ -372,14 +358,10 @@ export const {
   unlockMediumCandies,
   unlockBigCandies,
   addBulkEmpireSales,
-  lockCafeteria,
   setShowLunchMinigames,
 } = gameSlice.actions;
 
 export const selectBulkEmpireStacks = (state: any) => state.game?.bulkEmpireStacks ?? 0;
-export const selectCafeteriaLockedUntil = (state: any) => state.game?.cafeteriaLockedUntil ?? 0;
-export const selectIsCafeteriaLocked = (state: any) =>
-  (state.game?.cafeteriaLockedUntil ?? 0) > (state.game?.periodCount ?? 0);
 
 export default gameSlice.reducer;
 

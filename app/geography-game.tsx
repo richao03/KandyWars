@@ -1,16 +1,19 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { useGame } from '../src/hooks/useGame';
+import { useMinigameTracking } from '../src/hooks/useMinigameTracking';
 import GeographyGame from './minigames/GeographyGame';
 
 export default function GeographyGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
+  const { trackMinigameWon } = useMinigameTracking();
 
   const navigateBack = () => {
     router.back();
   };
 
   const handleComplete = () => {
+    trackMinigameWon('geography');
     if (__DEV__) console.log('Geography game completed! Context:', minigameContext);
 
     if (minigameContext === 'after-school') {

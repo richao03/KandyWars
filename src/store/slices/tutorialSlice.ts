@@ -3,7 +3,10 @@ import { createSlice } from '@reduxjs/toolkit';
 // Steps: 0=inactive, 1=wallet, 2=piggy bank, 3=tap gummy bears (buy),
 // 4=buy confirm in TransactionModal, 5=next period button,
 // 6=tap gummy bears (sell), 7=sell confirm in TransactionModal,
-// 8=congrats modal → complete
+// 8=jokers tab spotlight (in (tabs)/_layout.tsx),
+// 9=All tab spotlight inside jokers screen (in (tabs)/jokers.tsx),
+// 10=home tab spotlight (in (tabs)/_layout.tsx),
+// 11=congrats modal → complete
 interface TutorialState {
   tutorialStep: number;
   tutorialComplete: boolean;
@@ -20,7 +23,7 @@ const tutorialSlice = createSlice({
       state.tutorialComplete = false;
     },
     advanceTutorial(state) {
-      if (state.tutorialStep >= 8) {
+      if (state.tutorialStep >= 11) {
         state.tutorialStep = 0;
         state.tutorialComplete = true;
       } else if (state.tutorialStep > 0) {

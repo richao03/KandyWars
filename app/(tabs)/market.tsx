@@ -79,7 +79,7 @@ import TransactionModalManager, {
   TransactionModalHandle,
 } from '../components/TransactionModalManager';
 import { Candy } from '../types';
-import { CANDY_REGISTRY } from '../../src/constants/candyRegistry';
+import { CANDY_REGISTRY, getCandyDefinition } from '../../src/constants/candyRegistry';
 import { CandySize } from '../../src/types/candy';
 
 // Debug panel for testing joker acquisition channels (DEV only)
@@ -430,10 +430,17 @@ function Market(props) {
   useEffect(() => {
     if (seed && day > 0 && day !== lastHustleDayRef.current) {
       lastHustleDayRef.current = day;
-      generateHustlesAction(seed, day, periodsPerDay);
+      const unlockedHustleCandies = CANDY_REGISTRY
+        .filter((c) => {
+          if (c.size === 'medium' && !mediumUnlocked) return false;
+          if (c.size === 'big' && !bigUnlocked) return false;
+          return true;
+        })
+        .map((c) => c.name);
+      generateHustlesAction(seed, day, periodsPerDay, unlockedHustleCandies);
       if (__DEV__) console.log(`🤝 HUSTLE: Generated hustles for day ${day}`);
     }
-  }, [seed, day, periodsPerDay, generateHustlesAction]);
+  }, [seed, day, periodsPerDay, generateHustlesAction, mediumUnlocked, bigUnlocked]);
 
   // Show hustle "not enough candy" message in scroller
   useEffect(() => {
@@ -466,13 +473,27 @@ function Market(props) {
         dispatch(failQuest());
         setHint('The student found another supplier...');
         if (__DEV__) console.log('📦 QUEST: Failed - target period passed');
+        return;
+      }
+      // Belt-and-suspenders: if the quest names a candy the player can't currently
+      // access, fail it instead of leaving an unwinnable quest hanging.
+      const questCandyDef = getCandyDefinition(activeQuest.candyName);
+      const accessible =
+        !questCandyDef ||
+        questCandyDef.size === 'small' ||
+        (questCandyDef.size === 'medium' && mediumUnlocked) ||
+        (questCandyDef.size === 'big' && bigUnlocked);
+      if (!accessible) {
+        dispatch(failQuest());
+        if (__DEV__) console.log('📦 QUEST: Failed - candy not unlocked');
+        return;
       }
     }
     if (activeQuest && !activeQuest.completed && day > activeQuest.day) {
       dispatch(failQuest());
       if (__DEV__) console.log('📦 QUEST: Failed - day changed');
     }
-  }, [activeQuest, day, period, dispatch, setHint]);
+  }, [activeQuest, day, period, dispatch, setHint, mediumUnlocked, bigUnlocked]);
 
   // Ref for transaction modal manager (prevents parent re-renders)
   const transactionModalRef = useRef<TransactionModalHandle>(null);
@@ -957,7 +978,7 @@ function Market(props) {
       )}
       <MarketContent {...marketProps} />
 
-      {isTutorialActive && (
+      {isTutorialActive && tutorialStep <= 7 && (
         <TutorialOverlay
           tutorialStep={tutorialStep}
           measurements={tutorialMeasurements}

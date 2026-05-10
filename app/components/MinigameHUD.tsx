@@ -1,3 +1,4 @@
+import colors from '@/src/constants/colors';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
@@ -18,7 +19,10 @@ interface MinigameHUDProps {
     | 'homeec'
     | 'gym'
     | 'economy'
-    | 'recess';
+    | 'recess'
+    | 'geography'
+    | 'art'
+    | 'nim';
 }
 
 const THEME_COLORS = {
@@ -51,11 +55,11 @@ const THEME_COLORS = {
     info: '#8B4513',
   },
   homeec: {
-    background: '#2c3139',
-    border: '#495057',
-    title: '#f8f9fa',
-    subtitle: '#6c757d',
-    info: '#28a745',
+    background: '#7fc69e', // Strawberry pink
+    border: colors.offWhite, // brown
+    title: colors.offWhite,
+    subtitle: '#5d3a1a', // brown
+    info: colors.offWhite,
   },
   gym: {
     background: '#d4c5a9', // Warm beige desk
@@ -65,11 +69,11 @@ const THEME_COLORS = {
     info: '#5c4a32', // Dark wood info
   },
   economy: {
-    background: '#1e3a8a', // Deep blue matching game header
-    border: '#64b5f6', // Light blue border from game
-    title: '#64b5f6', // Light blue for title
-    subtitle: '#bbdefb', // Lighter blue for subtitle
-    info: '#ffeb3b', // Yellow accent for info (matching level text)
+    background: '#558060', // Mid US-bill green — distinctly lighter than math chalkboard
+    border: '#daa520', // Gold accent border
+    title: '#f5e6c8', // Cream — like bill paper
+    subtitle: '#daf0c4', // Pale green
+    info: '#ffd700', // Bright gold for info (level/score)
     fontSize: 12,
   },
   recess: {
@@ -80,11 +84,25 @@ const THEME_COLORS = {
     info: '#4A90C1', // Blue for info text
   },
   geography: {
-    background: '#1a202c', // Dark background matching game
-    border: '#3182ce', // Blue border
-    title: '#63b3ed', // Light blue for title
-    subtitle: '#e2e8f0', // Light gray for subtitle
-    info: '#63b3ed', // Light blue for info text
+    background: '#f4e8d0', // Ocean blue — globes are mostly water
+    border: '#c89968', // Tan / continent edge
+    title: '#7a9c5a', // Land green
+    subtitle: '#c89968', // Tan / continent edge
+    info: '#7a9c5a', // Land green
+  },
+  art: {
+    background: '#000000', // Pure black — neutral canvas so puzzle colors pop
+    border: '#ffffff', // White border
+    title: '#ffffff', // White title
+    subtitle: '#888888', // Single neutral gray for subtitle
+    info: '#ffffff', // White info
+  },
+  nim: {
+    background: '#c4b596', // Warm parchment — matches NimGame container
+    border: '#8B7355', // Wood brown
+    title: '#5c4a32', // Dark wood title
+    subtitle: '#6B5B45', // Medium brown subtitle
+    info: '#8b4513', // Saddle brown for info
   },
 };
 

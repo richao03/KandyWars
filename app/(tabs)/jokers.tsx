@@ -1,7 +1,7 @@
 import { useIsFocused } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { CANDY_NAMES } from '../../src/constants/candyRegistry';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Modal as RNModal, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { CANDY_NAMES, getCandyDefinition } from '../../src/constants/candyRegistry';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
@@ -9,8 +9,10 @@ import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
-import { selectTutorialStep } from '../../src/store/slices/tutorialSlice';
+import { selectMediumCandiesUnlocked, selectBigCandiesUnlocked } from '../../src/store/slices/gameSlice';
+import { advanceTutorial, selectTutorialStep, skipTutorial } from '../../src/store/slices/tutorialSlice';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import TutorialOverlay from '../components/TutorialOverlay';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { getCoveredCandyTypes, TYPE_MULTIPLIER_JOKERS } from '../../src/utils/jokerService';
 import { formatCurrency } from '../../src/utils/priceUtils';
@@ -21,8 +23,6 @@ import JokerConfirmationModal from '../components/JokerConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import TextWithEmojis from '../components/TextWithEmojis';
-
-const CANDY_TYPES = CANDY_NAMES;
 
 // Candy-themed colors for type coverage dots
 const CANDY_TYPE_COLORS: Record<string, string> = {
@@ -38,14 +38,98 @@ function JokersPage() {
   // Always call all hooks first - before any conditional returns
   const dispatch = useAppDispatch();
   const stashedAmount = useAppSelector((state) => state.wallet.stashedAmount);
+  const mediumUnlocked = useAppSelector(selectMediumCandiesUnlocked);
+  const bigUnlocked = useAppSelector(selectBigCandiesUnlocked);
+  const unlockedCandyNames = useMemo(
+    () =>
+      CANDY_NAMES.filter((name) => {
+        const def = getCandyDefinition(name);
+        if (!def) return false;
+        if (def.size === 'small') return true;
+        if (def.size === 'medium') return mediumUnlocked;
+        if (def.size === 'big') return bigUnlocked;
+        return false;
+      }),
+    [mediumUnlocked, bigUnlocked]
+  );
   const gameContext = useGame();
   const jokerContext = useJokers();
   const inventoryContext = useInventory();
   const seedContext = useSeed();
   const { triggerEvent } = useEventHandler();
   const isFocused = useIsFocused();
+  const { height: screenHeight } = useWindowDimensions();
   const tutorialStep = useAppSelector(selectTutorialStep);
-  const tutorialActive = tutorialStep > 0 && tutorialStep <= 8;
+  const tutorialActive = tutorialStep > 0 && tutorialStep <= 11;
+
+  // Tutorial step 9: spotlight the "All" tab inside this screen.
+  // Coords need to be in this screen's coordinate space (where the overlay
+  // renders), so measure both the screen container and the All tab in window
+  // coords and subtract.
+  const screenRootRef = useRef<View>(null);
+  const allTabRef = useRef<View>(null);
+  const screenOffsetRef = useRef({ x: 0, y: 0 });
+  const allTabWindowRectRef = useRef<
+    { x: number; y: number; width: number; height: number } | undefined
+  >(undefined);
+  const [allJokersTabRect, setAllJokersTabRect] = useState<
+    { x: number; y: number; width: number; height: number } | undefined
+  >(undefined);
+
+  const recomputeAllTabRect = useCallback(() => {
+    const win = allTabWindowRectRef.current;
+    if (!win) return;
+    const offset = screenOffsetRef.current;
+    const next = {
+      x: win.x - offset.x,
+      y: win.y - offset.y,
+      width: win.width,
+      height: win.height,
+    };
+    setAllJokersTabRect((prev) => {
+      if (
+        prev &&
+        prev.x === next.x &&
+        prev.y === next.y &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+
+  const measureScreenRoot = useCallback(() => {
+    if (!screenRootRef.current) return;
+    requestAnimationFrame(() => {
+      screenRootRef.current?.measureInWindow((x, y) => {
+        screenOffsetRef.current = { x, y };
+        recomputeAllTabRect();
+      });
+    });
+  }, [recomputeAllTabRect]);
+
+  const measureAllTab = useCallback(() => {
+    if (!allTabRef.current) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        allTabRef.current?.measureInWindow((x, y, width, height) => {
+          if (width > 0 && height > 0) {
+            allTabWindowRectRef.current = { x, y, width, height };
+            recomputeAllTabRect();
+          }
+        });
+      });
+    });
+  }, [recomputeAllTabRect]);
+
+  useEffect(() => {
+    if (tutorialStep === 9) {
+      measureScreenRoot();
+      measureAllTab();
+    }
+  }, [tutorialStep, measureScreenRoot, measureAllTab]);
   const [activeTab, setActiveTab] = useState<'inventory' | 'see-all'>(
     'inventory'
   );
@@ -275,9 +359,13 @@ function JokersPage() {
     const { getInventoryLimit } = inventoryContext;
     const { gameData, modifyCandyPrice } = seedContext;
 
-    if (joker.id === JOKER_IDS.MARKET_MANIPULATION) {
+    // Coerce joker.id to a number — it can arrive as a string from persistence,
+    // which would fail the strict-equal checks below.
+    const jokerId = Number((joker as any).originalId ?? joker.id);
+
+    if (jokerId === JOKER_IDS.MARKET_MANIPULATION) {
       // Mark as used FIRST to prevent double-use
-      markJokerUsedToday(joker.id.toString());
+      markJokerUsedToday(jokerId.toString());
 
       // Set the selected candy's price to the highest price of all candies this period
       const allCandyTypes = Object.keys(gameData.candyPrices);
@@ -300,11 +388,11 @@ function JokersPage() {
         '📈'
       );
     } else if (
-      joker.id === JOKER_IDS.DOUBLE_UP ||
+      jokerId === JOKER_IDS.DOUBLE_UP ||
       joker.effect === 'double_candy_price'
     ) {
       // Mark as used FIRST to prevent double-use
-      markJokerUsedToday(joker.id.toString());
+      markJokerUsedToday(jokerId.toString());
 
       // Double Up joker - doubles candy price for current period
       const originalPrice =
@@ -318,9 +406,9 @@ function JokersPage() {
         `${selectedCandy} price doubled to $${formatCurrency(newPrice)} for this period!`,
         '💰'
       );
-    } else if (joker.id === JOKER_IDS.BET_YOU_IM_FASTER) {
+    } else if (jokerId === JOKER_IDS.BET_YOU_IM_FASTER) {
       // Mark as used FIRST to prevent double-use
-      markJokerUsedToday(joker.id.toString());
+      markJokerUsedToday(jokerId.toString());
 
       // Fill inventory with the selected candy type
       const currentInventoryCount = inventoryContext.getTotalInventoryCount();
@@ -472,11 +560,18 @@ function JokersPage() {
   }
 
   return (
-    <View style={styles.container}>
-      <FirstTimeHint
-        hintKey="jokers_tab"
-        message="These are your Jokers. Each one gives a special profit bonus when selling candy."
-      />
+    <View
+      ref={screenRootRef}
+      onLayout={measureScreenRoot}
+      collapsable={false}
+      style={styles.container}
+    >
+      {!tutorialActive && (
+        <FirstTimeHint
+          hintKey="jokers_tab"
+          message="These are your Jokers. Each one gives a special profit bonus when selling candy."
+        />
+      )}
       <View style={headerStyles}>
         {/* <View style={styles.headerTop}>
           <View style={styles.titleRow}>
@@ -518,28 +613,45 @@ function JokersPage() {
             </TextWithEmojis>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              setActiveTab('see-all');
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={[
-              styles.tab,
-              activeTab !== 'inventory' && styles.activeTab,
-            ]}
+          <View
+            ref={allTabRef}
+            onLayout={measureAllTab}
+            collapsable={false}
+            style={styles.allTabWrapper}
           >
-            <Text
+            <PressableButton
+              onPress={() => {
+                setActiveTab('see-all');
+                if (tutorialStep === 9) dispatch(advanceTutorial());
+              }}
+              shadowOpacity={0}
+              elevation={0}
               style={[
-                styles.tabText,
-                activeTab !== 'inventory' && styles.activeTabText,
+                styles.tab,
+                activeTab !== 'inventory' && styles.activeTab,
               ]}
             >
-              {debugMode && __DEV__ ? '🐛 ' : ''}📖 All ({allJokersCount})
-            </Text>
-          </PressableButton>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab !== 'inventory' && styles.activeTabText,
+                ]}
+              >
+                {debugMode && __DEV__ ? '🐛 ' : ''}📖 All ({allJokersCount})
+              </Text>
+            </PressableButton>
+          </View>
         </View>
       </View>
+
+      {tutorialStep === 9 && (
+        <TutorialOverlay
+          tutorialStep={tutorialStep}
+          measurements={{ allJokersTab: allJokersTabRect }}
+          onAdvance={() => dispatch(advanceTutorial())}
+          onSkip={() => dispatch(skipTutorial())}
+        />
+      )}
 
       {/* Type Coverage Bar — shown when player has type-multiplier, Combo Platter, or Triple Threat jokers */}
       {activeTab === 'inventory' && jokers.length > 0 && (coveredTypeCount > 0 || ownsComboPlatter || ownsTripleThreat) && (
@@ -612,13 +724,21 @@ function JokersPage() {
         }
       />
 
-      {/* Candy Selector Modal */}
+      {/* Candy Selector Modal — portaled via RNModal so the backdrop covers
+          the AdBanner / GameHUD / TabBar above the Joker tab's container. */}
+      <RNModal
+        visible={candySelectorModal.visible}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={() => setCandySelectorModal({ visible: false, joker: null })}
+      >
       <FastModal
         visible={candySelectorModal.visible}
         onClose={() => setCandySelectorModal({ visible: false, joker: null })}
         animationType="spring"
         backdropOpacity={0.5}
-        modalStyle={styles.modalContent}
+        modalStyle={{ ...styles.modalContent, maxHeight: screenHeight * 0.7 }}
       >
         <>
           <View
@@ -627,44 +747,50 @@ function JokersPage() {
             }}
           >
             <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
-              {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
+              {Number(candySelectorModal.joker?.id) === JOKER_IDS.MARKET_MANIPULATION
                 ? '📈'
-                : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
+                : Number(candySelectorModal.joker?.id) === JOKER_IDS.BET_YOU_IM_FASTER
                   ? '⚡'
                   : '🍭'}
             </TextWithEmojis>
           </View>
           <TextWithEmojis style={styles.modalTitle} imageSize={24}>
-            {candySelectorModal.joker?.id === JOKER_IDS.MARKET_MANIPULATION
+            {Number(candySelectorModal.joker?.id) === JOKER_IDS.MARKET_MANIPULATION
               ? 'Choose Candy to Manipulate'
-              : candySelectorModal.joker?.id === JOKER_IDS.BET_YOU_IM_FASTER
+              : Number(candySelectorModal.joker?.id) === JOKER_IDS.BET_YOU_IM_FASTER
                 ? 'Choose Candy to Fill Inventory'
                 : 'Choose Candy Type'}
           </TextWithEmojis>
 
-          {CANDY_TYPES.map((candyType) => (
-            <PressableButton
-              key={candyType}
-              onPress={() => handleCandySelection(candyType)}
-              shadowColor="rgba(123,169,101,1)"
-              shadowOffset={{ width: 0, height: 4 }}
-              shadowOpacity={0.5}
-              shadowRadius={5}
-              elevation={8}
-              style={styles.candyButton}
-            >
-              <PixelBorder
-                borderColor="rgba(123,169,101,1)"
-                borderWidth={3}
-                backgroundColor="rgba(154,193,118,1)"
-                innerPadding={0}
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{ paddingBottom: 4 }}
+            showsVerticalScrollIndicator={true}
+          >
+            {unlockedCandyNames.map((candyType) => (
+              <PressableButton
+                key={candyType}
+                onPress={() => handleCandySelection(candyType)}
+                shadowColor="rgba(123,169,101,1)"
+                shadowOffset={{ width: 0, height: 4 }}
+                shadowOpacity={0.5}
+                shadowRadius={5}
+                elevation={8}
+                style={styles.candyButton}
               >
-                <View style={styles.candyButtonInner}>
-                  <Text style={styles.candyButtonText}>{candyType}</Text>
-                </View>
-              </PixelBorder>
-            </PressableButton>
-          ))}
+                <PixelBorder
+                  borderColor="rgba(123,169,101,1)"
+                  borderWidth={3}
+                  backgroundColor="rgba(154,193,118,1)"
+                  innerPadding={0}
+                >
+                  <View style={styles.candyButtonInner}>
+                    <Text style={styles.candyButtonText}>{candyType}</Text>
+                  </View>
+                </PixelBorder>
+              </PressableButton>
+            ))}
+          </ScrollView>
 
           <PressableButton
             onPress={() => {
@@ -691,6 +817,7 @@ function JokersPage() {
           </PressableButton>
         </>
       </FastModal>
+      </RNModal>
 
     </View>
   );
@@ -783,6 +910,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#3a3a3a',
+  },
+  allTabWrapper: {
+    flex: 1,
   },
   activeTab: {
     backgroundColor: colors.red.error,

@@ -6,7 +6,6 @@ import { useGame } from '../../src/hooks/useGame';
 import { useJokers } from '../../src/hooks/useJokers';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from './AvailableJokersModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 
@@ -73,15 +72,19 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
   isLunchPeriod = false,
   hasPlayedLunchMinigame = false,
 }: StudySubjectSelectorProps) {
-  const { period, markLunchMinigamePlayed, setMinigameContext, selectedMinigame, setSelectedMinigame } = useGame();
+  const { setMinigameContext, selectedMinigame, setSelectedMinigame } = useGame();
   const { jokersOwned } = useJokers();
+  const totalUnobtainedCount = React.useMemo(() => {
+    const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
+    return STANDARDIZED_JOKERS.filter((j) => !ownedIds.has(j.id.toString())).length;
+  }, [jokersOwned]);
   const [highlightedIndex, setHighlightedIndex] = React.useState<number | null>(
     // If a minigame was already selected, highlight it immediately
     selectedMinigame ? subjects.findIndex(s => s.name === selectedMinigame) : null
   );
   const [isSpinning, setIsSpinning] = React.useState(false);
   const [selectedSubject, setSelectedSubject] = React.useState<string | null>(selectedMinigame);
-  const [showAvailableJokers, setShowAvailableJokers] = React.useState(false);
+  const spinTimersRef = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const hasStartedSpin = React.useRef(false);
   const highlightScale = React.useRef(new Animated.Value(1)).current;
 
@@ -130,9 +133,10 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     }
     sequence.push(winnerIndex);
 
-    // Schedule highlights with increasing delays
+    // Schedule highlights with increasing delays. Timers go into the
+    // spinTimersRef so handleSkipGame can cancel them on a successful skip.
     let elapsed = 0;
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = spinTimersRef.current;
 
     sequence.forEach((idx, step) => {
       // Easing: starts at ~80ms, ramps up to ~400ms for last few steps
@@ -181,14 +185,9 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
 
     return () => {
       timers.forEach(t => clearTimeout(t));
+      spinTimersRef.current = [];
     };
   }, [disabled, isLunchPeriod, hasPlayedLunchMinigame]);
-
-  // Calculate total unobtained jokers from the flat pool
-  const totalUnobtainedCount = React.useMemo(() => {
-    const ownedIds = new Set(jokersOwned.map((j) => j.id.toString()));
-    return STANDARDIZED_JOKERS.filter((j) => !ownedIds.has(j.id.toString())).length;
-  }, [jokersOwned]);
 
   const handleSubjectSelect = (subject: string) => {
     // During lunch, check if a game has already been played
@@ -321,66 +320,28 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         </View>
       </View>
 
-      {!isLunchPeriod && (
-        isSpinning ? (
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#9C27B0"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={{ marginBottom: 20, width: '90%', alignSelf: 'center' }}
+      {!isLunchPeriod && !isSpinning && (
+        <PressableButton
+          onPress={onBack}
+          shadowColor="rgba(185,28,28,1)"
+          shadowOffset={{ width: 0, height: 4 }}
+          shadowOpacity={0.5}
+          shadowRadius={5}
+          elevation={8}
+          style={{ marginBottom: 20, width: '90%', alignSelf: 'center' }}
+        >
+          <PixelBorder
+            borderColor="rgba(185,28,28,1)"
+            borderWidth={3}
+            backgroundColor="rgba(239,68,68,1)"
+            innerPadding={0}
           >
-            <PixelBorder
-              borderColor="#9C27B0"
-              borderWidth={3}
-              backgroundColor="#6A1B9A"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-        ) : (
-          <PressableButton
-            onPress={onBack}
-            shadowColor="rgba(185,28,28,1)"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={{ marginBottom: 20, width: '90%', alignSelf: 'center' }}
-          >
-            <PixelBorder
-              borderColor="rgba(185,28,28,1)"
-              borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-        )
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       )}
-
-      <AvailableJokersModal
-        visible={showAvailableJokers}
-        onClose={() => setShowAvailableJokers(false)}
-        jokers={STANDARDIZED_JOKERS}
-        themeColors={{
-          borderColor: '#f5f5dc',
-          backgroundColor: '#0d2818',
-          headerColor: '#2d4a3e',
-          textColor: '#f5f5dc',
-        }}
-      />
     </View>
   );
 });

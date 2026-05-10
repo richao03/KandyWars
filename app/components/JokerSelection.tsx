@@ -122,7 +122,9 @@ export default function JokerSelection({
     const extraCreditBonus = hasJokerById(jokersOwned, JOKER_IDS.EXTRA_CREDIT)
       ? 1
       : 0;
-    // Valedictorian Vendor hall pass gives +1 joker selection
+    // Hall passes can grant +N extra joker choices via the joker_bonus effect
+    // type. (No active pass uses it after the minigame-skip refactor — the
+    // mechanism is kept here for future passes.)
     const hallPassJokerBonus = hallPassModifiers?.jokerBonusCount ?? 0;
     const jokerCount = Math.min(
       completionLevel + extraCreditBonus + hallPassJokerBonus,

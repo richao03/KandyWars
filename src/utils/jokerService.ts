@@ -154,22 +154,20 @@ export class JokerService {
 
     // Handle special daily effects like Inductive Reasoning
     if (target === 'inventory_limit') {
+      // Inductive Reasoning: factory provides the day-1 grant via inventory_limit (+5/+7/+10).
+      // This block adds the per-day scaling on top so total = factoryAmount × day.
+      // bonusPerDay must match the factory amount in jokerEffectEngine.ts:752 to stay in sync.
       const inductiveReasoning = this.findJokerByName(jokers, 'Inductive Reasoning');
       if (inductiveReasoning) {
         const level = inductiveReasoning.level ?? 1;
-        const bonusPerDay = level === 1 ? 5 : level === 2 ? 10 : 15;
+        const bonusPerDay = level === 1 ? 5 : level === 2 ? 7 : 10;
         const completedDays = Math.floor(currentPeriod / periodsPerDay);
         const dailyBonus = completedDays * bonusPerDay;
         result += dailyBonus;
       }
 
-      // Handle Trade Routes: +1/+2/+3 inventory every period
-      const tradeRoutes = this.findJokerByName(jokers, 'Trade Routes');
-      if (tradeRoutes) {
-        const level = tradeRoutes.level ?? 1;
-        const periodBonus = level === 1 ? 1 : level === 2 ? 2 : 3;
-        result += periodBonus;
-      }
+      // Trade Routes: factory provides +2/+3/+4 inventory via inventory_limit
+      // (single source of truth — was previously double-counted here).
 
       // Handle Vacuum Sealer: 2x inventory
       const vacuumSealer = this.findJokerByName(jokers, 'Vacuum Sealer');
@@ -424,7 +422,7 @@ export class JokerService {
   }
 
   public hasOneTimeSellMultiplier(
-    jokers: any[],
+    _jokers: any[],
     currentPeriod: number,
     activeEffects: any[]
   ): {

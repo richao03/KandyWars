@@ -26,12 +26,12 @@ import { useStudyTimeMultiplier } from '../../src/utils/jokerService';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 interface Tile {
@@ -96,7 +96,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   const [gameState, setGameState] = useState('instructions'); // 'instructions', 'playing', 'jokerSelection'
   const [stage, setStage] = useState(1); // 1, 2, 3
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [currentPosition, setCurrentPosition] = useState<{
     row: number;
@@ -736,17 +735,16 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-
-          <Text style={styles.instructionsTitle}>Art Study Session!</Text>
+          <Text style={styles.instructionsTitle}>Rainbow Road</Text>
 
           <PixelBorder
-            borderColor="#ff6b35"
+            borderColor="#ffffff"
             borderWidth={3}
-            backgroundColor="#2d4a3e"
+            backgroundColor="#1a1a1a"
             innerPadding={20}
             style={{ marginBottom: 20, width: '100%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Create:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1. </Text>
               <Text style={styles.stepText}>
@@ -778,9 +776,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             style={{ marginBottom: 16, width: '100%' }}
           >
             <PixelBorder
-              borderColor="#d44c1f"
+              borderColor="#ffffff"
               borderWidth={3}
-              backgroundColor="#ff6b35"
+              backgroundColor="#888888"
               innerPadding={0}
             >
               <View style={styles.pixelButtonInner}>
@@ -789,62 +787,29 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#d44c1f"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#d44c1f"
-              borderWidth={3}
-              backgroundColor="#8b2500"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-
-          <AvailableJokersModal
-            visible={showAvailableJokers}
-            onClose={() => setShowAvailableJokers(false)}
-            jokers={STANDARDIZED_JOKERS}
-            themeColors={{
-              borderColor: '#ff6b35',
-              backgroundColor: '#1a2332',
-              headerColor: '#2d4a3e',
-              textColor: '#faebd7',
-            }}
-          />
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
+
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
+          }}
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -869,9 +834,10 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
         <Animated.View style={flashStyle} />
 
         {/* Color Key - matches current grid colors exactly */}
-        <View style={styles.header}>
+        <View>
           <MinigameHUD
-            title="Color Theory"
+            theme="art"
+            title="Rainbow Road"
             subtitle="Follow the subtle color gradation path - artistic precision required!"
             leftInfo={`Level ${stage}/3`}
             centerInfo={' '}
@@ -880,9 +846,6 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 
           {/* Color Key - shows the correct path sequence */}
           <View style={styles.colorKeyContainer}>
-            <Text style={styles.colorKeyTitle}>
-              Path Sequence (Follow in Order):
-            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -1062,9 +1025,9 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           ]}
         >
           <PixelBorder
-            borderColor="#ff6b35"
+            borderColor="#ffffff"
             borderWidth={3}
-            backgroundColor="#0f1419"
+            backgroundColor="#1a1a1a"
             innerPadding={0}
             style={{ flex: 1, marginBottom: 8 }}
           >
@@ -1096,7 +1059,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a2332',
+    backgroundColor: '#000000',
   },
   gameContainer: {
     alignItems: 'center',
@@ -1109,7 +1072,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: colors.orange.primary,
+    textShadowColor: '#888888',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
@@ -1129,7 +1092,7 @@ const styles = StyleSheet.create({
   level: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#52c41a',
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
   },
   mistakes: {
@@ -1139,24 +1102,15 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     alignSelf: 'center',
-    backgroundColor: '#0f1419',
+    backgroundColor: '#1a1a1a',
     padding: 8,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: colors.orange.primary,
+    borderColor: '#ffffff',
     marginBottom: 8,
   },
   colorKeyContainer: {
-    marginTop: 4,
     alignItems: 'center',
-  },
-  colorKeyTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.white,
-    fontFamily: 'PixeloidMono',
-    marginBottom: 8,
-    textAlign: 'center',
   },
   colorKeyScroll: {
     maxHeight: 40,
@@ -1177,8 +1131,8 @@ const styles = StyleSheet.create({
   },
   startSwatch: {
     borderWidth: 3,
-    borderColor: colors.green.neon,
-    shadowColor: colors.green.neon,
+    borderColor: '#ffffff',
+    shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -1186,8 +1140,8 @@ const styles = StyleSheet.create({
   },
   goalSwatch: {
     borderWidth: 3,
-    borderColor: colors.orange.primary,
-    shadowColor: colors.orange.primary,
+    borderColor: '#888888',
+    shadowColor: '#888888',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -1217,34 +1171,34 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   startTile: {
-    borderColor: '#52c41a',
+    borderColor: '#ffffff',
     borderWidth: 3,
-    shadowColor: '#52c41a',
+    shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
     elevation: 4,
   },
   goalTile: {
-    borderColor: '#fadb14',
+    borderColor: '#888888',
     borderWidth: 3,
-    shadowColor: '#fadb14',
+    shadowColor: '#888888',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
     elevation: 4,
   },
   currentTile: {
-    borderColor: '#ff4d4f',
-    borderWidth: 4,
-    shadowColor: '#ff4d4f',
+    borderColor: '#ffffff',
+    borderWidth: 5,
+    shadowColor: '#ffffff',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 6,
     elevation: 6,
   },
   pathTile: {
-    borderColor: '#1890ff',
+    borderColor: '#888888',
     borderWidth: 2,
     opacity: 0.8,
   },
@@ -1267,12 +1221,12 @@ const styles = StyleSheet.create({
     marginTop: -10,
   },
   infoContainer: {
-    backgroundColor: colors.green.darkBg,
+    backgroundColor: '#1a1a1a',
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: colors.orange.primary,
+    borderColor: '#ffffff',
   },
   infoText: {
     fontSize: 14,
@@ -1284,7 +1238,7 @@ const styles = StyleSheet.create({
   infoHighlight: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#52c41a',
+    color: '#ffffff',
   },
   footer: {
     flexDirection: 'row',
@@ -1293,17 +1247,17 @@ const styles = StyleSheet.create({
   },
   footerBtn: {
     flex: 1,
-    backgroundColor: colors.green.darkBg,
+    backgroundColor: '#1a1a1a',
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.orange.primary,
+    borderColor: '#ffffff',
     alignItems: 'center',
     marginBottom: 8,
   },
   leaveBtn: {
-    backgroundColor: colors.brown.secondary,
-    borderColor: '#daa520',
+    backgroundColor: '#1a1a1a',
+    borderColor: '#ffffff',
   },
   leaveBtnInner: {
     paddingVertical: 12,
@@ -1320,7 +1274,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#1a2332',
+    backgroundColor: '#000000',
   },
   instructionsTitle: {
     fontSize: 28,
@@ -1329,7 +1283,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: colors.orange.primary,
+    textShadowColor: '#888888',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
@@ -1348,7 +1302,7 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.orange.primary,
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
@@ -1361,7 +1315,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.orange.primary,
+    color: '#ffffff',
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,

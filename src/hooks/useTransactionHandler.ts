@@ -318,6 +318,10 @@ export const useTransactionHandler = <T extends CandyForMarket>({
             if (hist.length < 2) return '';
             return hist[hist.length - 2]?.location ?? '';
           })(),
+          // Triple Threat: count of completed sale transactions before this one.
+          // candySales is appended to AFTER calculateSaleTotal, so its current
+          // length equals the number of prior sales — this sale is (length + 1).
+          salesTransactionCount: candySalesRef.current?.length ?? 0,
         });
 
         // Merge bonus breakdown from one-time jokers

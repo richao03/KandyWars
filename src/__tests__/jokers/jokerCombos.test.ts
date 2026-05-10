@@ -202,12 +202,9 @@ describe('Joker Combo Interactions', () => {
       expect(result.totalGain).toBe(2000);
     });
 
-    it('Cocoa Futures + Hard Knocks + Combo Platter + Triple Threat on M&Ms: Combo fires, Triple Threat does NOT', () => {
-      // M&Ms: chocolate + hard_candy (only 2 types)
-      // Triple Threat needs coveredTypes.size >= 3, but M&Ms only has 2 types
-      // Even though we have type jokers for 2 types, the candy only HAS 2 types,
-      // so coveredTypes can only be at most 2 -> Triple Threat does NOT fire
-      // Adding Bear Market (gummy) doesn't help because M&Ms is not gummy
+    it('Cocoa Futures + Hard Knocks + Combo Platter + Triple Threat on sale #1: Combo fires, Triple Threat does NOT', () => {
+      // Triple Threat fires on every 3rd sale; with salesTransactionCount=0
+      // (default → this is sale #1) it should not fire.
       const result = calculateSaleTotal({
         ...baseSaleParams,
         jokers: [
@@ -221,34 +218,29 @@ describe('Joker Combo Interactions', () => {
       // Cocoa: profitBoost += 0.5, Hard Knocks: profitBoost += 0.5
       // Bear Market: gummy doesn't match M&Ms -> no effect
       // Combo Platter: 2 types covered -> profitBoost += 1.0
-      // Triple Threat: only 2 types on candy match -> does NOT fire
-      // profitBoost = 1 + 0.5 + 0.5 + 1.0 = 3.0
-      // multiplier = 1
+      // Triple Threat: sale #1 (default count) -> does NOT fire
+      // profitBoost = 1 + 0.5 + 0.5 + 1.0 = 3.0, multiplier = 1
       // totalGain = 500 + (500 * 3.0) = 2000
       expect(result.totalGain).toBe(2000);
-      expect(result.jokerMultiplier).toBe(1); // Triple Threat did NOT add to multiplier
+      expect(result.jokerMultiplier).toBe(1);
     });
 
-    it('Triple Threat cannot fire on any candy (all candies have exactly 2 types)', () => {
-      // Triple Threat checks coveredTypes among the candy's own types.
-      // Since all candies have exactly 2 types, coveredTypes.size max is 2 < 3.
-      // Triple Threat can NEVER fire based on current candy registry + logic.
-      // Test with M&Ms and all 6 type jokers:
-      const result = calculateSaleTotal({
+    it('Triple Threat fires on every 3rd sale (counter-driven, type-independent)', () => {
+      // The new Triple Threat is purely sale-count-driven: every 3rd sale
+      // adds +1/+1.5/+2 mult regardless of candy type or covered types.
+      const lvl1 = calculateSaleTotal({
         ...baseSaleParams,
-        jokers: [
-          makeTestJoker(JOKER_IDS.COCOA_FUTURES),   // chocolate
-          makeTestJoker(JOKER_IDS.HARD_KNOCKS),       // hard_candy
-          makeTestJoker(JOKER_IDS.BEAR_MARKET),        // gummy
-          makeTestJoker(JOKER_IDS.SOUR_LOGIC),         // sour
-          makeTestJoker(JOKER_IDS.DOUBLE_DUTCH),       // chewy
-          makeTestJoker(JOKER_IDS.TROPICAL_IMPORT),    // fruity
-          makeTestJoker(JOKER_IDS.TRIPLE_THREAT),
-        ],
-      });
-      // M&Ms has chocolate + hard_candy. Only those 2 types match.
-      // coveredTypes.size = 2 < 3 -> Triple Threat does NOT fire
-      expect(result.jokerMultiplier).toBe(1);
+        jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, 1)],
+        salesTransactionCount: 2, // sale #3 → trigger
+      } as any);
+      expect(lvl1.jokerMultiplier).toBe(2); // 1 + 1
+
+      const lvl3 = calculateSaleTotal({
+        ...baseSaleParams,
+        jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, 3)],
+        salesTransactionCount: 5, // sale #6 → trigger
+      } as any);
+      expect(lvl3.jokerMultiplier).toBe(3); // 1 + 2
     });
   });
 
@@ -293,13 +285,10 @@ describe('Joker Combo Interactions', () => {
 
   // ===== 6. Quantity-based combos =====
   describe('Quantity-based combos', () => {
-    it('Lucky 7 + Last Stand: sell 4 candy — Last Stand fires, Lucky 7 does not', () => {
-      // qty = 4
-      // Lucky 7 (84): fires only when qty === 7 -> does NOT fire
+    it('Lucky 7 + Last Stand: sell 4 candy on a non-7th period — Last Stand fires, Lucky 7 does not', () => {
+      // Lucky 7 now fires only on absolute period 7, 14, 21, ...; default periodCount=0 → no fire.
       // Last Stand (88): fires when qty < 5 -> fires, multiplier += (10-1) = 9
       // multiplier = 1 + 9 = 10
-      // totalProfit = (100-50)*4 = 200, purchaseValue = 200
-      // totalGain = 200 + (200 * 1 * 10) = 200 + 2000 = 2200
       const result = calculateSaleTotal({
         ...baseSaleParams,
         quantity: 4,
@@ -312,26 +301,24 @@ describe('Joker Combo Interactions', () => {
       expect(result.totalGain).toBe(2200);
     });
 
-    it('Lucky 7 + Bulk Discount: sell 7 candy — Lucky 7 fires, Bulk Discount does NOT (threshold 20)', () => {
-      // qty = 7
-      // Lucky 7 (84): qty === 7 -> fires, multiplier += (7-1) = 6
-      // Bulk Discount (47): qty < 20 -> does NOT fire
-      // multiplier = 1 + 6 = 7
-      // profitBoost = 1 (unchanged)
-      // totalProfit = (100-50)*7 = 350, purchaseValue = 350
-      // boostedProfit = 350 * 1 = 350
-      // finalProfit = 350 * 7 = 2450
-      // totalGain = 350 + 2450 = 2800
+    it('Lucky 7 + Bulk Discount: sell on period 7 — Lucky 7 fires regardless of quantity', () => {
+      // Lucky 7 (84) at level 1: every 7th period → +2 mult. periodCount=6 ⇒ period 7.
+      // Bulk Discount (47): qty < 20 → does NOT fire
+      // multiplier = 1 + 2 = 3
+      // totalProfit = (100-50)*10 = 500, purchaseValue = 500
+      // finalProfit = 500 × 1 × 3 = 1500
+      // totalGain = 500 + 1500 = 2000
       const result = calculateSaleTotal({
         ...baseSaleParams,
-        quantity: 7,
+        quantity: 10,
+        periodCount: 6, // absolute period 7
         jokers: [
           makeTestJoker(JOKER_IDS.LUCKY_7),
           makeTestJoker(JOKER_IDS.BULK_DISCOUNT),
         ],
       });
-      expect(result.jokerMultiplier).toBe(7);
-      expect(result.totalGain).toBe(2800);
+      expect(result.jokerMultiplier).toBe(3);
+      expect(result.totalGain).toBe(2000);
     });
 
     it('Bulk Discount: sell 20 candy — fires at fixed threshold', () => {

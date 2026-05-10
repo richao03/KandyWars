@@ -176,12 +176,12 @@
     "typeLabel": "Aura",
     "maxLevel": 3,
     "flavorText": "Triple Double No Assists!",
-    "description": "+2/+3/+4 mult when 3+ candy types covered by your jokers",
-    "descriptionStripped": "+2/+3/+4 mult when 3+ candy types covered by your jokers",
+    "description": "+1/+1.5/+2 mult on every 3rd sale",
+    "descriptionStripped": "+1/+1.5/+2 mult on every 3rd sale",
     "perLevelDescriptions": {
-      "1": "+2 mult when 3+ candy types covered by your jokers",
-      "2": "+3 mult when 3+ candy types covered by your jokers",
-      "3": "+4 mult when 3+ candy types covered by your jokers"
+      "1": "+1 mult on every 3rd sale",
+      "2": "+1.5 mult on every 3rd sale",
+      "3": "+2 mult on every 3rd sale"
     },
     "icon": "trident.png",
     "canLevel": true
@@ -618,12 +618,12 @@
     "typeLabel": "Aura",
     "maxLevel": 1,
     "flavorText": "I see dead... jokers?",
-    "description": "+1 aura slot (hold 6 instead of 5)",
-    "descriptionStripped": "+1 aura slot (hold 6 instead of 5)",
+    "description": "10% chance per sale to add +6 mult",
+    "descriptionStripped": "10% chance per sale to add +6 mult",
     "perLevelDescriptions": {
-      "1": "+1 aura slot (hold 6 instead of 5)",
-      "2": "+1 aura slot (hold 6 instead of 5)",
-      "3": "+1 aura slot (hold 6 instead of 5)"
+      "1": "10% chance per sale to add +6 mult",
+      "2": "10% chance per sale to add +6 mult",
+      "3": "10% chance per sale to add +6 mult"
     },
     "icon": "crystalBall.png",
     "canLevel": false
@@ -1060,12 +1060,12 @@
     "typeLabel": "Aura",
     "maxLevel": 3,
     "flavorText": "Seven is the magic number",
-    "description": "+6/+9/+14 mult if selling exactly 7 candy",
-    "descriptionStripped": "+6/+9/+14 mult if selling exactly 7 candy",
+    "description": "+2/+3/+4 mult on sales during every 7th period",
+    "descriptionStripped": "+2/+3/+4 mult on sales during every 7th period",
     "perLevelDescriptions": {
-      "1": "+6 mult if selling exactly 7 candy",
-      "2": "+9 mult if selling exactly 7 candy",
-      "3": "+14 mult if selling exactly 7 candy"
+      "1": "+2 mult on sales during every 7th period",
+      "2": "+3 mult on sales during every 7th period",
+      "3": "+4 mult on sales during every 7th period"
     },
     "icon": "seven.png",
     "canLevel": true

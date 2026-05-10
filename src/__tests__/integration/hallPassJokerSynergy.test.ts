@@ -219,13 +219,15 @@ describe('Hall Pass + Joker Synergy Integration', () => {
       expect(result.totalGain).toBe(625);
     });
 
-    it('Final Exam last period + joker multipliers stack', () => {
-      // Period 8 of 8 → finalExamMultiplier = 15
+    it('Final Exam last period + joker multipliers stack additively', () => {
+      // Period 8 of 8 → Final Exam contributes +14 to additive multiplier
       // Mint Condition (70): multiplier += 1 (small candy)
-      // Night Owl (85): multiplier += 2 (last period, periodsPerDay-1=7, period 8>=7)
-      // multiplier = 1 + 1 + 2 = 4
-      // finalProfit = 500 * 1 * 4 * 15 = 30000
-      // totalGain = 500 + 30000 = 30500
+      // Night Owl (85): multiplier += 2 (last period)
+      // multiplier = 1 + 1 + 2 + 14 = 18
+      // finalProfit = 500 * 1 * 18 * 1 (no FE penalty, no LM) = 9000
+      // totalGain = 500 + 9000 = 9500
+      // (Previously this stacked multiplicatively to 30500 — the additive
+      // fold tames the Final Exam × joker product.)
       const result = calculateSaleTotal({
         ...baseSaleParams,
         period: 8,
@@ -236,7 +238,7 @@ describe('Hall Pass + Joker Synergy Integration', () => {
           makeTestJoker(JOKER_IDS.NIGHT_OWL),
         ],
       });
-      expect(result.totalGain).toBe(30500);
+      expect(result.totalGain).toBe(9500);
     });
 
     it('No Final Exam = no period multiplier', () => {
@@ -385,17 +387,19 @@ describe('Hall Pass + Joker Synergy Integration', () => {
       expect(result.jokerMultiplier).toBe(2.5);
     });
 
-    it('Final Exam last period + hall pass profit + jokers = massive payout', () => {
+    it('Final Exam last period + hall pass profit + jokers — additive fold tames the curve', () => {
       // High Roller: salePriceBonusPercent = 30 → profitBoost += 1.5
       // Cocoa Futures (23): profitBoost += 0.5
       // profitBoost = 1 + 1.5 + 0.5 = 3.0
       // Mint Condition (70): multiplier += 1
-      // multiplier = 2
-      // Final Exam last period (8 of 8): finalExamMultiplier = 15
+      // Final Exam last period (8 of 8): multiplier += 14 (folded additively)
+      // multiplier = 1 + 1 + 14 = 16
       //
       // boostedProfit = 500 * 3.0 = 1500
-      // finalProfit = 1500 * 2 * 15 = 45000
-      // totalGain = 500 + 45000 = 45500
+      // finalProfit = 1500 * 16 = 24000
+      // totalGain = 500 + 24000 = 24500
+      // (Previously 45500 with multiplicative Final Exam — additive fold
+      // cuts the worst-case stacking by ~46%.)
       const result = calculateSaleTotal({
         ...baseSaleParams,
         period: 8,
@@ -407,7 +411,7 @@ describe('Hall Pass + Joker Synergy Integration', () => {
           makeTestJoker(JOKER_IDS.MINT_CONDITION),
         ],
       });
-      expect(result.totalGain).toBe(45500);
+      expect(result.totalGain).toBe(24500);
     });
   });
 

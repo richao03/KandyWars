@@ -23,6 +23,9 @@ interface TutorialOverlayProps {
     piggyBank?: LayoutRect;
     gummyBears?: LayoutRect;
     nextPeriod?: LayoutRect;
+    jokersTab?: LayoutRect;
+    allJokersTab?: LayoutRect;
+    homeTab?: LayoutRect;
   };
   onAdvance: () => void;
   onSkip: () => void;
@@ -54,6 +57,21 @@ const STEP_CONFIG: Record<
     tapThrough: true,
   },
   8: {
+    target: 'jokersTab',
+    message: "Now meet your Jokers — the secret sauce for big profits. Tap the Jokers tab!",
+    tapThrough: true,
+  },
+  9: {
+    target: 'allJokersTab',
+    message: "Jokers can affect your profit and multiplier count — it's the key to making real dough. Tap the All tab!",
+    tapThrough: true,
+  },
+  10: {
+    target: 'homeTab',
+    message: "Last stop — head back home to kick off your week. Tap the Home tab!",
+    tapThrough: true,
+  },
+  11: {
     target: '',
     message: "Buy low, sell high - that's the whole game. Now go make enough bread before the week's over. Good luck!",
     tapThrough: false,
@@ -85,8 +103,8 @@ export default function TutorialOverlay({
   const config = STEP_CONFIG[tutorialStep];
   if (!config) return null;
 
-  // Step 8: centered congrats modal, no spotlight
-  if (tutorialStep === 8) {
+  // Step 11: centered congrats modal, no spotlight
+  if (tutorialStep === 11) {
     return (
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         <TouchableWithoutFeedback onPress={onAdvance}>
@@ -332,6 +350,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    // Lift the centered congrats modal above the bottom tab bar so it doesn't
+    // visually overlap the Jokers tab on smaller devices.
+    paddingBottom: 120,
   },
   darkRect: {
     position: 'absolute',

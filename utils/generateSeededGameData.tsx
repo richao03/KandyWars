@@ -241,10 +241,22 @@ export function generateSeededGameData(
     volatilityOverrides[sizeGroup[1]] = HIGH_VOL;
   });
 
+  // Per-size cap on the periodMax floor. Smaller candies get wilder swings (the
+  // speculation tier); medium and big stay closer to their natural baseMax so
+  // prices don't blow up when stacked with PRICE_SPIKE events.
+  const PERIOD_MAX_FLOOR_BY_SIZE: Record<'small' | 'medium' | 'big', number> = {
+    small: 5,
+    medium: 3,
+    big: 2,
+  };
+
   Object.entries(basePrices).forEach(
     ([candy, [min, max, _unusedFloorPrice]]) => {
       // Per-candy volatility: how much price swings each period (0.4 = stable, 1.3 = wild)
       const volatility = volatilityOverrides[candy] ?? 0.4 + rng() * 0.9;
+      const candyDef = CANDY_REGISTRY.find((c) => c.name === candy);
+      const sizeFloorMult =
+        PERIOD_MAX_FLOOR_BY_SIZE[(candyDef?.size as 'small' | 'medium' | 'big') ?? 'small'];
 
       const prices: number[] = [];
 
@@ -255,8 +267,9 @@ export function generateSeededGameData(
         const dayProgress = numDays > 1 ? day / (numDays - 1) : 1;
         const dayScale = 0.5 + dayProgress * 0.5; // 0.5 on Day 1 → 1.0 on Day 5
         const periodMin = min * dayScale;
-        // Allow prices to spike up to 5x the minimum (500% swing)
-        const periodMax = Math.max(max * dayScale, periodMin * 5);
+        // Floor the periodMax at sizeFloorMult × min so low-spread candies still
+        // get some upside. Natural max wins when it's already wider.
+        const periodMax = Math.max(max * dayScale, periodMin * sizeFloorMult);
 
         // Each period gets a fresh random price within the range
         // Volatility controls how spread out: low-vol clusters mid-range, high-vol hits extremes

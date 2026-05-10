@@ -2,7 +2,7 @@
 
 ## Overview
 
-The tutorial is a 9-step guided walkthrough that teaches new players how to buy, sell, and profit. It triggers automatically on **difficulty 1, first game, first period** and persists across sessions via Redux Persist.
+The tutorial is a 9-step guided walkthrough that teaches new players how to buy, sell, and find their Jokers. It triggers automatically on **difficulty 1, first game, first period** and persists across sessions via Redux Persist.
 
 ---
 
@@ -11,14 +11,14 @@ The tutorial is a 9-step guided walkthrough that teaches new players how to buy,
 | File | Role |
 |------|------|
 | `src/store/slices/tutorialSlice.ts` | Redux state (step counter, completion flag) |
-| `src/hooks/useTutorial.ts` | Hook for accessing state + layout registration |
-| `app/components/TutorialProvider.tsx` | Context provider — stores measured positions of UI targets |
 | `app/components/TutorialOverlay.tsx` | Overlay UI — cutout, tooltip, step configs |
-| `app/(tabs)/market.tsx` | Registers targets (wallet, piggy, gummy bears, next period), advances steps 3–6 |
-| `app/components/TransactionModal.tsx` | Highlights buy/sell buttons, advances steps 4, 7, 8 |
-| `app/(tabs)/_layout.tsx` | Handles step 9 (Jokers tab highlight) |
+| `app/(tabs)/market.tsx` | Owns measurements (wallet, piggy, gummy bears, next period) and renders the overlay for steps 1–7 |
+| `app/components/TransactionModal.tsx` | Highlights buy/sell buttons; advances steps 4 and 7 |
+| `app/(tabs)/_layout.tsx` | Renders the overlay for steps 8 (Jokers tab spotlight) and 9 (congrats); auto-advances 8→9 when pathname becomes `/jokers` |
 | `app/components/SugarWarsTitleScreen.tsx` | Passes `tutorialMode` flag to seed data (cheap Gummy Bears in periods 1–2) |
 | `app/(tabs)/settings.tsx` | Debug reset button |
+
+> Note: there is no `TutorialProvider` or `useTutorial` hook. Measurement state lives directly in `market.tsx`'s component state, and the bottom-tab spotlight (step 8) uses computed geometry (`screenWidth / 4 × tabIndex`) rather than `measureInWindow`.
 
 ---
 
@@ -32,30 +32,28 @@ interface TutorialState {
 ```
 
 **Actions:**
-- `startTutorial()` — sets step to 1 (only if not already complete)
-- `advanceTutorial()` — increments step; marks complete at step 11
+- `startTutorial()` — sets step to 1
+- `advanceTutorial()` — increments step; marks complete when advancing past step 9
 - `skipTutorial()` — sets step to 0, marks complete
 - `resetTutorial()` — resets both fields (available in Settings)
 
 ---
 
-## The 11 Steps
+## The 9 Steps
 
 | Step | Target Element | Message | Advancement |
 |------|---------------|---------|-------------|
-| 1 | Wallet display | "This is your cash. You start with $20 — spend it wisely!" | Tap **Next** |
-| 2 | Piggy Bank / Debt | "This is your debt. Pay it off by the end of Day 5 to win!" | Tap **Next** |
-| 3 | Gummy Bears row | "Gummy Bears are cheap right now! Tap to buy some." | Tap the candy row |
-| 4 | Buy button (modal) | "Tap the Buy button to purchase Gummy Bears!" | Tap Buy in TransactionModal |
-| 5 | Next Period button | "Nice! Now travel to the next period — prices will change!" | Tap Next Period |
-| 6 | Gummy Bears row | "Gummy Bears went up! Tap to sell them for a profit!" | Tap the candy row |
-| 7 | Sell tab (modal) | "Switch to the Sell tab to sell your candy." | Tap Sell tab in TransactionModal |
-| 8 | Sell button (modal) | "Now tap Sell to pocket your profit!" | Tap Sell in TransactionModal |
-| 9 | Jokers tab (bottom tabs) | "You can collect Jokers by completing minigames. Click here!" | Tap the Jokers tab |
-| 10 | Owned tab (jokers page) | "You can find all the Jokers you own here." | Tap **Next** |
-| 11 | All tab (jokers page) | "Click here to see what subjects offer which Jokers. Good luck!" | Tap **Got it!** |
+| 1 | Wallet display | "This is your wallet…" | Tap anywhere |
+| 2 | Piggy Bank / Debt | "This is your goal…" | Tap anywhere |
+| 3 | Gummy Bears row | "Gummy Bears for $2?!…" | Tap the candy row |
+| 4 | Buy button (modal) | "Smash that Buy button!" | Tap Buy in TransactionModal |
+| 5 | Next Period button | "Time to move!" | Tap Next Period |
+| 6 | Gummy Bears row | "Gummy Bears jumped to $8!" | Tap the candy row |
+| 7 | Sell button (modal) | (handled inside TransactionModal) | Tap Sell in TransactionModal |
+| 8 | Jokers tab (bottom tabs) | "Now meet your Jokers…" | Tap the Jokers tab |
+| 9 | Centered congrats modal | "Buy low, sell high…" | Tap **Got it!** → complete |
 
-Steps 1–2, 10–11 show a button. Steps 3–9 are **action-based** — the user must interact with the highlighted element to advance.
+Steps 1, 2, and 9 show a tap-anywhere overlay. Steps 3, 5, 6, 8 are **action-based** — the user must interact with the highlighted element to advance. Steps 4 and 7 are advanced from inside `TransactionModal`.
 
 ---
 
@@ -65,10 +63,15 @@ In `market.tsx`:
 
 ```typescript
 useEffect(() => {
-  if (difficultyLevel === 1 && !tutorialComplete && periodCount === 0 && !tutorialActive) {
-    startTutorial();
+  if (
+    difficultyLevel === 1 &&
+    periodCount === 0 &&
+    !tutorialComplete &&
+    tutorialStep === 0
+  ) {
+    dispatch(startTutorial());
   }
-}, [difficultyLevel, tutorialComplete, periodCount, tutorialActive, startTutorial]);
+}, [difficultyLevel, periodCount, tutorialComplete, tutorialStep, dispatch]);
 ```
 
 Only fires on difficulty 1, before the player has moved to any period.
@@ -90,26 +93,51 @@ This guarantees the "buy low, sell high" loop succeeds during the tutorial.
 
 ---
 
-## Target Registration (Layout Measurement)
+## Target Measurement
 
-`TutorialProvider` stores a `Map<number, LayoutRect>` of screen positions per step. Components register their targets using `measureInWindow` to get absolute coordinates, then convert to container-local coords.
+Steps 1–6 use `onLayout`-driven measurements stored in `market.tsx` state, then adjusted by the market container's window offset so coordinates are container-local. The overlay renders inside the market container.
 
-Market targets (steps 1–6) are measured relative to the market container. The Jokers tab (step 9) is measured in window coords from `_layout.tsx`.
+Step 8 (Jokers tab) does NOT use `onLayout`. Because the bottom tab bar has a fixed height (49px) and four equally-spaced visible tabs, the rect is computed directly from `useWindowDimensions()` and `useSafeAreaInsets()`:
 
-The overlay polls for layout at 400ms, 800ms, and 1500ms delays to handle async rendering.
+```typescript
+const tabWidth = screenWidth / 4;
+const jokersTabRect = {
+  x: 1 * tabWidth,                          // Jokers is index 1 of 4
+  y: screenHeight - insets.bottom - 49,
+  width: tabWidth,
+  height: 49,
+};
+```
+
+If the visible tab order or count ever changes, update `JOKERS_TAB_INDEX` / `VISIBLE_TAB_COUNT` in `(tabs)/_layout.tsx`.
 
 ---
 
 ## Overlay Rendering
 
-- **Steps 1–8**: `<TutorialOverlay />` renders inside `market.tsx`
-- **Step 9**: `<TutorialOverlay />` renders inside `(tabs)/_layout.tsx`
+- **Steps 1–7**: `<TutorialOverlay />` is rendered inside `market.tsx`, gated on `tutorialStep <= 7`.
+- **Steps 8–9**: `<TutorialOverlay />` is rendered inside `(tabs)/_layout.tsx`, gated on `tutorialStep === 8 || tutorialStep === 9`. Rendering at the layout level means the congrats modal (step 9) survives the tab switch from market → jokers.
 
 The overlay is a full-screen absolute view with:
 - Semi-transparent backdrop (`rgba(0,0,0,0.7)`)
-- Gold-bordered cutout around the target element (8px padding, #FFD700 border)
+- Gold-bordered cutout around the target element
 - Tooltip positioned above or below the target depending on screen space
-- 300ms fade-in, 200ms fade-out animations
+
+---
+
+## Step 8 Auto-Advance
+
+When the player is on step 8 and the route changes to `/jokers`, the layout effect in `(tabs)/_layout.tsx` fires `advanceTutorial()` automatically:
+
+```typescript
+useEffect(() => {
+  if (tutorialStep === 8 && pathname === '/jokers') {
+    dispatch(advanceTutorial());
+  }
+}, [tutorialStep, pathname, dispatch]);
+```
+
+This means the user can reach step 9 by tapping the Jokers tab from anywhere — even if the cutout geometry is slightly off on an unusual device.
 
 ---
 

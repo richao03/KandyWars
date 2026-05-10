@@ -20,13 +20,12 @@ import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
-import TextWithEmojis from '../components/TextWithEmojis';
+import SkipGameButton from '../components/SkipGameButton';
 
 // Candy emoji to image mapping
 const getCandyImage = (emoji: string) => {
@@ -88,7 +87,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   const [candyA, setCandyA] = useState('');
   const [candyB, setCandyB] = useState('');
   const [nextCandy, setNextCandy] = useState('');
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -240,7 +238,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                 clearTimeout(modalTimeoutRef.current);
               }
               modalTimeoutRef.current = setTimeout(() => {
-                if (__DEV__) console.log(`Level ${level} complete! Showing modal...`);
+                if (__DEV__)
+                  console.log(`Level ${level} complete! Showing modal...`);
                 SoundEffects.playCongratsSound();
                 showModal(
                   `Level ${level} Complete!`,
@@ -259,7 +258,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                 clearTimeout(modalTimeoutRef.current);
               }
               modalTimeoutRef.current = setTimeout(() => {
-                if (__DEV__) console.log('All levels complete! Showing final modal...');
+                if (__DEV__)
+                  console.log('All levels complete! Showing final modal...');
                 SoundEffects.playCongratsSound();
                 showModal(
                   'All Levels Complete!',
@@ -276,13 +276,13 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
           return newScore;
         });
-        setFeedback('✅ +1');
+        setFeedback('+1');
       } else {
         // Wrong match - play wrong answer sound and apply penalty
         SoundEffects.playWrongAnswerSound();
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setScore((prev) => Math.max(0, prev - 1)); // Subtract 1 but don't go below 0
-        setFeedback('❌ -1');
+        setFeedback('-1');
       }
 
       // Clear feedback and allow next swipe after animation
@@ -411,7 +411,10 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     const currentCompletedLevel = completedLevelRef.current; // Use ref to get current value
     if (currentCompletedLevel > 0) {
       // Player completed at least one level, award jokers based on completion
-      if (__DEV__) console.log(`Game ended after completing level ${currentCompletedLevel}`);
+      if (__DEV__)
+        console.log(
+          `Game ended after completing level ${currentCompletedLevel}`
+        );
       const jokerCount = currentCompletedLevel;
       const jokerText = jokerCount === 1 ? '1 joker' : `${jokerCount} jokers`;
 
@@ -496,7 +499,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
-        'Leave Kitchen?',
+        'Leave Candy Cook?',
         'Are you sure you want to leave?',
         '🚪',
         () => {
@@ -525,21 +528,19 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   if (gameState === 'instructions') {
     return (
       <View style={styles.instructionsContainer}>
-        <Text style={styles.instructionsTitle}>Candy Kitchen Study!</Text>
+        <Text style={styles.instructionsTitle}>Candy Cook</Text>
 
         <PixelBorder
-          borderColor="#6c757d"
+          borderColor="#7fc69e"
           borderWidth={3}
-          backgroundColor="#2c3139"
+          backgroundColor="#f4a3b8"
           innerPadding={20}
           style={{ marginBottom: 20, width: '100%' }}
         >
-          <Text style={styles.instructionsHeader}>How to Cook:</Text>
+          <Text style={styles.instructionsHeader}>How to Win:</Text>
           <View style={styles.instructionStep}>
             <Text style={styles.stepNumber}>1.</Text>
-            <Text style={styles.stepText}>
-              Swipe ingredients to matching kitchen stations
-            </Text>
+            <Text style={styles.stepText}>Swipe ingredients to match</Text>
           </View>
           <View style={styles.instructionStep}>
             <Text style={styles.stepNumber}>2.</Text>
@@ -587,9 +588,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           style={{ marginBottom: 16, width: '100%' }}
         >
           <PixelBorder
-            borderColor="#6c757d"
+            borderColor="#fff4e6"
             borderWidth={3}
-            backgroundColor="#495057"
+            backgroundColor="#7fc69e"
             innerPadding={0}
           >
             <View style={styles.pixelButtonInner}>
@@ -598,29 +599,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           </PixelBorder>
         </PressableButton>
 
-        <PressableButton
-          onPress={() => {
-            SoundEffects.playRandomPop();
-            setShowAvailableJokers(true);
-          }}
-          shadowColor="#495057"
-          shadowOffset={{ width: 0, height: 4 }}
-          shadowOpacity={0.5}
-          shadowRadius={5}
-          elevation={8}
-          style={styles.backButton}
-        >
-          <PixelBorder
-            borderColor="#6c757d"
-            borderWidth={3}
-            backgroundColor="#495057"
-            innerPadding={0}
-          >
-            <View style={styles.backButtonInner}>
-              <Text style={styles.backButtonText}>Available Jokers</Text>
-            </View>
-          </PixelBorder>
-        </PressableButton>
+        <SkipGameButton onSkipSuccess={onComplete} />
+
         <PressableButton
           onPress={() => {
             SoundEffects.playRandomPop();
@@ -628,7 +608,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginTop: 8, width: '100%' }}
+          style={{ marginTop: 'auto', marginBottom: 16, width: '100%' }}
         >
           <PixelBorder
             borderColor="#999"
@@ -641,18 +621,6 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             </View>
           </PixelBorder>
         </PressableButton>
-
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#6c757d',
-            backgroundColor: '#1c1f26',
-            headerColor: '#2c3139',
-            textColor: '#adb5bd',
-          }}
-        />
       </View>
     );
   }
@@ -673,7 +641,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
         <GestureHandlerRootView style={styles.gameContainer}>
           {/* Header */}
           <MinigameHUD
-            title="Kitchen Practice"
+            theme="homeec"
+            title="Candy Cook"
             subtitle="Sort ingredients to their designated stations"
             leftInfo={`Level ${level}/3`}
             centerInfo={`🎯: ${score}/${levelConfig.matches}`}
@@ -689,28 +658,24 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
                   source={getCandyImage('🍭')}
                   style={styles.edgeCandyImage}
                 />
-                <Text style={styles.stationLabel}>PREP</Text>
               </View>
               <View style={[styles.edgeCandy, styles.rightCandy]}>
                 <Image
                   source={getCandyImage('🍬')}
                   style={styles.edgeCandyImage}
                 />
-                <Text style={styles.stationLabel}>GRILL</Text>
               </View>
               <View style={[styles.edgeCandy, styles.bottomCandy]}>
                 <Image
                   source={getCandyImage('🧁')}
                   style={styles.edgeCandyImage}
                 />
-                <Text style={styles.stationLabel}>OVEN</Text>
               </View>
               <View style={[styles.edgeCandy, styles.leftCandy]}>
                 <Image
                   source={getCandyImage('🍫')}
                   style={styles.edgeCandyImage}
                 />
-                <Text style={styles.stationLabel}>COOL</Text>
               </View>
 
               {/* Preview panel */}
@@ -763,9 +728,9 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             ]}
           >
             <PixelBorder
-              borderColor="#adb5bd"
+              borderColor="#7fc69e"
               borderWidth={3}
-              backgroundColor="#6c757d"
+              backgroundColor="#fff4e6"
               innerPadding={0}
               style={{ flex: 1 }}
             >
@@ -797,7 +762,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1c1f26', // Dark metallic background
+    backgroundColor: '#e891a5', // Dark metallic background
   },
   gameContainer: {
     flex: 1,
@@ -805,11 +770,11 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 24,
-    backgroundColor: '#2c3139', // Dark steel
+    backgroundColor: '#f4a3b8', // Dark steel
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#495057', // Steel border
+    borderColor: '#5d3a1a', // Steel border
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -823,7 +788,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
-    textShadowColor: '#495057',
+    textShadowColor: '#5d3a1a',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
@@ -837,20 +802,20 @@ const styles = StyleSheet.create({
   levelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#adb5bd', // Medium gray
+    color: '#7fc69e', // Medium gray
     fontFamily: 'PixeloidMono',
   },
   scoreText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.green.success, // Success green
+    color: '#7fc69e', // Success green
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6c757d',
+    color: '#fff4e6',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
@@ -862,11 +827,11 @@ const styles = StyleSheet.create({
   gameArea: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#343a40', // Steel gray
+    backgroundColor: '#a8d8b9', // Steel gray
     margin: 10,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#495057', // Steel border
+    borderColor: colors.offWhite, // Steel border
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
@@ -878,10 +843,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 70,
     height: 70,
-    backgroundColor: '#6c757d', // Stainless steel
+    backgroundColor: '#fff4e6', // Stainless steel
     borderRadius: 8,
     borderWidth: 3,
-    borderColor: '#adb5bd', // Light steel border
+    borderColor: '#7fc69e', // Light steel border
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.black,
@@ -890,19 +855,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  stationLabel: {
-    position: 'absolute',
-    bottom: -18,
-    fontSize: 8,
-    fontWeight: '700',
-    color: colors.offWhite,
-    fontFamily: 'PixeloidMono',
-    textAlign: 'center',
-    backgroundColor: 'rgba(52, 58, 64, 0.8)',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
+
   topCandy: {
     top: 20,
     left: '50%',
@@ -927,11 +880,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#495057', // Steel background
+    backgroundColor: '#5d3a1a',
     borderRadius: 8,
     padding: 8,
     borderWidth: 2,
-    borderColor: '#6c757d',
+    borderColor: '#fff4e6',
     alignItems: 'center',
     shadowColor: colors.black,
     shadowOffset: { width: 2, height: 2 },
@@ -957,7 +910,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.offWhite, // Light metallic
     borderRadius: 12,
     borderWidth: 4,
-    borderColor: '#dee2e6',
+    borderColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.black,
@@ -968,11 +921,11 @@ const styles = StyleSheet.create({
   },
   feedbackContainer: {
     position: 'absolute',
-    backgroundColor: 'rgba(73, 80, 87, 0.95)', // Dark steel overlay
+    backgroundColor: 'rgba(244, 163, 184, 0.95)', // Dark steel overlay
     borderRadius: 12,
     padding: 8,
     borderWidth: 2,
-    borderColor: '#adb5bd',
+    borderColor: '#7fc69e',
     shadowColor: colors.black,
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 0.4,
@@ -986,23 +939,9 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
   },
-  infoContainer: {
-    backgroundColor: '#2c3139',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    marginHorizontal: 16,
-    borderWidth: 2,
-    borderColor: '#495057',
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
   infoText: {
     fontSize: 14,
-    color: '#adb5bd',
+    color: '#7fc69e',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 4,
@@ -1014,11 +953,11 @@ const styles = StyleSheet.create({
   },
   footerBtn: {
     flex: 1,
-    backgroundColor: '#495057', // Steel gray
+    backgroundColor: '#5d3a1a', // Steel gray
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#6c757d',
+    borderColor: '#fff4e6',
     alignItems: 'center',
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
@@ -1027,8 +966,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   leaveBtn: {
-    backgroundColor: '#6c757d',
-    borderColor: '#adb5bd',
+    backgroundColor: '#fff4e6',
+    borderColor: '#7fc69e',
   },
   leaveBtnInner: {
     paddingVertical: 12,
@@ -1037,7 +976,7 @@ const styles = StyleSheet.create({
   footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.offWhite,
+    color: '#5d3a1a',
     fontFamily: 'PixeloidMono',
   },
   // Instructions styles
@@ -1045,7 +984,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#1c1f26',
+    backgroundColor: '#e891a5',
   },
   instructionsTitle: {
     fontSize: 28,
@@ -1054,16 +993,16 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#495057',
+    textShadowColor: '#5d3a1a',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
   instructionsCard: {
-    backgroundColor: '#2c3139',
+    backgroundColor: '#f4a3b8',
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#495057',
+    borderColor: '#5d3a1a',
     marginBottom: 20,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 6 },
@@ -1074,11 +1013,11 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#adb5bd',
+    color: '#7fc69e',
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
-    textShadowColor: '#495057',
+    textShadowColor: '#5d3a1a',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -1090,7 +1029,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#6c757d',
+    color: '#fff4e6',
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
@@ -1103,12 +1042,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: '#495057',
+    backgroundColor: '#7fc69e',
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#6c757d',
+    borderColor: '#fff4e6',
     alignItems: 'center',
     marginBottom: 16,
     shadowColor: colors.black,
@@ -1122,7 +1061,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.offWhite,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#343a40',
+    textShadowColor: '#a8d8b9',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },

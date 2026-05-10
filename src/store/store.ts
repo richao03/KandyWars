@@ -67,7 +67,7 @@ const rootReducer = combineReducers({
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 7, // Increment version to trigger migration
+  version: 8, // Increment version to trigger migration
   storage: AsyncStorage,
   whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial', 'hustle', 'quest', 'settings', 'jokerStats', 'shopkeeper', 'juiceSettings'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
@@ -158,6 +158,39 @@ const persistConfig = {
     if (state && state._persist?.version < 7) {
       if (__DEV__) console.log('🔄 Migrating to version 7: Shopkeeper NPC system');
       // Shopkeeper slice will initialize with defaults automatically
+    }
+
+    // Migration to version 8: Hall pass refactor
+    // - valedictorian_vendor → the_valedictorian
+    // - lunchroom_monopoly → joker_monopoly
+    // - perfect_scholar repurposed (new effect type minigame_skip_chance)
+    // Old persisted availablePasses still hold the previous names — force a
+    // re-init so initializeHallPasses re-seeds from ALL_HALL_PASSES (preserves
+    // unlocked status). Also rewrite stale ids in selectedPassIds and
+    // unlockedPassIds so existing selections/unlocks carry over to the new ids.
+    if (state && state._persist?.version < 8) {
+      if (__DEV__) console.log('🔄 Migrating to version 8: Hall pass refactor (Valedictorian, Joker Monopoly)');
+      if (state.hallPass) {
+        state.hallPass.isLoaded = false; // Force re-init with new ALL_HALL_PASSES
+        const idRemap: Record<string, string> = {
+          valedictorian_vendor: 'the_valedictorian',
+          lunchroom_monopoly: 'joker_monopoly',
+        };
+        const remap = (id: string) => idRemap[id] ?? id;
+        if (Array.isArray(state.hallPass.selectedPassIds)) {
+          state.hallPass.selectedPassIds = state.hallPass.selectedPassIds.map(remap);
+        }
+        if (Array.isArray(state.hallPass.unlockedPassIds)) {
+          state.hallPass.unlockedPassIds = state.hallPass.unlockedPassIds.map(remap);
+        }
+        if (Array.isArray(state.hallPass.newlyUnlockedPassIds)) {
+          state.hallPass.newlyUnlockedPassIds = state.hallPass.newlyUnlockedPassIds.map(remap);
+        }
+      }
+      // Drop dead cafeteriaLockedUntil if it's still in persisted game state.
+      if (state.game && 'cafeteriaLockedUntil' in state.game) {
+        delete state.game.cafeteriaLockedUntil;
+      }
     }
 
     return Promise.resolve(state);

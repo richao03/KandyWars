@@ -193,14 +193,54 @@ describe('Sale Calculations', () => {
       expect(result.jokerMultiplier).toBe(1);
     });
 
-    it('Triple Threat should add to multiplier when 3+ types covered', () => {
-      // Triple Threat needs 3+ candy types covered by type-multiplier jokers
-      // Without other type-multiplier jokers, it should not trigger
+    it('Triple Threat fires on every 3rd sale transaction (level 1: +1 mult)', () => {
+      // salesTransactionCount = 2 means this is sale #3, which triggers.
       const result = calculateSaleTotal({
         ...baseSaleParams,
         jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, 1)],
-      });
-      expect(result.jokerMultiplier).toBe(1);
+        salesTransactionCount: 2,
+      } as any);
+      expect(result.jokerMultiplier).toBe(2); // 1 + 1
+    });
+
+    it('Triple Threat does NOT fire on sales 1 and 2', () => {
+      // salesTransactionCount = 0 → this is sale #1 → no trigger.
+      const sale1 = calculateSaleTotal({
+        ...baseSaleParams,
+        jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, 1)],
+        salesTransactionCount: 0,
+      } as any);
+      expect(sale1.jokerMultiplier).toBe(1);
+
+      // salesTransactionCount = 1 → this is sale #2 → no trigger.
+      const sale2 = calculateSaleTotal({
+        ...baseSaleParams,
+        jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, 1)],
+        salesTransactionCount: 1,
+      } as any);
+      expect(sale2.jokerMultiplier).toBe(1);
+    });
+
+    it('Triple Threat fires on sales 3, 6, 9, …', () => {
+      for (const count of [2, 5, 8, 11, 14]) {
+        const result = calculateSaleTotal({
+          ...baseSaleParams,
+          jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, 1)],
+          salesTransactionCount: count,
+        } as any);
+        expect(result.jokerMultiplier).toBe(2);
+      }
+    });
+
+    it('Triple Threat scales by level (L1 +1, L2 +1.5, L3 +2)', () => {
+      const params = (level: number) => ({
+        ...baseSaleParams,
+        jokers: [makeTestJoker(JOKER_IDS.TRIPLE_THREAT, level)],
+        salesTransactionCount: 2, // sale #3
+      } as any);
+      expect(calculateSaleTotal(params(1)).jokerMultiplier).toBe(2);
+      expect(calculateSaleTotal(params(2)).jokerMultiplier).toBe(2.5);
+      expect(calculateSaleTotal(params(3)).jokerMultiplier).toBe(3);
     });
   });
 

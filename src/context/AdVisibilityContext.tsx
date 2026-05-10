@@ -32,22 +32,11 @@ interface AdVisibilityProviderProps {
 }
 
 /**
- * Routes where ads should be HIDDEN
+ * Routes where ads should be HIDDEN.
+ * Currently only the title-screen flow — every other screen shows the banner.
  */
 const HIDDEN_AD_ROUTES = [
-  // Minigame screens
-  'computer-game',
-  'economy-game',
-  'history-game',
-  'home-ec-game',
-  'logic-game',
-  'math-game',
-  'art-game',
-  'recess-game',
-  'geography-game',
-  // Title/story screens
   'title-screen',
-  'story-screen',
   'index', // Title screen route
   'title-settings', // Title screen settings
 ];

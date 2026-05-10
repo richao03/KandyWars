@@ -50,7 +50,7 @@ export default function GameEndScreen() {
     clearNewlyUnlocked,
     checkUnlockRequirements,
   } = useHallPass();
-  const { hasPlayedAllMinigames, playedMinigames } = useMinigameTracking();
+  const { hasPlayedAllMinigames, playedMinigames, lifetimeMinigameCompletions, lifetimeMinigameWins } = useMinigameTracking();
   const navigation = useNavigation();
   const dispatch = useAppDispatch();
   const localAnalytics = useAppSelector((state) => state.localAnalytics);
@@ -94,7 +94,7 @@ export default function GameEndScreen() {
         };
       case 'senior_executive':
         return { current: totalWinCount, required: 5, label: 'wins' };
-      case 'valedictorian_vendor':
+      case 'the_valedictorian':
         return {
           current: playedMinigames.length,
           required: 9,
@@ -126,13 +126,15 @@ export default function GameEndScreen() {
         };
       case 'perfect_scholar':
         return {
-          current: difficultyLevel >= 6 && gameResult === 'won' ? 1 : 0,
-          required: 1,
-          label:
-            difficultyLevel >= 6 && gameResult === 'won'
-              ? 'Achieved!'
-              : `Difficulty ${difficultyLevel} (need 6+)`,
-          isBoolean: true,
+          current: lifetimeMinigameCompletions,
+          required: 75,
+          label: 'minigames played',
+        };
+      case 'joker_monopoly':
+        return {
+          current: lifetimeMinigameWins,
+          required: 100,
+          label: 'minigames won',
         };
       case 'teachers_pet':
         return {
@@ -367,6 +369,8 @@ export default function GameEndScreen() {
 
         const unlocked = checkUnlockRequirements(gameStats, {
           hasPlayedAllMinigames: hasPlayedAllMinigames,
+          lifetimeCompletionsTotal: lifetimeMinigameCompletions,
+          lifetimeWinsTotal: lifetimeMinigameWins,
         });
         if (__DEV__) console.log('🎓 Newly unlocked Hall Passes:', unlocked);
 

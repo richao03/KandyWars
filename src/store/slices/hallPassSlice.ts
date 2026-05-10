@@ -7,8 +7,9 @@ export interface HallPassEffect {
     | 'inventory_bonus'
     | 'allowance_bonus'
     | 'joker_bonus'
+    | 'minigame_skip_chance'
     | 'special';
-  value: number; // percentage or flat amount
+  value: number; // percentage, flat amount, or 0..1 chance for minigame_skip_chance
   description: string;
 }
 
@@ -66,15 +67,15 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
 
   // ===== MAGICAL (Green #1eff00) - Easy to Medium =====
   {
-    id: 'valedictorian_vendor',
-    name: 'Valedictorian Vendor',
-    description: 'Academic excellence across all minigames.',
+    id: 'the_valedictorian',
+    name: 'The Valedictorian',
+    description: 'You\'ve seen every classroom — sometimes you can talk your way out.',
     unlockRequirement: 'Play every single minigame at least once',
     effects: [
       {
-        type: 'joker_bonus',
-        value: 1,
-        description: 'Get +1 extra joker at joker selection screen',
+        type: 'minigame_skip_chance',
+        value: 0.5,
+        description: 'Skip a minigame and go straight to a joker reward (50% chance)',
       },
     ],
     rarity: 'magical',
@@ -240,13 +241,13 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'perfect_scholar',
     name: 'Perfect Scholar',
-    description: 'Academic excellence meets business prowess.',
-    unlockRequirement: 'Win the game on difficulty level 6',
+    description: 'Hours of study sessions have honed your hustle instincts.',
+    unlockRequirement: 'Play 75 minigames (lifetime)',
     effects: [
       {
-        type: 'allowance_bonus',
-        value: 1000,
-        description: '+1000% daily allowance',
+        type: 'minigame_skip_chance',
+        value: 0.75,
+        description: 'Skip a minigame and go straight to a joker reward (75% chance)',
       },
     ],
     rarity: 'legendary',
@@ -295,15 +296,15 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     rarity: 'legendary',
   },
   {
-    id: 'lunchroom_monopoly',
-    name: 'Lunchroom Monopoly',
-    description: 'Cafeteria sales print money, but the lunch lady needs a break after each one.',
-    unlockRequirement: 'Make 50 lifetime Cafeteria sales',
+    id: 'joker_monopoly',
+    name: 'Joker Monopoly',
+    description: 'You\'ve mastered the meta — minigames are a formality.',
+    unlockRequirement: 'Win 100 minigames (lifetime)',
     effects: [
       {
-        type: 'special',
-        value: 6,
-        description: 'Cafeteria sales 6x profit (+500%); every other location −50%. Cafeteria locked for 2 periods after each visit.',
+        type: 'minigame_skip_chance',
+        value: 0.9,
+        description: 'Skip a minigame and go straight to a joker reward (90% chance)',
       },
     ],
     rarity: 'legendary',
@@ -355,6 +356,18 @@ const hallPassSlice = createSlice({
         }
         delete oldState.selectedPassId;
       }
+
+      // In-place rewrite of renamed pass ids — defensive sweep in case the
+      // root persist migration didn't catch this user (e.g. they upgraded
+      // mid-session). Mirrors the v8 migration in store.ts.
+      const renamedPassIds: Record<string, string> = {
+        valedictorian_vendor: 'the_valedictorian',
+        lunchroom_monopoly: 'joker_monopoly',
+      };
+      const remap = (id: string) => renamedPassIds[id] ?? id;
+      state.selectedPassIds = state.selectedPassIds.map(remap);
+      state.unlockedPassIds = (state.unlockedPassIds ?? []).map(remap);
+      state.newlyUnlockedPassIds = (state.newlyUnlockedPassIds ?? []).map(remap);
 
       // Refresh Hall Pass definitions from static data while preserving unlock status
       state.availablePasses = ALL_HALL_PASSES.map((pass) => ({

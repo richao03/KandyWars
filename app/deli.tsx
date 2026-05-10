@@ -21,9 +21,9 @@ import { useWallet } from '../src/hooks/useWallet';
 import { STANDARDIZED_JOKERS } from '../src/utils/jokerEffectEngine';
 import { formatCurrency } from '../src/utils/priceUtils';
 import DeliJokerShop from './components/DeliJokerShop';
+import DeliQuestTab from './components/DeliQuestTab';
 import DeliTriviaModal from './components/DeliTriviaModal';
 import GameHUD from './components/GameHUD';
-import NightlyQuestBanner from './components/NightlyQuestBanner';
 import PixelBorder from './components/PixelBorder';
 import ShopkeeperNPC from './components/ShopkeeperNPC';
 import TransactionModal from './components/TransactionModal';
@@ -81,7 +81,9 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
   }, []);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'candy' | 'joker'>('candy');
+  const [activeTab, setActiveTab] = useState<'candy' | 'joker' | 'quests'>(
+    'candy'
+  );
   const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'big'>('all');
 
   // Trivia modal
@@ -175,13 +177,13 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
   };
 
   const handleTransaction = useCallback(
-    (quantity: number, mode: 'Buy' | 'Sell') => {
+    (quantity: number, mode: 'buy' | 'sell') => {
       if (selectedCandyIndex === null) return;
 
       const candy = candies[selectedCandyIndex];
       if (!candy) return;
 
-      if (mode === 'Buy') {
+      if (mode === 'buy') {
         const totalCost = candy.cost * quantity;
         if (balance < totalCost) return;
 
@@ -307,6 +309,17 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
     setCurrentDialogue(shopkeeper.getDialogue('quest_complete'));
   }, [shopkeeper, add]);
 
+  const handleAcceptQuest = useCallback(() => {
+    shopkeeper.acceptQuest();
+  }, [shopkeeper]);
+
+  const handleRerollQuest = useCallback(() => {
+    if (!shopkeeper.canRerollQuestToday(day)) return;
+    if (balance < shopkeeper.nightlyQuestRerollCost) return;
+    spend(shopkeeper.nightlyQuestRerollCost);
+    shopkeeper.rerollQuest(seed || 'default', day);
+  }, [shopkeeper, balance, spend, seed, day]);
+
   const selectedCandy =
     selectedCandyIndex !== null ? candies[selectedCandyIndex] : null;
 
@@ -354,13 +367,6 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
           onTrivia={handleTriviaOpen}
         />
 
-        {/* Nightly Quest Banner */}
-        <NightlyQuestBanner
-          quest={shopkeeper.nightlyQuest}
-          completed={shopkeeper.nightlyQuestCompleted}
-          pendingReward={shopkeeper.pendingQuestReward}
-          onClaimReward={handleClaimQuestReward}
-        />
 
         {/* Discount Banners */}
         {(hasShrinkingGlass || hasFriendshipDiscount) && (
@@ -409,6 +415,21 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
               ]}
             >
               Jokers
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'quests' && styles.tabActive]}
+            onPress={() => setActiveTab('quests')}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'quests' && styles.tabTextActive,
+              ]}
+            >
+              Quests
+              {shopkeeper.pendingQuestReward ? ' •' : ''}
             </Text>
           </TouchableOpacity>
         </View>
@@ -501,7 +522,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
             )}
           />
           </>
-        ) : (
+        ) : activeTab === 'joker' ? (
           <DeliJokerShop
             deliJokerIds={shopkeeper.deliJokerIds}
             deliJokersPurchased={shopkeeper.deliJokersPurchased}
@@ -512,6 +533,19 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
             discount={shopkeeper.discount}
             onBuyJoker={handleBuyJoker}
             onReroll={handleReroll}
+          />
+        ) : (
+          <DeliQuestTab
+            quest={shopkeeper.nightlyQuest}
+            completed={shopkeeper.nightlyQuestCompleted}
+            pendingReward={shopkeeper.pendingQuestReward}
+            accepted={shopkeeper.nightlyQuestAccepted}
+            rerollCost={shopkeeper.nightlyQuestRerollCost}
+            balance={balance}
+            canRerollToday={shopkeeper.canRerollQuestToday(day)}
+            onAccept={handleAcceptQuest}
+            onReroll={handleRerollQuest}
+            onClaimReward={handleClaimQuestReward}
           />
         )}
 

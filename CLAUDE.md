@@ -56,9 +56,11 @@ Jest is configured with `testEnvironment: jsdom` and maps `react-native` → `re
 - **Joker Effect Engine** — `src/utils/jokerEffectEngine.ts`: `JOKER_EFFECT_FACTORIES` keyed by joker ID, returns level-dependent effects (levels 1–3). `getJokerEffectsAtLevel(id, level)` is the canonical lookup.
 - **Sale Calculations** — `src/utils/saleCalculations.ts`: canonical profit formula
   ```
-  finalProfit = (baseProfit + flatBonuses) x productOfAllMultipliers
+  profitBoost = 1 + Σ(profit-boost contributions)        // type jokers, hall pass %, scaling jokers, etc.
+  multiplier  = 1 + Σ(multiplier contributions)          // size jokers, conditional mults, Final Exam +14, Lunchroom +5
+  finalProfit = totalProfit × profitBoost × multiplier × finalExamPenalty × lunchroomPenalty
   ```
-  Flat bonuses apply first (additive), then multipliers (multiplicative). Vacuum Sealer subtracts 2 from the final multiplier (min 1x). Total returned to player is `purchaseValue + finalProfit`.
+  Both buckets sum **additively** (Balatro-style: per-joker contributions add into a single bucket, no joker-on-joker product). Vacuum Sealer subtracts 2 from the multiplier bucket (min 1x). Hall pass *bonuses* (Final Exam in last period, Lunchroom Monopoly in cafeteria) are folded into the additive multiplier bucket so they don't compound multiplicatively with jokers; their *penalties* (off-period 0.25×, off-site 0.5×) remain as final multiplicative factors so the punishment is unaffected by joker buildup. Total returned to player is `purchaseValue + finalProfit`.
 - **Price Generation** — `utils/generateSeededGameData.tsx`: seeded per-period prices; no global trend system. Each candy has its own "home price," volatility, and random-walk momentum. Prices stay within day-progress-scaled `[baseMin, baseMax]`.
 - **Hall Pass Modifiers** — `src/utils/computeHallPassModifiers.ts` + `src/store/slices/hallPassModifiersSlice.ts`: hall passes are unlocked persistently but selected per-run. Modifiers are computed and cached into a slice.
 - **Audio** — `src/utils/musicController.ts` uses a SINGLE persistent `AudioPlayer` and calls `player.replace(source)` to swap tracks. Do NOT create/destroy players per track — expo-audio bugs out after ~40 cycles (permanent silence). Queued target track handles rapid transitions. SFX pools in `soundEffects.ts` use round-robin playback.

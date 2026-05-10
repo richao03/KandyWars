@@ -18,6 +18,11 @@ export interface HallPassModifiers {
   jokerBonusCount: number; // Additional jokers from selection (e.g., 1 = +1 joker)
   rerollBonusCount: number; // Additional rerolls in joker selection (e.g., 1 = +1 reroll)
   salesMultiplier: number; // Sales profit multiplier (e.g., 2 = 2x profit, 4 = 4x profit) - from Time Crunch/Speedrun Champion
+  // Probability (0..1) that the player can skip a minigame and go straight to
+  // a joker reward. When multiple skip-passes are selected the highest chance
+  // applies (single roll, not stacked). Driven by The Valedictorian (0.5),
+  // Perfect Scholar (0.75), Joker Monopoly (0.9).
+  minigameSkipChance: number;
 }
 
 interface HallPassModifiersState extends HallPassModifiers {
@@ -31,6 +36,7 @@ const initialState: HallPassModifiersState = {
   jokerBonusCount: 0,
   rerollBonusCount: 0,
   salesMultiplier: 1, // Default 1x (no multiplier)
+  minigameSkipChance: 0,
   isInitialized: false,
 };
 
@@ -49,6 +55,7 @@ const hallPassModifiersSlice = createSlice({
       state.jokerBonusCount = action.payload.jokerBonusCount;
       state.rerollBonusCount = action.payload.rerollBonusCount;
       state.salesMultiplier = action.payload.salesMultiplier ?? 1; // Default to 1x if not provided (backwards compatibility)
+      state.minigameSkipChance = action.payload.minigameSkipChance ?? 0;
       state.isInitialized = true;
       if (__DEV__) {
         console.log('🎖️ MODIFIERS REDUCER: State updated successfully');
@@ -83,7 +90,11 @@ export const selectHallPassModifiers = (state: { hallPassModifiers: HallPassModi
   jokerBonusCount: state.hallPassModifiers.jokerBonusCount,
   rerollBonusCount: state.hallPassModifiers.rerollBonusCount,
   salesMultiplier: state.hallPassModifiers.salesMultiplier ?? 1,
+  minigameSkipChance: state.hallPassModifiers.minigameSkipChance ?? 0,
 });
+
+export const selectMinigameSkipChance = (state: { hallPassModifiers: HallPassModifiersState }) =>
+  state.hallPassModifiers.minigameSkipChance ?? 0;
 
 export const selectIsHallPassModifiersInitialized = (state: { hallPassModifiers: HallPassModifiersState }) =>
   state.hallPassModifiers.isInitialized;

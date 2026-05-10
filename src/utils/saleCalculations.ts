@@ -40,8 +40,9 @@ interface SaleCalculationParams {
   pennyWiseStashes?: number; // For Penny Wise — times money was stashed
   survivorCandiesMelted?: number; // For Survivor — candy batches melted
   selectedPassIds?: string[]; // For Final Exam period-specific multiplier
-  currentLocation?: string; // For Lunchroom Monopoly location-specific multiplier
+  currentLocation?: string; // Available for future location-gated effects (formerly Lunchroom Monopoly)
   previousLocation?: string; // For Class Clown — compare vs current to boost on location change
+  salesTransactionCount?: number; // For Triple Threat — count of completed sale transactions BEFORE this one (this sale is the (count+1)th)
 }
 
 interface SaleCalculationResult {
@@ -97,6 +98,7 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     selectedPassIds = [],
     currentLocation = '',
     previousLocation = '',
+    salesTransactionCount = 0,
   } = params;
 
   const bonusBreakdown: Array<{
@@ -354,15 +356,26 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Compound Interest — scaling profit boost over days
+      // Compound Interest — scaling profit boost over days held.
+      // Per the joker description: starts 1.2x/1.4x/1.6x, gains +0.2/+0.3/+0.4
+      // per day, capped at 3x/4x/5x. compoundInterestDays = number of day
+      // rollovers since the joker was acquired (so day 1 → days = 1).
       if (effect.target === 'compound_interest_profit_boost') {
         if (compoundInterestDays > 0) {
-          profitBoost += (effect.amount - 1);
+          const ciLevel = (joker as any).level ?? 1;
+          const perDay = ciLevel === 3 ? 0.4 : ciLevel === 2 ? 0.3 : 0.2;
+          const cap = ciLevel === 3 ? 5 : ciLevel === 2 ? 4 : 3;
+          const scaledMult = Math.min(
+            effect.amount + perDay * (compoundInterestDays - 1),
+            cap
+          );
+          const bonus = scaledMult - 1;
+          profitBoost += bonus;
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
-            multiplier: effect.amount,
-            flatBonus: totalProfit * (effect.amount - 1),
+            multiplier: scaledMult,
+            flatBonus: totalProfit * bonus,
           });
         }
       }
@@ -551,14 +564,16 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
         }
       }
 
-      // Lucky 7 — bonus when selling exactly 7 candy
+      // Lucky 7 — bonus on sales during every 7th period (absolute period 7, 14, 21, …).
+      // periodCount is 0-indexed, so period N corresponds to periodCount N-1.
       if (effect.target === 'lucky_seven_boost') {
-        if (quantity === 7) {
-          multiplier += (effect.amount - 1);
+        const absolutePeriod = periodCount + 1;
+        if (absolutePeriod % 7 === 0) {
+          multiplier += effect.amount;
           bonusBreakdown.push({
             emoji: _getJokerEmoji(jokerId),
             name: _getJokerName(jokerId),
-            multiplier: effect.amount,
+            multiplier: 1 + effect.amount,
           });
         }
       }
@@ -712,23 +727,12 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     }
   }
 
-  // Triple Threat — bonus when 3+ candy types covered by owned type-multiplier jokers
-  if (hasJokerById(jokers, JOKER_IDS.TRIPLE_THREAT) && candyTypes.length >= 1) {
-    const coveredTypes = new Set<string>();
-    for (const joker of jokers) {
-      const jokerId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
-      if (jokerId === JOKER_IDS.TRIPLE_THREAT) continue; // don't count self
-      const level = joker.level ?? 1;
-      const effects = getJokerEffectsAtLevel(jokerId, level);
-      for (const effect of effects) {
-        if (effect.target === 'type_multiplier' && effect.conditions?.candyType) {
-          if (candyTypes.includes(effect.conditions.candyType)) {
-            coveredTypes.add(effect.conditions.candyType);
-          }
-        }
-      }
-    }
-    if (coveredTypes.size >= 3) {
+  // Triple Threat — +1/+1.5/+2 mult on every 3rd sale transaction.
+  // salesTransactionCount is the count of completed sale transactions BEFORE
+  // this one, so this sale's index is (count + 1). Fires on indices 3, 6, 9, ...
+  if (hasJokerById(jokers, JOKER_IDS.TRIPLE_THREAT)) {
+    const thisSaleIndex = salesTransactionCount + 1;
+    if (thisSaleIndex % 3 === 0) {
       const ttJoker = jokers.find((j: any) => {
         const id = typeof j.id === 'string' ? parseInt(j.id) : j.id;
         return id === JOKER_IDS.TRIPLE_THREAT;
@@ -760,20 +764,24 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     });
   }
 
-  // === STEP 4b: Final Exam hall pass (period-specific multiplier) ===
+  // === STEP 4b: Final Exam hall pass (period-specific) ===
+  // Bonus branch (last period) folds additively into `multiplier` so it
+  // doesn't compound multiplicatively with the (already large) joker bucket.
+  // Penalty branch stays multiplicative — the −75% is intended to punish
+  // off-period sales regardless of joker buildup.
   let finalExamMultiplier = 1;
   if (selectedPassIds.includes('final_exam')) {
     const effectivePeriodsPerDay = periodsPerDay;
     if (period === effectivePeriodsPerDay) {
-      // Last period: 15x profit
-      finalExamMultiplier = 15;
+      // Last period: contributes +14 to additive multiplier (15x when alone)
+      multiplier += 14;
       bonusBreakdown.push({
         emoji: '📝',
         name: 'Final Exam (Last Period)',
         multiplier: 15,
       });
     } else {
-      // All other periods: -75% profit (0.25x)
+      // All other periods: -75% profit (0.25x) — kept as a hard penalty factor
       finalExamMultiplier = 0.25;
       bonusBreakdown.push({
         emoji: '📝',
@@ -783,29 +791,8 @@ export function calculateSaleTotal(params: SaleCalculationParams): SaleCalculati
     }
   }
 
-  // === STEP 4c: Lunchroom Monopoly hall pass (location-specific multiplier) ===
-  let lunchroomMonopolyMultiplier = 1;
-  if (selectedPassIds.includes('lunchroom_monopoly')) {
-    if (currentLocation === 'cafeteria') {
-      lunchroomMonopolyMultiplier = 6; // +500%
-      bonusBreakdown.push({
-        emoji: '🍽️',
-        name: 'Lunchroom Monopoly (Cafeteria)',
-        multiplier: 6,
-      });
-    } else {
-      lunchroomMonopolyMultiplier = 0.5; // −50%
-      bonusBreakdown.push({
-        emoji: '🍽️',
-        name: 'Lunchroom Monopoly (Off-Site)',
-        multiplier: 0.5,
-      });
-    }
-  }
-
   // === STEP 5: Final calculation ===
-  const finalProfit =
-    boostedProfit * multiplier * finalExamMultiplier * lunchroomMonopolyMultiplier;
+  const finalProfit = boostedProfit * multiplier * finalExamMultiplier;
   const purchaseValue = purchasePrice * quantity;
   // If selling at a loss (current price < purchase price), player gets current market value
   const marketValue = basePrice * quantity;

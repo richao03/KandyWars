@@ -7,8 +7,13 @@ import { useHustle } from './useHustle';
 import { useJokers } from './useJokers';
 import { useSeed } from './useSeed';
 import { useAppSelector } from '../store/hooks';
-import { getPeriodsPerDay } from '../store/slices/gameSlice';
+import {
+  getPeriodsPerDay,
+  selectMediumCandiesUnlocked,
+  selectBigCandiesUnlocked,
+} from '../store/slices/gameSlice';
 import { selectActiveQuest } from '../store/slices/questSlice';
+import { getCandyDefinition } from '../constants/candyRegistry';
 import { JokerService } from '../utils/jokerService';
 
 /**
@@ -26,8 +31,10 @@ export function usePeriodEventFlavorText(): void {
   const { periodCount, currentLocation, period, day } = useGame();
   const periodsPerDay = useAppSelector(getPeriodsPerDay);
   const { jokers, activeEffects } = useJokers();
-  const { getHustleRumors } = useHustle();
+  const { activeHustles } = useHustle();
   const activeQuest = useAppSelector(selectActiveQuest);
+  const mediumUnlocked = useAppSelector(selectMediumCandiesUnlocked);
+  const bigUnlocked = useAppSelector(selectBigCandiesUnlocked);
   const { gameData } = useSeed();
 
   const jokerService = useMemo(() => JokerService.getInstance(), []);
@@ -41,22 +48,50 @@ export function usePeriodEventFlavorText(): void {
     }
 
     const timeoutId = setTimeout(() => {
+      // Pre-generated period events and hustles can both name candies that the
+      // player has not unlocked yet. The price-effect for those events still
+      // applies to a hidden tier (harmless), but the marquee/modal text would
+      // confusingly reference candies the player can't see, so we filter them
+      // out at display time.
+      const isCandyAccessible = (candyName?: string): boolean => {
+        if (!candyName) return true;
+        const def = getCandyDefinition(candyName);
+        if (!def) return true;
+        if (def.size === 'small') return true;
+        if (def.size === 'medium') return mediumUnlocked;
+        if (def.size === 'big') return bigUnlocked;
+        return true;
+      };
+
       // Universal events fire anywhere; location-based events only at matching location.
       // periodCount is 0-indexed (0-39), but event periods are 1-indexed (1-40).
-      const currentEvent = gameData.periodEvents.find(
+      const currentEventRaw = gameData.periodEvents.find(
         (e: any) =>
           e.period === periodCount + 1 &&
           (e.isUniversal || e.location === currentLocation)
       );
+      const currentEvent =
+        currentEventRaw && isCandyAccessible(currentEventRaw.candy)
+          ? currentEventRaw
+          : undefined;
 
       const nextPeriodEvents = gameData.periodEvents.filter(
-        (e: any) => e.period === periodCount + 2
+        (e: any) => e.period === periodCount + 2 && isCandyAccessible(e.candy)
       );
 
-      const hustleRumors = getHustleRumors();
+      const hustleRumors = activeHustles
+        .filter((h) => isCandyAccessible(h.candyName))
+        .map(
+          (h) =>
+            `A kid in the ${h.location} wants ${h.quantity} ${h.candyName} by period ${h.period}. Says he's got something good...`
+        );
 
+      // Suppress the quest hint if the quest names a candy the player can't currently access.
       const questHint =
-        activeQuest && !activeQuest.completed && day === activeQuest.day
+        activeQuest &&
+        !activeQuest.completed &&
+        day === activeQuest.day &&
+        isCandyAccessible(activeQuest.candyName)
           ? `A student needs you to hold ${activeQuest.quantity} ${activeQuest.candyName} until period ${activeQuest.targetPeriod}. Sell them then for a reward!`
           : null;
 
@@ -117,7 +152,7 @@ export function usePeriodEventFlavorText(): void {
               period <= Math.ceil(periodsPerDay * 0.75)
             ) {
               setEvent('LUNCH_RUSH');
-            } else if (period >= periodsPerDay - 1) {
+            } else if (period === periodsPerDay) {
               setEvent('FINAL_PERIOD');
             } else {
               setEvent('PERIOD_CHANGE');
@@ -134,7 +169,7 @@ export function usePeriodEventFlavorText(): void {
           period <= Math.ceil(periodsPerDay * 0.75)
         ) {
           setEvent('LUNCH_RUSH');
-        } else if (period >= periodsPerDay - 1) {
+        } else if (period === periodsPerDay) {
           setEvent('FINAL_PERIOD');
         } else {
           setEvent('PERIOD_CHANGE');
@@ -156,8 +191,10 @@ export function usePeriodEventFlavorText(): void {
     activeEffects,
     period,
     periodsPerDay,
-    getHustleRumors,
+    activeHustles,
     activeQuest,
     day,
+    mediumUnlocked,
+    bigUnlocked,
   ]);
 }

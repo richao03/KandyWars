@@ -22,12 +22,12 @@ import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 interface Position {
@@ -173,7 +173,6 @@ export default function GymGame({ onComplete }: GymGameProps) {
   const [moves, setMoves] = useState(0);
   const [traveledCells, setTraveledCells] = useState<Set<string>>(new Set());
   const [caughtPosition, setCaughtPosition] = useState<Position | null>(null);
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Initialize level
   const initializeLevel = (levelNum: number) => {
@@ -401,7 +400,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
-      'Leave Gym Class?',
+      'Leave Team Captain?',
       "If you leave now, you'll miss your chance to practice stealth!",
       '🚪',
       () => {
@@ -487,7 +486,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Gym Class Stealth!</Text>
+          <Text style={styles.instructionsTitle}>Gym Class Captain</Text>
 
           <PixelBorder
             borderColor="#e74c3c"
@@ -496,7 +495,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
             innerPadding={20}
             style={{ marginBottom: 20, width: '90%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Play:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
@@ -550,62 +549,29 @@ export default function GymGame({ onComplete }: GymGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#c0392b"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#e74c3c"
-              borderWidth={3}
-              backgroundColor="#8b1a1a"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#ef4444',
-            backgroundColor: '#1a2332',
-            headerColor: '#2d4a3e',
-            textColor: '#fee2e2',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -625,7 +591,8 @@ export default function GymGame({ onComplete }: GymGameProps) {
             ]}
           >
             <MinigameHUD
-              title="Gym Class Stealth"
+              theme="gym"
+              title="Gym Class Captain"
               subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
               leftInfo={`Level ${level}/3`}
               centerInfo={`Visited: ${traveledCells.size}/${gridSize * gridSize}`}

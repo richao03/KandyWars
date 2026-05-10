@@ -15,12 +15,12 @@ import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 // Candy images for visual variety per pile
@@ -167,7 +167,6 @@ export default function NimGame({ onComplete }: NimGameProps) {
   const [gameActive, setGameActive] = useState(false);
   const [lastAIMove, setLastAIMove] = useState<string | null>(null);
   const [aiActedPile, setAiActedPile] = useState<number | null>(null);
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Refs for values needed inside AI timeout
   const heapsRef = useRef(heaps);
@@ -205,7 +204,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
       const newHeaps = [...currentHeaps];
       newHeaps[move.heap] -= move.take;
 
-      setLastAIMove(`AI took ${move.take} from row ${move.heap + 1}`);
+      setLastAIMove(`Opp took ${move.take} from row ${move.heap + 1}`);
       setAiActedPile(move.heap);
       setHeaps(newHeaps);
       setAiThinking(false);
@@ -346,7 +345,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
     SoundEffects.playRandomPop();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     showModal(
-      'Leave Gym Class?',
+      'Leave Gym Class Captain?',
       "If you leave now, you'll forfeit the game!",
       '🚪',
       () => {
@@ -475,7 +474,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Gym Class</Text>
+          <Text style={styles.instructionsTitle}>Gym Class Captain</Text>
 
           <PixelBorder
             borderColor="#8B7355"
@@ -484,7 +483,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
             innerPadding={20}
             style={{ marginBottom: 20, width: '90%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Play:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
@@ -511,9 +510,9 @@ export default function NimGame({ onComplete }: NimGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
               <View>
-                <Text style={styles.stepText}>lvl 1: 3 rows, dumb AI</Text>
-                <Text style={styles.stepText}>lvl 2: 4 rows, smarter AI</Text>
-                <Text style={styles.stepText}>lvl 3: 4 rows, tough AI</Text>
+                <Text style={styles.stepText}>lvl 1: 3 rows, dumb Opp</Text>
+                <Text style={styles.stepText}>lvl 2: 4 rows, smarter Opp</Text>
+                <Text style={styles.stepText}>lvl 3: 4 rows, tough Opp</Text>
               </View>
             </View>
           </PixelBorder>
@@ -536,62 +535,29 @@ export default function NimGame({ onComplete }: NimGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#6B5B45"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.3}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#8B7355"
-              borderWidth={3}
-              backgroundColor="#6B5B45"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#8B7355',
-            backgroundColor: '#d4c5a9',
-            headerColor: '#6B5B45',
-            textColor: '#3e3428',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -611,17 +577,18 @@ export default function NimGame({ onComplete }: NimGameProps) {
         ]}
       >
         <MinigameHUD
-          title="Gym Class"
+          theme="nim"
+          title="Gym Class Captain"
           subtitle={
             aiThinking
-              ? 'AI is thinking...'
+              ? 'Opp is thinking...'
               : currentTurn === 'player'
                 ? 'Your Turn'
-                : 'AI Turn'
+                : 'Opp Turn'
           }
           leftInfo={`Level ${level}/3`}
           centerInfo={`${remaining} left`}
-          rightInfo={currentTurn === 'player' ? '👆 Pick' : '🤖 AI'}
+          rightInfo={currentTurn === 'player' ? '👆 Pick' : '🤖 Opp'}
         />
 
         <ScrollView

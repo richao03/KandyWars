@@ -52,7 +52,7 @@ export default function PriceHistory() {
   const renderChart = useCallback(({ item: candyName }: { item: string }) => (
     <MemoizedCandyPriceChart
       candyName={candyName}
-      prices={gameData.candyPrices[candyName] || []}
+      prices={gameData.candyPrices?.[candyName] || []}
       currentPeriod={periodCount}
     />
   ), [gameData.candyPrices, periodCount]);
@@ -69,9 +69,29 @@ export default function PriceHistory() {
     );
   }
 
+  const filterChips = (
+    <View style={styles.chipRow}>
+      {SIZE_FILTERS.map((f) => {
+        const isActive = sizeFilter === f.id;
+        return (
+          <Pressable
+            key={f.id}
+            onPress={() => setSizeFilter(f.id)}
+            style={[styles.chip, isActive && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+              {f.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
   if (candyNames.length === 0) {
     return (
       <View style={styles.container}>
+        {filterChips}
         <View style={styles.noDataContainer}>
           <View style={styles.noDataTitleRow}>
             <Image
@@ -90,22 +110,7 @@ export default function PriceHistory() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.chipRow}>
-        {SIZE_FILTERS.map((f) => {
-          const isActive = sizeFilter === f.id;
-          return (
-            <Pressable
-              key={f.id}
-              onPress={() => setSizeFilter(f.id)}
-              style={[styles.chip, isActive && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                {f.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {filterChips}
       <FlatList
         data={candyNames}
         renderItem={renderChart}

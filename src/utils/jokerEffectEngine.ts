@@ -35,7 +35,7 @@ export type EffectTarget =
   | 'type_multiplier' // multiplier targeting a candy type
   | 'flip_artist_boost' // Flip Artist — bonus when selling at 3x+ markup over purchase price
   | 'combo_platter_boost' // Combo Platter — bonus when both candy types covered by owned jokers
-  | 'triple_threat_boost' // Triple Threat — bonus when 3+ candy types covered by type-multiplier jokers
+  | 'triple_threat_boost' // Triple Threat — bonus on every 3rd sale transaction
   | 'variety_pack_boost' // Variety Pack — bonus when 3+ candy types in inventory
   | 'conditional_multiplier' // multiplier with special conditions (even/odd inv, perfect change)
   | 'inventory_double_with_penalty' // Vacuum Sealer special
@@ -63,7 +63,7 @@ export type EffectTarget =
   | 'location_change_boost' // Class Clown — profit boost when current location != previous period's
   | 'collector_boost' // Collector — bonus per unique joker owned
   | 'minimalist_boost' // Minimalist — big bonus if exactly 3 jokers
-  | 'lucky_seven_boost' // Lucky 7 — bonus when selling exactly 7 candy
+  | 'lucky_seven_boost' // Lucky 7 — bonus during every 7th period
   | 'night_owl_boost' // Night Owl — bonus in last period
   | 'tax_collector_boost' // Tax Collector — % of sale as bonus
   | 'last_stand_boost' // Last Stand — huge bonus when selling < 5 candy
@@ -337,7 +337,7 @@ export function getJokerDescription(
         );
         break;
       case 'triple_threat_boost':
-        parts.push(`+${e.amount} mult when 3+ candy types covered`);
+        parts.push(`+${e.amount} mult on every 3rd sale`);
         break;
       case 'type_multiplier':
         if (e.operation === 'add')
@@ -439,7 +439,7 @@ export function getJokerDescription(
           `+${e.amount - 1} mult when cash < $${formatNumber(e.conditions?.cashBelow ?? 500)}`
         );
         break;
-      case 'compound_interest_boost':
+      case 'compound_interest_profit_boost':
         parts.push(`+${+(e.amount - 1).toFixed(2)} mult (grows each day)`);
         break;
       case 'reputation_profit_boost':
@@ -486,7 +486,7 @@ export function getJokerDescription(
         parts.push(`+${e.amount - 1} mult if exactly 3 jokers owned`);
         break;
       case 'lucky_seven_boost':
-        parts.push(`+${e.amount - 1} mult if selling exactly 7 candy`);
+        parts.push(`+${e.amount} mult on sales during every 7th period`);
         break;
       case 'night_owl_boost':
         parts.push(`+${e.amount - 1} mult in last period of day`);
@@ -648,12 +648,17 @@ export function getLiveJokerValueText(
       return `currently +${per * stacks} inventory`;
     }
     case 63: {
-      // COMPOUND_INTEREST — fires once compoundInterestDays > 0 with the
-      // level-base boost. Despite the description, the existing engine
-      // does NOT scale per day, so we report the binary state.
+      // COMPOUND_INTEREST — scales with compoundInterestDays per level:
+      //   total mult = base + perDay × (days - 1), capped at 3x/4x/5x.
       if (jokerStats.compoundInterestDays <= 0) return null;
       const base = _LIVE_PER_STACK[63]![lvIdx]!;
-      const pct = Math.round((base - 1) * 100);
+      const perDay = lvIdx === 2 ? 0.4 : lvIdx === 1 ? 0.3 : 0.2;
+      const cap = lvIdx === 2 ? 5 : lvIdx === 1 ? 4 : 3;
+      const scaled = Math.min(
+        base + perDay * (jokerStats.compoundInterestDays - 1),
+        cap
+      );
+      const pct = Math.round((scaled - 1) * 100);
       return `currently +${pct}%`;
     }
     case 64: {
@@ -812,12 +817,12 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 18: Triple Threat — +2x/+3x/+4x when 3+ candy types covered by type-multiplier jokers
+    // 18: Triple Threat — +1/+1.5/+2 mult on every 3rd sale transaction
     18: (lv) => [
       {
         target: 'triple_threat_boost',
         operation: 'add',
-        amount: levelScale(2, 3, 4, lv),
+        amount: levelScale(1, 1.5, 2, lv),
         duration: 'persistent',
       },
     ],
@@ -860,7 +865,9 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 67: Safe House — Protect wallet from loss events + stash from confiscation (merged)
+    // 67: Safe House — Protect wallet from loss events + stash from confiscation (merged).
+    // NOTE: factory targets `money_protection` and `stash_protection` are decorative —
+    // the consumer at src/hooks/useEventHandler.ts checks `JOKER_IDS.SAFE_HOUSE` directly.
     67: (_lv) => [
       {
         target: 'money_protection',
@@ -1207,7 +1214,7 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 65: Street Smarts — +10%/+15%/+20% per event survived
+    // 65: Street Smarts — +0.5/+0.75/+1.0 mult per event survived (i.e. +50%/+75%/+100%)
     65: (lv) => [
       {
         target: 'street_smarts_boost',
@@ -1274,7 +1281,11 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 75: Market Crash — all prices x0.5/x0.4/x0.3 for 1 period
+    // 75: Market Crash — all prices x0.5/x0.4/x0.3 for 1 period.
+    // NOTE: instant joker; activation handler in app/components/JokerCard.tsx
+    // (handleMarketCrash) reads `joker.level` directly and modifies prices via
+    // useSeed.modifyCandyPrice. The factory target `price_manipulation` is
+    // decorative and not read by any consumer.
     75: (lv) => [
       {
         target: 'price_manipulation',
@@ -1284,7 +1295,9 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 76: Inflation — all prices x2/x3/x4 for 1 period
+    // 76: Inflation — all prices x2/x3/x4 for 1 period.
+    // NOTE: instant joker; activation handler in app/components/JokerCard.tsx
+    // (handleInflation) reads `joker.level` directly. Factory target is decorative.
     76: (lv) => [
       {
         target: 'price_manipulation',
@@ -1316,7 +1329,9 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 79: Teacher's Pet — reveal next-period price direction arrow on 1/2/3 candies (biggest movers)
+    // 79: Teacher's Pet — reveal next-period price direction arrow on 1/2/3 candies (biggest movers).
+    // NOTE: factory target `price_peek_hint` is decorative — consumer at
+    // app/(tabs)/market.tsx checks `JOKER_IDS.TEACHERS_PET` directly and reads `joker.level`.
     79: (lv) => [
       {
         target: 'price_peek_hint',
@@ -1336,7 +1351,10 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 81: Detention Dodge — event immunity for 1 day (one-time, L1 only)
+    // 81: Detention Dodge — event immunity for 1 day (one-time, L1 only).
+    // NOTE: instant joker; activation handler in app/components/JokerCard.tsx
+    // dispatches eventHandlerSlice.activateDetentionDodge. The factory target
+    // `event_immunity` is decorative — read nowhere.
     81: (_lv) => [
       {
         target: 'event_immunity',
@@ -1368,12 +1386,12 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 84: Lucky 7 — 7x/10x/15x if selling exactly 7 candy
+    // 84: Lucky 7 — +2/+3/+4 mult on sales during every 7th period (7, 14, 21, ...)
     84: (lv) => [
       {
         target: 'lucky_seven_boost',
-        operation: 'multiply',
-        amount: levelScale(7, 10, 15, lv),
+        operation: 'add',
+        amount: levelScale(2, 3, 4, lv),
         duration: 'persistent',
       },
     ],
@@ -1468,7 +1486,10 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 94: Deep Freeze — Candy never melts
+    // 94: Deep Freeze — Candy never melts.
+    // NOTE: factory target `prevent_melt` is decorative — consumer at
+    // src/hooks/usePeriodAdvance.ts checks `JOKER_IDS.DEEP_FREEZE` directly
+    // and skips the melt loop entirely.
     94: () => [
       {
         target: 'prevent_melt',
@@ -1712,7 +1733,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Triple Double No Assists!',
-      description: '+2/+3/+4 mult when 3+ candy types covered by your jokers',
+      description: '+1/+1.5/+2 mult on every 3rd sale',
     },
     JOKER_EFFECT_FACTORIES[18]
   ),
@@ -2279,7 +2300,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Seven is the magic number',
-      description: '+6/+9/+14 mult if selling exactly 7 candy',
+      description: '+2/+3/+4 mult on sales during every 7th period',
     },
     JOKER_EFFECT_FACTORIES[84]
   ),

@@ -1,6 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { MusicController } from '../../src/utils/musicController';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -17,13 +15,15 @@ import { useGame } from '../../src/hooks/useGame';
 import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
+import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
-import AvailableJokersModal from '../components/AvailableJokersModal';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 /** =========================
@@ -410,9 +410,9 @@ function DraggableTile({
       {...panResponder.panHandlers}
     >
       <PixelBorder
-        borderColor={isUsed ? '#424242' : '#42a5f5'}
+        borderColor={isUsed ? '#424242' : '#a4c391'}
         borderWidth={3}
-        backgroundColor={isUsed ? '#1a1a1a' : '#1565c0'}
+        backgroundColor={isUsed ? '#1a1a1a' : '#6f9772'}
         innerPadding={0}
         style={{ width: '100%', height: '100%' }}
       >
@@ -551,9 +551,9 @@ function Slot({
       collapsable={false}
     >
       <PixelBorder
-        borderColor={isHighlighted ? '#4caf50' : '#42a5f5'}
+        borderColor={isHighlighted ? '#ffd700' : '#a4c391'}
         borderWidth={3}
-        backgroundColor={slot ? '#1565c0' : '#0d47a1'}
+        backgroundColor={slot ? '#6f9772' : '#447a52'}
         innerPadding={0}
         style={{ width: '100%', height: '100%' }}
       >
@@ -593,7 +593,6 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   const [levelIndex, setLevelIndex] = useState(0);
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [timeLeft, setTimeLeft] = useState(60); // 60 second timer
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [puzzle, setPuzzle] = useState<Puzzle>(() => generatePuzzle(0));
@@ -710,7 +709,8 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
   };
 
   const handleDragFromSlot = (tile: TradeTile, fromIndex: number) => {
-    if (__DEV__) console.log('🎯 Drag started from slot:', fromIndex, tile.label);
+    if (__DEV__)
+      console.log('🎯 Drag started from slot:', fromIndex, tile.label);
     setDragPosition({ x: 0, y: 0 }); // Reset position to prevent flash
     setDraggingTile(tile);
     setDragSourceSlot(fromIndex);
@@ -785,7 +785,8 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
         });
       } else {
         // Dragging from palette to slot
-        if (__DEV__) console.log('✅ Placing tile from palette to slot', highlightedSlot);
+        if (__DEV__)
+          console.log('✅ Placing tile from palette to slot', highlightedSlot);
         setSlots((prev) => {
           const copy = [...prev];
           copy[highlightedSlot] = { ...draggingTile, source: 'slot' };
@@ -981,17 +982,16 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Economics Study Session</Text>
-
+          <Text style={styles.instructionsTitle}>The Trading Post</Text>
 
           <PixelBorder
-            borderColor="#42a5f5"
+            borderColor="#a4c391"
             borderWidth={3}
-            backgroundColor="#1e3a8a"
+            backgroundColor="#558060"
             innerPadding={20}
             style={{ marginBottom: 20, width: '100%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Trade:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1. </Text>
               <Text style={styles.stepText}>
@@ -1018,9 +1018,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             style={{ marginBottom: 16, width: '100%' }}
           >
             <PixelBorder
-              borderColor="#42a5f5"
+              borderColor="#a4c391"
               borderWidth={3}
-              backgroundColor="#2196f3"
+              backgroundColor="#9bc18a"
               innerPadding={0}
             >
               <View style={styles.pixelButtonInner}>
@@ -1029,62 +1029,29 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#1565c0"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#1565c0"
-              borderWidth={3}
-              backgroundColor="#0d47a1"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#52c41a',
-            backgroundColor: '#1a2332',
-            headerColor: '#2d4a3e',
-            textColor: '#f5f5dc',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -1102,7 +1069,8 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       >
         {/* Header */}
         <MinigameHUD
-          title="Barter Trading"
+          theme="economy"
+          title="The Trading Post"
           subtitle="Trade your way to the goal candy!"
           leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
           centerInfo={`Start: ${Object.keys(puzzle.startInventory)
@@ -1160,9 +1128,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           ]}
         >
           <PixelBorder
-            borderColor="#1976d2"
+            borderColor="#76a06b"
             borderWidth={3}
-            backgroundColor="#2196f3"
+            backgroundColor="#9bc18a"
             innerPadding={0}
             style={styles.footerBtn}
           >
@@ -1174,9 +1142,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             </TouchableOpacity>
           </PixelBorder>
           <PixelBorder
-            borderColor="#42a5f5"
+            borderColor="#a4c391"
             borderWidth={3}
-            backgroundColor="#1565c0"
+            backgroundColor="#6f9772"
             innerPadding={0}
             style={styles.footerBtn}
           >
@@ -1199,9 +1167,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           ]}
         >
           <PixelBorder
-            borderColor="#42a5f5"
+            borderColor="#a4c391"
             borderWidth={3}
-            backgroundColor="#1565c0"
+            backgroundColor="#6f9772"
             innerPadding={0}
             style={styles.footerBtn}
           >
@@ -1229,9 +1197,9 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
             pointerEvents="none"
           >
             <PixelBorder
-              borderColor="#4caf50"
+              borderColor="#ffd700"
               borderWidth={3}
-              backgroundColor="#1565c0"
+              backgroundColor="#6f9772"
               innerPadding={0}
               style={{ width: 96, height: 48 }}
             >
@@ -1265,28 +1233,28 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a1929',
+    backgroundColor: '#3d6a4a',
   },
   header: {
     alignItems: 'center',
     marginBottom: 24,
-    backgroundColor: '#1e3a8a',
+    backgroundColor: '#558060',
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#64b5f6',
+    borderColor: '#daa520',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#64b5f6',
+    color: '#daa520',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#bbdefb',
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 16,
@@ -1298,13 +1266,13 @@ const styles = StyleSheet.create({
   level: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#ffeb3b',
+    color: '#ffd700',
     fontFamily: 'PixeloidMono',
   },
   steps: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.blue.lightBg,
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
   },
 
@@ -1312,12 +1280,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#1e3a8a',
+    backgroundColor: '#558060',
     borderWidth: 3,
-    borderColor: colors.blue.primary,
+    borderColor: '#a4c391',
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: colors.blue.primary,
+    shadowColor: '#a4c391',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1329,7 +1297,7 @@ const styles = StyleSheet.create({
   },
   hudLabel: {
     fontSize: 12,
-    color: colors.blue.lightBg,
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
     marginBottom: 4,
     fontWeight: '600',
@@ -1339,7 +1307,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: colors.blue.primary,
+    textShadowColor: '#a4c391',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
@@ -1348,10 +1316,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.blue.primary,
+    color: '#a4c391',
     fontFamily: 'PixeloidMono',
     marginBottom: 12,
-    textShadowColor: '#1976d2',
+    textShadowColor: '#76a06b',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -1376,7 +1344,7 @@ const styles = StyleSheet.create({
   },
   slotPlaceholder: {
     textAlign: 'center',
-    color: colors.blue.lightBg,
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
     fontSize: 12,
     fontStyle: 'italic',
@@ -1388,13 +1356,13 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontSize: 13,
-    textShadowColor: '#1976d2',
+    textShadowColor: '#76a06b',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   slotHint: {
     fontSize: 8,
-    color: colors.blue.lightBg,
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 2,
@@ -1425,13 +1393,13 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontSize: 13,
-    textShadowColor: '#1976d2',
+    textShadowColor: '#76a06b',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
   tileHint: {
     fontSize: 8,
-    color: colors.blue.lightBg,
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginTop: 2,
@@ -1440,21 +1408,21 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#0d47a1',
+    backgroundColor: '#447a52',
     borderWidth: 2,
-    borderColor: '#42a5f5',
+    borderColor: '#a4c391',
     borderRadius: 12,
     borderStyle: 'dashed',
   },
   emptyPaletteText: {
-    color: '#64b5f6',
+    color: '#daa520',
     fontFamily: 'PixeloidMono',
     fontWeight: '700',
     textAlign: 'center',
     fontSize: 16,
   },
   emptyPaletteSubtext: {
-    color: colors.blue.lightBg,
+    color: '#daf0c4',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     fontSize: 12,
@@ -1482,7 +1450,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#1976d2',
+    textShadowColor: '#76a06b',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -1512,27 +1480,27 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#0a1929',
+    backgroundColor: '#3d6a4a',
   },
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.blue.primary,
+    color: '#a4c391',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#1976d2',
+    textShadowColor: '#76a06b',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
   instructionsCard: {
-    backgroundColor: '#1e3a8a',
+    backgroundColor: '#558060',
     borderRadius: 20,
     padding: 20,
     borderWidth: 3,
-    borderColor: '#42a5f5',
+    borderColor: '#a4c391',
     marginBottom: 20,
-    shadowColor: colors.blue.primary,
+    shadowColor: '#a4c391',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -1540,11 +1508,11 @@ const styles = StyleSheet.create({
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#64b5f6',
+    color: '#daa520',
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
-    textShadowColor: colors.blue.primary,
+    textShadowColor: '#a4c391',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
@@ -1556,7 +1524,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#42a5f5',
+    color: '#a4c391',
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
@@ -1570,15 +1538,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   startGameButton: {
-    backgroundColor: colors.blue.primary,
+    backgroundColor: '#a4c391',
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 12,
     borderWidth: 3,
-    borderColor: '#1976d2',
+    borderColor: '#76a06b',
     alignItems: 'center',
     marginBottom: 16,
-    shadowColor: colors.blue.primary,
+    shadowColor: '#a4c391',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -1588,7 +1556,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
     fontFamily: 'PixeloidMono',
-    textShadowColor: '#1976d2',
+    textShadowColor: '#76a06b',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },

@@ -41,7 +41,15 @@ export interface NightlyQuest {
   reward: { xp: number; cash: number };
   day: number;
   expiresDay?: number;
+  // Set to true when the player explicitly Accepts the quest from the deli's
+  // Quests tab. Once accepted, the quest can no longer be rerolled — the
+  // player has committed to it.
+  accepted?: boolean;
 }
+
+// Fixed cost ($) for swapping the current nightly quest for a freshly
+// generated one. Player can pay this once per game-day.
+export const NIGHTLY_QUEST_REROLL_COST = 500;
 
 export interface DailySpecial {
   candyName: string;
@@ -73,6 +81,9 @@ export interface ShopkeeperState {
   nightlyQuestCompleted: boolean;
   pendingQuestReward: boolean;
   completedNightlyQuestIds: string[];
+  // Last game-day on which the player paid to reroll the nightly quest. 0
+  // means "never this run." Used to enforce one reroll per day.
+  lastQuestRerollDay: number;
 
   // Deli joker shop
   deliJokerIds: number[];
@@ -106,6 +117,7 @@ const initialState: ShopkeeperState = {
   nightlyQuestCompleted: false,
   pendingQuestReward: false,
   completedNightlyQuestIds: [],
+  lastQuestRerollDay: 0,
 
   deliJokerIds: [],
   deliJokersPurchased: [],
@@ -532,6 +544,41 @@ const shopkeeperSlice = createSlice({
       state.mood = 'happy';
     },
 
+    // Player explicitly accepts the offered nightly quest. Locks the quest
+    // in — once accepted, it can no longer be rerolled this cycle. Idempotent.
+    acceptNightlyQuest: (state) => {
+      if (!state.nightlyQuest) return;
+      if (state.nightlyQuestCompleted) return;
+      state.nightlyQuest.accepted = true;
+    },
+
+    // Swap the current nightly quest for a freshly generated one. Caller
+    // (deli.tsx) is responsible for spending the $500 cost via wallet.spend()
+    // so the spend can be cleanly cancelled if the balance check fails.
+    rerollNightlyQuest: (
+      state,
+      action: PayloadAction<{ seed: string; day: number }>
+    ) => {
+      const { seed, day } = action.payload;
+      if (!state.nightlyQuest) return;
+      if (state.nightlyQuest.accepted) return;
+      if (state.nightlyQuestCompleted) return;
+      if (state.lastQuestRerollDay === day) return;
+
+      // Mark this quest as completed-for-skip purposes so the generator
+      // doesn't immediately offer the same one back. This uses the existing
+      // de-dupe path in generateNightlyQuest.
+      const skipIds = [...state.completedNightlyQuestIds, state.nightlyQuest.id];
+      state.nightlyQuest = generateNightlyQuest(
+        seed,
+        day,
+        state.level,
+        skipIds
+      );
+      state.nightlyQuestCompleted = false;
+      state.lastQuestRerollDay = day;
+    },
+
     // Set mood directly
     setMood: (state, action: PayloadAction<'normal' | 'happy' | 'mad'>) => {
       state.mood = action.payload;
@@ -595,6 +642,8 @@ export const {
   rerollDeliJoker,
   updateQuestProgress,
   acknowledgeQuestReward,
+  acceptNightlyQuest,
+  rerollNightlyQuest,
   setMood,
   resetDailyShopkeeperState,
   applyEndOfRunBonus,
@@ -633,6 +682,12 @@ export const selectNightlyQuestCompleted = (state: { shopkeeper: ShopkeeperState
 
 export const selectPendingQuestReward = (state: { shopkeeper: ShopkeeperState }) =>
   state.shopkeeper.pendingQuestReward;
+
+export const selectNightlyQuestAccepted = (state: { shopkeeper: ShopkeeperState }) =>
+  state.shopkeeper.nightlyQuest?.accepted ?? false;
+
+export const selectLastQuestRerollDay = (state: { shopkeeper: ShopkeeperState }) =>
+  state.shopkeeper.lastQuestRerollDay ?? 0;
 
 export const selectTriviaAnsweredToday = (state: { shopkeeper: ShopkeeperState }) =>
   state.shopkeeper.triviaAnsweredToday;

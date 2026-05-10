@@ -1,16 +1,19 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { useGame } from '../src/hooks/useGame';
+import { useMinigameTracking } from '../src/hooks/useMinigameTracking';
 import ComputerGame from './minigames/ComputerGame';
 
 export default function ComputerGameScreen() {
   const { markStudiedTonight, markLunchMinigamePlayed, minigameContext, setMinigameContext } = useGame();
+  const { trackMinigameWon } = useMinigameTracking();
 
   const navigateBack = () => {
     router.back();
   };
 
   const handleGameComplete = () => {
+    trackMinigameWon('computer');
     if (__DEV__) console.log('Computer game completed! Context:', minigameContext);
 
     if (minigameContext === 'after-school') {

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { useGame } from '../src/hooks/useGame';
+import { useMinigameTracking } from '../src/hooks/useMinigameTracking';
 import MathGame from './minigames/MathGame';
 
 export default function MathGameScreen() {
@@ -10,6 +11,7 @@ export default function MathGameScreen() {
     minigameContext,
     setMinigameContext,
   } = useGame();
+  const { trackMinigameWon } = useMinigameTracking();
 
   const navigateBack = () => {
     // Since we use router.push() to get here, we can use router.back() to return
@@ -17,6 +19,10 @@ export default function MathGameScreen() {
   };
 
   const handleGameComplete = () => {
+    // onComplete only fires after the player reaches the joker reward state —
+    // i.e. they actually beat the minigame's win condition. Drives Joker
+    // Monopoly unlock progress.
+    trackMinigameWon('math');
     if (__DEV__) console.log('Math game completed! Context:', minigameContext);
 
     // Mark study as completed based on context BEFORE navigating

@@ -38,12 +38,17 @@ export const useHallPass = () => {
   //   selectedEffects: selectedEffects,
   // });
 
-  // Initialize hall passes on mount to refresh definitions from static data
+  // Always re-sync hall pass definitions from ALL_HALL_PASSES on mount.
+  // The reducer preserves per-id isUnlocked/unlockedAt flags, so this is
+  // idempotent — but it guarantees that renamed/repurposed passes (e.g.
+  // valedictorian_vendor → the_valedictorian, lunchroom_monopoly →
+  // joker_monopoly) take effect even if the persisted state still holds the
+  // old shape and the migration didn't catch the user.
   useEffect(() => {
-    if (!hallPassState.isLoaded) {
-      dispatch(initializeHallPasses());
-    }
-  }, [dispatch, hallPassState.isLoaded]);
+    dispatch(initializeHallPasses());
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const unlockPass = useCallback(
     (passId: string) => {
@@ -163,6 +168,8 @@ export const useHallPass = () => {
       },
       minigameTrackingData?: {
         hasPlayedAllMinigames: boolean;
+        lifetimeCompletionsTotal?: number;
+        lifetimeWinsTotal?: number;
       }
     ) => {
       const newUnlocks: string[] = [];
@@ -186,7 +193,7 @@ export const useHallPass = () => {
           case 'senior_executive':
             if (gameStats.completions >= 5) newUnlocks.push(pass.id);
             break;
-          case 'valedictorian_vendor':
+          case 'the_valedictorian':
             if (minigameTrackingData?.hasPlayedAllMinigames)
               newUnlocks.push(pass.id);
             break;
@@ -208,7 +215,23 @@ export const useHallPass = () => {
               newUnlocks.push(pass.id);
             break;
           case 'perfect_scholar':
-            if (gameStats.difficulty >= 6) newUnlocks.push(pass.id);
+            // Repurposed: lifetime minigame completions reach 75
+            if (
+              minigameTrackingData?.lifetimeCompletionsTotal !== undefined &&
+              minigameTrackingData.lifetimeCompletionsTotal >= 75
+            ) {
+              newUnlocks.push(pass.id);
+            }
+            break;
+          case 'joker_monopoly':
+            // Lifetime minigame wins reach 100. "Wins" = the player met the
+            // minigame's actual win condition, not just completed it.
+            if (
+              minigameTrackingData?.lifetimeWinsTotal !== undefined &&
+              minigameTrackingData.lifetimeWinsTotal >= 100
+            ) {
+              newUnlocks.push(pass.id);
+            }
             break;
           case 'teachers_pet':
             if (gameStats.confiscationCount && gameStats.confiscationCount >= 3)

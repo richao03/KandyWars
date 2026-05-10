@@ -15,10 +15,10 @@ import {
   View,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useGame } from '../../src/hooks/useGame';
+import { useHallPass } from '../../src/hooks/useHallPass';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
@@ -27,7 +27,10 @@ import { scoreboardService } from '../../src/services/firebase';
 import { nameValidationService } from '../../src/services/nameValidationService';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { fullResetGame } from '../../src/store/slices/gameSlice';
-import { resetHallPasses } from '../../src/store/slices/hallPassSlice';
+import {
+  resetHallPasses,
+  unlockHallPass,
+} from '../../src/store/slices/hallPassSlice';
 import {
   setTotalCompletions,
   setWonDifficulties,
@@ -53,12 +56,107 @@ import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PixelBorder from '../components/PixelBorder';
 import { resetFirebaseSession } from '../components/SugarWarsTitleScreen';
-import TextWithEmojis from '../components/TextWithEmojis';
+
+// School-theme palette — matches GameHUD school config (#fef7e7 bg)
+const PALETTE = {
+  pageBg: '#fef7e7',
+  cardBg: '#fff5d4',
+  cardBorder: '#8b4513',
+  accent: '#d4af37',
+  titleText: '#6b4423',
+  bodyText: '#4a3520',
+  mutedText: '#8a6e4e',
+  inputBg: '#fffaf0',
+  divider: '#e8d4a8',
+  // action accents
+  primary: '#3b6cb0',
+  primaryBg: '#e0ecff',
+  success: '#4a7c4a',
+  successBg: '#e6f4d6',
+  danger: '#b91c1c',
+  dangerBg: '#fde2e2',
+  warning: '#b8650f',
+  warningBg: '#fff0d6',
+};
+
+// Section header — pixel icon + title text in school-theme styling
+function SectionHeader({
+  icon,
+  title,
+}: {
+  icon?: any;
+  title: string;
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      {icon && <Image source={icon} style={styles.sectionHeaderIcon} />}
+      <Text style={styles.sectionHeaderText}>{title}</Text>
+    </View>
+  );
+}
+
+// School-themed action row — pixel icon + label + chevron-style affordance
+function ActionRow({
+  icon,
+  label,
+  description,
+  onPress,
+  disabled,
+  tone = 'default',
+}: {
+  icon?: any;
+  label: string;
+  description?: string;
+  onPress: () => void;
+  disabled?: boolean;
+  tone?: 'default' | 'primary' | 'danger' | 'warning';
+}) {
+  const toneStyle =
+    tone === 'primary'
+      ? { borderColor: PALETTE.primary, backgroundColor: PALETTE.primaryBg, labelColor: PALETTE.primary }
+      : tone === 'danger'
+        ? { borderColor: PALETTE.danger, backgroundColor: PALETTE.dangerBg, labelColor: PALETTE.danger }
+        : tone === 'warning'
+          ? { borderColor: PALETTE.warning, backgroundColor: PALETTE.warningBg, labelColor: PALETTE.warning }
+          : { borderColor: PALETTE.cardBorder, backgroundColor: PALETTE.inputBg, labelColor: PALETTE.titleText };
+
+  return (
+    <PixelBorder
+      borderColor={toneStyle.borderColor}
+      borderWidth={3}
+      backgroundColor={toneStyle.backgroundColor}
+      innerPadding={0}
+      style={styles.actionRowWrap}
+    >
+      <TouchableOpacity
+        style={[styles.actionRow, disabled && styles.actionRowDisabled]}
+        onPress={onPress}
+        disabled={disabled}
+        activeOpacity={0.75}
+      >
+        {icon && <Image source={icon} style={styles.actionRowIcon} />}
+        <View style={styles.actionRowText}>
+          <Text style={[styles.actionRowLabel, { color: toneStyle.labelColor }]}>
+            {label}
+          </Text>
+          {description && (
+            <Text style={styles.actionRowDescription}>{description}</Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    </PixelBorder>
+  );
+}
 
 function Settings() {
   const { resetGame, jumpToPeriod } = useGame();
   const { setSeed, setGameData } = useSeed();
   const walletContext = useWallet();
+  const { allPasses, selectedPassIds } = useHallPass();
+  const activePasses = React.useMemo(
+    () => allPasses.filter((p) => selectedPassIds.includes(p.id)),
+    [allPasses, selectedPassIds]
+  );
   const { resetInventory } = useInventory();
   const { resetJokers } = useJokers();
   const { resetFlavorText } = useFlavorText();
@@ -71,11 +169,17 @@ function Settings() {
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
-  const initializeWallet = walletContext?.initializeWallet || (() => {});
   const setPlayerName = walletContext?.setPlayerName || (() => {});
-  const currentDifficulty = walletContext?.difficulty;
+  // Wallet is the source of truth — set by story-screen when the player enters
+  // their name. cachedUser.playerName can be stale "Player" from old defaults.
+  const walletName = walletContext?.playerName;
+  const cachedName = cachedUser?.playerName;
   const currentPlayerName =
-    cachedUser?.playerName || walletContext?.playerName || 'Player';
+    (walletName && walletName !== 'Player' ? walletName : null) ??
+    (cachedName && cachedName !== 'Player' ? cachedName : null) ??
+    walletName ??
+    cachedName ??
+    'Player';
   const [isRestarting, setIsRestarting] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -117,33 +221,23 @@ function Settings() {
       title: 'Restart Game',
       message:
         'Are you sure you want to restart the game? This will delete all progress and cannot be undone.',
+      emoji: '',
       confirmText: 'Restart',
       cancelText: 'Cancel',
       onConfirm: async () => {
-        if (__DEV__) {
-          console.log(
-            '✅ Restart confirmed, restarting with current difficulty:',
-            currentDifficulty
-          );
-        }
-        // Don't reset modal yet - keep it visible during restart
+        if (__DEV__) console.log('✅ Restart confirmed');
         setIsRestarting(true);
 
         try {
-          // Reset all game data
           await resetGame();
-
-          // Reset all contexts
           resetInventory();
           resetJokers();
           resetFlavorText();
           resetPlaythrough();
 
-          // Generate new seed for fresh game FIRST (this clears the seed context)
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
 
-          // Generate game data using the seed
           const gameData = generateSeededGameData(newSeed, 40);
           setGameData(gameData);
           if (__DEV__) {
@@ -154,26 +248,21 @@ function Settings() {
             );
           }
 
-          // Reset wallet completely (don't initialize with difficulty yet - let title screen handle it)
           resetWallet();
 
-          // Show success modal (this replaces the current modal)
           setConfirmModal({
             visible: true,
             title: 'Game Restarted',
             message: `Starting a fresh game! Please select your difficulty.`,
-            emoji: '✨',
+            emoji: '',
             confirmText: 'Go to Title Screen',
             onConfirm: () => {
-              // Close modal first
               resetConfirmModal();
-              // Navigate after modal closes
               setTimeout(() => {
                 router.replace('/title-screen');
               }, 200);
             },
             onCancel: () => {
-              // Allow closing without navigating
               resetConfirmModal();
             },
           });
@@ -183,7 +272,7 @@ function Settings() {
             visible: true,
             title: 'Error',
             message: 'Failed to restart the game. Please try again.',
-            emoji: '❌',
+            emoji: '',
             onConfirm: () => resetConfirmModal(),
             onCancel: () => resetConfirmModal(),
           });
@@ -204,14 +293,12 @@ function Settings() {
       visible: true,
       title: 'Return to Title Screen',
       message: 'Return to the main menu? Your progress will be saved.',
-      emoji: '🏠',
+      emoji: '',
       confirmText: 'Return',
       cancelText: 'Cancel',
       onConfirm: () => {
         if (__DEV__) console.log('✅ Return to title screen confirmed');
-        // Navigate to title screen first
         router.replace('/title-screen');
-        // Reset modal after navigation
         setTimeout(() => resetConfirmModal(), 100);
       },
       onCancel: () => {
@@ -242,7 +329,6 @@ function Settings() {
       return;
     }
 
-    // Skip validation if name hasn't changed
     if (trimmedName.toLowerCase() === (currentPlayerName || '').toLowerCase()) {
       setEditingName(false);
       setNewPlayerName('');
@@ -253,11 +339,9 @@ function Settings() {
     setNameValidationError(null);
 
     try {
-      // Update Redux cache with new player name
       dispatch(updateCachedUserObject({ playerName: trimmedName }));
       if (__DEV__) console.log('✅ Player name updated in Redux:', trimmedName);
 
-      // Get updated user object from Redux and sync to service cache
       const updatedUser = cachedUser
         ? { ...cachedUser, playerName: trimmedName }
         : null;
@@ -265,7 +349,6 @@ function Settings() {
         scoreboardService.setCachedUserObject(updatedUser);
         if (__DEV__) console.log('✅ Player name synced to service cache:', updatedUser);
 
-        // Also ensure scoreboard slice is in sync with userObject
         dispatch(setWonDifficulties(updatedUser.difficultyWon));
         dispatch(setTotalCompletions(updatedUser.totalWinCount));
         if (__DEV__) {
@@ -277,7 +360,6 @@ function Settings() {
         }
       }
 
-      // Also update wallet context for backward compatibility
       setPlayerName(trimmedName);
 
       setEditingName(false);
@@ -305,10 +387,10 @@ function Settings() {
   const handleClearAllData = () => {
     setConfirmModal({
       visible: true,
-      title: ' Clear All Data',
+      title: 'Clear All Data',
       message:
         'WARNING: This will delete ALL saved data including game progress, player name, joker cards, and settings. You will start as a completely new player. This action cannot be undone!',
-      emoji: '⚠️',
+      emoji: '',
       confirmText: 'DELETE EVERYTHING',
       cancelText: 'Cancel',
       onConfirm: async () => {
@@ -317,11 +399,9 @@ function Settings() {
         setIsRestarting(true);
 
         try {
-          // Get the current user object before clearing
           const currentPlayerId = walletContext?.playerId;
           const currentPlayerName = walletContext?.playerName;
 
-          // Delete user document from Firebase
           if (__DEV__) console.log('🗑️ Deleting user document from Firebase...');
           try {
             await scoreboardService.initializeAuth();
@@ -334,7 +414,6 @@ function Settings() {
             );
           }
 
-          // Clear the Firebase name association if we have a player ID
           if (currentPlayerId && currentPlayerName) {
             if (__DEV__) {
               console.log(
@@ -352,15 +431,13 @@ function Settings() {
             }
           }
 
-          // STEP 1: Reset all Redux slices FIRST (in memory)
           dispatch(resetHallPasses());
           dispatch(clearCachedUserObject());
           dispatch(setWonDifficulties([]));
           dispatch(setTotalCompletions(0));
           if (__DEV__) console.log('✅ All Redux slices reset in memory');
 
-          // STEP 2: Reset all game contexts
-          dispatch(fullResetGame()); // Use fullResetGame to clear isInitialized
+          dispatch(fullResetGame());
           resetWallet();
           resetInventory();
           resetJokers();
@@ -368,17 +445,14 @@ function Settings() {
           resetPlaythrough();
           if (__DEV__) console.log('✅ All game contexts reset');
 
-          // STEP 3: Clear service cache and Firebase session
           scoreboardService.clearUserObjectCache();
-          resetFirebaseSession(); // Reset session flag so Firebase re-initializes
+          resetFirebaseSession();
           if (__DEV__) console.log('✅ Service cache and Firebase session cleared');
 
-          // STEP 4: Clear ALL AsyncStorage data
           const allKeys = await AsyncStorage.getAllKeys();
           if (__DEV__) console.log('🗑️ Found keys to clear:', allKeys);
           await AsyncStorage.multiRemove(allKeys);
 
-          // Clear AsyncStorage again with specific keys to make sure
           const specificKeys = [
             'candyWarz_playerId',
             'playerName',
@@ -389,17 +463,15 @@ function Settings() {
             'inventory',
             'jokers',
             'flavor_text_shown',
-            'persist:root', // Redux persist key
+            'persist:root',
           ];
 
           await AsyncStorage.multiRemove(specificKeys);
           if (__DEV__) console.log('✅ AsyncStorage cleared');
 
-          // Generate new seed
           const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           setSeed(newSeed);
 
-          // Generate game data using the seed
           const gameData = generateSeededGameData(newSeed, 40);
           setGameData(gameData);
           if (__DEV__) {
@@ -412,12 +484,9 @@ function Settings() {
 
           if (__DEV__) console.log('✅ All data cleared successfully');
 
-          // Add a delay to ensure all operations complete
           await new Promise((resolve) => setTimeout(resolve, 500));
 
           if (__DEV__) console.log('✅ Navigating to root as new player');
-
-          // Navigate to root which should show the title screen
           router.replace('/');
         } catch (error) {
           console.error('Failed to clear all data:', error);
@@ -438,466 +507,360 @@ function Settings() {
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
       >
+        {/* PLAYER ============================================== */}
         <PixelBorder
-          borderColor="#ff91a4"
+          borderColor={PALETTE.cardBorder}
           borderWidth={4}
-          backgroundColor="#ffc0cb"
-          innerPadding={24}
-          style={styles.sectionWrapper}
+          backgroundColor={PALETTE.cardBg}
+          innerPadding={14}
+          style={styles.section}
         >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎮 Player Info</Text>
+          <SectionHeader
+            icon={require('../../assets/images/emojis/student.png')}
+            title="Player"
+          />
 
-            <View style={styles.playerInfoContainer}>
-              <Text style={styles.playerInfoLabel}>Player Name:</Text>
-              {editingName ? (
-                <View style={styles.nameEditContainer}>
-                  <TextInput
-                    style={[
-                      styles.nameInput,
-                      nameValidationError && styles.nameInputError,
-                    ]}
-                    value={newPlayerName}
-                    onChangeText={(text) => {
-                      setNewPlayerName(text);
-                      setNameValidationError(null); // Clear error when user types
-                    }}
-                    placeholder="Enter your name"
-                    placeholderTextColor="#999"
-                    maxLength={20}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    returnKeyType="done"
-                    onSubmitEditing={handleSaveName}
-                    editable={!isValidatingName}
-                  />
-
-                  {nameValidationError && (
-                    <Text style={styles.nameErrorText}>
-                      {nameValidationError}
-                    </Text>
-                  )}
-                  <View style={styles.nameButtonContainer}>
-                    <PixelBorder
-                      borderColor="#4a7c4a"
-                      borderWidth={2}
-                      backgroundColor="#d4f6d4"
-                      innerPadding={0}
-                      style={{ flex: 1 }}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.nameButton,
-                          isValidatingName && styles.disabledNameButton,
-                        ]}
-                        onPress={handleSaveName}
-                        disabled={isValidatingName}
-                      >
-                        {isValidatingName ? (
-                          <View style={styles.nameLoadingContainer}>
-                            <ActivityIndicator size="small" color="#2d5a2d" />
-                            <Text style={styles.saveButtonText}>
-                              Checking...
-                            </Text>
-                          </View>
-                        ) : (
-                          <Text style={styles.saveButtonText}>Save</Text>
-                        )}
-                      </TouchableOpacity>
-                    </PixelBorder>
-
-                    <PixelBorder
-                      borderColor="#ef4444"
-                      borderWidth={2}
-                      backgroundColor="#fee2e2"
-                      innerPadding={0}
-                      style={{ flex: 1 }}
-                    >
-                      <TouchableOpacity
-                        style={styles.nameButton}
-                        onPress={handleCancelEditName}
-                      >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                    </PixelBorder>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.nameDisplayContainer}>
-                  <Text style={styles.playerNameText}>
-                    {currentPlayerName || 'Player'}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.editNameButton}
-                    onPress={handleEditName}
-                  >
-                    <Text style={styles.editNameButtonText}>✏️ Edit</Text>
-                  </TouchableOpacity>
-                </View>
+          {editingName ? (
+            <View style={styles.editNameWrap}>
+              <TextInput
+                style={[
+                  styles.nameInput,
+                  nameValidationError && styles.nameInputError,
+                ]}
+                value={newPlayerName}
+                onChangeText={(text) => {
+                  setNewPlayerName(text);
+                  setNameValidationError(null);
+                }}
+                placeholder="Enter your name"
+                placeholderTextColor={PALETTE.mutedText}
+                maxLength={20}
+                autoCapitalize="words"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={handleSaveName}
+                editable={!isValidatingName}
+              />
+              {nameValidationError && (
+                <Text style={styles.nameErrorText}>{nameValidationError}</Text>
               )}
+              <View style={styles.editNameButtonRow}>
+                <PixelBorder
+                  borderColor={PALETTE.success}
+                  borderWidth={3}
+                  backgroundColor={PALETTE.successBg}
+                  innerPadding={0}
+                  style={styles.editNameAction}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.editNameActionInner,
+                      isValidatingName && styles.disabledButton,
+                    ]}
+                    onPress={handleSaveName}
+                    disabled={isValidatingName}
+                  >
+                    {isValidatingName ? (
+                      <View style={styles.validatingRow}>
+                        <ActivityIndicator size="small" color={PALETTE.success} />
+                        <Text style={[styles.editNameActionText, { color: PALETTE.success }]}>
+                          Checking...
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.editNameActionText, { color: PALETTE.success }]}>
+                        Save
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </PixelBorder>
+
+                <PixelBorder
+                  borderColor={PALETTE.danger}
+                  borderWidth={3}
+                  backgroundColor={PALETTE.dangerBg}
+                  innerPadding={0}
+                  style={styles.editNameAction}
+                >
+                  <TouchableOpacity
+                    style={styles.editNameActionInner}
+                    onPress={handleCancelEditName}
+                  >
+                    <Text style={[styles.editNameActionText, { color: PALETTE.danger }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </PixelBorder>
+              </View>
             </View>
-          </View>
-        </PixelBorder>
-
-        <PixelBorder
-          borderColor="#b088f9"
-          borderWidth={4}
-          backgroundColor="#d9c4ff"
-          innerPadding={24}
-          style={styles.sectionWrapper}
-        >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔊 Audio</Text>
-
-            <View style={styles.volumeRow}>
-              <Text style={styles.volumeLabel}>Music</Text>
-              <Slider
-                style={styles.volumeSlider}
-                minimumValue={0}
-                maximumValue={1}
-                step={0.05}
-                value={musicVolume}
-                onValueChange={(val: number) => {
-                  dispatch(setMusicVolume(val));
-                  MusicController.setVolume(val);
-                }}
-                minimumTrackTintColor="#b088f9"
-                maximumTrackTintColor="#ccc"
-                thumbTintColor="#7c3aed"
-              />
-              <Text style={styles.volumeValue}>{Math.round(musicVolume * 100)}%</Text>
-            </View>
-
-            <View style={styles.volumeRow}>
-              <Text style={styles.volumeLabel}>SFX</Text>
-              <Slider
-                style={styles.volumeSlider}
-                minimumValue={0}
-                maximumValue={1}
-                step={0.05}
-                value={soundVolume}
-                onValueChange={(val: number) => {
-                  dispatch(setSoundVolume(val));
-                  SoundEffects.setVolume(val);
-                }}
-                minimumTrackTintColor="#b088f9"
-                maximumTrackTintColor="#ccc"
-                thumbTintColor="#7c3aed"
-              />
-              <Text style={styles.volumeValue}>{Math.round(soundVolume * 100)}%</Text>
-            </View>
-          </View>
-        </PixelBorder>
-
-        <PixelBorder
-          borderColor="#80d4f0"
-          borderWidth={4}
-          backgroundColor="#c2ecfa"
-          innerPadding={24}
-          style={styles.sectionWrapper}
-        >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>♿ Accessibility</Text>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleTextContainer}>
-                <Text style={styles.toggleLabel}>Reduce Motion</Text>
-                <Text style={styles.toggleDescription}>
-                  Simpler animations and flashes
+          ) : (
+            <View style={styles.playerRow}>
+              <View style={styles.playerNameWrap}>
+                <Text style={styles.playerNameLabel}>Name</Text>
+                <Text style={styles.playerNameValue}>
+                  {currentPlayerName || 'Player'}
                 </Text>
               </View>
-              <Switch
-                value={reduceMotion}
-                onValueChange={(_val: boolean) => {
-                  dispatch(toggleReduceMotion());
-                }}
-                trackColor={{ false: '#ccc', true: '#80d4f0' }}
-                thumbColor={reduceMotion ? '#0099cc' : '#f4f3f4'}
-              />
-            </View>
-          </View>
-        </PixelBorder>
-
-        <PixelBorder
-          borderColor="#ff85c0"
-          borderWidth={4}
-          backgroundColor="#ffb3d9"
-          innerPadding={24}
-          style={styles.sectionWrapper}
-        >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🎮 Game Controls</Text>
-
-            <PixelBorder
-              borderColor="#66b3ff"
-              borderWidth={4}
-              backgroundColor="#b3d9ff"
-              innerPadding={0}
-              style={styles.buttonWrapper}
-            >
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleReturnToTitleScreen}
-              >
-                <View style={styles.titleScreenButtonRow}>
-                  <Image
-                    source={require('../../assets/images/emojis/home.png')}
-                    style={styles.titleScreenButtonIcon}
-                  />
-                  <Text style={styles.titleScreenButtonText}>
-                    Return to Title Screen
-                  </Text>
-                </View>
-                <Text style={styles.buttonSubtext}>
-                  Go back to main menu (progress saved)
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-
-            <PixelBorder
-              borderColor="#ff8080"
-              borderWidth={4}
-              backgroundColor="#ffb3b3"
-              innerPadding={0}
-              style={styles.buttonWrapper}
-            >
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleRestartGame}
-                disabled={isRestarting}
-              >
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {!isRestarting && (
-                    <Image
-                      source={require('../../assets/images/emojis/refresh.png')}
-                      style={{
-                        width: 24,
-                        height: 24,
-                        resizeMode: 'contain',
-                        marginRight: 6,
-                      }}
-                    />
-                  )}
-                  <Text style={styles.dangerButtonText}>
-                    {isRestarting ? 'Restarting...' : 'Restart Game'}
-                  </Text>
-                </View>
-                <Text style={styles.buttonSubtext}>
-                  Delete all progress and start fresh
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-
-            {__DEV__ && (
               <PixelBorder
-                borderColor="#ff9800"
-                borderWidth={3}
-                backgroundColor="#ffa726"
+                borderColor={PALETTE.primary}
+                borderWidth={2}
+                backgroundColor={PALETTE.primaryBg}
                 innerPadding={0}
-                style={styles.buttonWrapper}
               >
                 <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => {
-                    jumpToPeriod(32); // Day 5, Period 1 (32 = 4 days * 8 periods)
-                    router.push('/(tabs)/market');
-                  }}
+                  style={styles.editButton}
+                  onPress={handleEditName}
+                  activeOpacity={0.75}
                 >
-                  <Text style={styles.dangerButtonText}>
-                    🐛 DEBUG: Jump to Day 5
-                  </Text>
-                  <Text style={styles.buttonSubtext}>
-                    Skip to day 5 for testing
-                  </Text>
+                  <Text style={styles.editButtonText}>Edit</Text>
                 </TouchableOpacity>
               </PixelBorder>
-            )}
-
-            <PixelBorder
-              borderColor="#ff80bf"
-              borderWidth={4}
-              backgroundColor="#ffe6f0"
-              innerPadding={0}
-              style={styles.buttonWrapper}
-            >
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleClearAllData}
-                disabled={isRestarting}
-              >
-                <Text style={styles.clearDataButtonText}>
-                  {isRestarting ? 'Clearing...' : '🗑️ Clear All Data'}
-                </Text>
-                <Text style={styles.buttonSubtext}>
-                  Start as a completely new player
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-          </View>
+            </View>
+          )}
         </PixelBorder>
 
-        <PixelBorder
-          borderColor="#c79fff"
-          borderWidth={4}
-          backgroundColor="#e6d5ff"
-          innerPadding={24}
-          style={styles.sectionWrapper}
-        >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏆 Leaderboard</Text>
-            <PixelBorder
-              borderColor="#b366ff"
-              borderWidth={4}
-              backgroundColor="#d9b3ff"
-              innerPadding={0}
-              style={styles.buttonWrapper}
-            >
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => router.push('/leaderboard')}
-              >
-                <TextWithEmojis
-                  style={styles.leaderboardButtonText}
-                  imageSize={24}
-                >
-                  🏆 View Leaderboard
-                </TextWithEmojis>
-                <Text style={styles.buttonSubtext}>
-                  See how you rank against other players
-                </Text>
-              </TouchableOpacity>
-            </PixelBorder>
-          </View>
-        </PixelBorder>
-
-        {__DEV__ && (
+        {/* HALL PASSES ========================================= */}
+        {activePasses.length > 0 && (
           <PixelBorder
-            borderColor="#a855f7"
-            borderWidth={2}
-            backgroundColor="rgba(243, 232, 255, 0.8)"
-            innerPadding={20}
-            style={styles.sectionWrapper}
+            borderColor={PALETTE.cardBorder}
+            borderWidth={4}
+            backgroundColor={PALETTE.cardBg}
+            innerPadding={14}
+            style={styles.section}
           >
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🔧 Debug Tools</Text>
-              <PixelBorder
-                borderColor="#a855f7"
-                borderWidth={3}
-                backgroundColor="#f3e8ff"
-                innerPadding={0}
-              >
-                <TouchableOpacity
-                  style={styles.debugButton}
-                  onPress={() => {
-                    if (__DEV__) {
-                      console.log(
-                        '🔧 DEBUG: Getting total completions from cache...'
-                      );
-                    }
-                    const total = scoreboardService.getTotalWinCount();
-                    if (__DEV__) console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
-                    Alert.alert(
-                      'Total Win Count',
-                      `You have won ${total} game(s)`,
-                      [{ text: 'OK' }]
-                    );
-                  }}
-                >
-                  <Text style={styles.debugButtonText}>
-                    Show Total Completions
+            <SectionHeader
+              icon={require('../../assets/images/emojis/hallpass.png')}
+              title="Hall Passes"
+            />
+            {activePasses.map((pass) => (
+              <View key={pass.id} style={styles.passCard}>
+                <Text style={styles.passName}>{pass.name}</Text>
+                {pass.effects.map((effect, idx) => (
+                  <Text key={idx} style={styles.passEffect}>
+                    • {effect.description}
                   </Text>
-                </TouchableOpacity>
-              </PixelBorder>
-              <View style={{ height: 8 }} />
-              <PixelBorder
-                borderColor="#a855f7"
-                borderWidth={3}
-                backgroundColor="#f3e8ff"
-                innerPadding={0}
-              >
-                <TouchableOpacity
-                  style={styles.debugButton}
-                  onPress={() => {
-                    dispatch(resetTutorial());
-                    Alert.alert(
-                      'Tutorial Reset',
-                      'Tutorial will show again on next difficulty 1 game.',
-                      [{ text: 'OK' }]
-                    );
-                  }}
-                >
-                  <Text style={styles.debugButtonText}>Reset Tutorial</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-              <View style={{ height: 8 }} />
-              <PixelBorder
-                borderColor="#a855f7"
-                borderWidth={3}
-                backgroundColor="#f3e8ff"
-                innerPadding={0}
-              >
-                <TouchableOpacity
-                  style={styles.debugButton}
-                  onPress={() => router.push('/debug-minigames' as any)}
-                >
-                  <Text style={styles.debugButtonText}>🎮 Minigame Picker</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-              <View style={{ height: 8 }} />
-              <PixelBorder
-                borderColor="#a855f7"
-                borderWidth={3}
-                backgroundColor="#f3e8ff"
-                innerPadding={0}
-              >
-                <TouchableOpacity
-                  style={styles.debugButton}
-                  onPress={() => router.push('/debug-tier-preview' as any)}
-                >
-                  <Text style={styles.debugButtonText}>🎨 Sale Tier Preview</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-
-              <PixelBorder
-                borderColor="#7c3aed"
-                borderWidth={3}
-                backgroundColor="#f3e8ff"
-                innerPadding={0}
-              >
-                <TouchableOpacity
-                  style={styles.debugButton}
-                  onPress={() => router.push('/debug-jokers' as any)}
-                >
-                  <Text style={styles.debugButtonText}>🃏 Joker Picker</Text>
-                </TouchableOpacity>
-              </PixelBorder>
-            </View>
+                ))}
+              </View>
+            ))}
           </PixelBorder>
         )}
 
+        {/* PREFERENCES (audio + accessibility) ================= */}
         <PixelBorder
-          borderColor="#66e0b8"
+          borderColor={PALETTE.cardBorder}
           borderWidth={4}
-          backgroundColor="#b3f0d9"
-          innerPadding={24}
-          style={styles.sectionWrapper}
+          backgroundColor={PALETTE.cardBg}
+          innerPadding={14}
+          style={styles.section}
         >
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ℹ️ About</Text>
-            <Text style={styles.aboutText}>
-              Sugar Wars - The ultimate school trading simulation game
-            </Text>
-            <Text style={styles.aboutText}>
-              Build your candy empire, collect jokers, and dominate the market!
+          <SectionHeader
+            icon={require('../../assets/images/emojis/msuic.png')}
+            title="Preferences"
+          />
+
+          <View style={styles.sliderRow}>
+            <Text style={styles.sliderLabel}>Music</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={1}
+              step={0.05}
+              value={musicVolume}
+              onValueChange={(val: number) => {
+                dispatch(setMusicVolume(val));
+                MusicController.setVolume(val);
+              }}
+              minimumTrackTintColor={PALETTE.accent}
+              maximumTrackTintColor={PALETTE.divider}
+              thumbTintColor={PALETTE.cardBorder}
+            />
+            <Text style={styles.sliderValue}>
+              {Math.round(musicVolume * 100)}%
             </Text>
           </View>
+
+          <View style={styles.sliderRow}>
+            <Text style={styles.sliderLabel}>SFX</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={1}
+              step={0.05}
+              value={soundVolume}
+              onValueChange={(val: number) => {
+                dispatch(setSoundVolume(val));
+                SoundEffects.setVolume(val);
+              }}
+              minimumTrackTintColor={PALETTE.accent}
+              maximumTrackTintColor={PALETTE.divider}
+              thumbTintColor={PALETTE.cardBorder}
+            />
+            <Text style={styles.sliderValue}>
+              {Math.round(soundVolume * 100)}%
+            </Text>
+          </View>
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleText}>
+              <Text style={styles.toggleLabel}>Reduce Motion</Text>
+              <Text style={styles.toggleDescription}>
+                Simpler animations and flashes
+              </Text>
+            </View>
+            <Switch
+              value={reduceMotion}
+              onValueChange={() => {
+                dispatch(toggleReduceMotion());
+              }}
+              trackColor={{ false: PALETTE.divider, true: PALETTE.accent }}
+              thumbColor={reduceMotion ? PALETTE.cardBorder : '#f4f3f4'}
+            />
+          </View>
         </PixelBorder>
+
+        {/* ACTIONS ============================================= */}
+        <PixelBorder
+          borderColor={PALETTE.cardBorder}
+          borderWidth={4}
+          backgroundColor={PALETTE.cardBg}
+          innerPadding={14}
+          style={styles.section}
+        >
+          <SectionHeader title="Actions" />
+
+          <ActionRow
+            icon={require('../../assets/images/emojis/home.png')}
+            label="Return to Title Screen"
+            description="Progress saved"
+            onPress={handleReturnToTitleScreen}
+            tone="primary"
+          />
+
+          <ActionRow
+            icon={require('../../assets/images/emojis/trophy.png')}
+            label="Leaderboard"
+            description="See how you rank"
+            onPress={() => router.push('/leaderboard')}
+            tone="default"
+          />
+
+          <ActionRow
+            icon={require('../../assets/images/emojis/refresh.png')}
+            label={isRestarting ? 'Restarting…' : 'Restart Game'}
+            description="Delete progress and start fresh"
+            onPress={handleRestartGame}
+            disabled={isRestarting}
+            tone="warning"
+          />
+        </PixelBorder>
+
+        {/* DANGER ZONE ========================================= */}
+        <PixelBorder
+          borderColor={PALETTE.danger}
+          borderWidth={4}
+          backgroundColor={PALETTE.dangerBg}
+          innerPadding={14}
+          style={styles.section}
+        >
+          <SectionHeader
+            icon={require('../../assets/images/emojis/warning.png')}
+            title="Danger Zone"
+          />
+
+          <ActionRow
+            icon={require('../../assets/images/emojis/x.png')}
+            label={isRestarting ? 'Clearing…' : 'Clear All Data'}
+            description="Start as a completely new player"
+            onPress={handleClearAllData}
+            disabled={isRestarting}
+            tone="danger"
+          />
+        </PixelBorder>
+
+        {/* DEBUG (DEV) ========================================= */}
+        {__DEV__ && (
+          <PixelBorder
+            borderColor={PALETTE.cardBorder}
+            borderWidth={4}
+            backgroundColor={PALETTE.cardBg}
+            innerPadding={14}
+            style={styles.section}
+          >
+            <SectionHeader
+              icon={require('../../assets/images/emojis/gear.png')}
+              title="Debug Tools"
+            />
+
+            <ActionRow
+              label="Jump to Day 5"
+              description="Skip to day 5 for testing"
+              onPress={() => {
+                jumpToPeriod(32);
+                router.push('/(tabs)/market');
+              }}
+              tone="warning"
+            />
+            <ActionRow
+              label="Show Total Completions"
+              onPress={() => {
+                const total = scoreboardService.getTotalWinCount();
+                Alert.alert(
+                  'Total Win Count',
+                  `You have won ${total} game(s)`,
+                  [{ text: 'OK' }]
+                );
+              }}
+            />
+            <ActionRow
+              label="Reset Tutorial"
+              onPress={() => {
+                dispatch(resetTutorial());
+                Alert.alert(
+                  'Tutorial Reset',
+                  'Tutorial will show again on next difficulty 1 game.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            />
+            <ActionRow
+              label="Minigame Picker"
+              onPress={() => router.push('/debug-minigames' as any)}
+            />
+            <ActionRow
+              label="Sale Tier Preview"
+              onPress={() => router.push('/debug-tier-preview' as any)}
+            />
+            <ActionRow
+              label="Joker Picker"
+              onPress={() => router.push('/debug-jokers' as any)}
+            />
+            <ActionRow
+              label="Unlock All Hall Passes"
+              description="Mark every hall pass as unlocked for testing"
+              onPress={() => {
+                allPasses.forEach((pass) => {
+                  if (!pass.isUnlocked) {
+                    dispatch(unlockHallPass({ passId: pass.id }));
+                  }
+                });
+                Alert.alert(
+                  'Hall Passes Unlocked',
+                  `All ${allPasses.length} hall passes are now available in selection.`,
+                  [{ text: 'OK' }]
+                );
+              }}
+              tone="warning"
+            />
+          </PixelBorder>
+        )}
+
+        {/* ABOUT =============================================== */}
+        <View style={styles.aboutWrap}>
+          <Text style={styles.aboutTitle}>SUGAR WARS</Text>
+          <Text style={styles.aboutSubtitle}>
+            The ultimate school trading simulation
+          </Text>
+        </View>
       </ScrollView>
 
       <ConfirmationModal
@@ -918,242 +881,266 @@ function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff5f7', // Cotton Candy Pink background
+    backgroundColor: PALETTE.pageBg,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 24,
-    paddingBottom: 40,
+    padding: 12,
+    paddingBottom: 20,
   },
-  sectionWrapper: {
-    marginBottom: 24,
-  },
+
+  // Sections ------------------------------------------------------
   section: {
-    // PixelBorder now handles background and padding
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#cc2a6f', // Cherry Blossom
-    marginBottom: 18,
-    fontFamily: 'PixeloidMono',
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  volumeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  volumeLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#4a2080',
-    fontFamily: 'PixeloidMono',
-    width: 50,
-  },
-  volumeSlider: {
-    flex: 1,
-    height: 40,
-    marginHorizontal: 8,
-  },
-  volumeValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#4a2080',
-    fontFamily: 'PixeloidMono',
-    width: 40,
-    textAlign: 'right',
-  },
-  buttonWrapper: {
     marginBottom: 10,
   },
-  button: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  titleScreenButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0066cc', // Blueberry Ice
-    marginBottom: 6,
-    fontFamily: 'PixeloidMono',
-  },
-  titleScreenButtonRow: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 10,
+    paddingBottom: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: PALETTE.divider,
+    borderStyle: 'dashed',
   },
-  titleScreenButtonIcon: {
+  sectionHeaderIcon: {
     width: 20,
     height: 20,
     resizeMode: 'contain',
     marginRight: 8,
   },
-  dangerButtonText: {
-    fontSize: 18,
+  sectionHeaderText: {
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#cc3333', // Coral Candy
-    marginBottom: 6,
+    color: PALETTE.titleText,
     fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
   },
-  buttonSubtext: {
-    fontSize: 12,
-    color: '#6b5b73', // Neutral darker gray
-    fontStyle: 'italic',
-    fontFamily: 'PixeloidMono',
-  },
-  aboutText: {
-    fontSize: 15,
-    color: '#00a372',
-    lineHeight: 24,
-    marginBottom: 10,
-    textAlign: 'center',
-    fontFamily: 'PixeloidMono',
-  },
-  leaderboardButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#7700cc', // Grape Soda
-    marginBottom: 6,
-    fontFamily: 'PixeloidMono',
-  },
-  clearDataButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ff1493',
-    fontFamily: 'PixeloidMono',
-  },
-  // Player info styles
-  playerInfoContainer: {
-    marginBottom: 15,
-  },
-  playerInfoLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8b0045',
-    marginBottom: 12,
-    fontFamily: 'PixeloidMono',
-  },
-  nameDisplayContainer: {
+
+  // Player --------------------------------------------------------
+  playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    padding: 16,
-    borderWidth: 3,
-    borderColor: '#ff91a4',
-    borderRadius: 8,
   },
-  playerNameText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#8b0045',
-    fontFamily: 'PixeloidMono',
+  playerNameWrap: {
     flex: 1,
   },
-  editNameButton: {
-    backgroundColor: '#d6e8ff',
-    borderWidth: 1,
-    borderColor: '#5c7cb8',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+  playerNameLabel: {
+    fontSize: 10,
+    color: PALETTE.mutedText,
+    fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
+    marginBottom: 2,
+    textTransform: 'uppercase',
   },
-  editNameButtonText: {
-    fontSize: 14,
-    color: '#4a5a8a',
-    fontWeight: '600',
+  playerNameValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: PALETTE.titleText,
     fontFamily: 'PixeloidMono',
   },
-  nameEditContainer: {
+  editButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: PALETTE.primary,
+    fontFamily: 'PixeloidMono',
+  },
+
+  // Edit name -----------------------------------------------------
+  editNameWrap: {
     gap: 10,
   },
   nameInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: PALETTE.inputBg,
     borderWidth: 3,
-    borderColor: '#ff91a4',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderColor: PALETTE.cardBorder,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontSize: 18,
     fontFamily: 'PixeloidMono',
-    color: '#8b0045',
+    color: PALETTE.titleText,
   },
-  nameButtonContainer: {
+  nameInputError: {
+    borderColor: PALETTE.danger,
+  },
+  nameErrorText: {
+    color: PALETTE.danger,
+    fontSize: 12,
+    fontFamily: 'PixeloidMono',
+  },
+  editNameButtonRow: {
     flexDirection: 'row',
     gap: 10,
   },
-  nameButton: {
+  editNameAction: {
     flex: 1,
+  },
+  editNameActionInner: {
     paddingVertical: 10,
     alignItems: 'center',
   },
-  saveButtonText: {
+  editNameActionText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#2d5a2d',
+    fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
   },
-  cancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.red.error,
-    fontFamily: 'PixeloidMono',
-  },
-  nameInputError: {
-    borderColor: colors.red.error,
-    borderWidth: 3,
-  },
-  nameErrorText: {
-    color: colors.red.error,
-    fontSize: 12,
-    fontFamily: 'PixeloidMono',
-    marginTop: 5,
-    marginBottom: 5,
-  },
-  disabledNameButton: {
-    opacity: 0.6,
-  },
-  nameLoadingContainer: {
+  validatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
+  disabledButton: {
+    opacity: 0.6,
+  },
+
+  // Hall passes ---------------------------------------------------
+  emptyText: {
+    fontSize: 13,
+    color: PALETTE.mutedText,
+    fontFamily: 'PixeloidMono',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 6,
+  },
+  passCard: {
+    backgroundColor: PALETTE.inputBg,
+    borderLeftWidth: 4,
+    borderLeftColor: PALETTE.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  passName: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: PALETTE.titleText,
+    fontFamily: 'PixeloidMono',
+    marginBottom: 4,
+  },
+  passEffect: {
+    fontSize: 12,
+    color: PALETTE.bodyText,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 17,
+  },
+
+  // Audio ---------------------------------------------------------
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  sliderLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: PALETTE.bodyText,
+    fontFamily: 'PixeloidMono',
+    width: 44,
+  },
+  slider: {
+    flex: 1,
+    height: 28,
+    marginHorizontal: 6,
+  },
+  sliderValue: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: PALETTE.bodyText,
+    fontFamily: 'PixeloidMono',
+    width: 38,
+    textAlign: 'right',
+  },
+
+  // Accessibility -------------------------------------------------
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: PALETTE.divider,
   },
-  toggleTextContainer: {
+  toggleText: {
     flex: 1,
     marginRight: 12,
   },
   toggleLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#005f80',
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: PALETTE.bodyText,
     fontFamily: 'PixeloidMono',
-    marginBottom: 2,
   },
   toggleDescription: {
-    fontSize: 12,
-    color: '#3a6b7a',
+    fontSize: 10,
+    color: PALETTE.mutedText,
     fontFamily: 'PixeloidMono',
     fontStyle: 'italic',
   },
-  debugButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+
+  // Action rows ---------------------------------------------------
+  actionRowWrap: {
+    marginBottom: 6,
   },
-  debugButtonText: {
-    color: '#7e22ce',
-    fontSize: 16,
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  actionRowDisabled: {
+    opacity: 0.55,
+  },
+  actionRowIcon: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+    marginRight: 10,
+  },
+  actionRowText: {
+    flex: 1,
+  },
+  actionRowLabel: {
+    fontSize: 14,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
+  },
+  actionRowDescription: {
+    fontSize: 10,
+    color: PALETTE.mutedText,
+    fontFamily: 'PixeloidMono',
+    marginTop: 1,
+    fontStyle: 'italic',
+  },
+
+  // About ---------------------------------------------------------
+  aboutWrap: {
+    alignItems: 'center',
+    marginTop: 4,
+    paddingVertical: 8,
+  },
+  aboutTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: PALETTE.titleText,
+    fontFamily: 'PixeloidMono',
+    letterSpacing: 2,
+    marginBottom: 2,
+  },
+  aboutSubtitle: {
+    fontSize: 10,
+    color: PALETTE.mutedText,
+    fontFamily: 'PixeloidMono',
+    fontStyle: 'italic',
   },
 });
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   FlavorEvent,
@@ -112,6 +112,22 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
 export const useFlavorText = () => {
   const dispatch = useAppDispatch();
   const flavorTextState = useAppSelector((state) => state.flavorText);
+  // Track the last picked string so consecutive periods don't show identical
+  // marquee text (LUNCH_RUSH spans 3 periods and PERIOD_CHANGE can repeat
+  // across the day; without this guard the same line can land twice in a row).
+  const lastTextRef = useRef<string>('');
+
+  const pickFresh = useCallback((texts: string[]): string => {
+    if (texts.length <= 1) return texts[0] ?? '';
+    let pick = texts[Math.floor(Math.random() * texts.length)];
+    if (pick === lastTextRef.current) {
+      // Try once more with a different index — guarantees a different string
+      // because we know texts.length > 1.
+      const otherTexts = texts.filter((t) => t !== lastTextRef.current);
+      pick = otherTexts[Math.floor(Math.random() * otherTexts.length)];
+    }
+    return pick;
+  }, []);
 
   const setEvent = useCallback(
     (event: FlavorEvent) => {
@@ -119,16 +135,17 @@ export const useFlavorText = () => {
       if (!texts) {
         console.warn(`No flavor text found for event: ${event}`);
         const defaultTexts = flavorLibrary.DEFAULT;
-        const randomText =
-          defaultTexts[Math.floor(Math.random() * defaultTexts.length)];
+        const randomText = pickFresh(defaultTexts);
+        lastTextRef.current = randomText;
         dispatch(setFlavorEvent({ event: 'DEFAULT', text: randomText }));
         return;
       }
-      const randomText = texts[Math.floor(Math.random() * texts.length)];
+      const randomText = pickFresh(texts);
+      lastTextRef.current = randomText;
       if (__DEV__) console.log(`🎭 [FlavorText] Setting event: ${event}, text: "${randomText}"`);
       dispatch(setFlavorEvent({ event, text: randomText }));
     },
-    [dispatch]
+    [dispatch, pickFresh]
   );
 
   const setManual = useCallback(

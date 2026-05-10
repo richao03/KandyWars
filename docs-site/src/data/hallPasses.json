@@ -28,17 +28,11 @@
     "rarity": "common"
   },
   {
-    "id": "valedictorian_vendor",
-    "name": "Valedictorian Vendor",
-    "description": "Academic excellence across all minigames.",
+    "id": "the_valedictorian",
+    "name": "The Valedictorian",
+    "description": "You\\",
     "unlockRequirement": "Play every single minigame at least once",
-    "effects": [
-      {
-        "type": "joker_bonus",
-        "value": 1,
-        "description": "Get +1 extra joker at joker selection screen"
-      }
-    ],
+    "effects": [],
     "rarity": "magical"
   },
   {
@@ -178,15 +172,9 @@
   {
     "id": "perfect_scholar",
     "name": "Perfect Scholar",
-    "description": "Academic excellence meets business prowess.",
-    "unlockRequirement": "Win the game on difficulty level 6",
-    "effects": [
-      {
-        "type": "allowance_bonus",
-        "value": 1000,
-        "description": "+1000% daily allowance"
-      }
-    ],
+    "description": "Hours of study sessions have honed your hustle instincts.",
+    "unlockRequirement": "Play 75 minigames (lifetime)",
+    "effects": [],
     "rarity": "legendary"
   },
   {
@@ -232,17 +220,11 @@
     "rarity": "legendary"
   },
   {
-    "id": "lunchroom_monopoly",
-    "name": "Lunchroom Monopoly",
-    "description": "Cafeteria sales print money, but the lunch lady needs a break after each one.",
-    "unlockRequirement": "Make 50 lifetime Cafeteria sales",
-    "effects": [
-      {
-        "type": "special",
-        "value": 6,
-        "description": "Cafeteria sales 6x profit (+500%); every other location −50%. Cafeteria locked for 2 periods after each visit."
-      }
-    ],
+    "id": "joker_monopoly",
+    "name": "Joker Monopoly",
+    "description": "You\\",
+    "unlockRequirement": "Win 100 minigames (lifetime)",
+    "effects": [],
     "rarity": "legendary"
   }
 ]

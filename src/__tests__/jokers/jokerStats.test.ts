@@ -343,19 +343,51 @@ describe('getLiveJokerValueText', () => {
   });
 
   describe('Compound Interest (63)', () => {
-    it('returns base level boost (binary, fires once days > 0)', () => {
-      // L1 base 1.2x → +20%
+    it('day 1: shows base level boost', () => {
+      // L1 base 1.2x → +20% on day 1
       expect(
         getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
           jokerStats: { ...ZERO_STATS, compoundInterestDays: 1 },
         })
       ).toBe('currently +20%');
-      // L3 base 1.6x → +60% (no per-day scaling — see helper docs)
+    });
+
+    it('scales by +20%/+30%/+40% per day after day 1', () => {
+      // L1 day 3: 1.2 + 0.2*2 = 1.6 → +60%
       expect(
-        getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 3, {
-          jokerStats: { ...ZERO_STATS, compoundInterestDays: 7 },
+        getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
+          jokerStats: { ...ZERO_STATS, compoundInterestDays: 3 },
         })
       ).toBe('currently +60%');
+      // L3 day 3: 1.6 + 0.4*2 = 2.4 → +140%
+      expect(
+        getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 3, {
+          jokerStats: { ...ZERO_STATS, compoundInterestDays: 3 },
+        })
+      ).toBe('currently +140%');
+    });
+
+    it('caps at 3x / 4x / 5x (level 1 / 2 / 3)', () => {
+      // L1 cap = 3x → +200% even after many days
+      expect(
+        getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
+          jokerStats: { ...ZERO_STATS, compoundInterestDays: 100 },
+        })
+      ).toBe('currently +200%');
+      // L3 cap = 5x → +400% even after many days
+      expect(
+        getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 3, {
+          jokerStats: { ...ZERO_STATS, compoundInterestDays: 100 },
+        })
+      ).toBe('currently +400%');
+    });
+
+    it('returns null when compoundInterestDays === 0', () => {
+      expect(
+        getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
+          jokerStats: { ...ZERO_STATS, compoundInterestDays: 0 },
+        })
+      ).toBeNull();
     });
   });
 });

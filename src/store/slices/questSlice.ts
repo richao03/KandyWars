@@ -1,7 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import seedrandom from 'seedrandom';
-import { CANDY_NAMES } from '../../constants/candyRegistry';
+import { getCandiesBySize } from '../../constants/candyRegistry';
 import { resetGame } from './gameSlice';
+
+const SMALL_CANDY_NAMES = getCandiesBySize('small').map((c) => c.name);
 
 export interface Quest {
   id: string;
@@ -42,10 +44,11 @@ const questSlice = createSlice({
 
       const rng = seedrandom(`${seed}-quest-${day}`);
 
-      // Pick from unlocked candies if provided, otherwise all candies
+      // Pick from unlocked candies if provided, otherwise small candies (always available).
+      // Falling back to all 15 would generate unwinnable quests for locked tiers.
       const candidateCandies = unlockedCandies && unlockedCandies.length > 0
         ? unlockedCandies
-        : CANDY_NAMES;
+        : SMALL_CANDY_NAMES;
 
       const candyIndex = Math.floor(rng() * candidateCandies.length);
       const candyName = candidateCandies[candyIndex];
@@ -73,8 +76,10 @@ const questSlice = createSlice({
 
     completeQuest: (state) => {
       if (state.activeQuest) {
-        state.activeQuest.completed = true;
         state.completedQuestIds.push(state.activeQuest.id);
+        // Null out so the next-day generator (guarded by `if (state.activeQuest) return`)
+        // isn't blocked by a completed Day 2 quest when Day 4 rolls around.
+        state.activeQuest = null;
       }
     },
 

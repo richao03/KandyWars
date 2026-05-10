@@ -90,9 +90,25 @@ async function initializeAudioPlayers() {
       positivePlayerPool.push(posPlayer);
     }
 
-    for (let i = 0; i < SOUND_POOL_SIZE; i++) {
+    // Coin pool is larger than the default — the joker scoring cascade can
+    // fire 5-10 coin plays ~100ms apart, and each play sets a different
+    // playbackRate. Too few players means rate writes collide on a still-
+    // playing instance, which makes every joker coin sound identical.
+    const COIN_POOL_SIZE = 6;
+    for (let i = 0; i < COIN_POOL_SIZE; i++) {
       const coinPlayer = createAudioPlayer(COIN_SOUND);
       coinPlayer.volume = globalSoundVolume;
+      // expo-audio's `shouldCorrectPitch` flag is named inversely to its
+      // effect on iOS: when TRUE (and no pitchCorrectionQuality is passed
+      // to setPlaybackRate), the AVPlayer falls through to .varispeed —
+      // which DOES NOT preserve pitch (chipmunk effect, what we want).
+      // When FALSE, AVPlayer's default .spectral preserves pitch and the
+      // cascade ends up sounding identical for every joker.
+      try {
+        coinPlayer.shouldCorrectPitch = true;
+      } catch {
+        /* property may not exist in all envs */
+      }
       coinPlayerPool.push(coinPlayer);
     }
 
@@ -499,20 +515,20 @@ export async function playLeverClick(): Promise<void> {
 
 /**
  * Coin-cluster cascade ping (boost jokers). Pitches upward as combo grows.
- * rate = clamp(0.9 + comboIndex * 0.10, 0.9, 1.7)
+ * rate = clamp(0.9 + comboIndex * 0.0175, 0.9, 1.49)
  */
 export async function playJokerChip(comboIndex: number): Promise<void> {
-  const rate = Math.min(1.7, Math.max(0.9, 0.9 + comboIndex * 0.1));
+  const rate = Math.min(1.49, Math.max(0.9, 0.9 + comboIndex * 0.0175));
   await _playCoinAtRate(rate);
 }
 
 /**
  * Bright coin cascade for multiplier jokers — slightly higher pitch ladder
  * than the chip variant so the two interleave musically.
- * rate = clamp(1.0 + comboIndex * 0.10, 1.0, 1.85)
+ * rate = clamp(1.0 + comboIndex * 0.0175, 1.0, 1.595)
  */
 export async function playJokerMult(comboIndex: number): Promise<void> {
-  const rate = Math.min(1.85, Math.max(1.0, 1.0 + comboIndex * 0.1));
+  const rate = Math.min(1.595, Math.max(1.0, 1.0 + comboIndex * 0.0175));
   await _playCoinAtRate(rate);
 }
 
@@ -559,8 +575,23 @@ async function _playCoinAtRate(rate: number): Promise<void> {
     coinPlayerIndex = (coinPlayerIndex + 1) % coinPlayerPool.length;
     if (!player) return;
     player.seekTo(0);
+    // Re-assert varispeed mode in case expo-audio reset it after the
+    // last play (see init for the inverted-flag explanation).
     try {
-      player.playbackRate = rate;
+      player.shouldCorrectPitch = true;
+    } catch {
+      /* noop */
+    }
+    // `player.playbackRate = rate` is a no-op on iOS in expo-audio 1.0.14
+    // (the native module only defines a getter, no setter). Use the
+    // setPlaybackRate function and pass NO pitchCorrectionQuality so the
+    // native side falls through to .varispeed (real pitch shift).
+    try {
+      if (typeof player.setPlaybackRate === 'function') {
+        player.setPlaybackRate(rate);
+      } else {
+        player.playbackRate = rate;
+      }
     } catch {
       /* noop */
     }

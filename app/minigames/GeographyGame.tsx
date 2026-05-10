@@ -15,12 +15,12 @@ import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 interface GeographyGameProps {
@@ -78,7 +78,6 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDogName, setSelectedDogName] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrambleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -395,7 +394,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       gameState === 'scrambling'
     ) {
       showModal(
-        'Leave Geography?',
+        'Leave Pet Pangea?',
         "You'll lose your progress!",
         '🗺️',
         () => {
@@ -475,20 +474,20 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Geography Puzzle!</Text>
+          <Text style={styles.instructionsTitle}>Pet Pangea</Text>
 
           <PixelBorder
-            borderColor="#4a5568"
+            borderColor="#c89968"
             borderWidth={3}
-            backgroundColor="#2d3748"
+            backgroundColor="#f4e8d0"
             innerPadding={20}
             style={{ marginBottom: 20, width: '100%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Play:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
-                Slide tiles to reconstruct the dog picture
+                Slide tiles to reconstruct the pet picture
               </Text>
             </View>
             <View style={styles.instructionStep}>
@@ -499,9 +498,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             </View>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
-              <Text style={styles.stepText}>
-                Level 1: 4 scrambles • Level 2: 10 • Level 3: 15
-              </Text>
+              <Text style={styles.stepText}>4 - 15 scrambles</Text>
             </View>
           </PixelBorder>
 
@@ -512,9 +509,9 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             style={{ marginBottom: 16, width: '100%' }}
           >
             <PixelBorder
-              borderColor="#4a5568"
+              borderColor="#c89968"
               borderWidth={3}
-              backgroundColor="#3182ce"
+              backgroundColor="#f4e8d0"
               innerPadding={0}
             >
               <View style={styles.pixelButtonInner}>
@@ -523,62 +520,29 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#2d3748"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#4a5568"
-              borderWidth={3}
-              backgroundColor="#2d3748"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#3b82f6',
-            backgroundColor: '#1a2332',
-            headerColor: '#2d4a3e',
-            textColor: '#e0f2fe',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -599,7 +563,8 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
   return (
     <View style={styles.container}>
       <MinigameHUD
-        title="Pangea Puzzle"
+        theme="geography"
+        title="Pet Pangea"
         subtitle={'Unscramble!'}
         leftInfo={`Level ${level}/3`}
         centerInfo={`Moves: ${moves}`}
@@ -647,9 +612,9 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
       {/* Footer */}
       <View style={styles.footer}>
         <PixelBorder
-          borderColor="#4a5568"
+          borderColor="#c89968"
           borderWidth={3}
-          backgroundColor="#2d3748"
+          backgroundColor="#f4e8d0"
           innerPadding={0}
           style={{ flex: 1 }}
         >
@@ -681,7 +646,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a202c',
+    backgroundColor: '#5a9bbc',
     padding: 20,
   },
   instructionsContainer: {
@@ -692,18 +657,18 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.white,
+    color: '#f4e8d0',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
     marginBottom: 20,
-    textShadowColor: '#3182ce',
+    textShadowColor: '#3a7da0',
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 4,
   },
   instructionsHeader: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#63b3ed',
+    color: '#7a9c5a',
     fontFamily: 'PixeloidMono',
     marginBottom: 15,
     textAlign: 'center',
@@ -716,7 +681,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#63b3ed',
+    color: '#7a9c5a',
     fontFamily: 'PixeloidMono',
     marginRight: 10,
     minWidth: 20,
@@ -724,7 +689,7 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 16,
-    color: '#e2e8f0',
+    color: '#3d2817',
     fontFamily: 'PixeloidMono',
     flex: 1,
     lineHeight: 22,
@@ -732,7 +697,7 @@ const styles = StyleSheet.create({
   startGameButtonText: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.white,
+    color: '#7a9c5a',
     fontFamily: 'PixeloidMono',
   },
   pixelButtonInner: {
@@ -763,10 +728,10 @@ const styles = StyleSheet.create({
   },
   puzzleBoard: {
     position: 'relative',
-    backgroundColor: '#2d3748',
+    backgroundColor: '#f4e8d0',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#4a5568',
+    borderColor: '#c89968',
   },
   tilePosition: {
     position: 'absolute',
@@ -775,15 +740,15 @@ const styles = StyleSheet.create({
   tile: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#4a5568',
+    backgroundColor: '#c89968',
     borderRadius: 4,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#718096',
+    borderColor: '#9bb87a',
   },
   emptyTile: {
-    backgroundColor: '#1a202c',
-    borderColor: '#2d3748',
+    backgroundColor: '#5a9bbc',
+    borderColor: '#f4e8d0',
   },
   tileImageContainer: {
     width: '100%',
@@ -798,7 +763,7 @@ const styles = StyleSheet.create({
     top: '30%',
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(49, 130, 206, 0.9)',
+    backgroundColor: 'rgba(155, 184, 122, 0.9)',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -818,16 +783,16 @@ const styles = StyleSheet.create({
   },
   footerBtn: {
     flex: 1,
-    backgroundColor: '#2d3748',
+    backgroundColor: '#f4e8d0',
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#4a5568',
+    borderColor: '#c89968',
     alignItems: 'center',
   },
   leaveBtn: {
-    backgroundColor: '#2d3748',
-    borderColor: '#4a5568',
+    backgroundColor: '#f4e8d0',
+    borderColor: '#c89968',
   },
   leaveBtnInner: {
     paddingVertical: 12,
@@ -836,7 +801,7 @@ const styles = StyleSheet.create({
   footerBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#e2e8f0',
+    color: '#3d2817',
     fontFamily: 'PixeloidMono',
   },
   jokerIconButton: {

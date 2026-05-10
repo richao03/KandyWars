@@ -25,12 +25,12 @@ import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
 import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import AvailableJokersModal from '../components/AvailableJokersModal';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
 import MinigameHUD from '../components/MinigameHUD';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
+import SkipGameButton from '../components/SkipGameButton';
 import TextWithEmojis from '../components/TextWithEmojis';
 
 interface RecessGameProps {
@@ -84,23 +84,24 @@ const STAGE_TIMINGS = {
   resultDisplayDuration: 2000, // How long to show result before next round
 };
 
-// Hand positions for each entrance style
-// Adjust these to control where hands end up
+// Hand positions for each entrance style — offsets from gameArea center.
+// Both containers share a centered anchor (see gestureContainer style),
+// so each pair is mirrored around (0, 0) to guarantee a device-invariant meeting point.
 const HAND_POSITIONS = {
   // Style 0: Diagonal positioning (player top-left, CPU bottom-right)
   style0: {
-    player: { x: -58, y: -155 }, // Negative X = left, Negative Y = up
-    cpu: { x: 147, y: 295 }, // Positive X = right, Positive Y = down
+    player: { x: -120, y: -90 }, // Negative X = left, Negative Y = up
+    cpu: { x: 120, y: 90 }, // Positive X = right, Positive Y = down
   },
   // Style 1: Reversed diagonal (player bottom-left, CPU top-right)
   style1: {
-    player: { x: -39, y: 135 },
-    cpu: { x: 123, y: -31 },
+    player: { x: -120, y: 90 },
+    cpu: { x: 120, y: -90 },
   },
   // Style 2: Horizontal (both centered vertically)
   style2: {
-    player: { x: -24, y: 70 },
-    cpu: { x: 98, y: 90 },
+    player: { x: -110, y: 0 },
+    cpu: { x: 110, y: 0 },
   },
 };
 
@@ -135,7 +136,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   const [hintGesture, setHintGesture] = useState<Gesture | null>(null);
   const [playerTimeLimit, setPlayerTimeLimit] = useState(1500); // Time limit for player choice
   const [showTimerLine, setShowTimerLine] = useState(false);
-  const [showAvailableJokers, setShowAvailableJokers] = useState(false);
 
   // Animation values
   const countdownScale = useSharedValue(0);
@@ -268,12 +268,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     setComputerChoice(compChoice);
 
     if (stageToUse === 1) {
-      // Stage 1: Show computer choice briefly, then let player choose
-      if (__DEV__) {
-        console.log(
-          `🟢 STAGE 1 LOGIC: Setting up computer preview for stage ${stageToUse}`
-        );
-      }
       setGameState('computerChoice');
       setShowComputerPreview(true);
 
@@ -283,13 +277,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         startPlayerTimeout(STAGE_TIMINGS.stage1.playerTimeLimit);
       }, STAGE_TIMINGS.stage1.computerPreviewDuration);
     } else if (stageToUse === 2) {
-      // Stage 2: Show hint animation with decoy then real gesture
-      if (__DEV__) {
-        console.log(
-          'Stage 2: Setting up hint animation - current stage is:',
-          stageToUse
-        );
-      }
       setGameState('hint');
 
       // Get a decoy gesture (guaranteed different from real gesture)
@@ -309,13 +296,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         }, STAGE_TIMINGS.stage2.realGestureDuration);
       }, STAGE_TIMINGS.stage2.decoyDuration);
     } else {
-      // Stage 3: Show hint with 2 decoys then quick flash of real gesture
-      if (__DEV__) {
-        console.log(
-          'Stage 3: Setting up complex hint animation - current stage is:',
-          stageToUse
-        );
-      }
       setGameState('hint');
 
       // Get 2 different decoy gestures (both different from real gesture)
@@ -345,11 +325,6 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   // Start player timeout with round ID tracking
   const startPlayerTimeout = (timeLimit: number) => {
     const roundId = ++currentRoundId.current;
-    if (__DEV__) {
-      console.log(
-        `⏱️ Starting player timeout: ${timeLimit}ms, roundId: ${roundId}`
-      );
-    }
 
     // Show and animate timer line
     setShowTimerLine(true);
@@ -357,53 +332,28 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     timerLineWidth.value = withTiming(0, { duration: timeLimit });
 
     playerTimeoutRef.current = setTimeout(() => {
-      if (__DEV__) {
-        console.log('⏰ Player timeout fired:', {
-          roundId,
-          currentRoundId: currentRoundId.current,
-          roundIdMatch: roundId === currentRoundId.current,
-          playerChoice: playerChoiceRef.current,
-          gameState: gameStateRef.current,
-          isProcessingRound: isProcessingRoundRef.current,
-        });
-      }
-
       if (
         roundId === currentRoundId.current &&
         !playerChoiceRef.current &&
         gameStateRef.current === 'playing' &&
         !isProcessingRoundRef.current
       ) {
-        if (__DEV__) console.log('⏰ Player timed out - calling handlePlayerChoice(null)');
         setShowTimerLine(false);
         handlePlayerChoice(null); // Time out - player loses
-      } else {
-        if (__DEV__) console.log('⏰ Timeout conditions not met - skipping loss');
       }
     }, timeLimit);
   };
 
   // Handle player choice
   const handlePlayerChoice = (choice: Gesture | null) => {
-    if (__DEV__) {
-      console.log('🎮 handlePlayerChoice called:', {
-        choice,
-        gameState,
-        gameStateRef: gameStateRef.current,
-        playerChoice,
-        playerChoiceRef: playerChoiceRef.current,
-        isProcessingRound,
-        isProcessingRoundRef: isProcessingRoundRef.current,
-      });
-    }
-
     // Use refs for timeout calls to get current state
     if (
       gameStateRef.current !== 'playing' ||
       playerChoiceRef.current ||
       isProcessingRoundRef.current
     ) {
-      if (__DEV__) console.log('🎮 Blocking handlePlayerChoice - conditions not met');
+      if (__DEV__)
+        console.log('🎮 Blocking handlePlayerChoice - conditions not met');
       return;
     }
 
@@ -505,7 +455,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           gameStateRef.current !== 'levelComplete' &&
           gameStateRef.current !== 'jokerSelection'
         ) {
-          if (__DEV__) console.log('🔄 Starting next countdown after timeout loss');
+          if (__DEV__)
+            console.log('🔄 Starting next countdown after timeout loss');
           startCountdown(undefined, newRoundsPlayed);
         } else {
           if (__DEV__) {
@@ -531,7 +482,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         setScore((prev) => prev + 10);
         const newWins = wins + 1;
         setWins(newWins);
-        if (__DEV__) console.log(`✅ Win! Total wins: ${newWins}/3 on stage ${stage}`);
+        if (__DEV__)
+          console.log(`✅ Win! Total wins: ${newWins}/3 on stage ${stage}`);
 
         if (newWins >= 3) {
           shouldCompleteStage = true;
@@ -554,11 +506,13 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         SoundEffects.playWrongAnswerSound();
         setLosses((currentLosses) => {
           const newLosses = currentLosses + 1;
-          if (__DEV__) console.log(`Loss! Losses: ${newLosses}/4 on stage ${stage}`);
+          if (__DEV__)
+            console.log(`Loss! Losses: ${newLosses}/4 on stage ${stage}`);
 
           // Check if player has lost 4 times (game over)
           if (newLosses >= 4) {
-            if (__DEV__) console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
+            if (__DEV__)
+              console.log(`💀 4 LOSSES! Game over on stage ${stage}`);
             isGameOver = true;
           }
 
@@ -601,7 +555,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           handleStageComplete();
         } else if (isGameOver) {
           // Game over - check if player completed any stage
-          if (__DEV__) console.log(`💀 Showing game over modal after result animation`);
+          if (__DEV__)
+            console.log(`💀 Showing game over modal after result animation`);
           if (completedLevel > 0) {
             // Player completed at least one stage, award jokers based on completion
             const jokerCount = completedLevel;
@@ -663,7 +618,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
   // Handle stage complete
   const handleStageComplete = () => {
-    if (__DEV__) console.log(`🎊 handleStageComplete called for stage ${stage}`);
+    if (__DEV__)
+      console.log(`🎊 handleStageComplete called for stage ${stage}`);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     if (playerTimeoutRef.current) clearTimeout(playerTimeoutRef.current);
     if (resultTimeoutRef.current) clearTimeout(resultTimeoutRef.current);
@@ -675,9 +631,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     setGameState('levelComplete');
 
     if (stage < 3) {
-      if (__DEV__) console.log(`📈 Stage ${stage} < 3, showing advancement modal`);
+      if (__DEV__)
+        console.log(`📈 Stage ${stage} < 3, showing advancement modal`);
     } else {
-      if (__DEV__) console.log(`🏆 Stage ${stage} = 3, showing final completion modal`);
+      if (__DEV__)
+        console.log(`🏆 Stage ${stage} = 3, showing final completion modal`);
     }
 
     if (stage < 3) {
@@ -693,7 +651,8 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           let newStage: number;
           setStage((prev) => {
             newStage = prev + 1;
-            if (__DEV__) console.log(`Stage advancing from ${prev} to ${newStage}`);
+            if (__DEV__)
+              console.log(`Stage advancing from ${prev} to ${newStage}`);
             return newStage;
           });
 
@@ -862,32 +821,31 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         // Image is 225x225, sleeve is roughly at 180px from center of image
 
         if (entranceStyle === 0) {
-          // Style 1: Start from corners - arms hidden within game area
-          // For diagonal at 135°, start from true diagonal corner for angled entrance
-          playerGestureX.value = -220; // Start further out diagonally
-          playerGestureY.value = -130; // Start further out diagonally
-          computerGestureX.value = 200; // Start further out diagonally for angled entrance
-          computerGestureY.value = 250; // Start further out diagonally for angled entrance
+          // Style 1: Diagonal entrance - mirrored around center, clipped by gameArea overflow.
+          playerGestureX.value = -260;
+          playerGestureY.value = -200;
+          computerGestureX.value = 260;
+          computerGestureY.value = 200;
 
           // Angles for diagonal entrance
           playerRotation.value = 135;
           computerRotation.value = 315;
         } else if (entranceStyle === 1) {
-          // Style 2: Opposite corners - arms hidden within game area
-          playerGestureX.value = -180; // Arm hidden within left edge
-          playerGestureY.value = 200; // Arm hidden within bottom edge
-          computerGestureX.value = 180; // Arm hidden within right edge
-          computerGestureY.value = -100; // Arm hidden within top edge
+          // Style 2: Opposite diagonal - mirrored around center.
+          playerGestureX.value = -260;
+          playerGestureY.value = 200;
+          computerGestureX.value = 260;
+          computerGestureY.value = -200;
 
           // Angles for diagonal entrance
           playerRotation.value = 45;
           computerRotation.value = 225;
         } else {
-          // Style 3: Straight from sides - arms hidden within game area
-          playerGestureX.value = -200; // Arm hidden within left edge
-          playerGestureY.value = 50;
-          computerGestureX.value = 200; // Arm hidden within right edge
-          computerGestureY.value = 50;
+          // Style 3: Straight horizontal - mirrored around center.
+          playerGestureX.value = -260;
+          playerGestureY.value = 0;
+          computerGestureX.value = 260;
+          computerGestureY.value = 0;
 
           // Standard horizontal rotations
           playerRotation.value = 90;
@@ -1041,9 +999,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>
-            Rock Paper Scissors Battle!
-          </Text>
+          <Text style={styles.instructionsTitle}>Rock Paper Scissors!</Text>
 
           <PixelBorder
             borderColor="#4A90C1"
@@ -1052,11 +1008,11 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             innerPadding={20}
             style={{ marginBottom: 20, width: '100%' }}
           >
-            <Text style={styles.instructionsHeader}>How to Play:</Text>
+            <Text style={styles.instructionsHeader}>How to Win:</Text>
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
-                Beat the computer at Rock Paper Scissors
+                Beat the Opp at Rock Paper Scissors
               </Text>
             </View>
             <View style={styles.instructionStep}>
@@ -1091,62 +1047,29 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
             </PixelBorder>
           </PressableButton>
 
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              setShowAvailableJokers(true);
-            }}
-            shadowColor="#2E7D32"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.backButton}
-          >
-            <PixelBorder
-              borderColor="#388E3C"
-              borderWidth={3}
-              backgroundColor="#1B5E20"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Available Jokers</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-          <PressableButton
-            onPress={() => {
-              SoundEffects.playRandomPop();
-              router.back();
-            }}
-            shadowOpacity={0}
-            elevation={0}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            <PixelBorder
-              borderColor="#999"
-              borderWidth={3}
-              backgroundColor="#666"
-              innerPadding={0}
-            >
-              <View style={styles.backButtonInner}>
-                <Text style={styles.backButtonText}>Back</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
+          <SkipGameButton onSkipSuccess={onComplete} />
         </View>
 
-        <AvailableJokersModal
-          visible={showAvailableJokers}
-          onClose={() => setShowAvailableJokers(false)}
-          jokers={STANDARDIZED_JOKERS}
-          themeColors={{
-            borderColor: '#4A90C1',
-            backgroundColor: '#87CEEB',
-            headerColor: '#6BB6E3',
-            textColor: '#ffffff',
+        <PressableButton
+          onPress={() => {
+            SoundEffects.playRandomPop();
+            router.back();
           }}
-        />
+          shadowOpacity={0}
+          elevation={0}
+          style={{ marginBottom: 16, width: '100%' }}
+        >
+          <PixelBorder
+            borderColor="#999"
+            borderWidth={3}
+            backgroundColor="#666"
+            innerPadding={0}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </View>
+          </PixelBorder>
+        </PressableButton>
       </View>
     );
   }
@@ -1163,6 +1086,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
     >
       {/* Header */}
       <MinigameHUD
+        theme="recess"
         title="Rock Paper Scissors"
         subtitle={``}
         leftInfo={`Stage ${stage}/3`}
@@ -1195,7 +1119,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           showComputerPreview &&
           computerChoice && (
             <View style={styles.previewContainer}>
-              <Text style={styles.previewTitle}>Computer&apos;s Choice!</Text>
+              <Text style={styles.previewTitle}>Opp&apos;s Choice!</Text>
               <View style={styles.previewGestureContainer}>
                 <Image
                   source={GESTURE_IMAGES[computerChoice]}
@@ -1210,9 +1134,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         {gameState === 'hint' && hintGesture && (
           <View style={styles.hintContainer}>
             <Text style={styles.hintTitle}>
-              {stage === 2
-                ? "Watch the Computer's Hand..."
-                : 'Computer is Thinking...'}
+              {stage === 2 ? "Watch the Opp's Hand..." : 'Opp is Thinking...'}
             </Text>
             <View style={styles.hintGestureContainer}>
               <Image
@@ -1273,7 +1195,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
                   computerGestureStyle,
                 ]}
               >
-                <Text style={styles.gestureLabel}>CPU</Text>
+                <Text style={styles.gestureLabel}>Opp</Text>
                 <Animated.Image
                   source={GESTURE_IMAGES[computerChoice]}
                   style={[styles.gestureImage, computerImageStyle]}
@@ -1449,16 +1371,16 @@ const styles = StyleSheet.create({
   },
   gestureContainer: {
     position: 'absolute',
+    left: '50%',
+    top: '50%',
+    marginLeft: -112.5, // -gestureImage.width / 2
+    marginTop: -112.5, // -gestureImage.height / 2
     alignItems: 'center',
   },
   playerGesture: {
-    left: 0,
-    top: '30%',
     zIndex: 2,
   },
   computerGesture: {
-    left: '15%', // Changed from right: 0 to left: 0 so translateX works properly
-    top: '-5%',
     zIndex: 2,
   },
   gestureLabel: {
