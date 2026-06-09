@@ -66,7 +66,7 @@ export const MenuMusicManager = {
 
       // Create and configure player
       menuMusicPlayer = createAudioPlayer(
-        require('../../assets/music/menu.wav')
+        require('../../assets/music/menu.m4a')
       );
       menuMusicPlayer.loop = true;
       menuMusicPlayer.volume = 0.5;
@@ -137,7 +137,7 @@ export const MenuMusicManager = {
 
       // Create and configure player
       minigameMusicPlayer = createAudioPlayer(
-        require('../../assets/music/results.wav')
+        require('../../assets/music/results.m4a')
       );
       minigameMusicPlayer.loop = true;
       minigameMusicPlayer.volume = 0.5;
@@ -208,7 +208,7 @@ export const MenuMusicManager = {
 
       // Create and configure player
       victoryMusicPlayer = createAudioPlayer(
-        require('../../assets/music/victory.wav')
+        require('../../assets/music/victory.m4a')
       );
       victoryMusicPlayer.loop = false; // DO NOT loop victory music
       victoryMusicPlayer.volume = 0.5;

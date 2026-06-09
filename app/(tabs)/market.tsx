@@ -73,6 +73,7 @@ import { setCurrentEvent } from '../../src/store/slices/eventHandlerSlice';
 import ConfirmationModal from '../components/ConfirmationModal';
 import FirstTimeHint from '../components/FirstTimeHint';
 import EventModal from '../components/EventModal';
+import GameModal from '../components/GameModal';
 import MarketContent from '../components/MarketContent';
 import TutorialOverlay from '../components/TutorialOverlay';
 import TransactionModalManager, {
@@ -250,6 +251,14 @@ function Market(props) {
     }
   }, []);
 
+  // Re-measure the container's window offset on every tutorial step change.
+  // The offset feeds the spotlight coordinate conversion; re-measuring guards
+  // against a stale/zero offset (e.g. measured before first layout, or after a
+  // relayout) leaving the highlight misaligned on some screen sizes.
+  useEffect(() => {
+    if (isTutorialActive) handleContainerLayout();
+  }, [tutorialStep, isTutorialActive, handleContainerLayout]);
+
   // Adjust all measurements by subtracting container offset
   const tutorialMeasurements = useMemo(() => {
     const adjust = (rect?: { x: number; y: number; width: number; height: number }) => {
@@ -376,6 +385,7 @@ function Market(props) {
   const activeQuest = useAppSelector(selectActiveQuest);
   const isQuestActive = useAppSelector(selectIsQuestActive);
   const [showQuestJokerSelection, setShowQuestJokerSelection] = useState(false);
+  const [glassCannonShattered, setGlassCannonShattered] = useState(false);
   const questJokerChoices = useAppSelector(selectPendingJokerChoices);
 
   // Initialize computed joker effects system
@@ -529,8 +539,11 @@ function Market(props) {
       if (candy.size === 'big' && !bigUnlocked) return false;
       return candy.size === selectedSize;
     });
-    // During tutorial step 3, only show Gummy Bears
-    if (tutorialStep === 3) {
+    // During tutorial buy (step 3) and sell (step 6), show only Gummy Bears so
+    // the spotlight always lands on a single, top-of-list item. Leaving the full
+    // list visible at step 6 put Gummy Bears mid-list, where its measured
+    // position drifted across screen sizes and the highlight missed the row.
+    if (tutorialStep === 3 || tutorialStep === 6) {
       filtered = filtered.filter((c) => c.name === 'Gummy Bears');
     }
     return filtered;
@@ -743,6 +756,7 @@ function Market(props) {
     setCandies,
     closeModal,
     setShowQuestJokerSelection,
+    onGlassCannonShatter: () => setGlassCannonShattered(true),
   });
 
 
@@ -1214,6 +1228,17 @@ function Market(props) {
 
       {/* EventModal for special events */}
       <EventModal />
+
+      {/* Glass Cannon shatter notice */}
+      <GameModal
+        visible={glassCannonShattered}
+        title="Glass Cannon Shattered!"
+        message="Your Glass Cannon went out with a bang and broke after that sale. It's gone for the rest of the run."
+        emoji="💥"
+        theme="market"
+        dismissible
+        onClose={() => setGlassCannonShattered(false)}
+      />
 
       {/* Debug Panel — DEV only */}
       {__DEV__ && (

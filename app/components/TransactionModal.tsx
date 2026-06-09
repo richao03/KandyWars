@@ -1384,6 +1384,12 @@ function TransactionModal({
             style={[
               styles.container,
               isTutorialModal && { overflow: 'visible' },
+              // Cap the modal's own height so its flex children resolve against a
+              // bounded column. The scrollable body shrinks to fit while the
+              // Confirm button below stays pinned and on-screen — on short
+              // devices the button used to overflow past the screen edge and
+              // become untappable.
+              { maxHeight: modalMaxHeight },
               modalExitStyle,
             ]}
           >
@@ -1400,6 +1406,14 @@ function TransactionModal({
               />
             )}
 
+            {/* Scrollable body. Pinned beneath it are the tutorial hint and the
+              Confirm button so they remain reachable on every screen size. */}
+            <ScrollView
+              style={styles.bodyScroll}
+              contentContainerStyle={styles.bodyScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
             <PixelBorder
               borderColor="#e5e7eb"
               borderWidth={3}
@@ -1501,6 +1515,7 @@ function TransactionModal({
                     <ScrollView
                       style={{ flex: 1 }}
                       showsVerticalScrollIndicator={false}
+                      nestedScrollEnabled
                     >
                       {/* profit boost section */}
                       <Pressable
@@ -1821,6 +1836,7 @@ function TransactionModal({
                 </TextWithEmojis>
               )}
             </View>
+            </ScrollView>
 
             {/* Tutorial hint banner */}
             {(tutorialStep === 4 || tutorialStep === 7) && (
@@ -1969,6 +1985,15 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'stretch',
     fontFamily: 'PixeloidMono',
+  },
+  // flexShrink lets the body give up height (and scroll internally) when the
+  // modal is capped on a short screen, keeping the pinned Confirm button visible.
+  bodyScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  bodyScrollContent: {
+    flexGrow: 0,
   },
   priceInfoContainer: {
     padding: 12,

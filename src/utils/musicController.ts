@@ -34,15 +34,15 @@ let duckTickInterval: ReturnType<typeof setInterval> | null = null;
 let duckOriginalVolume: number | null = null;
 
 const MUSIC_FILES: Record<Exclude<MusicTrack, 'none'>, any> = {
-  menu: require('../../assets/music/menu.wav'),
-  day1: require('../../assets/music/day1.wav'),
-  day2: require('../../assets/music/day2.wav'),
-  day3: require('../../assets/music/day3.wav'),
-  day4: require('../../assets/music/day4.wav'),
-  day5: require('../../assets/music/day5.wav'),
-  minigame: require('../../assets/music/results.wav'),
-  results: require('../../assets/music/results.wav'),
-  victory: require('../../assets/music/victory.wav'),
+  menu: require('../../assets/music/menu.m4a'),
+  day1: require('../../assets/music/day1.m4a'),
+  day2: require('../../assets/music/day2.m4a'),
+  day3: require('../../assets/music/day3.m4a'),
+  day4: require('../../assets/music/day4.m4a'),
+  day5: require('../../assets/music/day5.m4a'),
+  minigame: require('../../assets/music/results.m4a'),
+  results: require('../../assets/music/results.m4a'),
+  victory: require('../../assets/music/victory.m4a'),
   bird: require('../../assets/soundEffects/birds1.m4a'),
   cricket: require('../../assets/soundEffects/crickets1.mp3'),
 };

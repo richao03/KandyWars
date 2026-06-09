@@ -41,6 +41,8 @@ interface UseTransactionHandlerInput<T extends CandyForMarket> {
   setCandies: React.Dispatch<React.SetStateAction<T[]>>;
   closeModal: () => void;
   setShowQuestJokerSelection: (v: boolean) => void;
+  /** Fired when Glass Cannon shatters itself after a sale, so the UI can notify the player. */
+  onGlassCannonShatter?: () => void;
 }
 
 /**
@@ -53,6 +55,7 @@ export const useTransactionHandler = <T extends CandyForMarket>({
   setCandies,
   closeModal,
   setShowQuestJokerSelection,
+  onGlassCannonShatter,
 }: UseTransactionHandlerInput<T>) => {
   const dispatch = useAppDispatch();
 
@@ -448,6 +451,7 @@ export const useTransactionHandler = <T extends CandyForMarket>({
           const destroyChance = gcLevel === 3 ? 0.05 : gcLevel === 2 ? 0.07 : 0.10;
           if (Math.random() < destroyChance) {
             removeJoker(glassCannon.id);
+            onGlassCannonShatter?.();
             if (__DEV__) console.log(`💥 GLASS CANNON: shattered after sale (L${gcLevel}, ${Math.round(destroyChance * 100)}% roll)`);
           }
         }
@@ -461,6 +465,7 @@ export const useTransactionHandler = <T extends CandyForMarket>({
       addCandySold, recordDailyStatsSale, addSale, removeFromInventory,
       closeModal, jokerService, clearActiveEffect, removeJoker,
       dispatch, getInventoryLimit, consecutivePeriodSales,
+      onGlassCannonShatter,
     ]
   );
 

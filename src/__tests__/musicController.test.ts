@@ -51,14 +51,14 @@ jest.mock('../utils/audioConfig', () => ({
 }));
 
 // Silence asset requires for music files
-jest.mock('../../assets/music/menu.wav', () => 'menu.wav', { virtual: true });
-jest.mock('../../assets/music/day1.wav', () => 'day1.wav', { virtual: true });
-jest.mock('../../assets/music/day2.wav', () => 'day2.wav', { virtual: true });
-jest.mock('../../assets/music/day3.wav', () => 'day3.wav', { virtual: true });
-jest.mock('../../assets/music/day4.wav', () => 'day4.wav', { virtual: true });
-jest.mock('../../assets/music/day5.wav', () => 'day5.wav', { virtual: true });
-jest.mock('../../assets/music/results.wav', () => 'results.wav', { virtual: true });
-jest.mock('../../assets/music/victory.wav', () => 'victory.wav', { virtual: true });
+jest.mock('../../assets/music/menu.m4a', () => 'menu.m4a', { virtual: true });
+jest.mock('../../assets/music/day1.m4a', () => 'day1.m4a', { virtual: true });
+jest.mock('../../assets/music/day2.m4a', () => 'day2.m4a', { virtual: true });
+jest.mock('../../assets/music/day3.m4a', () => 'day3.m4a', { virtual: true });
+jest.mock('../../assets/music/day4.m4a', () => 'day4.m4a', { virtual: true });
+jest.mock('../../assets/music/day5.m4a', () => 'day5.m4a', { virtual: true });
+jest.mock('../../assets/music/results.m4a', () => 'results.m4a', { virtual: true });
+jest.mock('../../assets/music/victory.m4a', () => 'victory.m4a', { virtual: true });
 jest.mock('../../assets/soundEffects/birds1.m4a', () => 'birds1.m4a', { virtual: true });
 jest.mock('../../assets/soundEffects/crickets1.mp3', () => 'crickets1.mp3', { virtual: true });
 

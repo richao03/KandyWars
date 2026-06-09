@@ -121,7 +121,7 @@ function LocationModal({
       animationType="spring"
       backdropOpacity={0.5}
       modalStyle={styles.modal}
-      position="bottom"
+      position="center"
     >
       <Text style={styles.title}>Where to next?</Text>
 

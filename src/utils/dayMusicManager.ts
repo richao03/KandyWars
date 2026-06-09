@@ -47,11 +47,11 @@ async function crossfade(
 
 // Map days to their music files
 const DAY_MUSIC_FILES = {
-  1: require('../../assets/music/day1.wav'),
-  2: require('../../assets/music/day2.wav'),
-  3: require('../../assets/music/day3.wav'),
-  4: require('../../assets/music/day4.wav'),
-  5: require('../../assets/music/day5.wav'),
+  1: require('../../assets/music/day1.m4a'),
+  2: require('../../assets/music/day2.m4a'),
+  3: require('../../assets/music/day3.m4a'),
+  4: require('../../assets/music/day4.m4a'),
+  5: require('../../assets/music/day5.m4a'),
 };
 
 export const DayMusicManager = {
