@@ -1,7 +1,24 @@
 import { useIsFocused } from '@react-navigation/native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Modal as RNModal, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { CANDY_NAMES, getCandyDefinition } from '../../src/constants/candyRegistry';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  FlatList,
+  Modal as RNModal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import {
+  CANDY_NAMES,
+  getCandyDefinition,
+} from '../../src/constants/candyRegistry';
 import colors from '../../src/constants/colors';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
@@ -9,12 +26,22 @@ import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
-import { selectMediumCandiesUnlocked, selectBigCandiesUnlocked } from '../../src/store/slices/gameSlice';
-import { advanceTutorial, selectTutorialStep, skipTutorial } from '../../src/store/slices/tutorialSlice';
+import {
+  selectMediumCandiesUnlocked,
+  selectBigCandiesUnlocked,
+} from '../../src/store/slices/gameSlice';
+import {
+  advanceTutorial,
+  selectTutorialStep,
+  skipTutorial,
+} from '../../src/store/slices/tutorialSlice';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import TutorialOverlay from '../components/TutorialOverlay';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
-import { getCoveredCandyTypes, TYPE_MULTIPLIER_JOKERS } from '../../src/utils/jokerService';
+import {
+  getCoveredCandyTypes,
+  TYPE_MULTIPLIER_JOKERS,
+} from '../../src/utils/jokerService';
 import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from '../components/FastModal';
 import FirstTimeHint from '../components/FirstTimeHint';
@@ -223,123 +250,129 @@ function JokersPage() {
   const jokers = jokerContext?.jokers || [];
   const isLoaded = jokerContext?.isLoaded || false;
 
+  const openConfirmModal = useCallback(
+    (
+      title: string,
+      message: string,
+      emoji: string,
+      onConfirmCallback?: () => void,
+      confirmText = 'OK',
+      cancelText = 'Cancel',
+      onCancelCallback?: () => void
+    ) => {
+      setConfirmModal({
+        visible: true,
+        title,
+        message,
+        emoji,
+        onConfirm: () => {
+          if (__DEV__) console.log('📋 Confirm pressed, closing modal');
+          setIsModalTransitioning(true);
+          setConfirmModal((prev) => ({ ...prev, visible: false }));
+          // Use setTimeout to ensure modal closes before callback executes
+          setTimeout(() => {
+            setIsModalTransitioning(false);
+            if (onConfirmCallback) {
+              onConfirmCallback();
+            }
+          }, 200);
+        },
+        onCancel: onCancelCallback
+          ? () => {
+              if (__DEV__) console.log('📋 Cancel pressed, closing modal');
+              setIsModalTransitioning(true);
+              setConfirmModal((prev) => ({ ...prev, visible: false }));
+              setTimeout(() => {
+                setIsModalTransitioning(false);
+                onCancelCallback();
+              }, 200);
+            }
+          : () => {
+              if (__DEV__) console.log('📋 Closing modal (no cancel callback)');
+              setIsModalTransitioning(true);
+              setConfirmModal((prev) => ({ ...prev, visible: false }));
+              setTimeout(() => {
+                setIsModalTransitioning(false);
+              }, 200);
+            },
+        confirmText,
+        cancelText: onCancelCallback ? cancelText : undefined,
+      });
+    },
+    []
+  );
+
   // Confirmation modal handler for JokerCard components
-  const handleShowConfirmation = (
-    title: string,
-    message: string,
-    emoji: string,
-    onConfirmCallback?: () => void,
-    confirmText = 'OK',
-    cancelText = 'Cancel',
-    onCancelCallback?: () => void
-  ) => {
-    if (__DEV__) console.log('📋 Opening confirmation modal:', title);
+  const handleShowConfirmation = useCallback(
+    (
+      title: string,
+      message: string,
+      emoji: string,
+      onConfirmCallback?: () => void,
+      confirmText = 'OK',
+      cancelText = 'Cancel',
+      onCancelCallback?: () => void
+    ) => {
+      if (__DEV__) console.log('📋 Opening confirmation modal:', title);
 
-    // If a modal is transitioning, queue the new modal
-    if (isModalTransitioning) {
-      if (__DEV__)
-        console.log('📋 Modal is transitioning, queueing request...');
-      setTimeout(() => {
-        handleShowConfirmation(
-          title,
-          message,
-          emoji,
-          onConfirmCallback,
-          confirmText,
-          cancelText,
-          onCancelCallback
-        );
-      }, 100);
-      return;
-    }
+      // If a modal is transitioning, queue the new modal
+      if (isModalTransitioning) {
+        if (__DEV__)
+          console.log('📋 Modal is transitioning, queueing request...');
+        setTimeout(() => {
+          handleShowConfirmation(
+            title,
+            message,
+            emoji,
+            onConfirmCallback,
+            confirmText,
+            cancelText,
+            onCancelCallback
+          );
+        }, 100);
+        return;
+      }
 
-    // If a modal is already open, close it first then open the new one
-    if (confirmModal.visible) {
-      if (__DEV__) console.log('📋 Modal already open, closing first...');
-      setIsModalTransitioning(true);
-      setConfirmModal((prev) => ({ ...prev, visible: false }));
-      setTimeout(() => {
-        setIsModalTransitioning(false);
-        openConfirmModal(
-          title,
-          message,
-          emoji,
-          onConfirmCallback,
-          confirmText,
-          cancelText,
-          onCancelCallback
-        );
-      }, 250);
-      return;
-    }
-
-    openConfirmModal(
-      title,
-      message,
-      emoji,
-      onConfirmCallback,
-      confirmText,
-      cancelText,
-      onCancelCallback
-    );
-  };
-
-  const openConfirmModal = (
-    title: string,
-    message: string,
-    emoji: string,
-    onConfirmCallback?: () => void,
-    confirmText = 'OK',
-    cancelText = 'Cancel',
-    onCancelCallback?: () => void
-  ) => {
-    setConfirmModal({
-      visible: true,
-      title,
-      message,
-      emoji,
-      onConfirm: () => {
-        if (__DEV__) console.log('📋 Confirm pressed, closing modal');
+      // If a modal is already open, close it first then open the new one
+      if (confirmModal.visible) {
+        if (__DEV__) console.log('📋 Modal already open, closing first...');
         setIsModalTransitioning(true);
         setConfirmModal((prev) => ({ ...prev, visible: false }));
-        // Use setTimeout to ensure modal closes before callback executes
         setTimeout(() => {
           setIsModalTransitioning(false);
-          if (onConfirmCallback) {
-            onConfirmCallback();
-          }
-        }, 200);
-      },
-      onCancel: onCancelCallback
-        ? () => {
-            if (__DEV__) console.log('📋 Cancel pressed, closing modal');
-            setIsModalTransitioning(true);
-            setConfirmModal((prev) => ({ ...prev, visible: false }));
-            setTimeout(() => {
-              setIsModalTransitioning(false);
-              onCancelCallback();
-            }, 200);
-          }
-        : () => {
-            if (__DEV__) console.log('📋 Closing modal (no cancel callback)');
-            setIsModalTransitioning(true);
-            setConfirmModal((prev) => ({ ...prev, visible: false }));
-            setTimeout(() => {
-              setIsModalTransitioning(false);
-            }, 200);
-          },
-      confirmText,
-      cancelText: onCancelCallback ? cancelText : undefined,
-    });
-  };
+          openConfirmModal(
+            title,
+            message,
+            emoji,
+            onConfirmCallback,
+            confirmText,
+            cancelText,
+            onCancelCallback
+          );
+        }, 250);
+        return;
+      }
+
+      openConfirmModal(
+        title,
+        message,
+        emoji,
+        onConfirmCallback,
+        confirmText,
+        cancelText,
+        onCancelCallback
+      );
+    },
+    [isModalTransitioning, confirmModal.visible, openConfirmModal]
+  );
 
   // Candy selector modal handler for JokerCard components
-  const handleShowCandySelector = (joker: any) => {
+  const handleShowCandySelector = useCallback((joker: any) => {
     setCandySelectorModal({
       visible: true,
       joker,
     });
-  };
+  }, []);
 
   // Joker selector modal handler (legacy — no longer used by Overclock)
   // Handle candy selection for various jokers
@@ -466,16 +499,11 @@ function JokersPage() {
     return STANDARDIZED_JOKERS.length;
   }, []);
 
-  // Current user's jokers for "Inventory" tab - organize into rows like the "All" tab
+  // Owned Jokers use the full-width strip variant so actions and live values
+  // stay readable without the empty space of the old two-column cards.
   const inventoryJokers = useMemo(() => {
     if (!jokers || jokers.length === 0) return [];
-
-    // Group jokers into rows of 2 for proper 2-column layout like the "All" tab
-    const jokersInRows = [];
-    for (let i = 0; i < jokers.length; i += 2) {
-      jokersInRows.push(jokers.slice(i, i + 2));
-    }
-    return jokersInRows;
+    return jokers;
   }, [jokers]);
 
   const currentJokers = inventoryJokers; // Only used for inventory tab
@@ -486,17 +514,19 @@ function JokersPage() {
 
   // Check if player owns Combo Platter or Triple Threat
   const ownsComboPlatter = useMemo(
-    () => jokers.some((j) => {
-      const jId = typeof j.id === 'string' ? parseInt(j.id as string) : j.id;
-      return jId === JOKER_IDS.COMBO_PLATTER;
-    }),
+    () =>
+      jokers.some((j) => {
+        const jId = typeof j.id === 'string' ? parseInt(j.id as string) : j.id;
+        return jId === JOKER_IDS.COMBO_PLATTER;
+      }),
     [jokers]
   );
   const ownsTripleThreat = useMemo(
-    () => jokers.some((j) => {
-      const jId = typeof j.id === 'string' ? parseInt(j.id as string) : j.id;
-      return jId === JOKER_IDS.TRIPLE_THREAT;
-    }),
+    () =>
+      jokers.some((j) => {
+        const jId = typeof j.id === 'string' ? parseInt(j.id as string) : j.id;
+        return jId === JOKER_IDS.TRIPLE_THREAT;
+      }),
     [jokers]
   );
 
@@ -504,48 +534,84 @@ function JokersPage() {
   const headerStyles = styles.header;
   const titleStyles = styles.title;
 
-  const renderInventoryJokerRow = ({ item }: { item: any[] }) => (
-    <View style={{ ...styles.row }}>
-      {item.map((joker, index) => {
-        const jId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
-        const showSynergy = jId === JOKER_IDS.COMBO_PLATTER || jId === JOKER_IDS.TRIPLE_THREAT;
-        return (
-          <View key={joker.id} style={styles.jokerCardContainer}>
-            <JokerCard
-              joker={joker}
-              isAfterSchool={isAfterSchool}
-              isCompact={true}
-              showOwned={false}
-              disableActivation={false}
-              coveredTypeCount={showSynergy ? coveredTypeCount : undefined}
-              onShowConfirmation={handleShowConfirmation}
-              onShowCandySelector={handleShowCandySelector}
-              onTriggerEvent={triggerEvent}
-            />
-          </View>
-        );
-      })}
-    </View>
+  // Memoized set of owned joker ids so the "All" tab renderer can check
+  // ownership in O(1) instead of scanning the owned list per row.
+  // Uses the raw `id` values to preserve the original equality semantics.
+  const ownedIdSet = useMemo(
+    () => new Set(jokers.map((ownedJoker) => ownedJoker.id)),
+    [jokers]
   );
 
-  const renderJokerRow = ({ item }: { item: any[] }) => (
-    <View style={styles.row}>
-      {item.map((joker) => (
-        <View key={joker.id} style={styles.jokerCardContainer}>
+  const renderInventoryJokerRow = useCallback(
+    ({ item: joker }: { item: any }) => {
+      const jId = typeof joker.id === 'string' ? parseInt(joker.id) : joker.id;
+      const showSynergy =
+        jId === JOKER_IDS.COMBO_PLATTER || jId === JOKER_IDS.TRIPLE_THREAT;
+      return (
+        <View style={styles.inventoryCardContainer}>
           <JokerCard
             joker={joker}
             isAfterSchool={isAfterSchool}
-            isCompact={true}
-            showOwned={jokers.some((ownedJoker) => ownedJoker.id === joker.id)}
-            disableActivation={true}
-            debugMode={debugMode && __DEV__}
+            variant="strip"
+            showOwned={false}
+            disableActivation={false}
+            coveredTypeCount={showSynergy ? coveredTypeCount : undefined}
             onShowConfirmation={handleShowConfirmation}
             onShowCandySelector={handleShowCandySelector}
             onTriggerEvent={triggerEvent}
           />
         </View>
-      ))}
-    </View>
+      );
+    },
+    [
+      isAfterSchool,
+      coveredTypeCount,
+      handleShowConfirmation,
+      handleShowCandySelector,
+      triggerEvent,
+    ]
+  );
+
+  const renderJokerRow = useCallback(
+    ({ item }: { item: any[] }) => (
+      <View style={styles.row}>
+        {item.map((joker) => (
+          <View key={joker.id} style={styles.jokerCardContainer}>
+            <JokerCard
+              joker={joker}
+              isAfterSchool={isAfterSchool}
+              variant="tile"
+              showOwned={ownedIdSet.has(joker.id)}
+              disableActivation={true}
+              debugMode={debugMode && __DEV__}
+              onShowConfirmation={handleShowConfirmation}
+              onShowCandySelector={handleShowCandySelector}
+              onTriggerEvent={triggerEvent}
+            />
+          </View>
+        ))}
+      </View>
+    ),
+    [
+      isAfterSchool,
+      ownedIdSet,
+      debugMode,
+      handleShowConfirmation,
+      handleShowCandySelector,
+      triggerEvent,
+    ]
+  );
+
+  // Catalog tiles remain fixed-height pairs, so their list can retain a cheap
+  // deterministic layout calculation. Owned strips are content-sized.
+  const ROW_HEIGHT = 172;
+  const getJokerRowLayout = useCallback(
+    (_data: ArrayLike<any[]> | null | undefined, index: number) => ({
+      length: ROW_HEIGHT,
+      offset: ROW_HEIGHT * index,
+      index,
+    }),
+    []
   );
 
   // Show loading view if needed
@@ -597,10 +663,7 @@ function JokersPage() {
             }}
             shadowOpacity={0}
             elevation={0}
-            style={[
-              styles.tab,
-              activeTab === 'inventory' && styles.activeTab,
-            ]}
+            style={[styles.tab, activeTab === 'inventory' && styles.activeTab]}
           >
             <TextWithEmojis
               imageSize={20}
@@ -654,33 +717,44 @@ function JokersPage() {
       )}
 
       {/* Type Coverage Bar — shown when player has type-multiplier, Combo Platter, or Triple Threat jokers */}
-      {activeTab === 'inventory' && jokers.length > 0 && (coveredTypeCount > 0 || ownsComboPlatter || ownsTripleThreat) && (
-        <View style={styles.coverageBar}>
-          <Text style={styles.coverageLabel}>Type Coverage</Text>
-          <View style={styles.coverageDots}>
-            {TYPE_MULTIPLIER_JOKERS.map((entry) => {
-              const isCovered = coveredTypes.includes(entry.candyType);
-              const dotColor = isCovered ? CANDY_TYPE_COLORS[entry.candyType] || '#888' : undefined;
-              return (
-                <View key={entry.candyType} style={styles.coverageDotWrapper}>
-                  <View
-                    style={[
-                      styles.coverageDot,
-                      isCovered
-                        ? { backgroundColor: dotColor, borderColor: dotColor }
-                        : styles.coverageDotEmpty,
-                    ]}
-                  />
-                  <Text style={[styles.coverageDotLabel, isCovered && { color: dotColor }]}>
-                    {entry.candyType === 'hard_candy' ? 'HC' : entry.label.substring(0, 3).toUpperCase()}
-                  </Text>
-                </View>
-              );
-            })}
+      {activeTab === 'inventory' &&
+        jokers.length > 0 &&
+        (coveredTypeCount > 0 || ownsComboPlatter || ownsTripleThreat) && (
+          <View style={styles.coverageBar}>
+            <Text style={styles.coverageLabel}>Type Coverage</Text>
+            <View style={styles.coverageDots}>
+              {TYPE_MULTIPLIER_JOKERS.map((entry) => {
+                const isCovered = coveredTypes.includes(entry.candyType);
+                const dotColor = isCovered
+                  ? CANDY_TYPE_COLORS[entry.candyType] || '#888'
+                  : undefined;
+                return (
+                  <View key={entry.candyType} style={styles.coverageDotWrapper}>
+                    <View
+                      style={[
+                        styles.coverageDot,
+                        isCovered
+                          ? { backgroundColor: dotColor, borderColor: dotColor }
+                          : styles.coverageDotEmpty,
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.coverageDotLabel,
+                        isCovered && { color: dotColor },
+                      ]}
+                    >
+                      {entry.candyType === 'hard_candy'
+                        ? 'HC'
+                        : entry.label.substring(0, 3).toUpperCase()}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <Text style={styles.coverageCount}>{coveredTypeCount}/6</Text>
           </View>
-          <Text style={styles.coverageCount}>{coveredTypeCount}/6</Text>
-        </View>
-      )}
+        )}
 
       {activeTab === 'inventory' ? (
         currentJokers.length > 0 ? (
@@ -690,6 +764,10 @@ function JokersPage() {
             renderItem={renderInventoryJokerRow}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={4}
+            maxToRenderPerBatch={4}
+            windowSize={5}
+            removeClippedSubviews={true}
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -706,6 +784,11 @@ function JokersPage() {
           renderItem={renderJokerRow}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={4}
+          maxToRenderPerBatch={4}
+          windowSize={5}
+          removeClippedSubviews={true}
+          getItemLayout={getJokerRowLayout}
         />
       )}
 
@@ -731,94 +814,104 @@ function JokersPage() {
         transparent
         animationType="none"
         statusBarTranslucent
-        onRequestClose={() => setCandySelectorModal({ visible: false, joker: null })}
+        onRequestClose={() =>
+          setCandySelectorModal({ visible: false, joker: null })
+        }
       >
-      <FastModal
-        visible={candySelectorModal.visible}
-        onClose={() => setCandySelectorModal({ visible: false, joker: null })}
-        animationType="spring"
-        backdropOpacity={0.5}
-        modalStyle={{ ...styles.modalContent, maxHeight: screenHeight * 0.7 }}
-      >
-        <>
-          <View
-            style={{
-              alignItems: 'center',
-            }}
+        <FastModal
+          visible={candySelectorModal.visible}
+          onClose={() => setCandySelectorModal({ visible: false, joker: null })}
+          animationType="spring"
+          backdropOpacity={0.5}
+          modalStyle={{ ...styles.modalContent, maxHeight: screenHeight * 0.7 }}
+        >
+          <PixelBorder
+            borderColor={colors.gold.medium}
+            borderWidth={3}
+            backgroundColor={colors.darkGray1}
+            innerPadding={20}
           >
-            <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
-              {Number(candySelectorModal.joker?.id) === JOKER_IDS.MARKET_MANIPULATION
-                ? '📈'
-                : Number(candySelectorModal.joker?.id) === JOKER_IDS.BET_YOU_IM_FASTER
-                  ? '⚡'
-                  : '🍭'}
-            </TextWithEmojis>
-          </View>
-          <TextWithEmojis style={styles.modalTitle} imageSize={24}>
-            {Number(candySelectorModal.joker?.id) === JOKER_IDS.MARKET_MANIPULATION
-              ? 'Choose Candy to Manipulate'
-              : Number(candySelectorModal.joker?.id) === JOKER_IDS.BET_YOU_IM_FASTER
-                ? 'Choose Candy to Fill Inventory'
-                : 'Choose Candy Type'}
-          </TextWithEmojis>
-
-          <ScrollView
-            style={{ flexShrink: 1 }}
-            contentContainerStyle={{ paddingBottom: 4 }}
-            showsVerticalScrollIndicator={true}
-          >
-            {unlockedCandyNames.map((candyType) => (
-              <PressableButton
-                key={candyType}
-                onPress={() => handleCandySelection(candyType)}
-                shadowColor="rgba(123,169,101,1)"
-                shadowOffset={{ width: 0, height: 4 }}
-                shadowOpacity={0.5}
-                shadowRadius={5}
-                elevation={8}
-                style={styles.candyButton}
-              >
-                <PixelBorder
-                  borderColor="rgba(123,169,101,1)"
-                  borderWidth={3}
-                  backgroundColor="rgba(154,193,118,1)"
-                  innerPadding={0}
-                >
-                  <View style={styles.candyButtonInner}>
-                    <Text style={styles.candyButtonText}>{candyType}</Text>
-                  </View>
-                </PixelBorder>
-              </PressableButton>
-            ))}
-          </ScrollView>
-
-          <PressableButton
-            onPress={() => {
-              setCandySelectorModal({ visible: false, joker: null });
-              setSelectedSourceCandy(null); // Reset source candy selection
-            }}
-            shadowColor="rgba(185,28,28,1)"
-            shadowOffset={{ width: 0, height: 4 }}
-            shadowOpacity={0.5}
-            shadowRadius={5}
-            elevation={8}
-            style={styles.cancelButton}
-          >
-            <PixelBorder
-              borderColor="rgba(185,28,28,1)"
-              borderWidth={3}
-              backgroundColor="rgba(239,68,68,1)"
-              innerPadding={0}
+            <View
+              style={{
+                alignItems: 'center',
+              }}
             >
-              <View style={styles.cancelButtonInner}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </View>
-            </PixelBorder>
-          </PressableButton>
-        </>
-      </FastModal>
-      </RNModal>
+              <TextWithEmojis style={[styles.modalTitle]} imageSize={54}>
+                {Number(candySelectorModal.joker?.id) ===
+                JOKER_IDS.MARKET_MANIPULATION
+                  ? '📈'
+                  : Number(candySelectorModal.joker?.id) ===
+                      JOKER_IDS.BET_YOU_IM_FASTER
+                    ? '⚡'
+                    : '🍭'}
+              </TextWithEmojis>
+            </View>
+            <TextWithEmojis style={styles.modalTitle} imageSize={24}>
+              {Number(candySelectorModal.joker?.id) ===
+              JOKER_IDS.MARKET_MANIPULATION
+                ? 'Choose Candy to Manipulate'
+                : Number(candySelectorModal.joker?.id) ===
+                    JOKER_IDS.BET_YOU_IM_FASTER
+                  ? 'Choose Candy to Fill Inventory'
+                  : 'Choose Candy Type'}
+            </TextWithEmojis>
 
+            <ScrollView
+              style={{ flexShrink: 1 }}
+              contentContainerStyle={{ paddingBottom: 4 }}
+              showsVerticalScrollIndicator={true}
+            >
+              {unlockedCandyNames.map((candyType) => (
+                <PressableButton
+                  key={candyType}
+                  onPress={() => handleCandySelection(candyType)}
+                  shadowColor="rgba(123,169,101,1)"
+                  shadowOffset={{ width: 0, height: 4 }}
+                  shadowOpacity={0.5}
+                  shadowRadius={5}
+                  elevation={8}
+                  style={styles.candyButton}
+                >
+                  <PixelBorder
+                    borderColor="rgba(123,169,101,1)"
+                    borderWidth={3}
+                    backgroundColor="rgba(154,193,118,1)"
+                    innerPadding={0}
+                  >
+                    <View style={styles.candyButtonInner}>
+                      <Text style={styles.candyButtonText}>{candyType}</Text>
+                    </View>
+                  </PixelBorder>
+                </PressableButton>
+              ))}
+            </ScrollView>
+
+            <PressableButton
+              onPress={() => {
+                setCandySelectorModal({ visible: false, joker: null });
+                setSelectedSourceCandy(null); // Reset source candy selection
+              }}
+              shadowColor="rgba(185,28,28,1)"
+              shadowOffset={{ width: 0, height: 4 }}
+              shadowOpacity={0.5}
+              shadowRadius={5}
+              elevation={8}
+              style={styles.cancelButton}
+            >
+              <PixelBorder
+                borderColor="rgba(185,28,28,1)"
+                borderWidth={3}
+                backgroundColor="rgba(239,68,68,1)"
+                innerPadding={0}
+              >
+                <View style={styles.cancelButtonInner}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </View>
+              </PixelBorder>
+            </PressableButton>
+          </PixelBorder>
+        </FastModal>
+      </RNModal>
     </View>
   );
 }
@@ -955,8 +1048,12 @@ const styles = StyleSheet.create({
   },
   jokerCardContainer: {
     width: 160, // Fixed width for consistent sizing
-    height: 180, // Fixed height to ensure all cards are the same size
+    height: 166, // Square art-forward tile plus the pixel frame
     position: 'relative',
+  },
+  inventoryCardContainer: {
+    width: '100%',
+    marginBottom: 10,
   },
   emptyContainer: {
     flex: 1,
@@ -1020,12 +1117,7 @@ const styles = StyleSheet.create({
   },
   // Candy Selector Modal styles
   modalContent: {
-    backgroundColor: colors.darkGray1,
-    borderRadius: 8,
-    padding: 20,
     width: '80%',
-    borderWidth: 2,
-    borderColor: colors.gold.medium,
   },
   modalTitle: {
     fontSize: 20,

@@ -18,7 +18,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -424,7 +424,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -442,40 +442,34 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Fixed Header */}
-      <View
-        style={[
-          styles.headerContainer,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-          },
-        ]}
+    <>
+      <MinigameScaffold
+        theme="logic"
+        title="Crack the Candy Code"
+        subtitle="🟩=Correct 🟨=Wrong position"
+        leftInfo={`Level ${level}/3`}
+        centerInfo={' '}
+        rightInfo={`Tries: ${attempts.length}/${maxAttempts}`}
+        backgroundColor={colors.darkGray2}
+        onLeave={handleForfeit}
+        footer={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              currentGuess.includes('') && styles.submitButtonDisabled,
+            ]}
+            onPress={handleSubmitGuess}
+            disabled={currentGuess.includes('')}
+          >
+            <TextWithEmojis imageSize={30} style={styles.submitButtonText}>
+              🍭 Try Pattern
+            </TextWithEmojis>
+          </TouchableOpacity>
+        }
       >
-        <MinigameHUD
-          theme="logic"
-          title="Crack the Candy Code"
-          subtitle="🟩=Correct 🟨=Wrong position"
-          leftInfo={`Level ${level}/3`}
-          centerInfo={' '}
-          rightInfo={`Tries: ${attempts.length}/${maxAttempts}`}
-        />
-      </View>
-
-      {/* Scrollable Content Area - Limited height to fit screen */}
-      <View
-        style={[
-          styles.gameContent,
-          {
-            paddingHorizontal: ResponsiveSpacing.containerPadding(),
-          },
-        ]}
-      >
-        <View
-          style={styles.contentScrollView}
-          contentContainerStyle={styles.contentScrollContainer}
-          showsVerticalScrollIndicator={true}
-        >
+        {/* Content Area */}
+        <View style={styles.gameContent}>
+        <View style={styles.contentScrollView}>
           <View style={styles.inputContainer}>
             <TextWithEmojis style={styles.inputLabel} imageSize={25}>
               Make Your Guess:
@@ -615,53 +609,10 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                currentGuess.includes('') && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmitGuess}
-              disabled={currentGuess.includes('')}
-            >
-              <TextWithEmojis imageSize={30} style={styles.submitButtonText}>
-                🍭 Try Pattern
-              </TextWithEmojis>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
-
-      {/* Fixed Bottom Buttons */}
-      <View
-        style={[
-          styles.bottomButtons,
-          {
-            gap: ResponsiveSpacing.buttonGap(),
-            paddingVertical: ResponsiveSpacing.buttonPadding(),
-            paddingHorizontal: ResponsiveSpacing.containerPadding(),
-          },
-        ]}
-      >
-        <PixelBorder
-          borderColor="#adb5bd"
-          borderWidth={3}
-          backgroundColor="#6c757d"
-          innerPadding={0}
-          style={{ flex: 1 }}
-        >
-          <TouchableOpacity
-            style={styles.instructionsButtonInner}
-            onPress={handleForfeit}
-          >
-            <TextWithEmojis
-              style={styles.instructionsButtonText}
-              imageSize={28}
-            >
-              🚪 Leave
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </PixelBorder>
-      </View>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -672,7 +623,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
         onConfirm={modal.onConfirm}
         showCancelButton={modal.showCancelButton}
       />
-    </View>
+    </>
   );
 }
 
@@ -736,6 +687,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   inputContainer: {
+    flex: 1, // fill the body so the palette can't overflow onto the footer
     backgroundColor: '#404040',
     borderRadius: 16,
     borderWidth: 2,
@@ -751,7 +703,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   attemptsScrollContainer: {
-    height: 180, // Fixed height (4 rows). Inner ScrollView auto-scrolls to bottom when rows accumulate.
+    flex: 1, // absorb/shrink the empty space instead of a fixed 180px reserve
+    minHeight: 70,
     marginBottom: 12,
   },
   attemptsScrollContent: {

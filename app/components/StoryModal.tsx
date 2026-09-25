@@ -149,7 +149,11 @@ export default function StoryModal({
       backdropOpacity={0.8}
       modalStyle={styles.modalContainer}
     >
-      <PixelBorder borderWidth={3} borderColor="#d4a574">
+      <PixelBorder
+        borderWidth={3}
+        borderColor="#d4a574"
+        backgroundColor="#ffffff"
+      >
         <Animated.View style={{ opacity: fadeAnim }}>
           <View style={styles.header}>
             <Image source={storyContent.petImage} style={styles.petImage} />

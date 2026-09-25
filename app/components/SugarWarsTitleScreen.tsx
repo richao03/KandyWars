@@ -9,37 +9,27 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
-import { useInventory } from '../../src/hooks/useInventory';
-import { useJokers } from '../../src/hooks/useJokers';
-import { useSeed } from '../../src/hooks/useSeed';
-import { useWallet } from '../../src/hooks/useWallet';
 import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { setPeriodCount, unlockMediumCandies } from '../../src/store/slices/gameSlice';
 import { setHallPassModifiers } from '../../src/store/slices/hallPassModifiersSlice';
 import { syncHallPassesFromFirebase } from '../../src/store/slices/hallPassSlice';
 import {
   setTotalCompletions,
   setWonDifficulties,
 } from '../../src/store/slices/scoreboardSlice';
+import { selectTutorialComplete } from '../../src/store/slices/tutorialSlice';
 import { setCachedUserObject } from '../../src/store/slices/userObjectSlice';
-import {
-  setBalance,
-  setStashedAmount,
-} from '../../src/store/slices/walletSlice';
+import { startNewGame } from '../../src/store/thunks/startNewGame';
 import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
-import { selectTutorialComplete, resetTutorial } from '../../src/store/slices/tutorialSlice';
 import { SoundEffects } from '../../src/utils/soundEffects';
-import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import DifficultySelectionModal from './DifficultySelectionModal';
-import TypewriterTitle from './TypewriterTitle';
 import HallPassModal from './HallPassModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import StoryModal from './StoryModal';
+import TypewriterTitle from './TypewriterTitle';
 
 const { width, height } = Dimensions.get('window');
 
@@ -62,13 +52,8 @@ export default function SugarWarsTitleScreen({
   onContinue,
   onSettings,
 }: SugarWarsTitleScreenProps) {
-  const wallet = useWallet();
   const dispatch = useAppDispatch();
-  const { resetGame, periodCount, isInitialized, setIsInitialized } = useGame();
-  const { resetInventory } = useInventory();
-  const { resetJokers } = useJokers();
-  const { resetFlavorText } = useFlavorText();
-  const { setSeed, setGameData } = useSeed();
+  const { periodCount, isInitialized, setIsInitialized } = useGame();
   const { selectPass, selectedPasses, unlockedPasses } = useHallPass();
   const cachedUserObject = useAppSelector(
     (state) => state.userObject.cachedUser
@@ -211,61 +196,10 @@ export default function SugarWarsTitleScreen({
       setShowDifficultyModal(false);
       setSelectedLevel(level);
 
-      // Refresh user object from Firebase to get latest data
-      const userObject = await scoreboardService.refreshUserObject();
-      dispatch(setCachedUserObject(userObject));
-
-      // Sync hall passes from Firebase (batch operation)
-      if (userObject.unlockedHallPasses?.length > 0) {
-        dispatch(syncHallPassesFromFirebase(userObject.unlockedHallPasses));
-      }
-
-      // Compute hall pass modifiers from selected passes FIRST
-      // This must happen BEFORE resetting or generating anything
-      const hallPassModifiers = computeHallPassModifiers(selectedPasses);
-
-      const totalPeriods = 40;
-
-      // Generate new seed for fresh game data
-      const newSeed = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      setSeed(newSeed);
-
-      // Generate game data using the seed with hall pass-adjusted periods
-      // Pass difficulty level to enable price range shuffling for level > 3
-      // Enable tutorial mode for difficulty 1 (tutorial resets on every new game)
-      const isTutorialMode = level === 1;
-      const gameData = generateSeededGameData(newSeed, totalPeriods, level, isTutorialMode);
-      setGameData(gameData);
-
-      // Reset all game state (this preserves selectedPassIds and clears hallPassModifiers)
-      resetGame();
-      resetInventory();
-      resetJokers();
-      resetFlavorText();
-
-      // Reset tutorial for difficulty 1 so it plays on each new game
-      if (level === 1) {
-        dispatch(resetTutorial());
-      }
-
-      // Initialize wallet with the selected difficulty level
-      // NOTE: This will trigger another resetGame() call internally, which clears modifiers
-      const existingPlayerName = wallet?.playerName;
-      wallet?.initializeWallet(level, existingPlayerName);
-
-      // Set hall pass modifiers AFTER wallet initialization
-      // Because initializeWallet calls resetGame which clears the modifiers
-      dispatch(setHallPassModifiers(hallPassModifiers));
-
-      // Time Crunch: start with medium candy unlocked
-      if (selectedPasses.some(p => p.id === 'time_crunch')) {
-        dispatch(unlockMediumCandies());
-      }
-
-      // Senior Executive: start with $2000 instead of $20
-      if (selectedPasses.some(p => p.id === 'senior_executive')) {
-        dispatch(setBalance(2000));
-      }
+      // Bootstrap the run: Firebase refresh, seed + game-data generation, slice
+      // resets, wallet init, hall-pass modifiers, and per-pass perk one-offs.
+      // All of this ordering-sensitive orchestration now lives in the thunk.
+      await dispatch(startNewGame(level));
 
       // Mark game as initialized so continue button works
       setIsInitialized(true);
@@ -436,120 +370,6 @@ export default function SugarWarsTitleScreen({
                     </View>
                   </PixelBorder>
                 </PressableButton>
-
-                {__DEV__ && (
-                  <>
-                    <PressableButton
-                      onPress={() => {
-                        console.log(
-                          '🔧 DEBUG: Setting up WIN scenario - Day 5'
-                        );
-                        // Set to day 5, period 8 (periodCount 39 = end of day 5)
-                        dispatch(setPeriodCount(39));
-                        // Give enough money to win (adoption fee + extra)
-                        const adoptionFee = wallet.adoptionFee || 1000;
-                        dispatch(setBalance(adoptionFee + 100));
-                        dispatch(setStashedAmount(0));
-                        setIsInitialized(true);
-                        console.log(
-                          '🔧 DEBUG: WIN setup complete - navigate to continue'
-                        );
-                      }}
-                      shadowColor="#15803d"
-                      shadowOffset={{ width: 0, height: 4 }}
-                      shadowOpacity={0.4}
-                      shadowRadius={5}
-                      elevation={8}
-                      style={{ width: '80%' }}
-                    >
-                      <PixelBorder
-                        borderColor="#4ade80"
-                        borderWidth={3}
-                        backgroundColor="#d1fae5"
-                        innerPadding={0}
-                      >
-                        <View style={[styles.button, styles.debugButton]}>
-                          <Text
-                            style={[styles.buttonText, { color: '#15803d' }]}
-                          >
-                            Debug: Win Setup
-                          </Text>
-                        </View>
-                      </PixelBorder>
-                    </PressableButton>
-
-                    <PressableButton
-                      onPress={() => {
-                        console.log(
-                          '🔧 DEBUG: Setting up LOSE scenario - Day 5'
-                        );
-                        // Set to day 5, period 8 (periodCount 39 = end of day 5)
-                        dispatch(setPeriodCount(39));
-                        // Give not enough money to win
-                        const adoptionFee = wallet.adoptionFee || 1000;
-                        dispatch(setBalance(adoptionFee - 200));
-                        dispatch(setStashedAmount(0));
-                        setIsInitialized(true);
-                        console.log(
-                          '🔧 DEBUG: LOSE setup complete - navigate to continue'
-                        );
-                      }}
-                      shadowColor="#991b1b"
-                      shadowOffset={{ width: 0, height: 4 }}
-                      shadowOpacity={0.4}
-                      shadowRadius={5}
-                      elevation={8}
-                      style={{ width: '80%' }}
-                    >
-                      <PixelBorder
-                        borderColor="#f87171"
-                        borderWidth={3}
-                        backgroundColor="#fee2e2"
-                        innerPadding={0}
-                      >
-                        <View style={[styles.button, styles.debugButton]}>
-                          <Text
-                            style={[styles.buttonText, { color: '#991b1b' }]}
-                          >
-                            Debug: Lose Setup
-                          </Text>
-                        </View>
-                      </PixelBorder>
-                    </PressableButton>
-
-                    <PressableButton
-                      onPress={() => {
-                        console.log(
-                          '🔧 DEBUG: Getting total completions from cache...'
-                        );
-                        const total = scoreboardService.getTotalWinCount();
-                        console.log('🏆 TOTAL WIN COUNT FROM CACHE:', total);
-                        alert(`Total Win Count: ${total}`);
-                      }}
-                      shadowColor="#7e22ce"
-                      shadowOffset={{ width: 0, height: 4 }}
-                      shadowOpacity={0.4}
-                      shadowRadius={5}
-                      elevation={8}
-                      style={{ width: '80%' }}
-                    >
-                      <PixelBorder
-                        borderColor="#a855f7"
-                        borderWidth={3}
-                        backgroundColor="#f3e8ff"
-                        innerPadding={0}
-                      >
-                        <View style={[styles.button, styles.debugButton]}>
-                          <Text
-                            style={[styles.buttonText, { color: '#7e22ce' }]}
-                          >
-                            Show Completions
-                          </Text>
-                        </View>
-                      </PixelBorder>
-                    </PressableButton>
-                  </>
-                )}
               </Animated.View>
             )}
           </ImageBackground>
@@ -626,9 +446,6 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   settingsButton: {
-    fontFamily: 'PixeloidMono',
-  },
-  debugButton: {
     fontFamily: 'PixeloidMono',
   },
   buttonText: {

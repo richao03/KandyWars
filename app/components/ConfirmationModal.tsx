@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -135,13 +129,19 @@ export default function ConfirmationModal({
           {summaryParts.length >= 2 && (
             <View style={styles.summaryContainer}>
               <TextWithEmojis
-                style={[styles.summaryText, { color: themeStyles.messageColor }]}
+                style={[
+                  styles.summaryText,
+                  { color: themeStyles.messageColor },
+                ]}
                 imageSize={12}
               >
                 Base: {summaryParts[0]}
               </TextWithEmojis>
               <TextWithEmojis
-                style={[styles.summaryText, { color: themeStyles.messageColor, fontWeight: 'bold' }]}
+                style={[
+                  styles.summaryText,
+                  { color: themeStyles.messageColor, fontWeight: 'bold' },
+                ]}
                 imageSize={12}
               >
                 Total: {summaryParts[1]}
@@ -172,8 +172,8 @@ export default function ConfirmationModal({
     >
       <PixelBorder
         borderColor="#d4a574"
-        borderWidth={3}
-        backgroundColor="rgba(255, 255, 255, 0.95)"
+        borderWidth={5}
+        backgroundColor="#ffffff"
         innerPadding={0}
       >
         <ScrollView
@@ -205,9 +205,7 @@ export default function ConfirmationModal({
                 innerPadding={0}
               >
                 <View style={styles.confirmButtonInner}>
-                  <Text style={styles.confirmButtonText}>
-                    {confirmText}
-                  </Text>
+                  <Text style={styles.confirmButtonText}>{confirmText}</Text>
                 </View>
               </PixelBorder>
             </PressableButton>
@@ -228,9 +226,7 @@ export default function ConfirmationModal({
                   innerPadding={0}
                 >
                   <View style={styles.cancelButtonInner}>
-                    <Text style={styles.cancelButtonText}>
-                      {cancelText}
-                    </Text>
+                    <Text style={styles.cancelButtonText}>{cancelText}</Text>
                   </View>
                 </PixelBorder>
               </PressableButton>
@@ -244,7 +240,6 @@ export default function ConfirmationModal({
 
 const styles = StyleSheet.create({
   modal: {
-    borderRadius: 24,
     width: '100%',
     maxWidth: 380,
     alignSelf: 'center',

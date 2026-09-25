@@ -17,7 +17,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -474,7 +474,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
     return (
       <View style={styles.container}>
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Gym Class Captain</Text>
+          <Text style={styles.instructionsTitle}>Team Captain</Text>
 
           <PixelBorder
             borderColor="#8B7355"
@@ -488,31 +488,29 @@ export default function NimGame({ onComplete }: NimGameProps) {
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>1.</Text>
               <Text style={styles.stepText}>
-                Take turns picking students for your team
+                Take turns picking players for your team
               </Text>
             </View>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>2.</Text>
               <Text style={styles.stepText}>
-                Tap a row to select it, tap again to pick more. Use +/− to
-                adjust
+                Tap to select a row, Use +/− to adjust
               </Text>
             </View>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>3.</Text>
               <Text style={styles.stepText}>
-                The team ending with the last pick loses
+                The team with the{' '}
+                <Text style={styles.highlightText}>last pick loses</Text>
               </Text>
             </View>
 
             <View style={styles.instructionStep}>
               <Text style={styles.stepNumber}>4.</Text>
               <View>
-                <Text style={styles.stepText}>lvl 1: 3 rows, dumb Opp</Text>
-                <Text style={styles.stepText}>lvl 2: 4 rows, smarter Opp</Text>
-                <Text style={styles.stepText}>lvl 3: 4 rows, tough Opp</Text>
+                <Text style={styles.stepText}>Opp gets smarter per level</Text>
               </View>
             </View>
           </PixelBorder>
@@ -545,7 +543,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -566,31 +564,23 @@ export default function NimGame({ onComplete }: NimGameProps) {
   const remaining = totalCandies(heaps);
 
   return (
-    <View style={styles.container}>
-      <View
-        style={[
-          styles.innerContainer,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
+    <>
+      <MinigameScaffold
+        theme="nim"
+        title="Team Captain"
+        subtitle={
+          aiThinking
+            ? 'Opp is thinking...'
+            : currentTurn === 'player'
+              ? 'Your Turn'
+              : 'Opp Turn'
+        }
+        leftInfo={`Level ${level}/3`}
+        centerInfo={`${remaining} left`}
+        rightInfo={currentTurn === 'player' ? '👆 Pick' : '🤖 Opp'}
+        backgroundColor="#e8dcc8"
+        onLeave={handleForfeit}
       >
-        <MinigameHUD
-          theme="nim"
-          title="Gym Class Captain"
-          subtitle={
-            aiThinking
-              ? 'Opp is thinking...'
-              : currentTurn === 'player'
-                ? 'Your Turn'
-                : 'Opp Turn'
-          }
-          leftInfo={`Level ${level}/3`}
-          centerInfo={`${remaining} left`}
-          rightInfo={currentTurn === 'player' ? '👆 Pick' : '🤖 Opp'}
-        />
-
         <ScrollView
           style={styles.contentContainer}
           contentContainerStyle={styles.contentInner}
@@ -622,32 +612,18 @@ export default function NimGame({ onComplete }: NimGameProps) {
         <Text style={styles.hintText}>
           Don&apos;t get stuck with the last pick or you lose!
         </Text>
-        {/* Leave button pinned to bottom */}
-        <PixelBorder
-          borderColor="#8B7355"
-          borderWidth={3}
-          backgroundColor="#c4b596"
-          innerPadding={0}
-          style={{ marginTop: 8 }}
-        >
-          <TouchableOpacity style={styles.leaveButton} onPress={handleForfeit}>
-            <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
-              🚪 Leave
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </PixelBorder>
+      </MinigameScaffold>
 
-        <GameModal
-          visible={modal.visible}
-          title={modal.title}
-          message={modal.message}
-          emoji={modal.emoji}
-          onClose={hideModal}
-          onConfirm={modal.onConfirm}
-          showCancelButton={modal.showCancelButton}
-        />
-      </View>
-    </View>
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
+      />
+    </>
   );
 }
 
@@ -696,6 +672,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#8B7355',
     marginRight: 10,
+    fontFamily: 'PixeloidMono',
+    lineHeight: 22,
+  },
+  highlightText: {
+    fontSize: 16,
+    color: 'red',
     fontFamily: 'PixeloidMono',
     lineHeight: 22,
   },
@@ -805,22 +787,23 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   candyItem: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 3,
   },
   candyItemMarked: {
     borderWidth: 2,
     borderColor: '#c0392b',
     borderRadius: 6,
     backgroundColor: 'rgba(192, 57, 43, 0.2)',
-    transform: [{ scale: 1.1 }],
+    transform: [{ scale: 1.2 }],
   },
   studentImage: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
   },
   // Action bar
   actionLabel: {

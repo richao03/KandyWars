@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useRef, useState } from 'react';
 import {
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -96,8 +97,13 @@ function DeliTriviaModal({
           innerPadding={16}
           style={styles.modal}
         >
-          {/* Header */}
-          <View style={styles.header}>
+          <ScrollView
+            style={styles.modalScroll}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
             <Text style={styles.headerText}>Trivia Time!</Text>
             <Text style={styles.counterText}>Question {displayNumber}/3</Text>
           </View>
@@ -129,8 +135,8 @@ function DeliTriviaModal({
           </View>
 
           {/* Feedback */}
-          {answered && (
-            <View style={styles.feedbackContainer}>
+            {answered && (
+              <View style={styles.feedbackContainer}>
               <Text style={[
                 styles.feedbackText,
                 wasCorrect ? styles.correctFeedback : styles.wrongFeedback,
@@ -144,8 +150,9 @@ function DeliTriviaModal({
                   {displayNumber >= 3 ? 'Done' : 'Next'}
                 </Text>
               </TouchableOpacity>
-            </View>
-          )}
+              </View>
+            )}
+          </ScrollView>
         </PixelBorder>
       </View>
     </Modal>
@@ -163,6 +170,13 @@ const styles = StyleSheet.create({
   modal: {
     width: '100%',
     maxWidth: 400,
+    maxHeight: '90%',
+  },
+  modalScroll: {
+    flexShrink: 1,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',

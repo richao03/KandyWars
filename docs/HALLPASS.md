@@ -2,28 +2,39 @@
 
 ## Overview
 
-Hall passes are **permanent unlockable modifiers** that persist across games. Players earn them by hitting specific milestones, then select which ones to activate before starting a new game. Multiple passes can be active simultaneously, and their bonuses stack.
+Hall passes are **permanent unlockable modifiers** that persist across games. Players earn them by hitting specific milestones, then select which ones to activate before starting a new game. Multiple passes can be active simultaneously, and their bonuses stack — up to an **active-pass cap** (see below).
+
+---
+
+## Active Pass Limit
+
+A run can have at most **3 hall passes active at once** (`BASE_MAX_ACTIVE_HALL_PASSES` in `hallPassSlice.ts`). The cap is **data-driven and extensible**: any pass carrying an `extra_active_slot` effect widens it.
+
+- **Overachiever** (legendary) grants `extra_active_slot: 1`, raising the cap from 3 → 4. The expander itself occupies a slot, so a build with Overachiever runs *Overachiever + 3 others = 4 total*.
+- The effective cap is `getHallPassActiveLimit(passes)` = `3 + Σ(extra_active_slot values)`.
+- Enforced centrally in the `selectHallPass` reducer (the candidate pass is included in the limit calc, so an extension pass can always be added to raise its own cap). The selection modal (`app/components/HallPassModal.tsx`, the "Hall Pass Binder") mirrors this: it renders one backpack slot per allowed pass (filled slots show the pass icon and can be tapped to unclip), an `X/max` counter, and flashes the card red on a rejected tap past the cap.
+- Adding a new cap-extending pass requires **no code changes** beyond the pass definition — just give it an `extra_active_slot` effect.
 
 ---
 
 ## All Hall Passes
 
-### Common (White)
+### Common (White) — 2 passes
 
 | Pass | Unlock | Effects |
 |------|--------|---------|
 | **Not a Freshman** | Win the game once | +50% profit bonus on candy sales |
 | **Sophomore Swagger** | Win the game 3 times | +15 inventory slots |
 
-### Magical (Green)
+### Magical (Green) — 3 passes
 
 | Pass | Unlock | Effects |
 |------|--------|---------|
-| **Valedictorian Vendor** | Play every minigame at least once | +1 extra joker at selection screen |
+| **The Valedictorian** | Play every single minigame at least once | 50% chance to skip a minigame and go straight to a joker reward |
 | **Maximalist** | Deposit your entire wallet 4 times in one game | +1000% daily allowance |
 | **Junior Genius** | Win with $100,000+ profit | All jokers obtained start at Level 2 |
 
-### Rare (Blue)
+### Rare (Blue) — 3 passes
 
 | Pass | Unlock | Effects |
 |------|--------|---------|
@@ -31,7 +42,7 @@ Hall passes are **permanent unlockable modifiers** that persist across games. Pl
 | **Finance Club** | Win with $35,000+ in the piggy bank | 10% of previous day's profit added to daily allowance |
 | **Forged Pass** | Win with 8+ jokers | +1 reroll in joker selection |
 
-### Epic (Purple)
+### Epic (Purple) — 3 passes
 
 | Pass | Unlock | Effects |
 |------|--------|---------|
@@ -39,18 +50,18 @@ Hall passes are **permanent unlockable modifiers** that persist across games. Pl
 | **Inheritance** | Win with $50,000+ in the piggy bank | 10% of wallet transferred to piggy bank at start of each day |
 | **Candy Kingpin** | Win the game 10 times | +125% profit bonus, +100% daily allowance |
 
-### Legendary (Orange)
+### Legendary (Orange) — 8 passes
 
 | Pass | Unlock | Effects |
 |------|--------|---------|
 | **Minimalist Master** | Win without using any jokers | +150% profit bonus |
 | **High Roller** | Win and sell over 1,000 units of candy | +150% profit bonus, +15 inventory slots |
-| **Perfect Scholar** | Win on difficulty level 6 | +1000% daily allowance |
+| **Perfect Scholar** | Play 75 minigames (lifetime) | 75% chance to skip a minigame and go straight to a joker reward |
 | **Time Crunch** | Win with 50%+ profit from periods 1–4 | Start with medium candy unlocked |
 | **Final Exam** | Win with 50%+ profit from periods 7–8 | Period 8 = 15x profit, periods 1–7 = -75% profit |
-| **Speedrun Champion** | Win with fewer than 20 total sales | +100% sales profit |
-
-**Total: 17 hall passes** (2 Common, 3 Magical, 3 Rare, 3 Epic, 6 Legendary)
+| **Speedrun Champion** | Win a run with a single sale over $10,000 | +100% sales profit |
+| **Joker Monopoly** | Win 100 minigames (lifetime) | 90% chance to skip a minigame and go straight to a joker reward |
+| **Overachiever** | Win a run with 3 hall passes active | +1 active-pass slot (max active 3 → 4) |
 
 ---
 
@@ -62,23 +73,25 @@ No mutual exclusions currently.
 
 ## Effect Types
 
-Hall pass effects fall into 5 categories:
+Hall pass effects fall into these categories:
 
 | Type | Stacking | Examples |
 |------|----------|---------|
-| `sale_price_bonus` | Additive | Not a Freshman (+10), Senior Executive (+15), Candy Kingpin (+25) |
-| `inventory_bonus` | Additive | Sophomore Swagger (+15), Senior Executive (+10), High Roller (+15) |
+| `sale_price_bonus` | Additive | Not a Freshman (+10), Candy Kingpin (+25), Minimalist Master / High Roller (+30) |
+| `inventory_bonus` | Additive | Sophomore Swagger (+15), High Roller (+15) |
 | `allowance_bonus` | Additive (%) | Maximalist (+1000%), Candy Kingpin (+100%) |
-| `joker_bonus` | Additive | Valedictorian Vendor (+1) |
+| `joker_bonus` | Additive | (no pass currently uses this effect) |
+| `minigame_skip_chance` | Max (not sum) | The Valedictorian (0.5), Perfect Scholar (0.75), Joker Monopoly (0.9) |
+| `extra_active_slot` | Additive | Overachiever (+1 active-pass slot) — selection-time only, no in-game modifier |
 | `special` | Varies | Finance Club, Teacher's Pet, Time Crunch, Final Exam, etc. |
 
 ### Internal Value Multiplier
 
 Sale price bonus values use an internal multiplier of **5x** for display:
-- Internal value `10` = displayed as "+50% profit bonus"
-- Internal value `15` = displayed as "+75% profit bonus"
-- Internal value `25` = displayed as "+125% profit bonus"
-- Internal value `30` = displayed as "+150% profit bonus"
+- Internal value `10` = displayed as "+50% profit bonus" (Not a Freshman)
+- Internal value `20` = displayed as "+100% profit bonus" (Speedrun Champion, added via special)
+- Internal value `25` = displayed as "+125% profit bonus" (Candy Kingpin)
+- Internal value `30` = displayed as "+150% profit bonus" (Minimalist Master, High Roller)
 
 ---
 
@@ -94,6 +107,7 @@ interface HallPassModifiers {
   jokerBonusCount: number;         // Extra jokers at selection
   rerollBonusCount: number;        // Extra rerolls at selection
   salesMultiplier: number;         // Flat sales multiplier (default 1x)
+  minigameSkipChance: number;      // 0..1 — highest skip chance of selected passes
 }
 ```
 
@@ -101,6 +115,8 @@ Special passes get converted during computation:
 - **Speedrun Champion**: +20 to `salePriceBonusPercent` (displayed as +100%)
 - **Forged Pass**: +1 to `rerollBonusCount`
 - **Time Crunch**: Dispatches `unlockMediumCandies()` at game start (no modifier)
+
+Minigame-skip passes set `minigameSkipChance` to the **MAX** of their values (not the sum), so multiple skip passes share a single roll at the highest probability: The Valedictorian (0.5), Perfect Scholar (0.75), Joker Monopoly (0.9).
 
 ---
 
@@ -142,8 +158,8 @@ Rewards patience — stockpile candy and dump everything in the last period.
 
 1. Player taps "New Game" on the title screen
 2. If any passes are unlocked, the Hall Pass Modal opens in selection mode
-3. Player toggles passes on/off with checkboxes
-4. Accumulated effects are previewed at the bottom of the modal
+3. Player toggles passes on/off with checkboxes, up to the active-pass cap (default 3, see [Active Pass Limit](#active-pass-limit)). Taps beyond the cap are ignored.
+4. Accumulated effects are previewed at the bottom of the modal, alongside an `X / max` selected counter
 5. Player taps "Let's go!" to proceed to difficulty selection
 6. `computeHallPassModifiers()` runs on the selected passes
 7. Modifiers are dispatched to `hallPassModifiersSlice` and applied throughout the game
@@ -156,7 +172,7 @@ Selected passes are preserved across game resets — the player doesn't have to 
 
 | File | Purpose |
 |------|---------|
-| `src/store/slices/hallPassSlice.ts` | All 17 pass definitions, Redux state, unlock/select reducers |
+| `src/store/slices/hallPassSlice.ts` | All 19 pass definitions, Redux state, unlock/select reducers |
 | `src/store/slices/hallPassModifiersSlice.ts` | Computed modifier state for active game |
 | `src/hooks/useHallPass.ts` | Hook: unlock checks, effect getters, bonus application |
 | `src/utils/computeHallPassModifiers.ts` | Combines selected passes into modifier object |

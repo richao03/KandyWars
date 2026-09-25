@@ -52,7 +52,7 @@ export default function DayStatsModal({
       <PixelBorder
         borderColor="#d4af37"
         borderWidth={3}
-        backgroundColor="rgba(255, 255, 255, 0.95)"
+        backgroundColor="#ffffff"
         innerPadding={24}
       >
         <PixelBorder
@@ -223,8 +223,6 @@ export default function DayStatsModal({
 
 const styles = StyleSheet.create({
   modal: {
-    backgroundColor: '#fefaf5',
-    borderRadius: 24,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',

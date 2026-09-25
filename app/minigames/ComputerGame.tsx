@@ -13,15 +13,13 @@ import { useMinigameTracking } from '../../src/hooks/useMinigameTracking';
 import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
-import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
-import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MemoryCard {
   id: string;
@@ -570,7 +568,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -589,23 +587,16 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
 
   return (
     <>
-      <View
-        style={[
-          styles.container,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
+      <MinigameScaffold
+        theme="computer"
+        title="Hack the System"
+        subtitle="Match the tech pairs to infiltrate the network!"
+        leftInfo={`Level ${level}/3`}
+        centerInfo={`❌: ${turns}/${maxTurns}`}
+        rightInfo="hax0rs"
+        backgroundColor="#0a0e1a"
+        onLeave={handleForfeit}
       >
-        <MinigameHUD
-          theme="computer"
-          title="Hack the System"
-          subtitle="Match the tech pairs to infiltrate the network!"
-          leftInfo={`Level ${level}/3`}
-          centerInfo={`❌: ${turns}/${maxTurns}`}
-          rightInfo={'hax0rs'}
-        />
 
         <View style={styles.gameContainer}>
           {level === 3 ? (
@@ -734,37 +725,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
             </View>
           )}
         </View>
-
-        <View
-          style={[
-            styles.bottomButtons,
-            {
-              gap: ResponsiveSpacing.buttonGap(),
-              paddingVertical: ResponsiveSpacing.buttonPadding(),
-            },
-          ]}
-        >
-          <PixelBorder
-            borderColor="#00d4ff"
-            borderWidth={3}
-            backgroundColor="#16213e"
-            innerPadding={0}
-            style={{ flex: 1 }}
-          >
-            <TouchableOpacity
-              style={styles.instructionsButtonInner}
-              onPress={handleForfeit}
-            >
-              <TextWithEmojis
-                style={styles.instructionsButtonText}
-                imageSize={28}
-              >
-                🚪 Leave
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
-        </View>
-      </View>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -926,6 +887,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     paddingVertical: 16,
+    marginBottom: 16,
   },
   // Joker Selection Styles
   jokerContainer: {

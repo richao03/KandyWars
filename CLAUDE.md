@@ -79,9 +79,9 @@ after day 5 → /game-end
 ```
 
 ### Event System
-Pre-generated per seed. Protection has priority (consumed on use):
-- `LOSE_MONEY`: Medieval Shield (joker) > 6th Grade Bodyguard (merchant)
-- `STASH_LOCKED`: Secret Hideout (joker) > Hall Monitor Bribe (merchant); Teacher's Pet hall pass reduces to 25% loss
+Pre-generated per seed. Protection has priority — the **Safe House** joker (#67) is a persistent aura (NOT consumed) checked first; merchant items are consumed on use:
+- `LOSE_MONEY`: Safe House (joker) > Kid Guard (`sixth_grade_bodyguard` merchant)
+- `STASH_LOCKED`: Safe House (joker) > Monitor Bribe (`hall_monitor_bribe` merchant); Teacher's Pet hall pass reduces to 25% loss. At most one confiscation per day.
 
 ### Win Condition
 `balance + stashedAmount >= 0` at end of day 5 (adoption fee starts as negative debt).

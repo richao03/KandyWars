@@ -41,6 +41,7 @@ interface GameState {
   bulkEmpireDailySales: number; // Bulk Empire: candy count for current day
   bulkEmpireLastDay: number; // Bulk Empire: last day stacks were checked
   showLunchMinigames: boolean; // UI flag: lunch minigames menu open (transient — blacklisted from redux-persist)
+  adoptionPromptDismissed: boolean; // Player chose "Continue" on the early-adoption prompt this run
 }
 
 const initialState: GameState = {
@@ -69,6 +70,7 @@ const initialState: GameState = {
   bulkEmpireDailySales: 0,
   bulkEmpireLastDay: 1,
   showLunchMinigames: false,
+  adoptionPromptDismissed: false,
 };
 
 const gameSlice = createSlice({
@@ -268,6 +270,9 @@ const gameSlice = createSlice({
         state.bulkEmpireStacks += (newStacks - oldStacks);
       }
     },
+    dismissAdoptionPrompt: (state) => {
+      state.adoptionPromptDismissed = true;
+    },
     setShowLunchMinigames: (state, action: PayloadAction<boolean>) => {
       state.showLunchMinigames = action.payload;
     },
@@ -359,6 +364,7 @@ export const {
   unlockBigCandies,
   addBulkEmpireSales,
   setShowLunchMinigames,
+  dismissAdoptionPrompt,
 } = gameSlice.actions;
 
 export const selectBulkEmpireStacks = (state: any) => state.game?.bulkEmpireStacks ?? 0;

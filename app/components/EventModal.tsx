@@ -21,11 +21,11 @@ import ReAnimated, {
 } from 'react-native-reanimated';
 import colors from '../../src/constants/colors';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
-import { useJokers, Joker as JokerType } from '../../src/hooks/useJokers';
+import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useWallet } from '../../src/hooks/useWallet';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import { StandardizedJoker, getJokerEffectsAtLevel } from '../../src/utils/jokerEffectEngine';
+import { StandardizedJoker } from '../../src/utils/jokerEffectEngine';
 import { formatCurrency } from '../../src/utils/priceUtils';
+import { SoundEffects } from '../../src/utils/soundEffects';
 import JokerCard from './JokerCard';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -83,11 +83,16 @@ const AnimatedMoneyCounter = ({
   prefix = '$',
 }) => {
   const animatedValue = useSharedValue(startValue);
-  const [displayText, setDisplayText] = useState(`${prefix}${formatCurrency(startValue)}`);
+  const [displayText, setDisplayText] = useState(
+    `${prefix}${formatCurrency(startValue)}`
+  );
 
-  const updateDisplay = useCallback((val: number) => {
-    setDisplayText(`${prefix}${formatCurrency(val)}`);
-  }, [prefix]);
+  const updateDisplay = useCallback(
+    (val: number) => {
+      setDisplayText(`${prefix}${formatCurrency(val)}`);
+    },
+    [prefix]
+  );
 
   useEffect(() => {
     if (isActive) {
@@ -115,10 +120,21 @@ const AnimatedMoneyCounter = ({
     }
   );
 
+  // Stepped font shrink so long amounts never overflow the row (mirrors the
+  // Wallet pill in GameHUD). adjustsFontSizeToFit is a backstop for the rest.
+  const len = displayText.length;
+  const fontSize =
+    len <= 8 ? 24 : len <= 10 ? 20 : len <= 12 ? 17 : len <= 14 ? 15 : 13;
+
   return (
     <Text
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.5}
       style={{
-        fontSize: 24,
+        flexShrink: 1,
+        fontSize,
+        lineHeight: fontSize,
         fontWeight: 'bold',
         color: colors.white,
         textAlign: 'center',
@@ -147,7 +163,9 @@ const EventModal = React.memo(function EventModal() {
   const [finalAmount, setFinalAmount] = useState(0);
   // Detention Discovery state
   const [showDetentionDiscovery, setShowDetentionDiscovery] = useState(false);
-  const [detentionChoices, setDetentionChoices] = useState<StandardizedJoker[]>([]);
+  const [detentionChoices, setDetentionChoices] = useState<StandardizedJoker[]>(
+    []
+  );
   const [detentionChosen, setDetentionChosen] = useState(false);
 
   // Ref to hold the latest currentEvent so Reanimated worklet callbacks
@@ -267,7 +285,10 @@ const EventModal = React.memo(function EventModal() {
       } else {
         // For GOOD/NEUTRAL events: Smooth fade in and scale up
         fadeAnim.value = withTiming(1, { duration: 800 });
-        scaleAnim.value = withTiming(1, { duration: 800, easing: Easing.out(Easing.back(1.5)) });
+        scaleAnim.value = withTiming(1, {
+          duration: 800,
+          easing: Easing.out(Easing.back(1.5)),
+        });
 
         // If it's a money-gaining event, start count-up animation and play positive sound
         if (isMoneyGainingEvent) {
@@ -321,42 +342,48 @@ const EventModal = React.memo(function EventModal() {
     };
   }, [currentEvent]);
 
-  const handleDetentionClaim = useCallback((joker: StandardizedJoker) => {
-    if (detentionChosen) return;
+  const handleDetentionClaim = useCallback(
+    (joker: StandardizedJoker) => {
+      if (detentionChosen) return;
 
-    const isOneTime = joker.type === 'one-time';
+      const isOneTime = joker.type === 'one-time';
 
-    // Block persistent jokers if slots are full — but still allow dismissal
-    if (!isOneTime && !canAddPersistentJoker()) {
-      // Can't add this joker, but don't silently block — just skip it
-      if (__DEV__) console.log('Detention: Aura slots full, cannot claim persistent joker');
-      return;
-    }
+      // Block persistent jokers if slots are full — but still allow dismissal
+      if (!isOneTime && !canAddPersistentJoker()) {
+        // Can't add this joker, but don't silently block — just skip it
+        if (__DEV__)
+          console.log(
+            'Detention: Aura slots full, cannot claim persistent joker'
+          );
+        return;
+      }
 
-    const jokerToAdd: JokerType = {
-      id: joker.id,
-      name: joker.name,
-      description: joker.description,
-      type: isOneTime ? 'one-time' : 'persistent',
-      effect: '',
-      effects: joker.effects,
-      level: 1,
-    };
+      const jokerToAdd: JokerType = {
+        id: joker.id,
+        name: joker.name,
+        description: joker.description,
+        type: isOneTime ? 'one-time' : 'persistent',
+        effect: '',
+        effects: joker.effects,
+        level: 1,
+      };
 
-    addJoker(jokerToAdd, 'event');
-    setDetentionChosen(true);
-    SoundEffects.playPositiveSound();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      addJoker(jokerToAdd, 'event');
+      setDetentionChosen(true);
+      SoundEffects.playPositiveSound();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Auto-dismiss after a short delay
-    const detentionTimeout = setTimeout(() => {
-      setShowDetentionDiscovery(false);
-      setDetentionChoices([]);
-      setDetentionChosen(false);
-      dismissEvent();
-    }, 1200);
-    animationTimeouts.current.push(detentionTimeout);
-  }, [detentionChosen, addJoker, canAddPersistentJoker, dismissEvent]);
+      // Auto-dismiss after a short delay
+      const detentionTimeout = setTimeout(() => {
+        setShowDetentionDiscovery(false);
+        setDetentionChoices([]);
+        setDetentionChosen(false);
+        dismissEvent();
+      }, 1200);
+      animationTimeouts.current.push(detentionTimeout);
+    },
+    [detentionChosen, addJoker, canAddPersistentJoker, dismissEvent]
+  );
 
   const handleDismissCleanup = useCallback(() => {
     // Reset all animation state
@@ -384,7 +411,11 @@ const EventModal = React.memo(function EventModal() {
     }
 
     if (event?.hasJokerDrop && event?.detentionJokerChoices?.length > 0) {
-      if (__DEV__) console.log('🎲 DETENTION: Showing joker selection!', event.detentionJokerChoices.map((j: any) => j.name));
+      if (__DEV__)
+        console.log(
+          '🎲 DETENTION: Showing joker selection!',
+          event.detentionJokerChoices.map((j: any) => j.name)
+        );
       setDetentionChoices(event.detentionJokerChoices);
       setShowDetentionDiscovery(true);
       setDetentionChosen(false);
@@ -418,42 +449,44 @@ const EventModal = React.memo(function EventModal() {
   }));
 
   const containerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scaleAnim.value },
-      { translateX: shakeAnim.value },
-    ],
+    transform: [{ scale: scaleAnim.value }, { translateX: shakeAnim.value }],
   }));
 
   // Show Detention Discovery joker selection overlay
-  if (__DEV__) console.log('🎲 DETENTION RENDER CHECK:', { showDetentionDiscovery, choicesLength: detentionChoices.length, currentEventExists: !!currentEvent });
+  if (__DEV__)
+    console.log('🎲 DETENTION RENDER CHECK:', {
+      showDetentionDiscovery,
+      choicesLength: detentionChoices.length,
+      currentEventExists: !!currentEvent,
+    });
   if (showDetentionDiscovery && detentionChoices.length > 0) {
     if (__DEV__) console.log('🎲 DETENTION: Rendering joker selection UI!');
     return (
       <View
-        style={[styles.modalOverlay, { opacity: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)' }]}
+        style={[
+          styles.modalOverlay,
+          { opacity: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)' },
+        ]}
         pointerEvents="auto"
       >
         <View style={styles.centeredContainer}>
           <PixelBorder
             borderColor="#d4af37"
             borderWidth={4}
-            backgroundColor="#00512C"
+            backgroundColor="#1a1a1a"
             innerPadding={0}
             style={{ width: '90%', maxWidth: 400, maxHeight: '90%' }}
+            contentStyle={styles.detentionModalFrame}
           >
-            <View style={{ padding: 20 }}>
-              <Text style={styles.detentionTitle}>
-                Detention Discovery!
-              </Text>
+            <View style={styles.detentionModalContent}>
+              <Text style={styles.detentionTitle}>Discovery!</Text>
               <Text style={styles.detentionSubtitle}>
                 While hiding, you found something interesting...
               </Text>
-              <Text style={styles.detentionInstruction}>
-                Pick one to keep:
-              </Text>
+              <Text style={styles.detentionInstruction}>Pick one to keep:</Text>
 
               <ScrollView
-                style={{ maxHeight: 400 }}
+                style={styles.detentionChoices}
                 contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
               >
                 {detentionChoices.map((joker) => (
@@ -462,16 +495,19 @@ const EventModal = React.memo(function EventModal() {
                     joker={{
                       id: Number(joker.id),
                       name: joker.name,
-                      type: joker.type === 'one-time' ? 'one-time' : 'persistent',
+                      type:
+                        joker.type === 'one-time' ? 'one-time' : 'persistent',
                       flavorText: (joker as any).flavorText || '',
                       description: joker.description,
                     }}
                     isAfterSchool={false}
-                    isCompact={true}
+                    variant="poster"
                     showOwned={false}
                     disableActivation={true}
                     onPress={
-                      detentionChosen ? undefined : () => handleDetentionClaim(joker)
+                      detentionChosen
+                        ? undefined
+                        : () => handleDetentionClaim(joker)
                     }
                     selectionDisabled={detentionChosen}
                   />
@@ -479,15 +515,18 @@ const EventModal = React.memo(function EventModal() {
               </ScrollView>
 
               {detentionChosen && (
-                <Text style={styles.detentionClaimedText}>
-                  Nice find!
-                </Text>
+                <Text style={styles.detentionClaimedText}>Nice find!</Text>
               )}
 
               {/* Skip/close button — always available as escape hatch */}
               {!detentionChosen && (
                 <TouchableOpacity
-                  style={{ marginTop: 12, alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16 }}
+                  style={{
+                    marginTop: 12,
+                    alignSelf: 'center',
+                    paddingVertical: 8,
+                    paddingHorizontal: 16,
+                  }}
                   onPress={() => {
                     setShowDetentionDiscovery(false);
                     setDetentionChoices([]);
@@ -495,7 +534,15 @@ const EventModal = React.memo(function EventModal() {
                     dismissEvent();
                   }}
                 >
-                  <Text style={{ color: '#d4af37', fontSize: 12, fontFamily: 'PixeloidMono' }}>Skip</Text>
+                  <Text
+                    style={{
+                      color: '#d4af37',
+                      fontSize: 12,
+                      fontFamily: 'PixeloidMono',
+                    }}
+                  >
+                    Skip
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -524,10 +571,7 @@ const EventModal = React.memo(function EventModal() {
       />
 
       <ReAnimated.View
-        style={[
-          styles.centeredContainer,
-          containerAnimatedStyle,
-        ]}
+        style={[styles.centeredContainer, containerAnimatedStyle]}
       >
         {currentEvent.backgroundImage ? (
           <PixelBorder
@@ -703,10 +747,16 @@ const EventModal = React.memo(function EventModal() {
                             style={{ marginTop: 12 }}
                           >
                             <Text style={styles.moneyChangeLabel}>
-                              Lost: -${formatCurrency(startAmount - finalAmount)}
+                              Lost: -$
+                              {formatCurrency(startAmount - finalAmount)}
                             </Text>
                             <View style={styles.moneyCountdownContainer}>
-                              <Text style={styles.moneyLabel}>
+                              <Text
+                                style={styles.moneyLabel}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.5}
+                              >
                                 ${formatCurrency(startAmount)} →
                               </Text>
                               <AnimatedMoneyCounter
@@ -728,10 +778,16 @@ const EventModal = React.memo(function EventModal() {
                           style={{ marginTop: 12 }}
                         >
                           <Text style={styles.moneyGainLabel}>
-                            Gained: +${formatCurrency(finalAmount - startAmount)}
+                            Gained: +$
+                            {formatCurrency(finalAmount - startAmount)}
                           </Text>
                           <View style={styles.moneyGainContainer}>
-                            <Text style={styles.moneyLabel}>
+                            <Text
+                              style={styles.moneyLabel}
+                              numberOfLines={1}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.5}
+                            >
                               ${formatCurrency(startAmount)} →
                             </Text>
                             <AnimatedMoneyCounter
@@ -849,7 +905,12 @@ const EventModal = React.memo(function EventModal() {
                         Lost: -${formatCurrency(startAmount - finalAmount)}
                       </Text>
                       <View style={styles.moneyCountdownContainer}>
-                        <Text style={styles.moneyLabel}>
+                        <Text
+                          style={styles.moneyLabel}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.5}
+                        >
                           ${formatCurrency(startAmount)} →
                         </Text>
                         <AnimatedMoneyCounter
@@ -873,7 +934,12 @@ const EventModal = React.memo(function EventModal() {
                         Gained: +${formatCurrency(finalAmount - startAmount)}
                       </Text>
                       <View style={styles.moneyGainContainer}>
-                        <Text style={styles.moneyLabel}>
+                        <Text
+                          style={styles.moneyLabel}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.5}
+                        >
                           ${formatCurrency(startAmount)} →
                         </Text>
                         <AnimatedMoneyCounter
@@ -1055,6 +1121,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   moneyLabel: {
+    flexShrink: 1,
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.white,
@@ -1084,6 +1151,18 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   // Detention Discovery styles — matches joker tab color scheme
+  detentionModalFrame: {
+    flexShrink: 1,
+    overflow: 'hidden',
+  },
+  detentionModalContent: {
+    flexShrink: 1,
+    padding: 20,
+  },
+  detentionChoices: {
+    flexShrink: 1,
+    maxHeight: 400,
+  },
   detentionTitle: {
     fontSize: 22,
     fontWeight: 'bold',

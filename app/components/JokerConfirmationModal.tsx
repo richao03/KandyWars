@@ -40,7 +40,12 @@ export default function JokerConfirmationModal({
       backdropOpacity={0.5}
       modalStyle={styles.modal}
     >
-      <>
+      <PixelBorder
+        borderColor="#d4af37"
+        borderWidth={3}
+        backgroundColor="#1a1a1a"
+        innerPadding={24}
+      >
         <View style={{ alignItems: 'center' }}>
           <TextWithEmojis style={styles.emoji} imageSize={54}>
             {emoji}
@@ -100,21 +105,16 @@ export default function JokerConfirmationModal({
             </PixelBorder>
           </PressableButton>
         )}
-      </>
+      </PixelBorder>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   modal: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 24,
     width: '90%',
     maxWidth: 400,
     alignSelf: 'center',
-    borderWidth: 2,
-    borderColor: '#d4af37',
   },
   emoji: {
     textAlign: 'center',

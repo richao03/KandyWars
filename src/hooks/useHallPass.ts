@@ -165,6 +165,7 @@ export const useHallPass = () => {
         earlyPeriodProfit?: number; // Profit from periods 1-4 (Time Crunch unlock)
         latePeriodProfit?: number; // Profit from periods 7-8 (Final Exam unlock)
         transactionCount?: number; // Number of sales transactions (Speedrun Champion unlock)
+        activePassCount?: number; // Hall passes active this run (Overachiever unlock)
       },
       minigameTrackingData?: {
         hasPlayedAllMinigames: boolean;
@@ -296,6 +297,17 @@ export const useHallPass = () => {
               gameStats.stashedAmount &&
               gameStats.stashedAmount >= 50000 &&
               gameStats.completions > 0
+            ) {
+              newUnlocks.push(pass.id);
+            }
+            break;
+          case 'overachiever':
+            // Unlock if the player won this run with 3 hall passes active
+            // (the base cap) — earning the slot to carry a 4th.
+            if (
+              gameStats.finalProfit >= 0 &&
+              gameStats.activePassCount !== undefined &&
+              gameStats.activePassCount >= 3
             ) {
               newUnlocks.push(pass.id);
             }

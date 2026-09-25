@@ -8,8 +8,9 @@ export interface HallPassEffect {
     | 'allowance_bonus'
     | 'joker_bonus'
     | 'minigame_skip_chance'
+    | 'extra_active_slot'
     | 'special';
-  value: number; // percentage, flat amount, or 0..1 chance for minigame_skip_chance
+  value: number; // percentage, flat amount, 0..1 chance, or extra active-pass slots
   description: string;
 }
 
@@ -31,6 +32,31 @@ interface HallPassState {
   isLoaded: boolean;
   newlyUnlockedPassIds: string[]; // Hall passes unlocked in the current playthrough
 }
+
+/**
+ * Base number of hall passes that can be active (selected) at the same time.
+ * The effective cap can be widened by passes carrying `extra_active_slot`
+ * effects — see `getHallPassActiveLimit`.
+ */
+export const BASE_MAX_ACTIVE_HALL_PASSES = 3;
+
+/**
+ * Effective active-pass cap for a given set of passes: the base limit plus any
+ * `extra_active_slot` bonuses the passes themselves grant (e.g. an "extension"
+ * pass that raises the cap from 3 → 4). Extensible — any future pass with an
+ * `extra_active_slot` effect widens the cap automatically.
+ */
+export const getHallPassActiveLimit = (
+  passes: { effects: HallPassEffect[] }[]
+): number =>
+  passes.reduce(
+    (limit, pass) =>
+      limit +
+      pass.effects
+        .filter((e) => e.type === 'extra_active_slot')
+        .reduce((sum, e) => sum + e.value, 0),
+    BASE_MAX_ACTIVE_HALL_PASSES
+  );
 
 // Define all possible Hall Passes
 // Sorted by rarity: Common → Magical → Rare → Epic → Legendary
@@ -119,7 +145,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       {
         type: 'special',
         value: 2000,
-        description: 'Start the game with $2,000 instead of $200',
+        description: 'Start the game with $2,000 instead of $20',
       },
     ],
     rarity: 'rare',
@@ -305,6 +331,20 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
         type: 'minigame_skip_chance',
         value: 0.9,
         description: 'Skip a minigame and go straight to a joker reward (90% chance)',
+      },
+    ],
+    rarity: 'legendary',
+  },
+  {
+    id: 'overachiever',
+    name: 'Overachiever',
+    description: 'Why stop at three when you can carry four?',
+    unlockRequirement: 'Win the game with 3 hall passes active',
+    effects: [
+      {
+        type: 'extra_active_slot',
+        value: 1,
+        description: 'Carry one extra hall pass (max active 3 → 4)',
       },
     ],
     rarity: 'legendary',
@@ -521,6 +561,18 @@ const hallPassSlice = createSlice({
         );
         if (__DEV__) console.log(`🎖️ REDUCER: Removed ${passId} from selection`);
       } else {
+        // Enforce the active-pass cap. The candidate pass is included in the
+        // limit calc so an extension pass can always raise its own cap.
+        const passesForLimit = state.availablePasses.filter(
+          (p) => state.selectedPassIds.includes(p.id) || p.id === passId
+        );
+        const limit = getHallPassActiveLimit(passesForLimit);
+        if (state.selectedPassIds.length >= limit) {
+          if (__DEV__) console.log(
+            `🎖️ REDUCER: At active cap (${limit}) — not adding ${passId}`
+          );
+          return;
+        }
         state.selectedPassIds.push(passId);
         if (__DEV__) console.log(`🎖️ REDUCER: Added ${passId} to selection`);
       }
@@ -618,6 +670,13 @@ export const selectSelectedHallPasses = createSelector(
 export const selectSelectedHallPass = createSelector(
   [selectSelectedHallPasses],
   (selectedPasses) => selectedPasses[0] || null
+);
+
+// Effective number of hall passes that can be active at once, accounting for
+// any selected pass that grants extra slots (e.g. Overachiever: 3 → 4).
+export const selectMaxActiveHallPasses = createSelector(
+  [selectSelectedHallPasses],
+  (selectedPasses) => getHallPassActiveLimit(selectedPasses)
 );
 
 // Memoized factory selector for finding hall pass by ID

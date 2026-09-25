@@ -237,7 +237,13 @@ export default function DifficultySelectionModal({
       modalStyle={styles.modalContainer}
       preMount
     >
-      <PixelBorder borderColor={'#d4a574'} borderWidth={3} innerPadding={0}>
+      <PixelBorder
+        borderColor="#d4a574"
+        borderWidth={3}
+        backgroundColor="#ffffff"
+        innerPadding={0}
+        style={styles.modalPixelFrame}
+      >
         <View style={styles.modalContent}>
           <View style={styles.innerContent}>
             <Text style={styles.title}>Choose your pet!</Text>
@@ -372,6 +378,10 @@ const styles = StyleSheet.create({
     width: '95%',
     maxWidth: 500,
     maxHeight: '85%',
+  },
+  modalPixelFrame: {
+    width: '100%',
+    maxHeight: '100%',
   },
   modalContent: {
     padding: 0,

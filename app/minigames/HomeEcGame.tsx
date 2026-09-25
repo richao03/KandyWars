@@ -22,7 +22,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -499,7 +499,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (gameState === 'playing') {
       showModal(
-        'Leave Candy Cook?',
+        'Leave Candy Sort?',
         'Are you sure you want to leave?',
         '🚪',
         () => {
@@ -528,7 +528,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
   if (gameState === 'instructions') {
     return (
       <View style={styles.instructionsContainer}>
-        <Text style={styles.instructionsTitle}>Candy Cook</Text>
+        <Text style={styles.instructionsTitle}>Candy Sort</Text>
 
         <PixelBorder
           borderColor="#7fc69e"
@@ -594,7 +594,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             innerPadding={0}
           >
             <View style={styles.pixelButtonInner}>
-              <Text style={styles.startGameButtonText}>Start Cooking!</Text>
+              <Text style={styles.startGameButtonText}>Start Sorting!</Text>
             </View>
           </PixelBorder>
         </PressableButton>
@@ -608,7 +608,12 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginTop: 'auto', marginBottom: 16, width: '100%' }}
+          style={{
+            marginTop: 'auto',
+            marginBottom: 16,
+            width: '100%',
+            paddingHorizontal: 20,
+          }}
         >
           <PixelBorder
             borderColor="#999"
@@ -629,26 +634,17 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
 
   return (
     <>
-      <View
-        style={[
-          styles.container,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
+      <MinigameScaffold
+        theme="homeec"
+        title="Candy Sort"
+        subtitle="Sort ingredients to their designated stations"
+        leftInfo={`Level ${level}/3`}
+        centerInfo={`🎯: ${score}/${levelConfig.matches}`}
+        rightInfo={`Time: ${timeLeft}s`}
+        backgroundColor="#e891a5"
+        onLeave={handleForfeit}
       >
         <GestureHandlerRootView style={styles.gameContainer}>
-          {/* Header */}
-          <MinigameHUD
-            theme="homeec"
-            title="Candy Cook"
-            subtitle="Sort ingredients to their designated stations"
-            leftInfo={`Level ${level}/3`}
-            centerInfo={`🎯: ${score}/${levelConfig.matches}`}
-            rightInfo={`Time: ${timeLeft}s`}
-          />
-
           {/* Game Area - Center Panel */}
           <GestureDetector gesture={panGesture}>
             <View style={styles.gameArea}>
@@ -717,33 +713,8 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
             </View>
           </GestureDetector>
 
-          {/* Footer - Bottom Buttons */}
-          <View
-            style={[
-              styles.footer,
-              {
-                gap: ResponsiveSpacing.buttonGap(),
-                paddingVertical: ResponsiveSpacing.buttonPadding(),
-              },
-            ]}
-          >
-            <PixelBorder
-              borderColor="#7fc69e"
-              borderWidth={3}
-              backgroundColor="#fff4e6"
-              innerPadding={0}
-              style={{ flex: 1 }}
-            >
-              <TouchableOpacity
-                style={styles.leaveBtnInner}
-                onPress={handleForfeit}
-              >
-                <Text style={styles.footerBtnText}>🚪 Leave</Text>
-              </TouchableOpacity>
-            </PixelBorder>
-          </View>
         </GestureHandlerRootView>
-      </View>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -837,7 +808,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
     elevation: 10,
-    minHeight: 400,
+    minHeight: 200, // floor only; flex:1 shrinks it to fit short screens
   },
   edgeCandy: {
     position: 'absolute',

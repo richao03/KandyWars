@@ -132,4 +132,26 @@ describe('Price Generation', () => {
       expect(gameData.candyPrices[name]).toBeDefined();
     });
   });
+
+  it('difficulty > 3 shuffles price ranges only WITHIN size groups (a small candy never inherits a big candy range)', () => {
+    // Regression: the difficulty>3 shuffle used to be global/cross-size, so a
+    // "small" candy like Jolly Ranchers could be handed Taffy's $500–$1,000
+    // range. The shuffle must stay within size groups so small stays cheap.
+    const hard = generateSeededGameData(SEED, TOTAL_PERIODS, 5);
+
+    (['small', 'medium', 'big'] as const).forEach((size) => {
+      const groupMaxBaseMax = Math.max(
+        ...CANDY_REGISTRY.filter((c) => c.size === size).map((c) => c.baseMax)
+      );
+      // Generous headroom for day-scaling + the periodMax size-floor; the bug
+      // produced values orders of magnitude above this (small tier max is $20).
+      const ceiling = groupMaxBaseMax * 3;
+
+      CANDY_REGISTRY.filter((c) => c.size === size).forEach((candy) => {
+        hard.candyPrices[candy.name].forEach((price) => {
+          expect(price).toBeLessThanOrEqual(ceiling);
+        });
+      });
+    });
+  });
 });

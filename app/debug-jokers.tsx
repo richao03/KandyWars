@@ -12,6 +12,7 @@ import {
 import { useJokers } from '../src/hooks/useJokers';
 import { STANDARDIZED_JOKERS } from '../src/utils/jokerEffectEngine';
 import { JOKER_ICON_MAP } from '../utils/jokerIcons';
+import JokerCard from './components/JokerCard';
 import PixelBorder from './components/PixelBorder';
 
 export default function DebugJokersScreen() {
@@ -34,7 +35,24 @@ export default function DebugJokersScreen() {
     );
   }, [query]);
 
-  const handleAdd = (joker: typeof STANDARDIZED_JOKERS[number]) => {
+  const previewJoker = useMemo(() => {
+    const joker =
+      STANDARDIZED_JOKERS.find((item) => item.name === 'King Size') ||
+      STANDARDIZED_JOKERS[0];
+    return {
+      id: Number(joker.id),
+      name: joker.name,
+      type:
+        joker.type === 'one-time'
+          ? ('one-time' as const)
+          : ('persistent' as const),
+      flavorText: joker.flavorText || '',
+      description: joker.description,
+      level: 2,
+    };
+  }, []);
+
+  const handleAdd = (joker: (typeof STANDARDIZED_JOKERS)[number]) => {
     addJoker({ ...joker, id: joker.id.toString(), level: 1 }, 'event');
   };
 
@@ -52,7 +70,8 @@ export default function DebugJokersScreen() {
       </View>
 
       <Text style={styles.subtitle}>
-        Owned: {jokers.length} • Tap a joker to add it. Tap an owned one to remove.
+        Owned: {jokers.length} • Tap a joker to add it. Tap an owned one to
+        remove.
       </Text>
 
       <TextInput
@@ -64,14 +83,60 @@ export default function DebugJokersScreen() {
         autoCorrect={false}
       />
 
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+      <ScrollView
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+      >
+        <Text style={styles.previewTitle}>Card System Preview</Text>
+        <Text style={styles.previewLabel}>POSTER · DISCOVERY / FEATURED</Text>
+        <JokerCard
+          joker={previewJoker}
+          isAfterSchool={false}
+          variant="poster"
+          disableActivation
+        />
+
+        <Text style={styles.previewLabel}>STRIP · OWNED / ACTIVE</Text>
+        <JokerCard
+          joker={previewJoker}
+          isAfterSchool={false}
+          variant="strip"
+          disableActivation
+          isSelected
+        />
+
+        <Text style={styles.previewLabel}>TILE · COLLECTION / UPGRADE</Text>
+        <View style={styles.previewTileRow}>
+          <View style={styles.previewTile}>
+            <JokerCard
+              joker={previewJoker}
+              isAfterSchool={false}
+              variant="tile"
+              disableActivation
+              showOwned
+            />
+          </View>
+          <View style={styles.previewTile}>
+            <JokerCard
+              joker={{ ...previewJoker, type: 'one-time' }}
+              isAfterSchool={false}
+              variant="tile"
+              disableActivation
+              selectionDisabled
+            />
+          </View>
+        </View>
+
+        <View style={styles.previewDivider} />
         {filtered.map((joker) => {
           const owned = ownedIds.has(joker.id.toString());
           const icon = JOKER_ICON_MAP[joker.name];
           return (
             <Pressable
               key={joker.id}
-              onPress={() => (owned ? handleRemove(joker.id) : handleAdd(joker))}
+              onPress={() =>
+                owned ? handleRemove(joker.id) : handleAdd(joker)
+              }
               style={({ pressed }) => [
                 { opacity: pressed ? 0.7 : 1 },
                 styles.itemWrap,
@@ -178,6 +243,37 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 30,
     gap: 6,
+  },
+  previewTitle: {
+    marginTop: 4,
+    fontSize: 16,
+    color: '#5d4e37',
+    fontFamily: 'PixeloidMono',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  previewLabel: {
+    marginTop: 8,
+    marginBottom: 2,
+    fontSize: 9,
+    color: '#8b5a3c',
+    fontFamily: 'PixeloidMono',
+    textAlign: 'center',
+  },
+  previewTileRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  previewTile: {
+    width: 160,
+    height: 166,
+  },
+  previewDivider: {
+    height: 2,
+    marginVertical: 14,
+    backgroundColor: '#d4a574',
   },
   itemWrap: {
     marginBottom: 6,

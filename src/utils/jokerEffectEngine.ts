@@ -65,7 +65,7 @@ export type EffectTarget =
   | 'minimalist_boost' // Minimalist — big bonus if exactly 3 jokers
   | 'lucky_seven_boost' // Lucky 7 — bonus during every 7th period
   | 'night_owl_boost' // Night Owl — bonus in last period
-  | 'tax_collector_boost' // Tax Collector — % of sale as bonus
+  | 'tax_collector_boost' // Tax Collector — % of profit as bonus
   | 'last_stand_boost' // Last Stand — huge bonus when selling < 5 candy
   | 'momentum_boost' // Momentum — bonus per consecutive sale period
   | 'diversifier_boost' // Diversifier — bonus when selling 3+ types same period
@@ -298,14 +298,25 @@ export class JokerEffectEngine {
   }
 }
 
-// Helper to get effects for a joker at a given level
+// Helper to get effects for a joker at a given level.
+// Memoized: factories allocate a fresh array of new effect objects on every
+// call, and calculateSaleTotal invokes this 4-6x per joker per sale-preview
+// frame. All callers treat the returned effects as read-only (verified), so we
+// can safely cache and return shared references keyed by `${id}_${level}`.
+const JOKER_EFFECT_CACHE = new Map<string, JokerEffect[]>();
+
 export function getJokerEffectsAtLevel(
   jokerId: number,
   level: number
 ): JokerEffect[] {
+  const cacheKey = `${jokerId}_${level}`;
+  const cached = JOKER_EFFECT_CACHE.get(cacheKey);
+  if (cached) return cached;
+
   const factory = JOKER_EFFECT_FACTORIES[jokerId];
-  if (!factory) return [];
-  return factory(level);
+  const effects = factory ? factory(level) : [];
+  JOKER_EFFECT_CACHE.set(cacheKey, effects);
+  return effects;
 }
 
 // Generate a human-readable description for a joker at a given level
@@ -363,7 +374,12 @@ export function getJokerDescription(
         parts.push(`+$${e.amount} cash to allowance`);
         break;
       case 'inventory_limit':
-        parts.push(`+${e.amount} inventory`);
+        // Trade Routes (39) accumulates its inventory bonus per period elapsed;
+        // Inductive Reasoning (43) re-grants its bonus each new day (applied in
+        // jokerService). Other inventory jokers are a flat one-time bump.
+        if (jokerId === 39) parts.push(`+${e.amount} inventory per period`);
+        else if (jokerId === 43) parts.push(`+${e.amount} inventory per day`);
+        else parts.push(`+${e.amount} inventory`);
         break;
       case 'money':
         parts.push(`+$${formatNumber(e.amount)} instant cash`);
@@ -493,7 +509,7 @@ export function getJokerDescription(
         break;
       case 'tax_collector_boost': {
         const pct = Math.round(e.amount * 100);
-        parts.push(`+${pct}% of sale as bonus cash`);
+        parts.push(`+${pct}% of profit as bonus cash`);
         break;
       }
       case 'last_stand_boost':
@@ -563,8 +579,56 @@ export function getJokerDescription(
       case 'survivor_boost':
         parts.push(`+${e.amount} mult per candy batch melted`);
         break;
+      // Profit-boost (%) variants — these add to the profit-boost bucket in
+      // saleCalculations as (amount - 1), so the displayed % is (amount-1)×100.
+      // Showing the CURRENT level's value (not all three) is the whole point.
+      case 'conditional_profit_boost': {
+        const pct = Math.round((e.amount - 1) * 100);
+        if (e.conditions?.inventoryParity)
+          parts.push(
+            `+${pct}% profit when inventory limit is ${e.conditions.inventoryParity}`
+          );
+        else if (e.conditions?.period === -1)
+          parts.push(`+${pct}% profit in last 2 periods of day`);
+        else parts.push(`+${pct}% profit`);
+        break;
+      }
+      case 'first_sale_profit_boost':
+        parts.push(
+          `+${Math.round((e.amount - 1) * 100)}% profit on first sale of day`
+        );
+        break;
+      case 'cash_under_profit_boost':
+        parts.push(
+          `+${Math.round((e.amount - 1) * 100)}% profit when cash < $${formatNumber(e.conditions?.cashBelow ?? 0)}`
+        );
+        break;
+      case 'variety_pack_profit_boost':
+        parts.push(
+          `+${Math.round((e.amount - 1) * 100)}% profit when 3+ candy types in inventory`
+        );
+        break;
+      case 'peak_hours_profit_boost':
+        parts.push(
+          `+${Math.round((e.amount - 1) * 100)}% profit during periods 3-5`
+        );
+        break;
+      case 'momentum_profit_boost':
+        // Momentum adds `amount` per consecutive sale period (not amount-1).
+        parts.push(
+          `+${Math.round(e.amount * 100)}% profit per consecutive sale period`
+        );
+        break;
+      case 'lucky_proc_mult': {
+        const chancePct = Math.round((e.conditions?.chance ?? 0) * 100);
+        parts.push(`${chancePct}% chance for +${e.amount} mult on a sale`);
+        break;
+      }
       default:
-        return null;
+        // Unknown target — skip it rather than discarding the whole
+        // description. If NOTHING was describable, we return null below and the
+        // caller falls back to the static description.
+        break;
     }
   }
 
@@ -627,25 +691,28 @@ const _LIVE_PER_STACK: Record<number, [number, number, number]> = {
  * suggesting per-day scaling.
  *
  * Examples:
- *   "currently +30% mult"   (Clearance Sale, 3 loss sales @ L1)
- *   "currently +1.5 mult"   (Street Smarts, 3 events @ L1)
- *   "currently +45%"        (Reputation, 3 types @ L2)
+ *   "+30% mult"   (Clearance Sale, 3 loss sales @ L1)
+ *   "+1.5 mult"   (Street Smarts, 3 events @ L1)
+ *   "+45%"        (Reputation, 3 types @ L2)
  */
 export function getLiveJokerValueText(
-  jokerId: number,
+  jokerId: number | string,
   level: number,
   ctx: LiveJokerContext
 ): string | null {
+  // Joker ids arrive as strings in some call paths (e.g. inventory cards),
+  // so normalize before matching against the numeric joker-id cases below.
+  const id = typeof jokerId === 'string' ? parseInt(jokerId, 10) : jokerId;
   const lvIdx = Math.min(2, Math.max(0, (level || 1) - 1));
   const { jokerStats, consecutivePeriodSales = 0 } = ctx;
 
-  switch (jokerId) {
+  switch (id) {
     case 39: {
       // TRADE_ROUTES — accumulated inventory bonus = perPeriod × periods elapsed
       const stacks = jokerStats.tradeRoutesPeriods;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[39]![lvIdx]!;
-      return `currently +${per * stacks} inventory`;
+      return `+${per * stacks} inventory`;
     }
     case 63: {
       // COMPOUND_INTEREST — scales with compoundInterestDays per level:
@@ -659,52 +726,52 @@ export function getLiveJokerValueText(
         cap
       );
       const pct = Math.round((scaled - 1) * 100);
-      return `currently +${pct}%`;
+      return `+${pct}%`;
     }
     case 64: {
       const stacks = jokerStats.reputationTypesSold;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[64]![lvIdx]!;
       const pct = Math.round(per * stacks * 100);
-      return `currently +${pct}%`;
+      return `+${pct}%`;
     }
     case 65: {
       const stacks = jokerStats.streetSmartsEventsSurvived;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[65]![lvIdx]!;
-      return `currently +${_formatLiveMult(per * stacks)} mult`;
+      return `+${_formatLiveMult(per * stacks)} mult`;
     }
     case 73: {
       const stacks = jokerStats.clearanceSaleLosses;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[73]![lvIdx]!;
       const pct = Math.round(per * stacks * 100);
-      return `currently +${pct}% mult`;
+      return `+${pct}% mult`;
     }
     case 89: {
       // MOMENTUM — counter lives in candySalesSlice (consecutivePeriodSales)
       if (consecutivePeriodSales <= 0) return null;
       const per = _LIVE_PER_STACK[89]![lvIdx]!;
-      return `currently +${_formatLiveMult(per * consecutivePeriodSales)} mult`;
+      return `+${_formatLiveMult(per * consecutivePeriodSales)} mult`;
     }
     case 95: {
-      const stacks = jokerStats.hoarderMaxHits;
+      const stacks = jokerStats.hoarderMaxHits || 0;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[95]![lvIdx]!;
-      return `currently +${_formatLiveMult(per * stacks)} mult`;
+      return `+${_formatLiveMult(per * stacks)} mult`;
     }
     case 96: {
       const stacks = jokerStats.pennyWiseStashes;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[96]![lvIdx]!;
       const pct = Math.round(per * stacks * 100);
-      return `currently +${pct}%`;
+      return `+${pct}%`;
     }
     case 97: {
-      const stacks = jokerStats.survivorCandiesMelted;
+      const stacks = jokerStats.survivorCandiesMelted || 0;
       if (stacks <= 0) return null;
       const per = _LIVE_PER_STACK[97]![lvIdx]!;
-      return `currently +${_formatLiveMult(per * stacks)} mult`;
+      return `+${_formatLiveMult(per * stacks)} mult`;
     }
     default:
       return null;
@@ -1329,14 +1396,16 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 79: Teacher's Pet — reveal next-period price direction arrow on 1/2/3 candies (biggest movers).
+    // 79: Teacher's Pet — per candy size, 10%/20%/30% chance to reveal one
+    // candy's next-period price direction arrow (the biggest mover in that size).
     // NOTE: factory target `price_peek_hint` is decorative — consumer at
-    // app/(tabs)/market.tsx checks `JOKER_IDS.TEACHERS_PET` directly and reads `joker.level`.
+    // app/(tabs)/market.tsx checks `JOKER_IDS.TEACHERS_PET` directly and reads
+    // `joker.level`, rolling the reveal chance itself. `amount` holds the chance.
     79: (lv) => [
       {
         target: 'price_peek_hint',
         operation: 'set',
-        amount: levelScale(1, 2, 3, lv),
+        amount: levelScale(0.1, 0.2, 0.3, lv),
         duration: 'persistent',
       },
     ],
@@ -1416,7 +1485,7 @@ const JOKER_EFFECT_FACTORIES: Record<number, (level: number) => JokerEffect[]> =
       },
     ],
 
-    // 87: Tax Collector — 5%/8%/12% of sale as bonus
+    // 87: Tax Collector — 5%/8%/12% of profit as bonus
     87: (lv) => [
       {
         target: 'tax_collector_boost',
@@ -2239,7 +2308,8 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Bring an apple, hear the gossip',
-      description: 'See next-period price arrow on 1/2/3 candies (biggest movers)',
+      description:
+        '10%/20%/30% chance per candy size to reveal one candy’s next-period price arrow',
     },
     JOKER_EFFECT_FACTORIES[79]
   ),
@@ -2251,7 +2321,8 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Fresh crowds love fresh jokes',
-      description: '+10%/+25%/+50% profit when this period’s location is new (not last period’s)',
+      description:
+        '+10%/+25%/+50% profit when this period’s location is new (not last period’s)',
     },
     JOKER_EFFECT_FACTORIES[80]
   ),
@@ -2336,7 +2407,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Uncle Sam wants his cut... and so do you',
-      description: '5%/8%/12% of sale as bonus cash',
+      description: '5%/8%/12% of profit as bonus cash',
     },
     JOKER_EFFECT_FACTORIES[87]
   ),
@@ -2484,8 +2555,11 @@ export function processEffectsByTarget(
   }
 
   for (const joker of jokers) {
+    // Owned joker ids are stored as strings while STANDARDIZED_JOKERS ids are
+    // numbers — compare via toString() so the lookup actually matches (a strict
+    // === here silently dropped every effect, e.g. Deposit Bonus #22).
     const standardizedJoker = STANDARDIZED_JOKERS.find(
-      (sj) => sj.id === joker.id
+      (sj) => sj.id.toString() === joker.id.toString()
     );
 
     if (standardizedJoker) {

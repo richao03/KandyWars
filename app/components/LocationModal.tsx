@@ -123,7 +123,13 @@ function LocationModal({
       modalStyle={styles.modal}
       position="center"
     >
-      <Text style={styles.title}>Where to next?</Text>
+      <PixelBorder
+        borderColor="#d4a574"
+        borderWidth={3}
+        backgroundColor="#fefaf5"
+        innerPadding={24}
+      >
+        <Text style={styles.title}>Where to next?</Text>
 
       <View style={styles.locationGrid}>
         {locations.map((location) => {
@@ -245,21 +251,17 @@ function LocationModal({
             <Text style={styles.cancelText}>Cancel</Text>
           </View>
         </PixelBorder>
-      </PressableButton>
+        </PressableButton>
+      </PixelBorder>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   modal: {
-    backgroundColor: '#fefaf5', // Warm paper background
-    borderRadius: 24,
-    padding: 24,
     maxWidth: 380,
     width: '90%',
-    borderWidth: 3,
     alignSelf: 'center',
-    borderColor: '#d4a574', // Brown crayon border
     shadowColor: colors.brown.secondary,
     shadowOffset: { width: 2, height: 4 },
     shadowOpacity: 0.2,

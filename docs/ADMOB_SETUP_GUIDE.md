@@ -1,6 +1,8 @@
 # AdMob Setup Guide for Production
 
-This guide walks you through setting up AdMob for your Candy Warz game and configuring production ad units.
+This guide walks you through setting up AdMob for your Sugar Wars game and configuring production ad units.
+
+This app uses **`react-native-google-mobile-ads`** (v16) integrated via its Expo config plugin in `app.json`.
 
 ## Prerequisites
 
@@ -18,7 +20,7 @@ This guide walks you through setting up AdMob for your Candy Warz game and confi
    - Select "Yes" and search for your app
 6. If your app is not published yet:
    - Select "No"
-   - Enter app name: **Candy Warz**
+   - Enter app name: **Sugar Wars**
    - Select platform: **iOS** or **Android**
    - Click **"Add"**
 
@@ -32,7 +34,7 @@ Format: `ca-app-pub-1234567890123456~1234567890`
 ### Android App ID
 Format: `ca-app-pub-1234567890123456~0987654321`
 
-**Update `app.json`:**
+**Update `app.json`:** the `react-native-google-mobile-ads` config plugin is already added to the `plugins` array. Replace the App IDs with your own:
 ```json
 {
   "expo": {
@@ -48,6 +50,10 @@ Format: `ca-app-pub-1234567890123456~0987654321`
   }
 }
 ```
+
+> **Note:** The `androidAppId` currently committed in `app.json` is still Google's sample/test App ID (`ca-app-pub-3940256099942544~3347511713`). The `iosAppId` is set to a real App ID. Be sure to replace the Android value before shipping production ads.
+>
+> The iOS native `GADApplicationIdentifier` in `ios/SugarWars/Info.plist` must match the `iosAppId`. It is currently set to Google's test App ID (`ca-app-pub-3940256099942544~1458002511`) and should be regenerated (re-run `npx expo prebuild`) so it matches your production iOS App ID.
 
 ## Step 3: Create Standard Banner Ad Units (320x50)
 
@@ -79,20 +85,24 @@ You need to create **dedicated ad units** for the standard 320x50 banner on each
 
 ## Step 4: Update Your Code with Production Ad Unit IDs
 
-Open `app/components/AdBanner.tsx` and update the ad unit configuration:
+Open `app/components/AdBanner.tsx` and update the ad unit configuration. In development (`__DEV__`) it falls back to the test banner unit (`TestIds.BANNER`, or `TEST_AD_UNIT` if the module isn't available); in production it uses the IDs you paste in:
 
 ```typescript
+const TEST_AD_UNIT = 'ca-app-pub-3940256099942544/6300978111'; // Google's test banner ad unit
+
 const AD_UNITS = {
   STANDARD_BANNER: {
     ios: __DEV__
-      ? TestIds.BANNER
-      : 'ca-app-pub-XXXXX/YOUR-IOS-BANNER-UNIT-ID', // ← Paste your iOS banner ad unit ID here
+      ? TestIds?.BANNER || TEST_AD_UNIT
+      : 'ca-app-pub-1627354972629832/2334523799', // ← Your iOS banner ad unit ID
     android: __DEV__
-      ? TestIds.BANNER
-      : 'ca-app-pub-XXXXX/YOUR-ANDROID-BANNER-UNIT-ID', // ← Paste your Android banner ad unit ID here
+      ? TestIds?.BANNER || TEST_AD_UNIT
+      : 'ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-ANDROID-320x50', // ← Paste your Android banner ad unit ID here
   },
 };
 ```
+
+> **Note:** The iOS production banner ad unit ID is already filled in. The Android production ID is still a placeholder (`ca-app-pub-XXXXXXXXXXXXXXXX/STANDARD-ANDROID-320x50`) and must be replaced before shipping.
 
 ## Step 5: Configure Privacy & Compliance
 
@@ -112,11 +122,15 @@ If you want to show personalized ads (higher revenue) to users who consent, you'
 2. Show consent form on first app launch
 3. Update `requestNonPersonalizedAdsOnly` based on user consent
 
-### iOS Privacy Manifest (Already Configured)
+### iOS Privacy Manifest
 
-The app includes `PrivacyInfo.xcprivacy` with required declarations for:
-- Device ID collection (advertising)
-- SKAdNetwork identifiers
+The app includes `ios/SugarWars/PrivacyInfo.xcprivacy`. It currently declares only required-reason API usage (UserDefaults, system boot time, file timestamp, disk space), with `NSPrivacyTracking` set to `false` and an empty `NSPrivacyCollectedDataTypes` array.
+
+If you serve ads that collect the advertising identifier (IDFA) or use tracking, update this manifest before submitting to the App Store:
+- Add the relevant `NSPrivacyCollectedDataTypes` entries (e.g. Device ID / advertising data)
+- Set `NSPrivacyTracking` appropriately and add `NSPrivacyTrackingDomains` if needed
+
+> **Note:** No `SKAdNetwork` identifiers are currently declared in `Info.plist`. The Google Mobile Ads SDK pod ships its own privacy manifest, but if Apple flags missing SKAdNetwork entries for attribution, add a `SKAdNetworkItems` array to `Info.plist`.
 
 ### Android Privacy
 
@@ -139,15 +153,16 @@ To test on a physical device with test ads:
    - iOS: Settings → Privacy → Advertising → Copy IDFA
    - Android: Settings → Google → Ads → Copy advertising ID
 
-2. Add to `AdBanner.tsx`:
+2. Register the device once at app startup (before requesting ads), e.g. in `app/_layout.tsx`:
 ```typescript
-requestOptions={{
-  requestNonPersonalizedAdsOnly: true,
-  testDevices: [
-    'YOUR_DEVICE_ADVERTISING_ID', // Your test device
-  ],
-}}
+import mobileAds, { MobileAds } from 'react-native-google-mobile-ads';
+
+MobileAds().setRequestConfiguration({
+  testDeviceIdentifiers: ['YOUR_DEVICE_ID'], // Your test device(s)
+});
 ```
+
+> **Note:** In `react-native-google-mobile-ads` v16, test devices are configured globally via `setRequestConfiguration({ testDeviceIdentifiers })` — there is no `testDevices` field on the `<BannerAd>` `requestOptions` prop.
 
 ## Step 7: Build & Deploy
 
@@ -173,24 +188,23 @@ npx expo run:android --variant release
 
 ## Expected Ad Behavior
 
-### Ads VISIBLE on these screens:
-- ✅ Home tab
+Visibility is controlled by `HIDDEN_AD_ROUTES` in `src/context/AdVisibilityContext.tsx`. Any route whose name *contains* one of those entries hides the banner; every other route shows it.
+
+### Ads HIDDEN on these screens (for cleaner UX):
+- ❌ Title screen (`title-screen`)
+- ❌ Index / landing route (`index`)
+- ❌ Title-screen settings (`title-settings`)
+
+### Ads VISIBLE everywhere else, including:
+- ✅ Home / market tab
 - ✅ Jokers tab
 - ✅ Price History tab
 - ✅ Settings tab
-- ✅ Market screen
 - ✅ After School screen
+- ✅ Story screen
+- ✅ Minigame screens
 
-### Ads HIDDEN on these screens (for better UX):
-- ❌ All minigame screens (computer, math, art, etc.)
-- ❌ Title screen
-- ❌ Story screen
-
-**Why hide ads on some screens?**
-- Better performance during gameplay
-- Less distraction for users
-- Cleaner UX on intro screens
-- **Note**: Ads are hidden but not destroyed, so they reload instantly when returning to main screens
+> **Note:** To hide ads on additional screens (e.g. minigames or the story screen), add their route names to `HIDDEN_AD_ROUTES`. Ads are hidden via `display: none`, not destroyed, so they reload instantly when returning to a visible screen.
 
 ## Revenue Optimization Tips
 
@@ -246,7 +260,7 @@ Beyond banners, consider:
 2. **Check Ad Unit IDs**: Verify `AdBanner.tsx` has correct Ad Unit IDs
 3. **Wait 24 hours**: New ad units take time to activate
 4. **Check AdMob status**: Ensure your account isn't suspended
-5. **Enable logging**: Set `__DEV__ = true` temporarily to see error messages
+5. **Enable logging**: `AdBanner.tsx` already logs ad load / failure events when `__DEV__` is true (development builds). Run a debug build to see these messages in the console.
 
 ### "Ad failed to load" errors:
 

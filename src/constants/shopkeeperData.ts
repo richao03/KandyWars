@@ -190,16 +190,22 @@ export const NIGHTLY_QUEST_TEMPLATES: NightlyQuestTemplate[] = [
   { type: 'multi_day',    minLevel: 8, descriptionTemplate: 'Sell {quantity} {target} over the next 2 days' },
 ];
 
-// Quest reward scaling by day
+// Floor for the wallet-scaled nightly quest reward (see getWalletQuestReward).
 export const QUEST_REWARDS = {
   BASE_CASH: 200,
-  CASH_PER_DAY: 200, // Increases by this much per day
-  MAX_CASH: 1000,
 };
 
-export function getQuestCashReward(day: number, isMultiDay: boolean): number {
-  const base = QUEST_REWARDS.BASE_CASH + (day - 1) * QUEST_REWARDS.CASH_PER_DAY;
-  const reward = Math.min(base, QUEST_REWARDS.MAX_CASH);
+// Nightly quest reward scales with the player's wallet so it stays meaningful
+// late-game. Always 15% of the current balance, floored at BASE_CASH so an
+// early/empty wallet still pays out something. Multi-day quests keep the 1.5x.
+export const QUEST_REWARD_WALLET_PCT = 0.15;
+
+export function getWalletQuestReward(
+  balance: number,
+  isMultiDay = false
+): number {
+  const pct = Math.round(Math.max(balance, 0) * QUEST_REWARD_WALLET_PCT);
+  const reward = Math.max(pct, QUEST_REWARDS.BASE_CASH);
   return isMultiDay ? Math.floor(reward * 1.5) : reward;
 }
 

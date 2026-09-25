@@ -17,7 +17,7 @@ import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -561,16 +561,17 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
   // Main game screen
   return (
-    <View style={styles.container}>
-      <MinigameHUD
+    <>
+      <MinigameScaffold
         theme="geography"
         title="Pet Pangea"
         subtitle={'Unscramble!'}
         leftInfo={`Level ${level}/3`}
         centerInfo={`Moves: ${moves}`}
         rightInfo={`Time: ${timeLeft}s`}
-      />
-
+        backgroundColor="#5a9bbc"
+        onLeave={handleForfeit}
+      >
       {/* Show preview message */}
       {gameState === 'preview' && (
         <View style={styles.messageOverlay}>
@@ -609,25 +610,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         </View>
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <PixelBorder
-          borderColor="#c89968"
-          borderWidth={3}
-          backgroundColor="#f4e8d0"
-          innerPadding={0}
-          style={{ flex: 1 }}
-        >
-          <TouchableOpacity
-            style={styles.leaveBtnInner}
-            onPress={handleForfeit}
-          >
-            <TextWithEmojis style={styles.footerBtnText} imageSize={30}>
-              🚪 Leave
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </PixelBorder>
-      </View>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -639,7 +622,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
         showCancelButton={modal.showCancelButton}
         dismissible={modal.dismissible}
       />
-    </View>
+    </>
   );
 }
 

@@ -139,10 +139,24 @@ const CandyListItem = React.memo(function CandyListItem({
           <View style={styles.candyInfo}>
             <View style={styles.candyLeftSection}>
               <View style={styles.candyNameRow}>
-                <Text style={styles.name}>{item.name}</Text>
+                <Text
+                  style={styles.name}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.55}
+                >
+                  {item.name}
+                </Text>
                 {item.quantityOwned > 0 && (
                   <View style={styles.ownedBadge}>
-                    <Text style={styles.ownedText}>{item.quantityOwned}</Text>
+                    <Text
+                      style={styles.ownedText}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
+                    >
+                      {item.quantityOwned}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -152,7 +166,12 @@ const CandyListItem = React.memo(function CandyListItem({
               </View>
             </View>
             <View style={styles.candyPriceRow}>
-              <Text style={styles.price}>
+              <Text
+                style={styles.price}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.55}
+              >
                 {localPricesUpdating
                   ? '$-.--'
                   : `$${formatCurrency(item.cost)}`}
@@ -186,6 +205,7 @@ const styles = StyleSheet.create({
   candyLeftSection: {
     flexDirection: 'column',
     flex: 1,
+    minWidth: 0, // allow the section (and its text) to shrink instead of overflowing
   },
   candyNameRow: {
     flexDirection: 'row',
@@ -196,6 +216,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 1,
+    maxWidth: '44%', // bound the price area so it can't crowd the name
+    justifyContent: 'flex-end',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -219,6 +242,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
   },
   name: {
+    flexShrink: 1, // shrink to fit the row before the owned badge gets pushed
     fontWeight: '700',
     fontSize: 19,
     color: colors.brown.primary,
@@ -234,6 +258,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.green.success,
+    flexShrink: 0, // keep the count badge visible; the name shrinks instead
+    maxWidth: 70, // bound large counts so the text scales down within
   },
   ownedText: {
     fontSize: 12,
@@ -252,6 +278,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   price: {
+    flexShrink: 1, // shrink the price font to fit its bounded area
     fontSize: 17,
     fontWeight: '700',
     color: '#8b0000',
@@ -262,6 +289,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffb3b3',
     fontFamily: 'PixeloidMono',
+    textAlign: 'center',
   },
   priceHintUp: {
     marginLeft: 6,

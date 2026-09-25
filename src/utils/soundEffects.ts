@@ -466,27 +466,16 @@ export const SoundEffects = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Cooldown tracker for rate-varied pop helpers
-// ---------------------------------------------------------------------------
-let _lastPopAtRateTime = 0;
-const _POP_AT_RATE_COOLDOWN_MS = 30;
-
 /**
  * Private helper: play the next pop from the pool at a given playbackRate.
- * Enforces a 30ms cooldown between calls (shared with cascade scheduling).
+ * Cascade spacing is driven by the caller (e.g. playCoinCascade schedules
+ * pops 40ms apart), so no internal throttle is applied here.
  */
 async function _playPopAtRate(rate: number): Promise<void> {
   try {
     if (!audioInitialized) {
       await initializeAudioPlayers();
     }
-
-    const now = Date.now();
-    if (now - _lastPopAtRateTime < _POP_AT_RATE_COOLDOWN_MS) {
-      // Still within cooldown – skip silently (caller is responsible for timing)
-    }
-    _lastPopAtRateTime = now;
 
     // Round-robin from the existing pop pool
     const player = popPlayerPool[popPlayerIndex];
@@ -558,19 +547,15 @@ export async function playCashRegister(): Promise<void> {
   }
 }
 
-/** Round-robin coin-cluster pop at varying playbackRate. */
-let _lastCoinAtRateTime = 0;
-const _COIN_AT_RATE_COOLDOWN_MS = 30;
+/**
+ * Round-robin coin-cluster pop at varying playbackRate.
+ * Cascade spacing is driven by the caller, so no internal throttle is applied.
+ */
 async function _playCoinAtRate(rate: number): Promise<void> {
   try {
     if (!audioInitialized) {
       await initializeAudioPlayers();
     }
-    const now = Date.now();
-    if (now - _lastCoinAtRateTime < _COIN_AT_RATE_COOLDOWN_MS) {
-      // intentionally non-throttled — log only
-    }
-    _lastCoinAtRateTime = now;
     const player = coinPlayerPool[coinPlayerIndex];
     coinPlayerIndex = (coinPlayerIndex + 1) % coinPlayerPool.length;
     if (!player) return;

@@ -1,21 +1,21 @@
 // app/(tabs)/settings.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
+import { getDifficultyName } from '../../src/constants/petData';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useAdoptionReady } from '../../src/hooks/useAdoptionPrompt';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useGame } from '../../src/hooks/useGame';
 import { useHallPass } from '../../src/hooks/useHallPass';
@@ -32,29 +32,37 @@ import {
   unlockHallPass,
 } from '../../src/store/slices/hallPassSlice';
 import {
+  selectReduceMotion,
+  toggleReduceMotion,
+} from '../../src/store/slices/juiceSettingsSlice';
+import {
   setTotalCompletions,
   setWonDifficulties,
 } from '../../src/store/slices/scoreboardSlice';
+import {
+  selectMusicVolume,
+  selectSoundVolume,
+  setMusicVolume,
+  setSoundVolume,
+} from '../../src/store/slices/settingsSlice';
 import { resetTutorial } from '../../src/store/slices/tutorialSlice';
 import {
   clearCachedUserObject,
   updateCachedUserObject,
 } from '../../src/store/slices/userObjectSlice';
-import {
-  setSoundVolume,
-  setMusicVolume,
-  selectSoundVolume,
-  selectMusicVolume,
-} from '../../src/store/slices/settingsSlice';
-import {
-  toggleReduceMotion,
-  selectReduceMotion,
-} from '../../src/store/slices/juiceSettingsSlice';
-import { SoundEffects } from '../../src/utils/soundEffects';
 import { MusicController } from '../../src/utils/musicController';
+import { SoundEffects, playLeverClick } from '../../src/utils/soundEffects';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import ConfirmationModal from '../components/ConfirmationModal';
+import PickUpPetButton from '../components/PickUpPetButton';
 import PixelBorder from '../components/PixelBorder';
+import {
+  ListRow,
+  MenuTile,
+  PixelMeter,
+  PixelToggle,
+  SectionCard,
+} from '../components/SettingsWidgets';
 import { resetFirebaseSession } from '../components/SugarWarsTitleScreen';
 
 // School-theme palette — matches GameHUD school config (#fef7e7 bg)
@@ -79,79 +87,17 @@ const PALETTE = {
   warningBg: '#fff0d6',
 };
 
-// Section header — pixel icon + title text in school-theme styling
-function SectionHeader({
-  icon,
-  title,
-}: {
-  icon?: any;
-  title: string;
-}) {
-  return (
-    <View style={styles.sectionHeader}>
-      {icon && <Image source={icon} style={styles.sectionHeaderIcon} />}
-      <Text style={styles.sectionHeaderText}>{title}</Text>
-    </View>
-  );
-}
-
-// School-themed action row — pixel icon + label + chevron-style affordance
-function ActionRow({
-  icon,
-  label,
-  description,
-  onPress,
-  disabled,
-  tone = 'default',
-}: {
-  icon?: any;
-  label: string;
-  description?: string;
-  onPress: () => void;
-  disabled?: boolean;
-  tone?: 'default' | 'primary' | 'danger' | 'warning';
-}) {
-  const toneStyle =
-    tone === 'primary'
-      ? { borderColor: PALETTE.primary, backgroundColor: PALETTE.primaryBg, labelColor: PALETTE.primary }
-      : tone === 'danger'
-        ? { borderColor: PALETTE.danger, backgroundColor: PALETTE.dangerBg, labelColor: PALETTE.danger }
-        : tone === 'warning'
-          ? { borderColor: PALETTE.warning, backgroundColor: PALETTE.warningBg, labelColor: PALETTE.warning }
-          : { borderColor: PALETTE.cardBorder, backgroundColor: PALETTE.inputBg, labelColor: PALETTE.titleText };
-
-  return (
-    <PixelBorder
-      borderColor={toneStyle.borderColor}
-      borderWidth={3}
-      backgroundColor={toneStyle.backgroundColor}
-      innerPadding={0}
-      style={styles.actionRowWrap}
-    >
-      <TouchableOpacity
-        style={[styles.actionRow, disabled && styles.actionRowDisabled]}
-        onPress={onPress}
-        disabled={disabled}
-        activeOpacity={0.75}
-      >
-        {icon && <Image source={icon} style={styles.actionRowIcon} />}
-        <View style={styles.actionRowText}>
-          <Text style={[styles.actionRowLabel, { color: toneStyle.labelColor }]}>
-            {label}
-          </Text>
-          {description && (
-            <Text style={styles.actionRowDescription}>{description}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    </PixelBorder>
-  );
-}
-
 function Settings() {
   const { resetGame, jumpToPeriod } = useGame();
   const { setSeed, setGameData } = useSeed();
   const walletContext = useWallet();
+  const { ready: canAdoptNow, pet: adoptionPet, goAdopt } = useAdoptionReady();
+  const adoptionTotal =
+    (walletContext?.balance ?? 0) + (walletContext?.stashedAmount ?? 0);
+  const adoptionProgress =
+    (walletContext?.adoptionFee ?? 0) > 0
+      ? adoptionTotal / (walletContext?.adoptionFee ?? 1)
+      : 0;
   const { allPasses, selectedPassIds } = useHallPass();
   const activePasses = React.useMemo(
     () => allPasses.filter((p) => selectedPassIds.includes(p.id)),
@@ -166,6 +112,16 @@ function Settings() {
   const soundVolume = useAppSelector(selectSoundVolume);
   const musicVolume = useAppSelector(selectMusicVolume);
   const reduceMotion = useAppSelector(selectReduceMotion);
+
+  // Apply persisted audio volumes to the players once on mount. Per-frame
+  // application during slider drags is deferred to onSlidingComplete so we
+  // don't loop setVolume over ~26 pooled SFX players every drag frame.
+  useEffect(() => {
+    SoundEffects.setVolume(soundVolume);
+    MusicController.setVolume(musicVolume);
+    // Intentionally run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle potential null wallet context
   const resetWallet = walletContext?.resetWallet || (() => {});
@@ -347,7 +303,8 @@ function Settings() {
         : null;
       if (updatedUser) {
         scoreboardService.setCachedUserObject(updatedUser);
-        if (__DEV__) console.log('✅ Player name synced to service cache:', updatedUser);
+        if (__DEV__)
+          console.log('✅ Player name synced to service cache:', updatedUser);
 
         dispatch(setWonDifficulties(updatedUser.difficultyWon));
         dispatch(setTotalCompletions(updatedUser.totalWinCount));
@@ -402,7 +359,8 @@ function Settings() {
           const currentPlayerId = walletContext?.playerId;
           const currentPlayerName = walletContext?.playerName;
 
-          if (__DEV__) console.log('🗑️ Deleting user document from Firebase...');
+          if (__DEV__)
+            console.log('🗑️ Deleting user document from Firebase...');
           try {
             await scoreboardService.initializeAuth();
             await scoreboardService.deleteUserObject();
@@ -447,7 +405,8 @@ function Settings() {
 
           scoreboardService.clearUserObjectCache();
           resetFirebaseSession();
-          if (__DEV__) console.log('✅ Service cache and Firebase session cleared');
+          if (__DEV__)
+            console.log('✅ Service cache and Firebase session cleared');
 
           const allKeys = await AsyncStorage.getAllKeys();
           if (__DEV__) console.log('🗑️ Found keys to clear:', allKeys);
@@ -507,19 +466,34 @@ function Settings() {
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
       >
-        {/* PLAYER ============================================== */}
-        <PixelBorder
-          borderColor={PALETTE.cardBorder}
-          borderWidth={4}
-          backgroundColor={PALETTE.cardBg}
-          innerPadding={14}
-          style={styles.section}
-        >
-          <SectionHeader
-            icon={require('../../assets/images/emojis/student.png')}
-            title="Player"
+        {/* ADOPT NOW — featured once the fee is covered =========== */}
+        {canAdoptNow && (
+          <PickUpPetButton
+            pet={adoptionPet}
+            onPress={() =>
+              setConfirmModal({
+                visible: true,
+                title: `Adopt ${adoptionPet.name}?`,
+                message: `You've got enough to cover the adoption fee!\n\nEnd the run now, bring ${adoptionPet.name} home, and unlock the next level?`,
+                emoji: '🎉',
+                confirmText: 'Adopt Now',
+                cancelText: 'Keep Trading',
+                onConfirm: () => {
+                  resetConfirmModal();
+                  goAdopt();
+                },
+              })
+            }
           />
+        )}
 
+        {/* STUDENT ID ========================================== */}
+        <SectionCard
+          tone="blue"
+          icon={require('../../assets/images/emojis/student.png')}
+          title="Student ID"
+          subtitle="Sugar Wars Academy"
+        >
           {editingName ? (
             <View style={styles.editNameWrap}>
               <TextInput
@@ -562,13 +536,26 @@ function Settings() {
                   >
                     {isValidatingName ? (
                       <View style={styles.validatingRow}>
-                        <ActivityIndicator size="small" color={PALETTE.success} />
-                        <Text style={[styles.editNameActionText, { color: PALETTE.success }]}>
+                        <ActivityIndicator
+                          size="small"
+                          color={PALETTE.success}
+                        />
+                        <Text
+                          style={[
+                            styles.editNameActionText,
+                            { color: PALETTE.success },
+                          ]}
+                        >
                           Checking...
                         </Text>
                       </View>
                     ) : (
-                      <Text style={[styles.editNameActionText, { color: PALETTE.success }]}>
+                      <Text
+                        style={[
+                          styles.editNameActionText,
+                          { color: PALETTE.success },
+                        ]}
+                      >
                         Save
                       </Text>
                     )}
@@ -586,7 +573,12 @@ function Settings() {
                     style={styles.editNameActionInner}
                     onPress={handleCancelEditName}
                   >
-                    <Text style={[styles.editNameActionText, { color: PALETTE.danger }]}>
+                    <Text
+                      style={[
+                        styles.editNameActionText,
+                        { color: PALETTE.danger },
+                      ]}
+                    >
                       Cancel
                     </Text>
                   </TouchableOpacity>
@@ -594,44 +586,80 @@ function Settings() {
               </View>
             </View>
           ) : (
-            <View style={styles.playerRow}>
-              <View style={styles.playerNameWrap}>
-                <Text style={styles.playerNameLabel}>Name</Text>
-                <Text style={styles.playerNameValue}>
-                  {currentPlayerName || 'Player'}
+            <View style={styles.idCard}>
+              {/* Photo */}
+              <View style={styles.idPhotoFrame}>
+                <Image
+                  source={adoptionPet.image}
+                  style={styles.idPhoto}
+                  resizeMode="contain"
+                />
+                <View style={styles.idPhotoTape} />
+              </View>
+
+              {/* Details */}
+              <View style={styles.idDetails}>
+                <Text style={styles.idLabel}>NAME</Text>
+                <View style={styles.idNameRow}>
+                  <Text style={styles.idName} numberOfLines={1}>
+                    {currentPlayerName || 'Player'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.idEditButton}
+                    onPress={handleEditName}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Text style={styles.idEditButtonText}>EDIT</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.idBadgeRow}>
+                  <View style={styles.idBadge}>
+                    <Text style={styles.idBadgeText}>
+                      LVL {walletContext?.difficultyLevel ?? 1}
+                    </Text>
+                  </View>
+                  <View style={[styles.idBadge, styles.idBadgeAlt]}>
+                    <Text style={[styles.idBadgeText, styles.idBadgeAltText]}>
+                      {getDifficultyName(walletContext?.difficultyLevel)}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.idLabel}>
+                  ADOPTION FUND · {adoptionPet.name}
+                </Text>
+                <View style={styles.fundBar}>
+                  <View
+                    style={[
+                      styles.fundFill,
+                      {
+                        width: `${Math.round(
+                          Math.min(1, Math.max(0, adoptionProgress)) * 100
+                        )}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.fundText}>
+                  ${Math.round(adoptionTotal).toLocaleString()} / $
+                  {Math.round(walletContext?.adoptionFee ?? 0).toLocaleString()}
+                  {canAdoptNow ? '  ✓ READY' : ''}
                 </Text>
               </View>
-              <PixelBorder
-                borderColor={PALETTE.primary}
-                borderWidth={2}
-                backgroundColor={PALETTE.primaryBg}
-                innerPadding={0}
-              >
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={handleEditName}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.editButtonText}>Edit</Text>
-                </TouchableOpacity>
-              </PixelBorder>
             </View>
           )}
-        </PixelBorder>
+        </SectionCard>
 
         {/* HALL PASSES ========================================= */}
         {activePasses.length > 0 && (
-          <PixelBorder
-            borderColor={PALETTE.cardBorder}
-            borderWidth={4}
-            backgroundColor={PALETTE.cardBg}
-            innerPadding={14}
-            style={styles.section}
+          <SectionCard
+            tone="gold"
+            icon={require('../../assets/images/emojis/hallpass.png')}
+            title="Hall Passes"
+            subtitle="Active this run"
           >
-            <SectionHeader
-              icon={require('../../assets/images/emojis/hallpass.png')}
-              title="Hall Passes"
-            />
             {activePasses.map((pass) => (
               <View key={pass.id} style={styles.passCard}>
                 <Text style={styles.passName}>{pass.name}</Text>
@@ -642,165 +670,143 @@ function Settings() {
                 ))}
               </View>
             ))}
-          </PixelBorder>
+          </SectionCard>
         )}
 
-        {/* PREFERENCES (audio + accessibility) ================= */}
-        <PixelBorder
-          borderColor={PALETTE.cardBorder}
-          borderWidth={4}
-          backgroundColor={PALETTE.cardBg}
-          innerPadding={14}
-          style={styles.section}
+        {/* SOUND BOOTH (audio + accessibility) ================= */}
+        <SectionCard
+          tone="purple"
+          icon={require('../../assets/images/emojis/msuic.png')}
+          title="Sound Booth"
+          subtitle="Tap a bar or use − / +"
         >
-          <SectionHeader
+          <PixelMeter
             icon={require('../../assets/images/emojis/msuic.png')}
-            title="Preferences"
+            label="Music"
+            value={musicVolume}
+            tone="purple"
+            onChange={(val) => {
+              dispatch(setMusicVolume(val));
+              MusicController.setVolume(val);
+            }}
+          />
+          <PixelMeter
+            icon={require('../../assets/images/emojis/controller.png')}
+            label="SFX"
+            value={soundVolume}
+            tone="purple"
+            onChange={(val) => {
+              dispatch(setSoundVolume(val));
+              SoundEffects.setVolume(val);
+              // Let the player hear the new level.
+              if (val > 0) playLeverClick();
+            }}
           />
 
-          <View style={styles.sliderRow}>
-            <Text style={styles.sliderLabel}>Music</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={1}
-              step={0.05}
-              value={musicVolume}
-              onValueChange={(val: number) => {
-                dispatch(setMusicVolume(val));
-                MusicController.setVolume(val);
-              }}
-              minimumTrackTintColor={PALETTE.accent}
-              maximumTrackTintColor={PALETTE.divider}
-              thumbTintColor={PALETTE.cardBorder}
-            />
-            <Text style={styles.sliderValue}>
-              {Math.round(musicVolume * 100)}%
-            </Text>
-          </View>
-
-          <View style={styles.sliderRow}>
-            <Text style={styles.sliderLabel}>SFX</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={1}
-              step={0.05}
-              value={soundVolume}
-              onValueChange={(val: number) => {
-                dispatch(setSoundVolume(val));
-                SoundEffects.setVolume(val);
-              }}
-              minimumTrackTintColor={PALETTE.accent}
-              maximumTrackTintColor={PALETTE.divider}
-              thumbTintColor={PALETTE.cardBorder}
-            />
-            <Text style={styles.sliderValue}>
-              {Math.round(soundVolume * 100)}%
-            </Text>
-          </View>
+          <View style={styles.prefDivider} />
 
           <View style={styles.toggleRow}>
+            <Image
+              source={require('../../assets/images/emojis/lightning.png')}
+              style={styles.toggleIcon}
+            />
             <View style={styles.toggleText}>
               <Text style={styles.toggleLabel}>Reduce Motion</Text>
               <Text style={styles.toggleDescription}>
-                Simpler animations and flashes
+                Calmer animations, no screen shake
               </Text>
             </View>
-            <Switch
+            <PixelToggle
               value={reduceMotion}
-              onValueChange={() => {
-                dispatch(toggleReduceMotion());
-              }}
-              trackColor={{ false: PALETTE.divider, true: PALETTE.accent }}
-              thumbColor={reduceMotion ? PALETTE.cardBorder : '#f4f3f4'}
+              tone="purple"
+              onToggle={() => dispatch(toggleReduceMotion())}
             />
           </View>
-        </PixelBorder>
+        </SectionCard>
 
-        {/* ACTIONS ============================================= */}
-        <PixelBorder
-          borderColor={PALETTE.cardBorder}
-          borderWidth={4}
-          backgroundColor={PALETTE.cardBg}
-          innerPadding={14}
-          style={styles.section}
+        {/* MAIN MENU =========================================== */}
+        <SectionCard
+          tone="green"
+          icon={require('../../assets/images/emojis/controller.png')}
+          title="Main Menu"
         >
-          <SectionHeader title="Actions" />
-
-          <ActionRow
-            icon={require('../../assets/images/emojis/home.png')}
-            label="Return to Title Screen"
-            description="Progress saved"
-            onPress={handleReturnToTitleScreen}
-            tone="primary"
-          />
-
-          <ActionRow
-            icon={require('../../assets/images/emojis/trophy.png')}
-            label="Leaderboard"
-            description="See how you rank"
-            onPress={() => router.push('/leaderboard')}
-            tone="default"
-          />
-
-          <ActionRow
-            icon={require('../../assets/images/emojis/refresh.png')}
-            label={isRestarting ? 'Restarting…' : 'Restart Game'}
-            description="Delete progress and start fresh"
-            onPress={handleRestartGame}
-            disabled={isRestarting}
-            tone="warning"
-          />
-        </PixelBorder>
+          <View style={styles.tileGrid}>
+            <MenuTile
+              icon={require('../../assets/images/emojis/home.png')}
+              label="Title Screen"
+              sub="Progress saved"
+              tone="blue"
+              onPress={handleReturnToTitleScreen}
+            />
+            <MenuTile
+              icon={require('../../assets/images/emojis/trophy.png')}
+              label="Leaderboard"
+              sub="See how you rank"
+              tone="gold"
+              onPress={() => router.push('/leaderboard')}
+            />
+            <MenuTile
+              icon={require('../../assets/images/emojis/refresh.png')}
+              label={isRestarting ? 'Restarting…' : 'Restart Game'}
+              sub="Start this run over"
+              tone="orange"
+              onPress={handleRestartGame}
+              disabled={isRestarting}
+            />
+            <MenuTile
+              icon={require('../../assets/images/emojis/book.png')}
+              label="How to Play"
+              sub="Replay the tutorial"
+              tone="green"
+              onPress={() => {
+                dispatch(resetTutorial());
+                Alert.alert(
+                  'Tutorial Reset',
+                  'The tutorial will show again on your next Level 1 game.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            />
+          </View>
+        </SectionCard>
 
         {/* DANGER ZONE ========================================= */}
-        <PixelBorder
-          borderColor={PALETTE.danger}
-          borderWidth={4}
-          backgroundColor={PALETTE.dangerBg}
-          innerPadding={14}
-          style={styles.section}
+        <SectionCard
+          tone="red"
+          icon={require('../../assets/images/emojis/warning.png')}
+          title="Danger Zone"
+          subtitle="No take-backs"
+          hazard
         >
-          <SectionHeader
-            icon={require('../../assets/images/emojis/warning.png')}
-            title="Danger Zone"
-          />
-
-          <ActionRow
+          <MenuTile
             icon={require('../../assets/images/emojis/x.png')}
             label={isRestarting ? 'Clearing…' : 'Clear All Data'}
-            description="Start as a completely new player"
+            sub="Wipe everything and start as a brand-new player"
+            tone="red"
             onPress={handleClearAllData}
             disabled={isRestarting}
-            tone="danger"
+            style={styles.fullTile}
           />
-        </PixelBorder>
+        </SectionCard>
 
         {/* DEBUG (DEV) ========================================= */}
         {__DEV__ && (
-          <PixelBorder
-            borderColor={PALETTE.cardBorder}
-            borderWidth={4}
-            backgroundColor={PALETTE.cardBg}
-            innerPadding={14}
-            style={styles.section}
+          <SectionCard
+            tone="brown"
+            icon={require('../../assets/images/emojis/gear.png')}
+            title="Debug Tools"
+            subtitle="Dev builds only"
           >
-            <SectionHeader
-              icon={require('../../assets/images/emojis/gear.png')}
-              title="Debug Tools"
-            />
-
-            <ActionRow
+            <ListRow
               label="Jump to Day 5"
-              description="Skip to day 5 for testing"
+              sub="Skip to day 5 for testing"
+              tone="orange"
               onPress={() => {
                 jumpToPeriod(32);
                 router.push('/(tabs)/market');
               }}
-              tone="warning"
             />
-            <ActionRow
+            <ListRow
               label="Show Total Completions"
               onPress={() => {
                 const total = scoreboardService.getTotalWinCount();
@@ -811,32 +817,22 @@ function Settings() {
                 );
               }}
             />
-            <ActionRow
-              label="Reset Tutorial"
-              onPress={() => {
-                dispatch(resetTutorial());
-                Alert.alert(
-                  'Tutorial Reset',
-                  'Tutorial will show again on next difficulty 1 game.',
-                  [{ text: 'OK' }]
-                );
-              }}
-            />
-            <ActionRow
+            <ListRow
               label="Minigame Picker"
               onPress={() => router.push('/debug-minigames' as any)}
             />
-            <ActionRow
+            <ListRow
               label="Sale Tier Preview"
               onPress={() => router.push('/debug-tier-preview' as any)}
             />
-            <ActionRow
+            <ListRow
               label="Joker Picker"
               onPress={() => router.push('/debug-jokers' as any)}
             />
-            <ActionRow
+            <ListRow
               label="Unlock All Hall Passes"
-              description="Mark every hall pass as unlocked for testing"
+              sub="Mark every hall pass as unlocked for testing"
+              tone="orange"
               onPress={() => {
                 allPasses.forEach((pass) => {
                   if (!pass.isUnlocked) {
@@ -849,17 +845,13 @@ function Settings() {
                   [{ text: 'OK' }]
                 );
               }}
-              tone="warning"
             />
-          </PixelBorder>
+          </SectionCard>
         )}
 
         {/* ABOUT =============================================== */}
         <View style={styles.aboutWrap}>
-          <Text style={styles.aboutTitle}>SUGAR WARS</Text>
-          <Text style={styles.aboutSubtitle}>
-            The ultimate school trading simulation
-          </Text>
+          <Text style={styles.aboutTitle}>H U S T L E</Text>
         </View>
       </ScrollView>
 
@@ -888,70 +880,118 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 12,
-    paddingBottom: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
 
-  // Sections ------------------------------------------------------
-  section: {
-    marginBottom: 10,
-  },
-  sectionHeader: {
+  // Student ID card ----------------------------------------------
+  idCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    paddingBottom: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: PALETTE.divider,
-    borderStyle: 'dashed',
+    gap: 14,
   },
-  sectionHeaderIcon: {
-    width: 20,
-    height: 20,
-    resizeMode: 'contain',
-    marginRight: 8,
+  idPhotoFrame: {
+    width: 84,
+    height: 96,
+    backgroundColor: '#fffaf0',
+    borderWidth: 3,
+    borderColor: PALETTE.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '-2deg' }],
   },
-  sectionHeaderText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: PALETTE.titleText,
+  idPhoto: {
+    width: 64,
+    height: 64,
+  },
+  idPhotoTape: {
+    position: 'absolute',
+    top: -8,
+    width: 40,
+    height: 12,
+    backgroundColor: 'rgba(255, 215, 94, 0.85)',
+    transform: [{ rotate: '4deg' }],
+  },
+  idDetails: {
+    flex: 1,
+  },
+  idLabel: {
+    fontSize: 9,
+    color: PALETTE.mutedText,
     fontFamily: 'PixeloidMono',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
+    letterSpacing: 1.2,
+    marginBottom: 2,
   },
-
-  // Player --------------------------------------------------------
-  playerRow: {
+  idNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 6,
   },
-  playerNameWrap: {
+  idName: {
     flex: 1,
-  },
-  playerNameLabel: {
-    fontSize: 10,
-    color: PALETTE.mutedText,
-    fontFamily: 'PixeloidMono',
-    letterSpacing: 1,
-    marginBottom: 2,
-    textTransform: 'uppercase',
-  },
-  playerNameValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: PALETTE.titleText,
     fontFamily: 'PixeloidMono',
   },
-  editButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+  idEditButton: {
+    borderWidth: 2,
+    borderColor: PALETTE.primary,
+    backgroundColor: PALETTE.primaryBg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    marginLeft: 8,
   },
-  editButtonText: {
-    fontSize: 14,
+  idEditButtonText: {
+    fontSize: 10,
     fontWeight: 'bold',
     color: PALETTE.primary,
+    fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
+  },
+  idBadgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  idBadge: {
+    backgroundColor: PALETTE.cardBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+  },
+  idBadgeAlt: {
+    backgroundColor: PALETTE.accent,
+  },
+  idBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#fff5d4',
+    fontFamily: 'PixeloidMono',
+    letterSpacing: 1,
+  },
+  idBadgeAltText: {
+    color: '#3d2a00',
+  },
+  fundBar: {
+    height: 12,
+    backgroundColor: '#e8d4a8',
+    borderWidth: 2,
+    borderColor: PALETTE.cardBorder,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 3,
+  },
+  fundFill: {
+    height: '100%',
+    backgroundColor: PALETTE.success,
+  },
+  fundText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: PALETTE.bodyText,
     fontFamily: 'PixeloidMono',
   },
 
@@ -1003,14 +1043,6 @@ const styles = StyleSheet.create({
   },
 
   // Hall passes ---------------------------------------------------
-  emptyText: {
-    fontSize: 13,
-    color: PALETTE.mutedText,
-    fontFamily: 'PixeloidMono',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    paddingVertical: 6,
-  },
   passCard: {
     backgroundColor: PALETTE.inputBg,
     borderLeftWidth: 4,
@@ -1033,42 +1065,23 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  // Audio ---------------------------------------------------------
-  sliderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
+  // Sound booth ---------------------------------------------------
+  prefDivider: {
+    height: 2,
+    backgroundColor: 'rgba(107, 79, 163, 0.25)',
+    marginVertical: 8,
+    borderRadius: 1,
   },
-  sliderLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: PALETTE.bodyText,
-    fontFamily: 'PixeloidMono',
-    width: 44,
-  },
-  slider: {
-    flex: 1,
-    height: 28,
-    marginHorizontal: 6,
-  },
-  sliderValue: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: PALETTE.bodyText,
-    fontFamily: 'PixeloidMono',
-    width: 38,
-    textAlign: 'right',
-  },
-
-  // Accessibility -------------------------------------------------
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: PALETTE.divider,
+    paddingTop: 4,
+  },
+  toggleIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+    marginRight: 8,
   },
   toggleText: {
     flex: 1,
@@ -1087,39 +1100,14 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
 
-  // Action rows ---------------------------------------------------
-  actionRowWrap: {
-    marginBottom: 6,
-  },
-  actionRow: {
+  // Menu tiles ----------------------------------------------------
+  tileGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    flexWrap: 'wrap',
+    gap: 10,
   },
-  actionRowDisabled: {
-    opacity: 0.55,
-  },
-  actionRowIcon: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-    marginRight: 10,
-  },
-  actionRowText: {
-    flex: 1,
-  },
-  actionRowLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: 'PixeloidMono',
-  },
-  actionRowDescription: {
-    fontSize: 10,
-    color: PALETTE.mutedText,
-    fontFamily: 'PixeloidMono',
-    marginTop: 1,
-    fontStyle: 'italic',
+  fullTile: {
+    minWidth: '100%',
   },
 
   // About ---------------------------------------------------------

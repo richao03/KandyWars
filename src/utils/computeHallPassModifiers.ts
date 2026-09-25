@@ -60,6 +60,10 @@ export function computeHallPassModifiers(selectedPasses: HallPass[]): HallPassMo
             effect.value
           );
           break;
+        case 'extra_active_slot':
+          // Selection-time meta effect (raises the active-pass cap); has no
+          // in-game modifier, so nothing to accumulate here.
+          break;
         case 'special':
           // Special effects are handled by hall pass ID above
           break;

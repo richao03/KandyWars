@@ -3,6 +3,8 @@ import {
   incrementPeriod,
   jumpToPeriod,
   resetGame,
+  fullResetGame,
+  dismissAdoptionPrompt,
   addBulkEmpireSales,
   selectDay,
   selectPeriod,
@@ -239,5 +241,25 @@ describe('gameSlice', () => {
     }
 
     expect(store.getState().game.locationHistory.length).toBeLessThanOrEqual(10);
+  });
+
+  describe('adoption prompt flag', () => {
+    it('starts undismissed and is set by dismissAdoptionPrompt', () => {
+      const store = createMockStore();
+      expect(store.getState().game.adoptionPromptDismissed).toBe(false);
+      store.dispatch(dismissAdoptionPrompt());
+      expect(store.getState().game.adoptionPromptDismissed).toBe(true);
+    });
+
+    it('resets on a new run (resetGame and fullResetGame)', () => {
+      const store = createMockStore();
+      store.dispatch(dismissAdoptionPrompt());
+      store.dispatch(resetGame());
+      expect(store.getState().game.adoptionPromptDismissed).toBe(false);
+
+      store.dispatch(dismissAdoptionPrompt());
+      store.dispatch(fullResetGame());
+      expect(store.getState().game.adoptionPromptDismissed).toBe(false);
+    });
   });
 });

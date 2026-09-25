@@ -1,11 +1,22 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { resetGame } from './gameSlice';
-import { SoundEffects } from '../../utils/soundEffects';
+
+// One recorded contribution to the piggy bank, used by the Piggy Bank detail
+// view to graph deposits over time. Withdrawals are intentionally not recorded
+// (the chart shows gross deposits by day; the live stash drives the headline).
+export interface StashEntry {
+  day: number;
+  period: number;
+  amount: number; // positive contribution added this entry
+  total: number; // running stashedAmount after this entry
+  kind: 'deposit' | 'interest' | 'inheritance';
+}
 
 interface WalletState {
   balance: number;
   stashedAmount: number;
   adoptionFee: number;
+  stashHistory: StashEntry[];
   difficultyLevel: number | null;
   playerName: string | null;
   playerId: string | null;
@@ -15,8 +26,11 @@ interface WalletState {
 
 const initialState: WalletState = {
   balance: 20,
+  // Piggy bank now starts at 0 and grows with deposits. The adoption fee is the
+  // separate GOAL the player saves toward (win = balance + stash >= adoptionFee).
   stashedAmount: 0,
   adoptionFee: 5000,
+  stashHistory: [],
   difficultyLevel: null,
   playerName: null,
   playerId: null,
@@ -34,10 +48,7 @@ const walletSlice = createSlice({
     addBalance: (state, action: PayloadAction<number>) => {
       state.balance += action.payload;
 
-      // Play coin sound when money is added (positive amount only)
-      if (action.payload > 0) {
-        SoundEffects.playCoinSound();
-      }
+      // Coin SFX is fired by audioListenerMiddleware (keeps this reducer pure).
 
       if (__DEV__) {
         console.log(
@@ -78,7 +89,16 @@ const walletSlice = createSlice({
     setAdoptionFee: (state, action: PayloadAction<number>) => {
       state.adoptionFee = action.payload;
     },
-    stashMoney: (state, action: PayloadAction<{ amountPaid: number; amountStashed: number }>) => {
+    stashMoney: (
+      state,
+      action: PayloadAction<{
+        amountPaid: number;
+        amountStashed: number;
+        day?: number;
+        period?: number;
+        kind?: StashEntry['kind'];
+      }>
+    ) => {
       // Use small epsilon to handle floating point precision issues
       const epsilon = 0.001;
       const { amountPaid, amountStashed } = action.payload;
@@ -86,6 +106,17 @@ const walletSlice = createSlice({
       if (state.balance >= amountPaid - epsilon) {
         state.balance -= amountPaid;
         state.stashedAmount += amountStashed;
+        // Record the contribution so the Piggy Bank detail view can graph it.
+        if (amountStashed > 0) {
+          if (!state.stashHistory) state.stashHistory = [];
+          state.stashHistory.push({
+            day: action.payload.day ?? 0,
+            period: action.payload.period ?? 0,
+            amount: amountStashed,
+            total: state.stashedAmount,
+            kind: action.payload.kind ?? 'deposit',
+          });
+        }
         const bonusApplied = amountStashed !== amountPaid;
         if (__DEV__) {
           console.log(
@@ -110,11 +141,7 @@ const walletSlice = createSlice({
       if (state.stashedAmount >= action.payload) {
         state.stashedAmount -= action.payload;
         state.balance += action.payload;
-
-        // Play coin sound when withdrawing from stash
-        if (action.payload > 0) {
-          SoundEffects.playCoinSound();
-        }
+        // Coin SFX fired by audioListenerMiddleware (keeps this reducer pure).
       }
     },
     setDifficultyLevel: (state, action: PayloadAction<number | null>) => {
@@ -138,7 +165,8 @@ const walletSlice = createSlice({
     resetWallet: (state) => {
       state.balance = 20;
       state.adoptionFee = 5000;
-      state.stashedAmount = -state.adoptionFee;
+      state.stashedAmount = 0;
+      state.stashHistory = [];
       state.hasDuplicatedVacuumSealer = false;
     },
     completeReset: () => initialState,
@@ -174,8 +202,9 @@ const walletSlice = createSlice({
         };
 
         state.adoptionFee = adoptionFees[action.payload.level] || 5000;
-        // Set stashed amount to negative adoption fee (representing debt)
-        state.stashedAmount = -(adoptionFees[action.payload.level] || 5000);
+        // Piggy bank starts empty; the adoption fee above is the goal to reach.
+        state.stashedAmount = 0;
+        state.stashHistory = [];
       }
       if (action.payload.playerName) {
         state.playerName = action.payload.playerName;
@@ -220,6 +249,9 @@ export default walletSlice.reducer;
 export const selectBalance = (state: { wallet: WalletState }) => state.wallet.balance;
 export const selectStashedAmount = (state: { wallet: WalletState }) => state.wallet.stashedAmount;
 export const selectAdoptionFee = (state: { wallet: WalletState }) => state.wallet.adoptionFee;
+const EMPTY_STASH_HISTORY: StashEntry[] = [];
+export const selectStashHistory = (state: { wallet: WalletState }) =>
+  state.wallet.stashHistory ?? EMPTY_STASH_HISTORY;
 export const selectDifficultyLevel = (state: { wallet: WalletState }) => state.wallet.difficultyLevel;
 export const selectPlayerName = (state: { wallet: WalletState }) => state.wallet.playerName;
 export const selectPlayerId = (state: { wallet: WalletState }) => state.wallet.playerId;

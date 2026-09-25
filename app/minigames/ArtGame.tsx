@@ -28,7 +28,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -97,6 +97,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
   const [stage, setStage] = useState(1); // 1, 2, 3
   const [completedLevel, setCompletedLevel] = useState(0); // Track highest level completed
   const [tiles, setTiles] = useState<Tile[]>([]);
+  const [boardHeight, setBoardHeight] = useState(0); // measured board area for tile sizing
   const [currentPosition, setCurrentPosition] = useState<{
     row: number;
     col: number;
@@ -797,7 +798,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -814,38 +815,37 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     );
   }
 
-  const screenWidth = Dimensions.get('window').width - 32;
-  const tileSize =
-    Math.floor(
-      (screenWidth - 16 - (stageConfig.gridSize - 1) * 2) / stageConfig.gridSize
-    ) - 2;
+  const { width: winW, height: winH } = Dimensions.get('window');
+  const screenWidth = winW - 32;
+  // Size the square grid to the MEASURED board area (onLayout below) so it can
+  // never overflow onto the Leave. Falls back to a height fraction before the
+  // first layout pass.
+  const availGridHeight = boardHeight > 0 ? boardHeight - 16 : winH * 0.46;
+  const tileByWidth =
+    (screenWidth - 16 - (stageConfig.gridSize - 1) * 2) / stageConfig.gridSize;
+  const tileByHeight =
+    (availGridHeight - (stageConfig.gridSize - 1) * 5) / stageConfig.gridSize;
+  const tileSize = Math.max(
+    18,
+    Math.floor(Math.min(tileByWidth, tileByHeight)) - 2
+  );
 
   return (
     <>
-      <View
-        style={[
-          styles.container,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
+      <MinigameScaffold
+        theme="art"
+        title="Rainbow Road"
+        subtitle="Follow the subtle color gradation path - artistic precision required!"
+        leftInfo={`Level ${stage}/3`}
+        centerInfo={' '}
+        rightInfo={`Tries: ${mistakesLeft}/5`}
+        backgroundColor="#000000"
+        onLeave={handleForfeit}
       >
         <Animated.View style={flashStyle} />
 
-        {/* Color Key - matches current grid colors exactly */}
-        <View>
-          <MinigameHUD
-            theme="art"
-            title="Rainbow Road"
-            subtitle="Follow the subtle color gradation path - artistic precision required!"
-            leftInfo={`Level ${stage}/3`}
-            centerInfo={' '}
-            rightInfo={`Tries: ${mistakesLeft}/5`}
-          />
-
-          {/* Color Key - shows the correct path sequence */}
-          <View style={styles.colorKeyContainer}>
+        {/* Color Key - shows the correct path sequence */}
+        <View style={styles.colorKeyContainer}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -960,12 +960,15 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
               </View>
             </ScrollView>
           </View>
-        </View>
 
-        {/* Game Container */}
+        {/* Game Container — measured so the grid is sized to fit, never overflow */}
+        <View
+          style={styles.boardArea}
+          onLayout={(e) => setBoardHeight(e.nativeEvent.layout.height)}
+        >
         <Animated.View style={[styles.gameContainer, shakeStyle]}>
           {/* Grid - Create rows explicitly */}
-          <View style={[styles.gridContainer, { width: screenWidth }]}>
+          <View style={styles.gridContainer}>
             {Array.from({ length: stageConfig.gridSize }, (_, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.gridRow}>
                 {Array.from({ length: stageConfig.gridSize }, (_, colIndex) => {
@@ -1013,35 +1016,8 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
             ))}
           </View>
         </Animated.View>
-
-        {/* Footer - Outside gameContainer to prevent overlap */}
-        <View
-          style={[
-            styles.footer,
-            {
-              gap: ResponsiveSpacing.buttonGap(),
-              paddingVertical: ResponsiveSpacing.buttonPadding(),
-            },
-          ]}
-        >
-          <PixelBorder
-            borderColor="#ffffff"
-            borderWidth={3}
-            backgroundColor="#1a1a1a"
-            innerPadding={0}
-            style={{ flex: 1, marginBottom: 8 }}
-          >
-            <TouchableOpacity
-              style={styles.leaveBtnInner}
-              onPress={handleForfeit}
-            >
-              <TextWithEmojis style={styles.footerBtnText} imageSize={28}>
-                🚪 Leave
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
         </View>
-      </View>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -1060,6 +1036,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  boardArea: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
   },
   gameContainer: {
     alignItems: 'center',

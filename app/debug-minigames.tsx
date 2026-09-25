@@ -15,7 +15,7 @@ const MINIGAMES = [
   { label: 'Logic', route: '/logic-game', emoji: '🧩' },
   { label: 'Art', route: '/art-game', emoji: '🎨' },
   { label: 'Economy', route: '/economy-game', emoji: '📈' },
-  { label: 'Geography', route: '/geography-game', emoji: '🌍' },
+  { label: 'Pangea', route: '/geography-game', emoji: '🌍' },
   { label: 'Home Ec', route: '/home-ec-game', emoji: '🍳' },
   { label: 'Gym', route: '/history-game', emoji: '🏋️' },
   { label: 'Recess', route: '/recess-game', emoji: '⛹️' },

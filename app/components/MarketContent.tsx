@@ -19,6 +19,7 @@ interface MarketContentProps {
   onCandyPress: (index: number) => void;
   onLunchBack: () => void;
   onInventoryPress: () => void;
+  onPiggyBankPress?: () => void;
   onNextPeriod: () => void;
   onEndDay: () => void;
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
@@ -51,6 +52,7 @@ function MarketContent({
   onCandyPress,
   onLunchBack,
   onInventoryPress,
+  onPiggyBankPress,
   onNextPeriod,
   onEndDay,
   flavorTextWrapper,
@@ -75,19 +77,26 @@ function MarketContent({
       <View style={styles.contentContainer}>
         <GameHUD
           onInventoryPress={onInventoryPress}
+          onPiggyBankPress={onPiggyBankPress}
           flavorTextWrapper={flavorTextWrapper}
           showLunchMinigames={showLunchMinigames}
           onWalletLayout={onWalletLayout}
           onPiggyBankLayout={onPiggyBankLayout}
         />
 
-        {showSizeTabs && availableSizes && selectedSize && onSizeSelect && (
-          <SizeTabs
-            sizes={availableSizes}
-            selectedSize={selectedSize}
-            onSelect={onSizeSelect}
-          />
-        )}
+        {/* Hide the candy size tabs while the lunch minigame picker is up —
+            size selection is irrelevant when the game is choosing a minigame. */}
+        {showSizeTabs &&
+          !showLunchMinigames &&
+          availableSizes &&
+          selectedSize &&
+          onSizeSelect && (
+            <SizeTabs
+              sizes={availableSizes}
+              selectedSize={selectedSize}
+              onSelect={onSizeSelect}
+            />
+          )}
 
         <View style={styles.listContainer}>
           <MarketList

@@ -223,6 +223,7 @@ function StashMoneyModal({
       animationType="spring"
       backdropOpacity={0.85}
       position="center"
+      presentation="fullBleed"
     >
       <ImageBackground
         source={require('../../assets/images/neighborhood.png')}

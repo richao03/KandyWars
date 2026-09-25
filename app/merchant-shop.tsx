@@ -1,6 +1,7 @@
 import { router, Stack } from 'expo-router';
 import React, { lazy, Suspense, useCallback } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useDailyStats } from '../src/hooks/useDailyStats';
 import { useWallet } from '../src/hooks/useWallet';
@@ -133,56 +134,56 @@ const MerchantItemButton = React.memo(function MerchantItemButton({
       }
       style={styles.itemButtonWrapper}
     >
-    <PressableButton
-      onPress={undefined}
-      shadowColor={itemColor.border}
-      shadowOffset={{ width: 0, height: 4 }}
-      shadowOpacity={0.5}
-      shadowRadius={6}
-      elevation={8}
-      style={{ flex: 1 }}
-    >
-      <View style={styles.itemContainer}>
-        <Image source={MERCHANT_ICONS[itemId]} style={styles.itemIcon} />
-        <View style={styles.borderWrapper}>
-          <PixelBorder
-            borderColor={itemColor.border}
-            borderWidth={3}
-            backgroundColor={itemColor.bg}
-            innerPadding={0}
-          >
-            <View style={styles.itemButton}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              {shouldShowActivation ? (
-                <Text
-                  style={[
-                    styles.activateText,
-                    (itemId === 'sixth_grade_bodyguard' ||
-                      itemId === 'hall_monitor_bribe') &&
-                      styles.protectedText,
-                    itemId === 'influencer_shoutout' && styles.uploadedText,
-                  ]}
-                >
-                  {activationText}
-                </Text>
-              ) : (
-                <Text
-                  style={[
-                    styles.itemPrice,
-                    !canAfford && styles.cannotAffordPrice,
-                  ]}
-                >
-                  ${(price / 1000).toFixed(1)}k
-                </Text>
-              )}
-              {displayLevel && (
-                <Text style={styles.itemLevel}>{displayLevel}</Text>
-              )}
-            </View>
-          </PixelBorder>
+      <PressableButton
+        onPress={undefined}
+        shadowColor={itemColor.border}
+        shadowOffset={{ width: 0, height: 4 }}
+        shadowOpacity={0.5}
+        shadowRadius={6}
+        elevation={8}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.itemContainer}>
+          <Image source={MERCHANT_ICONS[itemId]} style={styles.itemIcon} />
+          <View style={styles.borderWrapper}>
+            <PixelBorder
+              borderColor={itemColor.border}
+              borderWidth={3}
+              backgroundColor={itemColor.bg}
+              innerPadding={0}
+            >
+              <View style={styles.itemButton}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                {shouldShowActivation ? (
+                  <Text
+                    style={[
+                      styles.activateText,
+                      (itemId === 'sixth_grade_bodyguard' ||
+                        itemId === 'hall_monitor_bribe') &&
+                        styles.protectedText,
+                      itemId === 'influencer_shoutout' && styles.uploadedText,
+                    ]}
+                  >
+                    {activationText}
+                  </Text>
+                ) : (
+                  <Text
+                    style={[
+                      styles.itemPrice,
+                      !canAfford && styles.cannotAffordPrice,
+                    ]}
+                  >
+                    ${(price / 1000).toFixed(1)}k
+                  </Text>
+                )}
+                {displayLevel && (
+                  <Text style={styles.itemLevel}>{displayLevel}</Text>
+                )}
+              </View>
+            </PixelBorder>
+          </View>
         </View>
-      </View>
-    </PressableButton>
+      </PressableButton>
     </PressableScale>
   );
 });
@@ -441,7 +442,7 @@ const DailyJokerSection = React.memo(function DailyJokerSection({
         <JokerCard
           joker={cardJoker}
           isAfterSchool={true}
-          isCompact={true}
+          variant="poster"
           disableActivation={true}
           onPress={
             canBuy
@@ -455,7 +456,6 @@ const DailyJokerSection = React.memo(function DailyJokerSection({
               : undefined
           }
           selectionDisabled={!canBuy}
-          containerStyle={styles.dailyJokerSquareContainer}
         />
         {dailyJoker.purchased && (
           <View style={styles.dailyJokerSoldOverlay}>
@@ -480,6 +480,7 @@ const MERCHANT_SUBTITLES = [
 ];
 
 export default function MerchantShopPage() {
+  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const { spend, balance } = useWallet();
   const { recordMerchantPurchase } = useDailyStats();
@@ -568,21 +569,16 @@ export default function MerchantShopPage() {
       // Mark as purchased
       dispatch(markDailyJokerPurchased());
 
-      // Record purchase for stats
-      recordMerchantPurchase({
-        itemId: `daily_joker_${jokerId}` as any,
-        itemName: `Daily Joker: ${jokerName}`,
-        price,
-        type: 'consumable',
-        level: ownedLevel > 0 ? ownedLevel + 1 : 1,
-      });
+      // NOTE: the daily joker is a joker (shown in the owned-jokers grid at game
+      // end), not a merchant consumable — so it is intentionally NOT recorded via
+      // recordMerchantPurchase, to keep it out of the end-game "Merchant Items".
 
       if (__DEV__)
         console.log(
           `✅ Daily Joker "${jokerName}" ${ownedLevel > 0 ? 'upgraded to L' + (ownedLevel + 1) : 'purchased'}`
         );
     },
-    [balance, spend, dispatch, recordMerchantPurchase]
+    [balance, spend, dispatch]
   );
 
   const handlePurchase = useCallback(() => {
@@ -645,80 +641,89 @@ export default function MerchantShopPage() {
           onInventoryPress={() => setInventoryModalVisible(true)}
         />
 
-        <DailyJokerSection onPurchase={handleDailyJokerPurchase} />
-
-        <View style={styles.itemsContainer}>
-          {/* Row 1 */}
-          <View style={styles.itemsRow}>
-            <MerchantItemButton
-              itemId="fake_report_card"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-            <MerchantItemButton
-              itemId="metal_detector"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-            <MerchantItemButton
-              itemId="hollowed_textbook"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-          </View>
-
-          {/* Row 2 */}
-          <View style={styles.itemsRow}>
-            <MerchantItemButton
-              itemId="street_cred"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-            <MerchantItemButton
-              itemId="double_sided_coin"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-            <MerchantItemButton
-              itemId="influencer_shoutout"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-          </View>
-
-          {/* Row 3 */}
-          <View style={styles.itemsRow}>
-            <MerchantItemButton
-              itemId="hall_monitor_bribe"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-            <MerchantItemButton
-              itemId="sixth_grade_bodyguard"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-            <MerchantItemButton
-              itemId="air_delivery_drone"
-              onPress={handleItemPress}
-              onActivate={handleActivateDrone}
-            />
-          </View>
-        </View>
-
-        <PressableButton
-          onPress={handleBack}
-          shadowColor="rgba(185,28,28,1)"
-          shadowOffset={{ width: 0, height: 4 }}
-          shadowOpacity={0.5}
-          shadowRadius={5}
-          elevation={8}
-          style={styles.backButton}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.backButtonInner}>
-            <Text style={styles.backButtonText}>Leave</Text>
+          <DailyJokerSection onPurchase={handleDailyJokerPurchase} />
+
+          <View style={styles.itemsContainer}>
+            {/* Row 1 */}
+            <View style={styles.itemsRow}>
+              <MerchantItemButton
+                itemId="fake_report_card"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+              <MerchantItemButton
+                itemId="metal_detector"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+              <MerchantItemButton
+                itemId="hollowed_textbook"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+            </View>
+
+            {/* Row 2 */}
+            <View style={styles.itemsRow}>
+              <MerchantItemButton
+                itemId="street_cred"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+              <MerchantItemButton
+                itemId="double_sided_coin"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+              <MerchantItemButton
+                itemId="influencer_shoutout"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+            </View>
+
+            {/* Row 3 */}
+            <View style={styles.itemsRow}>
+              <MerchantItemButton
+                itemId="hall_monitor_bribe"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+              <MerchantItemButton
+                itemId="sixth_grade_bodyguard"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+              <MerchantItemButton
+                itemId="air_delivery_drone"
+                onPress={handleItemPress}
+                onActivate={handleActivateDrone}
+              />
+            </View>
           </View>
-        </PressableButton>
+        </ScrollView>
+
+        {/* Pinned footer */}
+        <View style={[styles.footer, { paddingBottom: 12 }]}>
+          <PressableButton
+            onPress={handleBack}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={styles.backButton}
+          >
+            <View style={styles.backButtonInner}>
+              <Text style={styles.backButtonText}>Leave</Text>
+            </View>
+          </PressableButton>
+        </View>
 
         {/* Item Info Modal */}
         {selectedItem && (
@@ -778,11 +783,18 @@ const styles = StyleSheet.create({
     fontFamily: 'PixeloidMono',
     marginTop: 8,
   },
-  itemsContainer: {
+  scroll: {
+    marginTop: 8,
     flex: 1,
-    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  itemsContainer: {
     gap: 15,
     paddingHorizontal: 20,
+    marginTop: 8,
   },
   itemsRow: {
     flexDirection: 'row',
@@ -864,10 +876,11 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
+  footer: {
+    paddingTop: 8,
+    paddingHorizontal: 20,
+  },
   backButton: {
-    marginBottom: 30,
-    marginTop: 20,
-    marginHorizontal: 20,
     backgroundColor: 'rgba(239,68,68,1)',
     borderRadius: 12,
     borderWidth: 3,
@@ -987,14 +1000,9 @@ const styles = StyleSheet.create({
   },
   dailyJokerCardWrapper: {
     position: 'relative',
-    width: 180,
-    height: 130,
+    width: '100%',
+    maxWidth: 360,
     marginBottom: 4,
-  },
-  dailyJokerSquareContainer: {
-    minHeight: undefined,
-    height: '100%',
-    padding: 6,
   },
   dailyJokerSoldOverlay: {
     position: 'absolute',

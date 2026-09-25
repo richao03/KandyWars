@@ -74,7 +74,6 @@ const baseSaleParams = {
 const findStandardized = (id: number) =>
   STANDARDIZED_JOKERS.find((j: any) => j.id === id);
 
-
 // =============================================================
 // 66 — Treasure Chest (already strongly covered in endDayBonuses.test.ts)
 // =============================================================
@@ -285,9 +284,15 @@ describe('Piggy Bank Pro (#74) — registry sanity', () => {
 // =============================================================
 describe('Market Crash (#75) — registry only (instant)', () => {
   it('exposes price_manipulation with multiply 0.5/0.4/0.3', () => {
-    expect(getJokerEffectsAtLevel(JOKER_IDS.MARKET_CRASH, 1)[0].amount).toBe(0.5);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.MARKET_CRASH, 2)[0].amount).toBe(0.4);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.MARKET_CRASH, 3)[0].amount).toBeCloseTo(0.3);
+    expect(getJokerEffectsAtLevel(JOKER_IDS.MARKET_CRASH, 1)[0].amount).toBe(
+      0.5
+    );
+    expect(getJokerEffectsAtLevel(JOKER_IDS.MARKET_CRASH, 2)[0].amount).toBe(
+      0.4
+    );
+    expect(
+      getJokerEffectsAtLevel(JOKER_IDS.MARKET_CRASH, 3)[0].amount
+    ).toBeCloseTo(0.3);
   });
 
   it('STANDARDIZED_JOKERS marks it one-time', () => {
@@ -332,8 +337,12 @@ describe('Lucky Charm (#77) — registry sanity', () => {
 describe('Bully Bait (#78) — registry sanity', () => {
   it('exposes event_conversion with amount 500/1000/2000', () => {
     expect(getJokerEffectsAtLevel(JOKER_IDS.BULLY_BAIT, 1)[0].amount).toBe(500);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.BULLY_BAIT, 2)[0].amount).toBe(1000);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.BULLY_BAIT, 3)[0].amount).toBe(2000);
+    expect(getJokerEffectsAtLevel(JOKER_IDS.BULLY_BAIT, 2)[0].amount).toBe(
+      1000
+    );
+    expect(getJokerEffectsAtLevel(JOKER_IDS.BULLY_BAIT, 3)[0].amount).toBe(
+      2000
+    );
     expect(getJokerEffectsAtLevel(JOKER_IDS.BULLY_BAIT, 1)[0].target).toBe(
       'event_conversion'
     );
@@ -344,10 +353,16 @@ describe('Bully Bait (#78) — registry sanity', () => {
 // 79 — Teacher's Pet (UI-only via direct ID check — registry sanity)
 // =============================================================
 describe("Teacher's Pet (#79) — registry only (UI-driven)", () => {
-  it('exposes price_peek_hint with amount 1/2/3', () => {
-    expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 1)[0].amount).toBe(1);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 2)[0].amount).toBe(2);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 3)[0].amount).toBe(3);
+  it('exposes price_peek_hint with reveal chance 0.1/0.2/0.3', () => {
+    expect(
+      getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 1)[0].amount
+    ).toBeCloseTo(0.1);
+    expect(
+      getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 2)[0].amount
+    ).toBeCloseTo(0.2);
+    expect(
+      getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 3)[0].amount
+    ).toBeCloseTo(0.3);
     expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 1)[0].target).toBe(
       'price_peek_hint'
     );
@@ -724,8 +739,12 @@ describe('Patience Pays (#92) — registry sanity', () => {
 describe('Spare Change (#93) — registry sanity', () => {
   it('exposes spare_change_income add 5/10/20', () => {
     expect(getJokerEffectsAtLevel(JOKER_IDS.SPARE_CHANGE, 1)[0].amount).toBe(5);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.SPARE_CHANGE, 2)[0].amount).toBe(10);
-    expect(getJokerEffectsAtLevel(JOKER_IDS.SPARE_CHANGE, 3)[0].amount).toBe(20);
+    expect(getJokerEffectsAtLevel(JOKER_IDS.SPARE_CHANGE, 2)[0].amount).toBe(
+      10
+    );
+    expect(getJokerEffectsAtLevel(JOKER_IDS.SPARE_CHANGE, 3)[0].amount).toBe(
+      20
+    );
   });
 });
 
@@ -815,7 +834,8 @@ describe('Penny Wise (#96) — penny_wise_boost × pennyWiseStashes', () => {
     });
     // flatBonus expected = 500 × (0.15 × 2) = 150
     const entry = result.bonusBreakdown.find(
-      (b: any) => b.flatBonus !== undefined && Math.abs(b.flatBonus - 150) < 0.001
+      (b: any) =>
+        b.flatBonus !== undefined && Math.abs(b.flatBonus - 150) < 0.001
     );
     expect(entry).toBeDefined();
   });

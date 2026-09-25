@@ -12,6 +12,7 @@ import {
 
 import { CANDY_NAMES } from '../../src/constants/candyRegistry';
 import { JOKER_IDS } from '../../src/constants/jokerIds';
+import { useCandySales } from '../../src/hooks/useCandySales';
 import { useEventHandler } from '../../src/hooks/useEventHandler';
 import { useGame } from '../../src/hooks/useGame';
 import { useInventory } from '../../src/hooks/useInventory';
@@ -19,7 +20,6 @@ import { useJokers } from '../../src/hooks/useJokers';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useWallet } from '../../src/hooks/useWallet';
 import { useAppSelector } from '../../src/store/hooks';
-import { useCandySales } from '../../src/hooks/useCandySales';
 import { selectJokerStats } from '../../src/store/slices/jokerStatsSlice';
 import { triggerTieredHaptic } from '../../src/utils/hapticTier';
 import {
@@ -53,7 +53,8 @@ interface JokerCardProps {
   isAfterSchool: boolean;
   onLongPress?: () => void;
   isDragging?: boolean;
-  isCompact?: boolean;
+  /** Visual density/layout chosen by the parent context. */
+  variant?: 'poster' | 'strip' | 'tile';
   showOwned?: boolean;
   disableActivation?: boolean;
   debugMode?: boolean;
@@ -87,7 +88,7 @@ function JokerCard({
   isAfterSchool,
   onLongPress,
   isDragging,
-  isCompact,
+  variant = 'tile',
   showOwned,
   disableActivation = false,
   debugMode = false,
@@ -463,7 +464,8 @@ function JokerCard({
 
     // Get current target candy price for conversion
     const targetPrice =
-      gameData.candyPrices[targetCandyType]?.[periodCount] || 0;
+      gameData.candyPrices?.[targetCandyType]?.[periodCount] || 0;
+    const sourceQuantity = sourceInventoryItem.quantity || 0;
     if (__DEV__)
       console.log(
         `Master of Trade: Target price for ${targetCandyType}: ${targetPrice}`
@@ -472,7 +474,7 @@ function JokerCard({
     // Use the dedicated convertCandyType function (bypasses inventory limits for 1:1 conversion)
     const conversionSuccess = convertCandyType(
       selectedSourceCandy,
-      sourceInventoryItem.quantity,
+      sourceQuantity,
       targetCandyType,
       targetPrice
     );
@@ -633,7 +635,11 @@ function JokerCard({
     for (const candyType of Object.keys(candyPrices)) {
       const original = candyPrices[candyType]?.[periodCount];
       if (typeof original !== 'number') continue;
-      modifyCandyPrice(candyType, Math.max(1, Math.round(original * mult)), periodCount);
+      modifyCandyPrice(
+        candyType,
+        Math.max(1, Math.round(original * mult)),
+        periodCount
+      );
     }
   };
 
@@ -651,7 +657,11 @@ function JokerCard({
       );
     } catch (error) {
       console.error('📉 Market Crash: Error during activation:', error);
-      showAlert('Error', 'An error occurred while activating Market Crash', '❌');
+      showAlert(
+        'Error',
+        'An error occurred while activating Market Crash',
+        '❌'
+      );
     }
   };
 
@@ -685,27 +695,35 @@ function JokerCard({
       );
     } catch (error) {
       console.error('🏃 Detention Dodge: Error during activation:', error);
-      showAlert('Error', 'An error occurred while activating Detention Dodge', '❌');
+      showAlert(
+        'Error',
+        'An error occurred while activating Detention Dodge',
+        '❌'
+      );
     }
   };
 
   const jokerLevel = (joker as any).level ?? 1;
+  // joker.id can arrive as a string from persistence; normalize once so the
+  // numeric-id lookups/comparisons below (and the effect engine) match.
+  const numericJokerId =
+    typeof joker.id === 'string' ? parseInt(joker.id, 10) : joker.id;
   const LEVEL_COLORS = { 1: '#22c55e', 2: '#3b82f6', 3: '#a855f7' } as const;
   const levelColor = LEVEL_COLORS[jokerLevel as 1 | 2 | 3] || LEVEL_COLORS[1];
   const standardizedJoker = STANDARDIZED_JOKERS.find(
-    (sj) => sj.id === joker.id
+    (sj) => sj.id === numericJokerId
   );
   const maxLevel = standardizedJoker?.maxLevel ?? 1;
   const isLevelable = maxLevel > 1;
 
-  // Live "(currently +30%)" text for variable jokers (Trade Routes,
+  // Live "(+30%)" text for variable jokers (Trade Routes,
   // Compound Interest, Reputation, Street Smarts, Clearance Sale, Momentum,
   // Hoarder, Penny Wise, Survivor) — null for non-variable jokers or
   // zero-counter state. Momentum's counter lives in candySalesSlice so it's
   // sourced via useCandySales().
   const jokerStats = useAppSelector(selectJokerStats);
   const { consecutivePeriodSales } = useCandySales();
-  const liveValueText = getLiveJokerValueText(joker.id, jokerLevel, {
+  const liveValueText = getLiveJokerValueText(numericJokerId, jokerLevel, {
     jokerStats,
     consecutivePeriodSales: consecutivePeriodSales(),
   });
@@ -720,8 +738,12 @@ function JokerCard({
         : 'Instant';
   const flavorText =
     joker.flavorText ||
-    STANDARDIZED_JOKERS.find((sj) => sj.id === joker.id)?.flavorText ||
+    STANDARDIZED_JOKERS.find((sj) => sj.id === numericJokerId)?.flavorText ||
     'Mysterious power awaits...';
+
+  const jokerArt =
+    JOKER_ICON_MAP[joker.name] ||
+    require('../../assets/images/emojis/joker.png');
 
   // PressableScale for press-down spring feedback (I3 game-feel)
   const CardWrapper =
@@ -757,6 +779,126 @@ function JokerCard({
   const isUsedToday =
     joker.type === 'one-time' &&
     usedTodayJokerIds.includes(joker.id.toString());
+  const variantCardStyle =
+    variant === 'poster'
+      ? styles.posterCard
+      : variant === 'strip'
+        ? styles.stripCard
+        : styles.tileCard;
+
+  const description = (
+    getJokerDescription(numericJokerId, jokerLevel) || joker.description
+  ).replace(/^\[(?:xMult|\+Profit)\]\s*/, '');
+  const liveSuffix = liveValueText ? ` (${liveValueText})` : '';
+  const leadingValue = isLevelable
+    ? description.match(/^([+\-$]?\d+\.?\d*[xk%]?)/)
+    : null;
+
+  const renderDescription = () => (
+    <Text
+      style={[
+        styles.jokerDescription,
+        variant === 'poster' && styles.posterDescription,
+        variant === 'strip' && styles.stripDescription,
+        variant === 'tile' && styles.tileDescription,
+      ]}
+      adjustsFontSizeToFit
+      minimumFontScale={0.78}
+    >
+      {leadingValue ? (
+        <>
+          <Text style={{ color: levelColor, fontWeight: '700' }}>
+            {leadingValue[1]}
+          </Text>
+          {description.slice(leadingValue[1].length)}
+        </>
+      ) : (
+        description
+      )}
+      {liveSuffix}
+    </Text>
+  );
+
+  const renderLevelDots = () =>
+    isLevelable ? (
+      <View style={styles.levelBadgeContainer}>
+        {[1, 2, 3].map((i) => (
+          <View
+            key={i}
+            style={[
+              styles.levelDot,
+              i <= jokerLevel
+                ? {
+                    backgroundColor: LEVEL_COLORS[i as 1 | 2 | 3],
+                    shadowColor: LEVEL_COLORS[i as 1 | 2 | 3],
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 3,
+                  }
+                : styles.levelDotEmpty,
+            ]}
+          />
+        ))}
+      </View>
+    ) : null;
+
+  const renderTypeBadge = () => (
+    <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
+      <TextWithEmojis style={styles.typeText} imageSize={12}>
+        {`${typeEmoji} ${typeText}`}
+      </TextWithEmojis>
+    </View>
+  );
+
+  const renderUseButton = () =>
+    joker.type === 'one-time' &&
+    !disableActivation &&
+    !isAfterSchool &&
+    !isUsedToday ? (
+      <PressableScale style={styles.useButton} onPress={handleActivate}>
+        <Text style={styles.useButtonText}>USE</Text>
+      </PressableScale>
+    ) : null;
+
+  const renderStateOverlays = () => (
+    <>
+      {isSelected && (
+        <View style={styles.selectedBadge}>
+          <Text style={styles.selectedBadgeText}>✓</Text>
+        </View>
+      )}
+      {showOwned && (
+        <View style={styles.ownedBadge}>
+          <Text style={styles.ownedBadgeText}>OWNED ✓</Text>
+        </View>
+      )}
+    </>
+  );
+
+  const renderSynergyBadge = () => {
+    const target =
+      numericJokerId === JOKER_IDS.COMBO_PLATTER
+        ? 2
+        : numericJokerId === JOKER_IDS.TRIPLE_THREAT
+          ? 3
+          : null;
+    if (coveredTypeCount === undefined || target === null) return null;
+    const ready = coveredTypeCount >= target;
+    return (
+      <View
+        style={[
+          styles.synergyBadge,
+          ready ? styles.synergyReady : styles.synergyPending,
+        ]}
+      >
+        <Text style={[styles.synergyText, ready && styles.synergyTextReady]}>
+          {ready
+            ? `${coveredTypeCount}/${target} types ✓`
+            : `${coveredTypeCount}/${target} types needed`}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <>
@@ -769,157 +911,98 @@ function JokerCard({
           <CardWrapper
             style={[
               styles.cardContainer,
+              variantCardStyle,
               selectionDisabled && { opacity: 0.4 },
               containerStyle,
             ]}
+            accessibilityRole={onPress || onLongPress ? 'button' : undefined}
+            accessibilityLabel={`${joker.name}. ${typeText}. ${description}${liveSuffix}`}
+            accessibilityState={{
+              selected: isSelected,
+              disabled: selectionDisabled,
+            }}
             {...cardWrapperProps}
           >
-            {/* Background icon */}
-            {JOKER_ICON_MAP[joker.name] && (
-              <Image
-                source={JOKER_ICON_MAP[joker.name]}
-                style={styles.backgroundIcon}
-                resizeMode="contain"
-              />
-            )}
-            {/* Header Section */}
-            <View style={styles.headerSection}>
+            {variant === 'poster' && (
               <>
-                <Text style={styles.jokerName}>{joker.name}</Text>
-                {(isLevelable && (
-                  <View style={styles.levelBadgeContainer}>
-                    {[1, 2, 3].map((i) => (
-                      <View
-                        key={i}
-                        style={[
-                          styles.levelDot,
-                          i <= jokerLevel
-                            ? {
-                                backgroundColor: LEVEL_COLORS[i as 1 | 2 | 3],
-                                shadowColor: LEVEL_COLORS[i as 1 | 2 | 3],
-                                shadowOffset: { width: 0, height: 0 },
-                                shadowOpacity: 0.8,
-                                shadowRadius: 3,
-                              }
-                            : styles.levelDotEmpty,
-                        ]}
-                      />
-                    ))}
+                <View style={styles.headerSection}>
+                  <Text style={styles.jokerName}>{joker.name}</Text>
+                  {renderLevelDots()}
+                </View>
+                <View style={styles.posterBody}>
+                  <View style={styles.posterCopy}>
+                    <View style={styles.badgeRow}>
+                      {renderTypeBadge()}
+                      {renderUseButton()}
+                    </View>
+                    {renderDescription()}
+                    {renderSynergyBadge()}
+                    <Text style={styles.jokerFlavorText}>{flavorText}</Text>
                   </View>
-                )) ||
-                  (showOwned && <View style={styles.ownedIndicator} />)}
+                  <View style={styles.posterArtStage}>
+                    <View style={styles.artBurst} />
+                    <Image
+                      source={jokerArt}
+                      style={styles.posterArt}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </View>
               </>
-            </View>
+            )}
 
-            {/* Type Badge and Play Card Row */}
-            <View style={styles.badgeRow}>
-              <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-                <TextWithEmojis style={styles.typeText} imageSize={12}>
-                  {`${typeEmoji} ${typeText}`}
-                </TextWithEmojis>
+            {variant === 'strip' && (
+              <View style={styles.stripBody}>
+                <View style={styles.stripArtStage}>
+                  <View style={styles.artBurst} />
+                  <Image
+                    source={jokerArt}
+                    style={styles.stripArt}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View style={styles.stripCopy}>
+                  <Text style={[styles.jokerName, styles.stripName]}>
+                    {joker.name}
+                  </Text>
+                  {renderDescription()}
+                  {renderSynergyBadge()}
+                </View>
+                <View style={styles.stripMeta}>
+                  {renderLevelDots()}
+                  {renderTypeBadge()}
+                  {renderUseButton()}
+                </View>
               </View>
+            )}
 
-              {joker.type === 'one-time' &&
-                !disableActivation &&
-                !isAfterSchool &&
-                !isUsedToday && (
-                  // PressableScale for press-down spring feedback (I3 game-feel)
-                  <PressableScale
-                    style={styles.useButton}
-                    onPress={handleActivate}
-                  >
-                    <Text style={styles.useButtonText}>USE</Text>
-                  </PressableScale>
-                )}
-            </View>
-
-            {/* Main Content */}
-            <View style={styles.contentSection}>
-              {(() => {
-                const desc = (
-                  getJokerDescription(joker.id, jokerLevel) || joker.description
-                ).replace(/^\[(?:xMult|\+Profit)\]\s*/, '');
-                const liveSuffix = liveValueText ? ` (${liveValueText})` : '';
-                if (!isLevelable) {
-                  return (
-                    <Text style={styles.jokerDescription}>
-                      {desc}
-                      {liveSuffix}
-                    </Text>
-                  );
-                }
-                // Color only the leading numeric value (e.g., "+0.5", "3x", "$5k", "50%")
-                const match = desc.match(/^([+\-$]?\d+\.?\d*[xk%]?)/);
-                if (!match) {
-                  return (
-                    <Text style={styles.jokerDescription}>
-                      {desc}
-                      {liveSuffix}
-                    </Text>
-                  );
-                }
-                return (
-                  <Text style={styles.jokerDescription}>
-                    <Text style={{ color: levelColor, fontWeight: '700' }}>
-                      {match[1]}
-                    </Text>
-                    {desc.slice(match[1].length)}
-                    {liveSuffix}
-                  </Text>
-                );
-              })()}
-            </View>
-
-            {/* Synergy Badge for Combo Platter / Triple Threat */}
-            {coveredTypeCount !== undefined &&
-              joker.id === JOKER_IDS.COMBO_PLATTER && (
-                <View
-                  style={[
-                    styles.synergyBadge,
-                    coveredTypeCount >= 2
-                      ? styles.synergyReady
-                      : styles.synergyPending,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.synergyText,
-                      coveredTypeCount >= 2 && styles.synergyTextReady,
-                    ]}
-                  >
-                    {coveredTypeCount >= 2
-                      ? `${coveredTypeCount}/2 types \u2713`
-                      : `${coveredTypeCount}/2 types needed`}
+            {variant === 'tile' && (
+              <>
+                <View style={styles.tileArtStage}>
+                  <View style={styles.artBurst} />
+                  <Image
+                    source={jokerArt}
+                    style={styles.tileArt}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.tileDots}>{renderLevelDots()}</View>
+                </View>
+                <View style={styles.tileHeader}>
+                  <Text style={[styles.jokerName, styles.tileName]}>
+                    {joker.name}
                   </Text>
                 </View>
-              )}
-            {coveredTypeCount !== undefined &&
-              joker.id === JOKER_IDS.TRIPLE_THREAT && (
-                <View
-                  style={[
-                    styles.synergyBadge,
-                    coveredTypeCount >= 3
-                      ? styles.synergyReady
-                      : styles.synergyPending,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.synergyText,
-                      coveredTypeCount >= 3 && styles.synergyTextReady,
-                    ]}
-                  >
-                    {coveredTypeCount >= 3
-                      ? `${coveredTypeCount}/3 types \u2713`
-                      : `${coveredTypeCount}/3 types needed`}
-                  </Text>
+                <View style={styles.tileInfo}>
+                  <View style={styles.tileBadgeRow}>
+                    {renderTypeBadge()}
+                    {renderUseButton()}
+                  </View>
+                  {renderDescription()}
+                  {renderSynergyBadge()}
                 </View>
-              )}
-
-            {/* Footer Section */}
-            <View style={styles.footerSection}>
-              <Text style={styles.jokerFlavorText}>{flavorText}</Text>
-            </View>
+              </>
+            )}
+            {renderStateOverlays()}
           </CardWrapper>
         </PixelBorder>
       </View>
@@ -932,11 +1015,14 @@ function JokerCard({
         onRequestClose={() => setShowConversionStep1(false)}
       >
         <View style={styles.modalOverlay}>
-          <View
+          <PixelBorder
+            borderColor={isAfterSchool ? '#8b5cf6' : '#d4a574'}
+            borderWidth={3}
+            backgroundColor={isAfterSchool ? '#1f2937' : '#ffffff'}
+            innerPadding={24}
             style={[
               styles.modalContent,
               styles.jokerModalContent,
-              isAfterSchool && styles.modalContentAfterSchool,
             ]}
           >
             <>
@@ -999,7 +1085,7 @@ function JokerCard({
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             </>
-          </View>
+          </PixelBorder>
         </View>
       </Modal>
 
@@ -1011,7 +1097,13 @@ function JokerCard({
         onRequestClose={() => setShowConversionStep2(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <PixelBorder
+            borderColor="#d4a574"
+            borderWidth={3}
+            backgroundColor="#ffffff"
+            innerPadding={24}
+            style={styles.modalContent}
+          >
             <View
               style={{
                 flexDirection: 'row',
@@ -1041,21 +1133,26 @@ function JokerCard({
               </Text>
             )}
 
-            {availableTargetCandies.map((candyType) => (
-              <TouchableOpacity
-                key={candyType}
-                style={styles.candyOption}
-                onPress={() => handleTargetCandySelection(candyType)}
-              >
-                <Text style={styles.candyOptionText}>{candyType}</Text>
-                <Text style={styles.targetPrice}>
-                  Current Price: $
-                  {formatCurrency(
-                    gameData.candyPrices[candyType]?.[periodCount] || 0
-                  )}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <ScrollView
+              style={styles.jokerScrollView}
+              showsVerticalScrollIndicator={false}
+            >
+              {availableTargetCandies.map((candyType) => (
+                <TouchableOpacity
+                  key={candyType}
+                  style={styles.candyOption}
+                  onPress={() => handleTargetCandySelection(candyType)}
+                >
+                  <Text style={styles.candyOptionText}>{candyType}</Text>
+                  <Text style={styles.targetPrice}>
+                    Current Price: $
+                    {formatCurrency(
+                      gameData.candyPrices?.[candyType]?.[periodCount] || 0
+                    )}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.cancelButton}
@@ -1066,7 +1163,7 @@ function JokerCard({
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-          </View>
+          </PixelBorder>
         </View>
       </Modal>
 
@@ -1094,19 +1191,21 @@ function JokerCard({
 const styles = StyleSheet.create({
   cardContainer: {
     backgroundColor: '#f8f8f0',
-    padding: 8,
     borderRadius: 12,
-    minHeight: 160,
-    justifyContent: 'space-between',
     overflow: 'hidden',
+    position: 'relative',
   },
-  backgroundIcon: {
-    position: 'absolute',
-    right: -10,
-    bottom: -10,
-    width: 120,
-    height: 120,
-    opacity: 0.25,
+  posterCard: {
+    width: '100%',
+    minHeight: 168,
+  },
+  stripCard: {
+    width: '100%',
+    minHeight: 92,
+  },
+  tileCard: {
+    width: '100%',
+    aspectRatio: 1,
   },
   headerSection: {
     flexDirection: 'row',
@@ -1115,11 +1214,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginBottom: 4,
-    marginTop: -8,
-    marginHorizontal: -8,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    minHeight: 36,
   },
   jokerName: {
     fontSize: 13,
@@ -1133,16 +1228,6 @@ const styles = StyleSheet.create({
     textShadowColor: '#000',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
-  },
-  ownedIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#d4af37',
-    shadowColor: '#d4af37',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
   },
   levelBadgeContainer: {
     flexDirection: 'row',
@@ -1207,6 +1292,147 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'left',
   },
+  posterBody: {
+    flex: 1,
+    minHeight: 132,
+    flexDirection: 'row',
+  },
+  posterCopy: {
+    width: '58%',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'space-between',
+    zIndex: 2,
+  },
+  posterDescription: {
+    fontSize: 14,
+    lineHeight: 18,
+    marginVertical: 6,
+  },
+  posterArtStage: {
+    width: '42%',
+    minHeight: 132,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff4bd',
+    overflow: 'hidden',
+  },
+  posterArt: {
+    width: '92%',
+    height: '92%',
+    opacity: 1,
+    zIndex: 1,
+  },
+  artBurst: {
+    position: 'absolute',
+    width: '140%',
+    height: '140%',
+    borderRadius: 999,
+    backgroundColor: 'rgba(250, 204, 21, 0.18)',
+    borderWidth: 18,
+    borderColor: 'rgba(255, 255, 255, 0.42)',
+    transform: [{ rotate: '18deg' }],
+  },
+  stripBody: {
+    minHeight: 92,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  stripArtStage: {
+    width: 88,
+    minHeight: 92,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff4bd',
+    overflow: 'hidden',
+  },
+  stripArt: {
+    width: 76,
+    height: 76,
+    opacity: 1,
+    zIndex: 1,
+  },
+  stripCopy: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  stripName: {
+    color: '#d4af37',
+    backgroundColor: '#1a1a1a',
+    marginHorizontal: -10,
+    marginTop: -8,
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  stripDescription: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  stripMeta: {
+    width: 88,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#eeeadd',
+    gap: 5,
+  },
+  tileArtStage: {
+    flex: 1,
+    minHeight: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff4bd',
+    overflow: 'hidden',
+  },
+  tileArt: {
+    width: '78%',
+    height: '78%',
+    opacity: 1,
+    zIndex: 1,
+  },
+  tileDots: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 2,
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(26, 26, 26, 0.8)',
+  },
+  tileHeader: {
+    minHeight: 28,
+    justifyContent: 'center',
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  tileName: {
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  tileInfo: {
+    minHeight: 54,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    justifyContent: 'space-between',
+  },
+  tileBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+    marginBottom: 3,
+  },
+  tileDescription: {
+    fontSize: 9,
+    lineHeight: 11,
+    textAlign: 'center',
+  },
   footerSection: {
     gap: 8,
   },
@@ -1219,6 +1445,43 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.7,
   },
+  selectedBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    zIndex: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    borderWidth: 2,
+    borderColor: '#ecfdf5',
+  },
+  selectedBadgeText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  ownedBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    zIndex: 9,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#d4af37',
+  },
+  ownedBadgeText: {
+    color: '#d4af37',
+    fontSize: 7,
+    fontWeight: '700',
+    fontFamily: 'PixeloidMono',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1227,11 +1490,10 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
     minHeight: 300,
     maxWidth: 600,
+    maxHeight: '90%',
+    flexShrink: 1,
   },
   modalTitle: {
     fontSize: 20,
@@ -1250,12 +1512,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d4a574',
   },
+  candyOptionAfterSchool: {
+    backgroundColor: '#312e81',
+    borderColor: '#8b5cf6',
+  },
   candyOptionText: {
     color: '#6b4423',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'PixeloidMono',
     textAlign: 'center',
+  },
+  candyOptionTextAfterSchool: {
+    color: '#f7e98e',
   },
   cancelButton: {
     backgroundColor: '#f87171',

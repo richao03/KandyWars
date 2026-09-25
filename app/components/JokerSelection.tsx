@@ -34,12 +34,7 @@ import PressableButton from './PressableButton';
 // PressableScale for press-down spring feedback (I3 game-feel) —
 // applied via JokerCard's onPress CardWrapper (PressableScale internally)
 
-const UPGRADE_COSTS: Record<number, number> = {
-  1: 5000, // L1 → L2
-  2: 30000, // L2 → L3
-};
-
-const LEVEL_COLORS = { 1: '#22c55e', 2: '#3b82f6', 3: '#a855f7' } as const;
+import { UPGRADE_COSTS, LEVEL_COLORS } from '../../src/constants/jokerUpgrades';
 
 interface JokerSelectionProps {
   jokers: StandardizedJoker[];
@@ -80,7 +75,9 @@ export default function JokerSelection({
   // Per-card view refs for measureInWindow (sell modal)
   const sellCardRefs = useRef<Record<string, View | null>>({});
   // Cache of measured card positions keyed by joker id
-  const sellCardPositions = useRef<Record<string, { x: number; y: number }>>({});
+  const sellCardPositions = useRef<Record<string, { x: number; y: number }>>(
+    {}
+  );
   const dispatch = useAppDispatch();
   const balance = useAppSelector(selectBalance);
   const {
@@ -175,10 +172,26 @@ export default function JokerSelection({
     // Wobble the chosen joker
     const chosenAnim = getAnim(joker.id);
     const chosenWobble = RNAnimated.sequence([
-      RNAnimated.timing(chosenAnim, { toValue: 1.1, duration: 80, useNativeDriver: true }),
-      RNAnimated.timing(chosenAnim, { toValue: 0.9, duration: 80, useNativeDriver: true }),
-      RNAnimated.timing(chosenAnim, { toValue: 1.05, duration: 60, useNativeDriver: true }),
-      RNAnimated.timing(chosenAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
+      RNAnimated.timing(chosenAnim, {
+        toValue: 1.1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(chosenAnim, {
+        toValue: 0.9,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(chosenAnim, {
+        toValue: 1.05,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(chosenAnim, {
+        toValue: 1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
     ]);
 
     // Fade out the unchosen jokers
@@ -298,7 +311,8 @@ export default function JokerSelection({
         return {
           id: j.id,
           name: j.name || standardized?.name || 'Unknown',
-          description: standardized?.description || (j as any).description || '',
+          description:
+            standardized?.description || (j as any).description || '',
           type: j.type,
           level: (j as any).level ?? 1,
         };
@@ -464,7 +478,7 @@ export default function JokerSelection({
                       <JokerCard
                         joker={cardJoker}
                         isAfterSchool={false}
-                        isCompact={true}
+                        variant="tile"
                         showOwned={false}
                         disableActivation={true}
                       />
@@ -557,7 +571,12 @@ export default function JokerSelection({
                   style={[
                     styles.confirmEffectText,
                     themeStyles.jokerDescription,
-                    { color: LEVEL_COLORS[upgradeConfirmJoker.currentLevel as 1 | 2 | 3] || '#22c55e' },
+                    {
+                      color:
+                        LEVEL_COLORS[
+                          upgradeConfirmJoker.currentLevel as 1 | 2 | 3
+                        ] || '#22c55e',
+                    },
                   ]}
                 >
                   {describeEffectsAtLevel(
@@ -578,7 +597,13 @@ export default function JokerSelection({
                 <Text
                   style={[
                     styles.confirmEffectText,
-                    { color: LEVEL_COLORS[(upgradeConfirmJoker.currentLevel + 1) as 1 | 2 | 3] || '#a855f7', fontWeight: '700' },
+                    {
+                      color:
+                        LEVEL_COLORS[
+                          (upgradeConfirmJoker.currentLevel + 1) as 1 | 2 | 3
+                        ] || '#a855f7',
+                      fontWeight: '700',
+                    },
                   ]}
                 >
                   {describeEffectsAtLevel(
@@ -691,13 +716,18 @@ export default function JokerSelection({
             <View style={styles.cardGrid}>
               {sellableJokers.map((joker) => {
                 const cardJoker = toCardJoker(joker.id, joker.level);
-                const { scale: sScale, opacity: sOpacity } = getSellAnim(joker.id);
+                const { scale: sScale, opacity: sOpacity } = getSellAnim(
+                  joker.id
+                );
                 const jokerKey = joker.id.toString();
 
                 return (
                   <RNAnimated.View
                     key={jokerKey}
-                    style={{ transform: [{ scale: sScale }], opacity: sOpacity }}
+                    style={{
+                      transform: [{ scale: sScale }],
+                      opacity: sOpacity,
+                    }}
                     ref={(ref) => {
                       if (ref) {
                         sellCardRefs.current[jokerKey] = ref as unknown as View;
@@ -708,7 +738,10 @@ export default function JokerSelection({
                       onPress={() => {
                         // Measure card position before animating
                         const viewRef = sellCardRefs.current[jokerKey];
-                        if (viewRef && typeof (viewRef as any).measureInWindow === 'function') {
+                        if (
+                          viewRef &&
+                          typeof (viewRef as any).measureInWindow === 'function'
+                        ) {
                           (viewRef as any).measureInWindow(
                             (x: number, y: number, w: number, h: number) => {
                               sellCardPositions.current[jokerKey] = {
@@ -730,7 +763,7 @@ export default function JokerSelection({
                         <JokerCard
                           joker={cardJoker}
                           isAfterSchool={false}
-                          isCompact={true}
+                          variant="tile"
                           showOwned={false}
                           disableActivation={true}
                         />
@@ -847,7 +880,7 @@ export default function JokerSelection({
                   <JokerCard
                     joker={cardJoker}
                     isAfterSchool={false}
-                    isCompact={true}
+                    variant="poster"
                     showOwned={false}
                     disableActivation={true}
                     onPress={
@@ -1020,7 +1053,7 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     width: 160,
-    height: 180,
+    height: 166,
   },
   auraFullText: {
     fontSize: 11,

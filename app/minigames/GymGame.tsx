@@ -24,7 +24,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -559,7 +559,7 @@ export default function GymGame({ onComplete }: GymGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -581,24 +581,16 @@ export default function GymGame({ onComplete }: GymGameProps) {
     <GestureHandlerRootView style={styles.container}>
       <GestureDetector gesture={panGesture}>
         <Animated.View style={styles.container}>
-          <View
-            style={[
-              styles.innerContainer,
-              {
-                padding: ResponsiveSpacing.containerPadding(),
-                paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-              },
-            ]}
+          <MinigameScaffold
+            theme="gym"
+            title="Gym Class Captain"
+            subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
+            leftInfo={`Level ${level}/3`}
+            centerInfo={`Visited: ${traveledCells.size}/${gridSize * gridSize}`}
+            rightInfo={`Moves: ${moves}`}
+            backgroundColor="#2c3e50"
+            onLeave={handleForfeit}
           >
-            <MinigameHUD
-              theme="gym"
-              title="Gym Class Captain"
-              subtitle={`${hallMonitors.length} Hall Monitor${hallMonitors.length > 1 ? 's' : ''}: 🚨`}
-              leftInfo={`Level ${level}/3`}
-              centerInfo={`Visited: ${traveledCells.size}/${gridSize * gridSize}`}
-              rightInfo={`Moves: ${moves}`}
-            />
-
             <View style={styles.contentContainer}>
               <View style={styles.gameContainer}>
                 <View style={styles.gridContainer}>
@@ -612,33 +604,17 @@ export default function GymGame({ onComplete }: GymGameProps) {
                 </View>
               </View>
             </View>
-            <PixelBorder
-              borderColor="#e74c3c"
-              borderWidth={3}
-              backgroundColor="#1a2332"
-              innerPadding={0}
-              style={{ marginTop: 8 }}
-            >
-              <TouchableOpacity
-                style={styles.leaveButton}
-                onPress={handleForfeit}
-              >
-                <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
-                  🚪 Leave
-                </TextWithEmojis>
-              </TouchableOpacity>
-            </PixelBorder>
+          </MinigameScaffold>
 
-            <GameModal
-              visible={modal.visible}
-              title={modal.title}
-              message={modal.message}
-              emoji={modal.emoji}
-              onClose={hideModal}
-              onConfirm={modal.onConfirm}
-              showCancelButton={modal.showCancelButton}
-            />
-          </View>
+          <GameModal
+            visible={modal.visible}
+            title={modal.title}
+            message={modal.message}
+            emoji={modal.emoji}
+            onClose={hideModal}
+            onConfirm={modal.onConfirm}
+            showCancelButton={modal.showCancelButton}
+          />
         </Animated.View>
       </GestureDetector>
     </GestureHandlerRootView>

@@ -22,11 +22,10 @@ import { MusicController } from '../../src/utils/musicController';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
-import TextWithEmojis from '../components/TextWithEmojis';
 
 interface MathGameProps {
   onComplete: () => void;
@@ -604,16 +603,27 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
   // Render game
   return (
-    <View style={styles.container}>
-      <MinigameHUD
+    <>
+      <MinigameScaffold
         theme="math"
         title="Add to 10!"
         subtitle={`Make ${getRightmostNumber().number} + ? = 10`}
         leftInfo={`Level ${level}/3`}
         centerInfo={`🎯: ${matchedIndices.length}/${getLevelConfig(level).requiredMatches}`}
         rightInfo={'Mathing!'}
-      />
-
+        backgroundColor="#1a3d1a"
+        onLeave={() => {
+          SoundEffects.playRandomPop();
+          showModal(
+            'Leave Math Study?',
+            "You'll lose your progress!",
+            '🚪',
+            onBack || (() => router.back()),
+            false,
+            true
+          );
+        }}
+      >
       {/* Scrolling numbers */}
       <PixelBorder
         borderColor="#f5f5dc"
@@ -712,33 +722,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         </View>
       </View>
 
-      {/* Leave button */}
-      <PixelBorder
-        borderColor="#f5f5dc"
-        borderWidth={3}
-        backgroundColor="#0d2818"
-        innerPadding={0}
-        style={{ marginTop: 20 }}
-      >
-        <TouchableOpacity
-          style={styles.pixelButtonInner}
-          onPress={() => {
-            SoundEffects.playRandomPop();
-            showModal(
-              'Leave Math Study?',
-              "You'll lose your progress!",
-              '🚪',
-              onBack || (() => router.back()),
-              false,
-              true
-            );
-          }}
-        >
-          <TextWithEmojis style={styles.leaveButtonText} imageSize={28}>
-            🚪 Leave
-          </TextWithEmojis>
-        </TouchableOpacity>
-      </PixelBorder>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -749,7 +733,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
         onConfirm={modal.onConfirm}
         showCancelButton={modal.showCancelButton}
       />
-    </View>
+    </>
   );
 }
 

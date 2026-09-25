@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import colors from '../../src/constants/colors';
+import { getWalletQuestReward } from '../../src/constants/shopkeeperData';
 import { type NightlyQuest } from '../../src/store/slices/shopkeeperSlice';
 import PixelBorder from './PixelBorder';
 
@@ -39,6 +40,9 @@ function DeliQuestTab({
 
   const progressPercent = Math.min((quest.progress / quest.goal) * 100, 100);
   const isComplete = completed || quest.progress >= quest.goal;
+  // Reward scales with the wallet (15%); compute live so the shown amount
+  // matches what the claim handler actually grants.
+  const rewardCash = getWalletQuestReward(balance, quest.type === 'multi_day');
   const canAfford = balance >= rerollCost;
   const rerollDisabled =
     accepted || isComplete || !canRerollToday || !canAfford;
@@ -84,7 +88,7 @@ function DeliQuestTab({
 
         <View style={styles.rewardBlock}>
           <Text style={styles.rewardLabel}>Reward</Text>
-          <Text style={styles.rewardValue}>+${quest.reward.cash}</Text>
+          <Text style={styles.rewardValue}>+${rewardCash}</Text>
           {quest.reward.xp > 0 && (
             <Text style={styles.rewardXp}>+{quest.reward.xp} XP</Text>
           )}
@@ -97,7 +101,7 @@ function DeliQuestTab({
             activeOpacity={0.7}
           >
             <Text style={styles.claimButtonText}>
-              Claim ${quest.reward.cash}
+              Claim ${rewardCash}
             </Text>
           </TouchableOpacity>
         ) : !isComplete ? (

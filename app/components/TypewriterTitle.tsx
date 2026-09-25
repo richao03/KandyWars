@@ -119,14 +119,20 @@ export default function TypewriterTitle({
   const allDone = warzVisible >= warzText.length;
   const showWarzCursor = sugarDone && !allDone;
 
-  const renderText = (text: string, visibleCount: number, showCursor: boolean) => (
+  const renderText = (
+    text: string,
+    visibleCount: number,
+    showCursor: boolean
+  ) => (
     <View>
       {/* Outline layer (deep brown, offset down-right) */}
       <Text style={[styles.titleText, styles.outlineText]}>
         {text.slice(0, visibleCount)}
       </Text>
       {/* Highlight layer (cream, offset up-left) */}
-      <Text style={[styles.titleText, styles.highlightText, styles.layeredText]}>
+      <Text
+        style={[styles.titleText, styles.highlightText, styles.layeredText]}
+      >
         {text.slice(0, visibleCount)}
       </Text>
       {/* Main fill layer (golden yellow) */}
@@ -136,7 +142,12 @@ export default function TypewriterTitle({
       {/* Cursor next to text */}
       {showCursor && (
         <Animated.Text
-          style={[styles.cursorText, styles.fillText, styles.cursorPos, { opacity: cursorOpacity }]}
+          style={[
+            styles.cursorText,
+            styles.fillText,
+            styles.cursorPos,
+            { opacity: cursorOpacity },
+          ]}
         >
           _
         </Animated.Text>
@@ -147,12 +158,16 @@ export default function TypewriterTitle({
   return (
     <View style={styles.container}>
       {/* Sugar - left aligned */}
-      <Animated.View style={[styles.sugarRow, { transform: [{ scale: sugarScale }] }]}>
+      <Animated.View
+        style={[styles.sugarRow, { transform: [{ scale: sugarScale }] }]}
+      >
         {renderText(sugarText, sugarVisible, !sugarDone && sugarVisible >= 0)}
       </Animated.View>
 
       {/* WarZ - right aligned */}
-      <Animated.View style={[styles.warzRow, { transform: [{ scale: warzScale }] }]}>
+      <Animated.View
+        style={[styles.warzRow, { transform: [{ scale: warzScale }] }]}
+      >
         {sugarDone && renderText(warzText, warzVisible, showWarzCursor)}
       </Animated.View>
     </View>
@@ -167,23 +182,25 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 20,
     minHeight: fontSize * 2.8,
+    top: -65,
   },
   sugarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    minHeight: fontSize * 1.3,
-    marginLeft: 10,
+    minHeight: fontSize * 1.2,
+    marginLeft: 25,
   },
   warzRow: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
-    minHeight: fontSize * 1.3,
-    marginRight: 10,
+    minHeight: fontSize * 1.2,
+    top: -35,
+    marginRight: 25,
   },
   titleText: {
-    fontFamily: 'PlayMeGames',
+    fontFamily: 'Bubble3D',
     fontSize: fontSize,
     lineHeight: fontSize * 1.2,
     includeFontPadding: false,

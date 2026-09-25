@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useJokers } from '../../src/hooks/useJokers';
 import FastModal from './FastModal';
 import JokerCard from './JokerCard';
@@ -75,7 +81,9 @@ export default function AvailableJokersModal({
             {!ready ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={themeColors.textColor} />
-                <Text style={[styles.loadingText, { color: themeColors.textColor }]}>
+                <Text
+                  style={[styles.loadingText, { color: themeColors.textColor }]}
+                >
                   Loading jokers...
                 </Text>
               </View>
@@ -87,7 +95,7 @@ export default function AvailableJokersModal({
                       joker={joker}
                       isAfterSchool={false}
                       disableActivation={true}
-                      isCompact={true}
+                      variant="tile"
                     />
                   </View>
                 ))}
@@ -186,7 +194,7 @@ const styles = StyleSheet.create({
   },
   jokerCardWrapper: {
     width: 160,
-    height: 180,
+    height: 166,
     marginBottom: 2,
   },
   loadingContainer: {

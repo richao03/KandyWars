@@ -286,7 +286,7 @@ describe('Joker Combo Interactions', () => {
   // ===== 6. Quantity-based combos =====
   describe('Quantity-based combos', () => {
     it('Lucky 7 + Last Stand: sell 4 candy on a non-7th period — Last Stand fires, Lucky 7 does not', () => {
-      // Lucky 7 now fires only on absolute period 7, 14, 21, ...; default periodCount=0 → no fire.
+      // Lucky 7 now fires only on the 7th period of each day; default period (1) → no fire.
       // Last Stand (88): fires when qty < 5 -> fires, multiplier += (10-1) = 9
       // multiplier = 1 + 9 = 10
       const result = calculateSaleTotal({
@@ -302,7 +302,7 @@ describe('Joker Combo Interactions', () => {
     });
 
     it('Lucky 7 + Bulk Discount: sell on period 7 — Lucky 7 fires regardless of quantity', () => {
-      // Lucky 7 (84) at level 1: every 7th period → +2 mult. periodCount=6 ⇒ period 7.
+      // Lucky 7 (84) at level 1: fires on the 7th period of the day → +2 mult.
       // Bulk Discount (47): qty < 20 → does NOT fire
       // multiplier = 1 + 2 = 3
       // totalProfit = (100-50)*10 = 500, purchaseValue = 500
@@ -311,7 +311,7 @@ describe('Joker Combo Interactions', () => {
       const result = calculateSaleTotal({
         ...baseSaleParams,
         quantity: 10,
-        periodCount: 6, // absolute period 7
+        period: 7, // 7th period of the day
         jokers: [
           makeTestJoker(JOKER_IDS.LUCKY_7),
           makeTestJoker(JOKER_IDS.BULK_DISCOUNT),

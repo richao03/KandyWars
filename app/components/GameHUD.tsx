@@ -1,8 +1,13 @@
 import { Marquee } from '@animatereactnative/marquee';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -12,16 +17,25 @@ import Animated, {
 import { useFlavorText } from '../../src/context/FlavorTextContext';
 import { useInventory } from '../../src/hooks/useInventory';
 import { useAppSelector } from '../../src/store/hooks';
+import {
+  selectCurrentLocation,
+  selectDay,
+  selectPeriod,
+} from '../../src/store/slices/gameSlice';
 import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
-import { selectBalance, selectStashedAmount } from '../../src/store/slices/walletSlice';
-import { selectDay, selectPeriod, selectCurrentLocation } from '../../src/store/slices/gameSlice';
-import { SparkController } from '../../src/utils/sparkController';
+import {
+  selectBalance,
+  selectStashedAmount,
+} from '../../src/store/slices/walletSlice';
 import { triggerTieredHaptic } from '../../src/utils/hapticTier';
+import {
+  formatCurrency,
+  formatCurrencyCompact,
+} from '../../src/utils/priceUtils';
 import { setWalletPosition } from '../../src/utils/walletPositionStore';
 import { EMOJI_IMAGES, EMOJI_TO_IMAGE_MAP } from '../../utils/eventImages';
 import PixelBorder from './PixelBorder';
 import StatusIndicators from './StatusIndicators';
-import { formatCurrency, formatCurrencyCompact } from '../../src/utils/priceUtils';
 
 // Pre-computed regex for emoji matching (EMOJI_TO_IMAGE_MAP is static)
 const emojiPattern = Object.keys(EMOJI_TO_IMAGE_MAP)
@@ -101,6 +115,7 @@ interface GameHUDProps {
   flavorTextWrapper?: (children: React.ReactNode) => React.ReactNode;
   inventoryWrapper?: (children: React.ReactNode) => React.ReactNode;
   onInventoryPress?: () => void;
+  onPiggyBankPress?: () => void;
   disableBalanceAnimation?: boolean;
   showLunchMinigames: boolean;
   onWalletLayout?: (layout: LayoutRect) => void;
@@ -116,6 +131,7 @@ function GameHUD({
   flavorTextWrapper,
   inventoryWrapper,
   onInventoryPress,
+  onPiggyBankPress,
   showLunchMinigames,
   disableBalanceAnimation = false,
   onWalletLayout,
@@ -170,7 +186,10 @@ function GameHUD({
       // Delay measurement to ensure layout is finalized
       requestAnimationFrame(() => {
         walletRef.current?.measureInWindow((x, y, width, height) => {
-          if (__DEV__) console.log(`📖 Wallet measured: x=${x}, y=${y}, w=${width}, h=${height}`);
+          if (__DEV__)
+            console.log(
+              `📖 Wallet measured: x=${x}, y=${y}, w=${width}, h=${height}`
+            );
           if (width > 0 && height > 0) {
             // Cache center of wallet HUD for arc target
             const center = { x: x + width / 2, y: y + height / 2 };
@@ -187,8 +206,12 @@ function GameHUD({
     if (onPiggyBankLayout && piggyBankRef.current) {
       requestAnimationFrame(() => {
         piggyBankRef.current?.measureInWindow((x, y, width, height) => {
-          if (__DEV__) console.log(`📖 PiggyBank measured: x=${x}, y=${y}, w=${width}, h=${height}`);
-          if (width > 0 && height > 0) onPiggyBankLayout({ x, y, width, height });
+          if (__DEV__)
+            console.log(
+              `📖 PiggyBank measured: x=${x}, y=${y}, w=${width}, h=${height}`
+            );
+          if (width > 0 && height > 0)
+            onPiggyBankLayout({ x, y, width, height });
         });
       });
     }
@@ -491,104 +514,124 @@ function GameHUD({
           style={[{ flex: 1, overflow: 'visible' }, animatedWalletStyle]}
         >
           <Animated.View style={animatedWalletScalePunch}>
-          <View ref={walletRef} onLayout={handleWalletLayout} collapsable={false}>
-          <PixelBorder
-            borderColor="#4a7c4a"
-            borderWidth={3}
-            backgroundColor="#d4f6d4"
-            innerPadding={0}
-            style={styles.overflowVisible}
-          >
-            <View style={[styles.statBox, styles.cashBox]}>
-              <Text style={statTitleStyle}>Wallet</Text>
-              {(() => {
-                const walletText = `$${formatCurrencyCompact(balance || 0)}`;
-                // Stepped font shrink so the text never overflows the pill.
-                // PixeloidMono is fixed-width, so length-based steps are reliable.
-                const len = walletText.length;
-                const fontSize =
-                  len <= 9 ? 16 :
-                  len <= 11 ? 14 :
-                  len <= 13 ? 12 :
-                  len <= 15 ? 11 : 10;
-                return (
-                  <Text
-                    style={[styles.cashAmount, { fontSize, lineHeight: fontSize }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.6}
-                  >
-                    {walletText}
-                  </Text>
-                );
-              })()}
-              {/* Gold flash border overlay on balance increase */}
-              <Animated.View
-                pointerEvents="none"
-                style={[styles.goldFlashOverlay, animatedGoldFlash]}
-              />
+            <View
+              ref={walletRef}
+              onLayout={handleWalletLayout}
+              collapsable={false}
+            >
+              <PixelBorder
+                borderColor="#4a7c4a"
+                borderWidth={3}
+                backgroundColor="#d4f6d4"
+                innerPadding={0}
+                style={styles.overflowVisible}
+              >
+                <View style={[styles.statBox, styles.cashBox]}>
+                  <Text style={statTitleStyle}>Wallet</Text>
+                  {(() => {
+                    const walletText = `$${formatCurrencyCompact(balance || 0)}`;
+                    // Stepped font shrink so the text never overflows the pill.
+                    // PixeloidMono is fixed-width, so length-based steps are reliable.
+                    const len = walletText.length;
+                    const fontSize =
+                      len <= 9
+                        ? 16
+                        : len <= 11
+                          ? 14
+                          : len <= 13
+                            ? 12
+                            : len <= 15
+                              ? 11
+                              : 10;
+                    return (
+                      <Text
+                        style={[
+                          styles.cashAmount,
+                          { fontSize, lineHeight: fontSize },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.6}
+                      >
+                        {walletText}
+                      </Text>
+                    );
+                  })()}
+                  {/* Gold flash border overlay on balance increase */}
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.goldFlashOverlay, animatedGoldFlash]}
+                  />
 
-              {/* Animated money change indicator */}
-              {moneyChange !== null && (
-                <Animated.View
-                  style={[
-                    styles.moneyChangeIndicator,
-                    animatedMoneyChangeStyle,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.moneyChangeText,
-                      moneyChange > 0 ? styles.moneyGain : styles.moneyLoss,
-                    ]}
-                  >
-                    {moneyChange > 0 ? '+' : '-'}$
-                    {formatCurrency(Math.abs(moneyChange))}
-                  </Text>
-                </Animated.View>
-              )}
+                  {/* Animated money change indicator */}
+                  {moneyChange !== null && (
+                    <Animated.View
+                      style={[
+                        styles.moneyChangeIndicator,
+                        animatedMoneyChangeStyle,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.moneyChangeText,
+                          moneyChange > 0 ? styles.moneyGain : styles.moneyLoss,
+                        ]}
+                      >
+                        {moneyChange > 0 ? '+' : '-'}$
+                        {formatCurrency(Math.abs(moneyChange))}
+                      </Text>
+                    </Animated.View>
+                  )}
+                </View>
+              </PixelBorder>
             </View>
-          </PixelBorder>
-          </View>
           </Animated.View>
         </Animated.View>
 
         <Animated.View style={[{ flex: 1 }, animatedPiggyBankStyle]}>
-          <View ref={piggyBankRef} onLayout={handlePiggyBankLayout} collapsable={false}>
-          <PixelBorder
-            borderColor="#b85c8a"
-            borderWidth={3}
-            backgroundColor="#ffd6e8"
-            innerPadding={0}
-            style={styles.overflowVisible}
+          <View
+            ref={piggyBankRef}
+            onLayout={handlePiggyBankLayout}
+            collapsable={false}
           >
-            <View style={[styles.statBox, styles.piggyBox]}>
-              <Text style={statTitleStyle}>Piggy Bank</Text>
-              <Text style={[styles.piggyAmount, { fontSize: piggyFontSize }]}>
-                {piggyAmountText}
-              </Text>
+            <PixelBorder
+              borderColor="#b85c8a"
+              borderWidth={3}
+              backgroundColor="#ffd6e8"
+              innerPadding={0}
+              style={styles.overflowVisible}
+            >
+              <TouchableOpacity
+                style={[styles.statBox, styles.piggyBox]}
+                onPress={onPiggyBankPress}
+                activeOpacity={0.8}
+              >
+                <Text style={statTitleStyle}>Piggy Bank</Text>
+                <Text style={[styles.piggyAmount, { fontSize: piggyFontSize }]}>
+                  {piggyAmountText}
+                </Text>
 
-              {/* Animated stashed change indicator */}
-              {stashedChange !== null && (
-                <Animated.View
-                  style={[
-                    styles.moneyChangeIndicator,
-                    animatedStashedChangeStyle,
-                  ]}
-                >
-                  <Text
+                {/* Animated stashed change indicator */}
+                {stashedChange !== null && (
+                  <Animated.View
                     style={[
-                      styles.moneyChangeText,
-                      stashedChange > 0 ? styles.moneyGain : styles.moneyLoss,
+                      styles.moneyChangeIndicator,
+                      animatedStashedChangeStyle,
                     ]}
                   >
-                    {stashedChange > 0 ? '+' : '-'}$
-                    {formatCurrency(Math.abs(stashedChange))}
-                  </Text>
-                </Animated.View>
-              )}
-            </View>
-          </PixelBorder>
+                    <Text
+                      style={[
+                        styles.moneyChangeText,
+                        stashedChange > 0 ? styles.moneyGain : styles.moneyLoss,
+                      ]}
+                    >
+                      {stashedChange > 0 ? '+' : '-'}$
+                      {formatCurrency(Math.abs(stashedChange))}
+                    </Text>
+                  </Animated.View>
+                )}
+              </TouchableOpacity>
+            </PixelBorder>
           </View>
         </Animated.View>
 

@@ -35,15 +35,21 @@ const STEP_CONFIG: Record<
   number,
   { target: string; message: string; tapThrough: boolean }
 > = {
-  1: { target: 'wallet', message: "This is your wallet. Guard it with your life... or at least your lunch money", tapThrough: false },
+  1: {
+    target: 'wallet',
+    message:
+      'This is your wallet. Guard it with your life... or at least your lunch money',
+    tapThrough: false,
+  },
   2: {
     target: 'piggyBank',
-    message: "This is your goal. Fill this piggy bank before Friday or it's game over!",
+    message:
+      "This is your goal. Fill this piggy bank before Friday or it's game over!",
     tapThrough: false,
   },
   3: {
     target: 'gummyBears',
-    message: "Gummy Bears for $2?! That's basically free. Tap to snag some!",
+    message: "Gummy Bears for $0.02?! That's basically free. Tap to snag some!",
     tapThrough: true,
   },
   5: {
@@ -53,27 +59,31 @@ const STEP_CONFIG: Record<
   },
   6: {
     target: 'gummyBears',
-    message: 'Gummy Bears jumped to $8! Sell sell sell!',
+    message: 'Gummy Bears jumped to $0.08! Sell sell sell!',
     tapThrough: true,
   },
   8: {
     target: 'jokersTab',
-    message: "Now meet your Jokers — the secret sauce for big profits. Tap the Jokers tab!",
+    message:
+      'Now meet your Jokers — the secret sauce for big profits. Tap the Jokers tab!',
     tapThrough: true,
   },
   9: {
     target: 'allJokersTab',
-    message: "Jokers can affect your profit and multiplier count — it's the key to making real dough. Tap the All tab!",
+    message:
+      "Jokers can affect your profit and multiplier count — it's the key to making real dough. Tap the All tab!",
     tapThrough: true,
   },
   10: {
     target: 'homeTab',
-    message: "Last stop — head back home to kick off your week. Tap the Home tab!",
+    message:
+      'Last stop — head back home to kick off your week. Tap the Home tab!',
     tapThrough: true,
   },
   11: {
     target: '',
-    message: "Buy low, sell high - that's the whole game. Now go make enough bread before the week's over. Good luck!",
+    message:
+      "Buy low, sell high - that's the whole game. Now go make enough bread before the week's over. Good luck!",
     tapThrough: false,
   },
 };
@@ -91,7 +101,9 @@ export default function TutorialOverlay({
   if (__DEV__) {
     console.log(
       `📖 TutorialOverlay render - step: ${tutorialStep}, measurements:`,
-      Object.keys(measurements).filter((k) => measurements[k as keyof typeof measurements])
+      Object.keys(measurements).filter(
+        (k) => measurements[k as keyof typeof measurements]
+      )
     );
   }
 
@@ -117,7 +129,9 @@ export default function TutorialOverlay({
                 innerPadding={0}
               >
                 <View style={styles.congratsInner}>
-                  <Text style={styles.congratsTitle}>You&apos;re a Natural!</Text>
+                  <Text style={styles.congratsTitle}>
+                    You&apos;re a Natural!
+                  </Text>
                   <Text style={styles.congratsMessage}>{config.message}</Text>
                   <Text style={styles.tapHint}>Tap to continue</Text>
                 </View>
@@ -167,7 +181,10 @@ export default function TutorialOverlay({
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {/* Top dark rect */}
         <View
-          style={[styles.darkRect, { top: 0, left: 0, right: 0, height: cutout.y }]}
+          style={[
+            styles.darkRect,
+            { top: 0, left: 0, right: 0, height: cutout.y },
+          ]}
           pointerEvents="none"
         />
         {/* Bottom dark rect */}
@@ -226,7 +243,11 @@ export default function TutorialOverlay({
 
         {/* Tooltip */}
         <View
-          style={[styles.tooltipContainer, tooltipStyle, { left: 16, right: 16 }]}
+          style={[
+            styles.tooltipContainer,
+            tooltipStyle,
+            { left: 16, right: 16 },
+          ]}
           pointerEvents="none"
         >
           <PixelBorder
@@ -260,7 +281,10 @@ export default function TutorialOverlay({
         <View style={StyleSheet.absoluteFill}>
           {/* Top dark rect */}
           <View
-            style={[styles.darkRect, { top: 0, left: 0, right: 0, height: cutout.y }]}
+            style={[
+              styles.darkRect,
+              { top: 0, left: 0, right: 0, height: cutout.y },
+            ]}
           />
           {/* Bottom dark rect */}
           <View

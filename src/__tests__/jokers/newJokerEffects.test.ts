@@ -217,41 +217,40 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
     });
 
-    describe('Lucky 7 (84) — every 7th period', () => {
-      // Trigger condition: (periodCount + 1) % 7 === 0, i.e. absolute period 7, 14, 21, ...
-      // periodCount is 0-indexed; period N has periodCount N - 1.
+    describe('Lucky 7 (84) — 7th period of each day', () => {
+      // Trigger condition: period === 7 (period is 1-indexed within the day).
 
-      it('should trigger +2 mult on period 7 at level 1 (periodCount = 6)', () => {
+      it('should trigger +2 mult on period 7 at level 1', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          periodCount: 6,
+          period: 7,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
         expect(result.jokerMultiplier).toBe(3); // 1 + 2
       });
 
-      it('should trigger +3 mult on period 14 at level 2 (periodCount = 13)', () => {
+      it('should trigger +3 mult on period 7 at level 2', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          periodCount: 13,
+          period: 7,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 2)],
         });
         expect(result.jokerMultiplier).toBe(4); // 1 + 3
       });
 
-      it('should trigger +4 mult on period 21 at level 3 (periodCount = 20)', () => {
+      it('should trigger +4 mult on period 7 at level 3', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          periodCount: 20,
+          period: 7,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 3)],
         });
         expect(result.jokerMultiplier).toBe(5); // 1 + 4
       });
 
-      it('should NOT trigger on a non-multiple-of-7 period', () => {
+      it('should NOT trigger on a non-7th period', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          periodCount: 5, // period 6
+          period: 6,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
         expect(result.jokerMultiplier).toBe(1);
@@ -261,7 +260,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
           quantity: 7, // legacy expectation: would have fired
-          periodCount: 5, // not a 7th period
+          period: 6, // not the 7th period
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
         expect(result.jokerMultiplier).toBe(1);
@@ -272,7 +271,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
       it('should trigger 3x in last period (period >= periodsPerDay - 1)', () => {
         const result = calculateSaleTotal({
           ...baseSaleParams,
-          period: 7,       // last period (0-indexed: periodsPerDay - 1 = 7)
+          period: 7, // last period (0-indexed: periodsPerDay - 1 = 7)
           periodsPerDay: 8,
           jokers: [makeTestJoker(JOKER_IDS.NIGHT_OWL, 1)],
         });
@@ -544,7 +543,7 @@ describe('New Joker Effects (IDs 57-93)', () => {
         expect(effects).toHaveLength(1);
         expect(effects[0].target).toBe('clearance_sale_boost');
         expect(effects[0].operation).toBe('add');
-        expect(effects[0].amount).toBe(0.10);
+        expect(effects[0].amount).toBe(0.1);
       });
     });
 
@@ -601,17 +600,21 @@ describe('New Joker Effects (IDs 57-93)', () => {
     });
 
     describe("Teacher's Pet (79)", () => {
-      it('should return price_peek_hint with 1 candy at L1', () => {
+      it('should return price_peek_hint with a 10% reveal chance at L1', () => {
         const effects = getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 1);
         expect(effects).toHaveLength(1);
         expect(effects[0].target).toBe('price_peek_hint');
         expect(effects[0].operation).toBe('set');
-        expect(effects[0].amount).toBe(1);
+        expect(effects[0].amount).toBeCloseTo(0.1);
       });
 
-      it('should scale to 2/3 candies at L2/L3', () => {
-        expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 2)[0].amount).toBe(2);
-        expect(getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 3)[0].amount).toBe(3);
+      it('should scale reveal chance to 20%/30% at L2/L3', () => {
+        expect(
+          getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 2)[0].amount
+        ).toBeCloseTo(0.2);
+        expect(
+          getJokerEffectsAtLevel(JOKER_IDS.TEACHERS_PET, 3)[0].amount
+        ).toBeCloseTo(0.3);
       });
     });
 
@@ -625,8 +628,12 @@ describe('New Joker Effects (IDs 57-93)', () => {
       });
 
       it('should scale to +25%/+50% at L2/L3', () => {
-        expect(getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 2)[0].amount).toBeCloseTo(0.25);
-        expect(getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 3)[0].amount).toBeCloseTo(0.5);
+        expect(
+          getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 2)[0].amount
+        ).toBeCloseTo(0.25);
+        expect(
+          getJokerEffectsAtLevel(JOKER_IDS.CLASS_CLOWN, 3)[0].amount
+        ).toBeCloseTo(0.5);
       });
 
       it('profit boost fires in calc only when previousLocation differs', () => {
@@ -734,12 +741,12 @@ describe('New Joker Effects (IDs 57-93)', () => {
 
         const resultL1 = calculateSaleTotal({
           ...baseSaleParams,
-          periodCount: 6, // absolute period 7
+          period: 7, // 7th period of the day
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 1)],
         });
         const resultL3 = calculateSaleTotal({
           ...baseSaleParams,
-          periodCount: 6,
+          period: 7,
           jokers: [makeTestJoker(JOKER_IDS.LUCKY_7, 3)],
         });
         // L1: multiplier = 1 + 2 = 3, L3: multiplier = 1 + 4 = 5

@@ -17,7 +17,7 @@ import {
   selectPlayerId,
   selectIsFirstTimeDifficultySelection,
 } from '../store/slices/walletSlice';
-import { resetGame } from '../store/slices/gameSlice';
+import { resetGame, selectDay, selectPeriod } from '../store/slices/gameSlice';
 import { resetInventory } from '../store/slices/inventorySlice';
 import { resetJokers } from '../store/slices/jokerSlice';
 import { resetDailyStats } from '../store/slices/dailyStatsSlice';
@@ -47,6 +47,9 @@ export const useWallet = () => {
   const dailyStats = useAppSelector(state => state.dailyStats.dailyStats);
   const currentDayStats = useAppSelector(state => state.dailyStats.currentDayStats);
   const merchantEffects = useAppSelector(selectActiveEffects);
+  // Current day/period so stash deposits can be timestamped for the graph.
+  const currentDay = useAppSelector(selectDay);
+  const currentPeriod = useAppSelector(selectPeriod);
   const { showToast } = useToast();
 
   const spend = useCallback((amount: number): boolean => {
@@ -176,7 +179,15 @@ export const useWallet = () => {
   const stashMoneyAction = useCallback((amount: number): boolean => {
     const epsilon = 0.001;
     if (balance >= amount - epsilon) {
-      dispatch(stashMoney({ amountPaid: amount, amountStashed: amount }));
+      dispatch(
+        stashMoney({
+          amountPaid: amount,
+          amountStashed: amount,
+          day: currentDay,
+          period: currentPeriod,
+          kind: 'deposit',
+        })
+      );
       // Penny Wise — increment per intentional player stash deposit. Skip
       // zero/cancelled deposits, and do NOT increment for daily-interest
       // or inheritance auto-stashes (those use stashMoney directly with
@@ -187,7 +198,7 @@ export const useWallet = () => {
       return true;
     }
     return false;
-  }, [dispatch, balance]);
+  }, [dispatch, balance, currentDay, currentPeriod]);
 
   const withdrawFromStashAction = useCallback((amount: number): boolean => {
     if (stashedAmount >= amount) {
@@ -287,12 +298,20 @@ export const useWallet = () => {
     }
 
     const cappedTotal = Math.min(totalInterest, MAX_DAILY_INTEREST * 2);
-    dispatch(stashMoney({ amountPaid: 0, amountStashed: cappedTotal }));
+    dispatch(
+      stashMoney({
+        amountPaid: 0,
+        amountStashed: cappedTotal,
+        day: currentDay,
+        period: currentPeriod,
+        kind: 'interest',
+      })
+    );
     if (__DEV__) {
       console.log(`💰 Daily Interest: ✅ Total interest earned: $${cappedTotal.toFixed(2)} (stash was $${stashedAmount})`);
     }
     return cappedTotal;
-  }, [dispatch, stashedAmount]);
+  }, [dispatch, stashedAmount, currentDay, currentPeriod]);
 
   const applyInheritance = useCallback((): number => {
     if (__DEV__) {
@@ -321,14 +340,22 @@ export const useWallet = () => {
       console.log(`💎 Inheritance: Wallet before: $${balance} (will stay the same)`);
       console.log(`💎 Inheritance: Stashed before: $${stashedAmount}`);
     }
-    dispatch(stashMoney({ amountPaid: 0, amountStashed: transferAmount }));
+    dispatch(
+      stashMoney({
+        amountPaid: 0,
+        amountStashed: transferAmount,
+        day: currentDay,
+        period: currentPeriod,
+        kind: 'inheritance',
+      })
+    );
     if (__DEV__) {
       console.log(`💎 Inheritance: ✅ Added $${transferAmount.toFixed(2)} to piggy bank (FREE money, wallet unchanged)`);
       console.log(`💎 Inheritance: Wallet after: $${balance} (unchanged)`);
       console.log(`💎 Inheritance: Stashed after: $${stashedAmount + transferAmount}`);
     }
     return transferAmount;
-  }, [dispatch, selectedPassIds, balance, stashedAmount]);
+  }, [dispatch, selectedPassIds, balance, stashedAmount, currentDay, currentPeriod]);
 
   return {
     balance,

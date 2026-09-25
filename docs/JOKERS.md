@@ -4,7 +4,7 @@
 
 - **76 total jokers**
 - **Level system:** 1–3 (higher = stronger). Some jokers are max level 1 (not upgradeable).
-- **Types:** `persistent` (always active, capped at 5 aura slots, 6 with Sixth Sense) or `one-time` (activated manually)
+- **Types:** `persistent` (always active) or `one-time` (activated manually). Persistent joker slots are currently unlimited (`MAX_PERSISTENT_SLOTS = Infinity`).
 - **Upgrade costs:** $5,000 (L1->L2), $30,000 (L2->L3)
 - **Level colors:** L1 = green, L2 = blue, L3 = purple
 
@@ -13,12 +13,15 @@
 ## Sale Formula
 
 ```
-finalProfit = (baseProfit x profitBoost) x multiplier
+finalProfit = totalProfit x profitBoost x multiplier x finalExamPenalty
 ```
 
-- **profitBoost** starts at 1 (100%). Profit jokers ADD to this (e.g., +50% = profitBoost becomes 1.5).
-- **multiplier** starts at 1. Mult jokers ADD to this (e.g., +0.5 = multiplier becomes 1.5).
-- Both layers stack additively within themselves, then multiply together.
+- **profitBoost** starts at 1 (100%). Profit jokers ADD their contribution into this single bucket (e.g., a +50% type joker adds 0.5 → profitBoost becomes 1.5). Includes type jokers, hall pass %, and scaling profit jokers.
+- **multiplier** starts at 1. Mult jokers ADD their contribution into this single bucket (e.g., +0.5 → multiplier becomes 1.5). Includes size jokers, conditional mults, and scaling mult jokers.
+- Both buckets sum **additively** (Balatro-style: per-joker contributions add into one bucket — there is no joker-on-joker product), then the two buckets multiply together.
+- **Vacuum Sealer** subtracts 2 from the multiplier bucket (floored at 1x).
+- Hall pass *bonuses* (Final Exam in the last period, +14 to the multiplier bucket) fold additively into the multiplier bucket so they don't compound with jokers; the Final Exam off-period **penalty** (0.25x) stays as a final multiplicative factor.
+- Total returned to the player is `purchaseValue + finalProfit`. Selling at a loss instead returns `currentPrice x quantity`.
 
 ---
 
@@ -35,7 +38,7 @@ finalProfit = (baseProfit x profitBoost) x multiplier
 | 42  | Tropical Import | +50%/+100%/+200% profit on Fruity candy                  | 1.5/2/3         | profitBoost += (amount - 1) |
 | 8   | Combo Platter   | +100%/+150%/+200% profit when 2 candy types are covered  | 1/1.5/2         | profitBoost += amount       |
 | 47  | Bulk Discount   | +50%/+100%/+200% profit when selling 20+ at once         | 1.5/2/3         | profitBoost += (amount - 1) |
-| 87  | Tax Collector   | 5%/8%/12% of sale as bonus cash                          | 0.05/0.08/0.12  | profitBoost += amount       |
+| 87  | Tax Collector   | 5%/8%/12% of profit as bonus cash                        | 0.05/0.08/0.12  | profitBoost += amount       |
 | 29  | Even Stevens    | +50%/+100%/+200% profit when inventory limit is even     | 1.5/2/3         | profitBoost += (amount - 1) |
 | 38  | Golden Hour     | +50%/+100%/+200% profit in last 2 periods of day         | 1.5/2/3         | profitBoost += (amount - 1) |
 | 45  | Early Bird      | +50%/+100%/+200% profit on first sale each day           | 1.5/2/3         | profitBoost += (amount - 1) |
@@ -140,7 +143,7 @@ finalProfit = (baseProfit x profitBoost) x multiplier
 | --- | --------------- | -------------------------------------------- | --------------- | ----------------------- |
 | 77  | Lucky Charm     | 3x/4x/5x found money multiplier              | 3/4/5           | found money x= amount   |
 | 78  | Bully Bait      | Convert bully events to +$500/+$1k/+$2k cash | 500/1000/2000   | bully -> cash += amount |
-| 79  | Teacher's Pet   | See next-period price arrow on 1/2/3 candies | 1/2/3           | market-list UI hint     |
+| 79  | Teacher's Pet   | 10%/20%/30% chance per candy size to reveal one candy's next-period price arrow | 10%/20%/30%     | market-list UI hint     |
 | 80  | Class Clown     | +10%/+25%/+50% profit when location changed  | 0.1/0.25/0.5    | profitBoost += amount if prev ≠ curr |
 | 81  | Detention Dodge | Event immunity for 1 day                     | L1 only         | skip events for 1 day   |
 
@@ -152,7 +155,7 @@ finalProfit = (baseProfit x profitBoost) x multiplier
 | 67  | Safe House      | Protects wallet from bullies and stash from confiscation | L1 only                     | blocks bully + confiscation      |
 | 24  | Shrinking Glass | 50%/75%/90% off deli candy                               | 0.5/0.25/0.1                | deli price x= amount             |
 | 55  | Extra Credit    | +1 joker choice after minigames                          | L1 only                     | +1 pick                          |
-| 56  | Sixth Sense     | +1 aura slot (hold 6 instead of 5)                       | L1 only                     | max aura slots += 1              |
+| 56  | Sixth Sense     | 10% chance per sale to add +6 mult                       | L1 only (+6, 10% chance)    | multiplier += 6 on proc          |
 | 94  | Deep Freeze     | Candy never melts                                        | L1 only                     | skip melt check                  |
 
 ---
@@ -180,7 +183,7 @@ Selling 10 Chocolate Gummy Bears (small candy) at $5 each, bought at $2 each:
 
 | Constraint                    | Value                               |
 | ----------------------------- | ----------------------------------- |
-| Persistent (aura) joker slots | 5 (6 with Sixth Sense)              |
+| Persistent (aura) joker slots | Unlimited (`MAX_PERSISTENT_SLOTS = Infinity`) |
 | One-time joker slots          | Unlimited                           |
 | Allowance multiplier cap      | 8x combined                         |
 | Stash interest cap            | $5,000/day                          |

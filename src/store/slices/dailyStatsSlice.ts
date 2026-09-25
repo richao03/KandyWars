@@ -196,11 +196,14 @@ export const {
 export default dailyStatsSlice.reducer;
 
 // Selectors
+// Cache per-argument memoized selectors so repeated calls with the same day
+// return the SAME selector instance (preserving memoization across renders).
+const _statsByDayCache: Record<number, ReturnType<typeof createSelector>> = {};
 export const selectStatsByDay = (day: number) =>
-  createSelector(
+  (_statsByDayCache[day] ??= createSelector(
     [(state: { dailyStats: DailyStatsState }) => state.dailyStats.dailyStats],
     (dailyStats) => dailyStats.find(s => s.day === day)
-  );
+  ));
 
 export const selectTotalProfit = createSelector(
   [(state: { dailyStats: DailyStatsState }) => state.dailyStats.dailyStats],

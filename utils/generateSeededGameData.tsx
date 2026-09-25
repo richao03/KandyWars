@@ -192,29 +192,34 @@ export function generateSeededGameData(
   const pickRandom = <T,>(arr: readonly T[]): T =>
     arr[Math.floor(rng() * arr.length)];
 
-  // For difficulty level > 3, shuffle price ranges between candies
-  let basePrices = { ...candyBasePrices };
+  // For difficulty level > 3, shuffle price ranges between candies — but only
+  // WITHIN each size group, so small candies stay cheap and big candies stay
+  // expensive (preserving the size→affordability design). This scrambles which
+  // candy in a tier is cheapest without ever handing a small candy a big
+  // candy's range (e.g. a $1000 Jolly Rancher).
+  const basePrices = { ...candyBasePrices };
 
   if (difficultyLevel && difficultyLevel > 3) {
-    if (__DEV__) console.log('🎲 Difficulty > 3 detected: Shuffling candy price ranges');
+    if (__DEV__) console.log('🎲 Difficulty > 3 detected: Shuffling candy price ranges within size groups');
 
-    // Extract candy names and price ranges separately
-    const candyNames = Object.keys(candyBasePrices);
-    const priceRanges = Object.values(candyBasePrices);
-
-    // Fisher-Yates shuffle using seeded RNG for reproducibility
-    for (let i = priceRanges.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [priceRanges[i], priceRanges[j]] = [priceRanges[j], priceRanges[i]];
-    }
-
-    // Rebuild basePrices with shuffled ranges
-    basePrices = {};
-    candyNames.forEach((name, index) => {
-      basePrices[name] = priceRanges[index];
-      if (__DEV__) console.log(
-        `🍬 ${name}: [${priceRanges[index][0]}, ${priceRanges[index][1]}]`
+    (['small', 'medium', 'big'] as const).forEach((size) => {
+      const names = CANDY_REGISTRY.filter((c) => c.size === size).map(
+        (c) => c.name
       );
+      const ranges = names.map((name) => candyBasePrices[name]);
+
+      // Fisher-Yates shuffle the ranges within this size group (seeded).
+      for (let i = ranges.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [ranges[i], ranges[j]] = [ranges[j], ranges[i]];
+      }
+
+      names.forEach((name, index) => {
+        basePrices[name] = ranges[index];
+        if (__DEV__) console.log(
+          `🍬 ${name}: [${ranges[index][0]}, ${ranges[index][1]}]`
+        );
+      });
     });
   }
 

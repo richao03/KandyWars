@@ -9,9 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CANDY_REGISTRY } from '../src/constants/candyRegistry';
 import colors from '../src/constants/colors';
 import { JOKER_IDS, findJokerById } from '../src/constants/jokerIds';
+import { getWalletQuestReward } from '../src/constants/shopkeeperData';
 import { useGame } from '../src/hooks/useGame';
 import { useInventory } from '../src/hooks/useInventory';
 import { useJokers } from '../src/hooks/useJokers';
@@ -50,6 +52,7 @@ interface DeliPageProps {
 }
 
 export default function Deli({ onBack }: DeliPageProps = {}) {
+  const insets = useSafeAreaInsets();
   const { gameData, seed } = useSeed();
   const { balance, spend, add } = useWallet();
   const {
@@ -84,7 +87,9 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
   const [activeTab, setActiveTab] = useState<'candy' | 'joker' | 'quests'>(
     'candy'
   );
-  const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'big'>('all');
+  const [sizeFilter, setSizeFilter] = useState<
+    'all' | 'small' | 'medium' | 'big'
+  >('all');
 
   // Trivia modal
   const [showTrivia, setShowTrivia] = useState(false);
@@ -104,10 +109,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
   );
 
   // Check for Shrinking Glass joker (provides deli discount)
-  const shrinkingGlassJoker = findJokerById(
-    jokers,
-    JOKER_IDS.SHRINKING_GLASS
-  );
+  const shrinkingGlassJoker = findJokerById(jokers, JOKER_IDS.SHRINKING_GLASS);
 
   // Build candy list with all discounts
   const candies = useMemo(() => {
@@ -304,10 +306,16 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
 
   const handleClaimQuestReward = useCallback(() => {
     if (!shopkeeper.nightlyQuest) return;
-    add(shopkeeper.nightlyQuest.reward.cash);
+    // Reward scales with the wallet (15%), so grant based on the current balance
+    // rather than the static value baked in at quest generation.
+    const reward = getWalletQuestReward(
+      balance,
+      shopkeeper.nightlyQuest.type === 'multi_day'
+    );
+    add(reward);
     shopkeeper.claimQuestReward();
     setCurrentDialogue(shopkeeper.getDialogue('quest_complete'));
-  }, [shopkeeper, add]);
+  }, [shopkeeper, add, balance]);
 
   const handleAcceptQuest = useCallback(() => {
     shopkeeper.acceptQuest();
@@ -366,7 +374,6 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
           onChat={handleChat}
           onTrivia={handleTriviaOpen}
         />
-
 
         {/* Discount Banners */}
         {(hasShrinkingGlass || hasFriendshipDiscount) && (
@@ -440,7 +447,8 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
             <View style={styles.sizeChipRow}>
               {(['all', 'small', 'medium', 'big'] as const).map((id) => {
                 const isActive = sizeFilter === id;
-                const label = id === 'all' ? 'All' : id[0].toUpperCase() + id.slice(1);
+                const label =
+                  id === 'all' ? 'All' : id[0].toUpperCase() + id.slice(1);
                 return (
                   <TouchableOpacity
                     key={id}
@@ -460,67 +468,67 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
                 );
               })}
             </View>
-          <FlatList
-            data={
-              sizeFilter === 'all'
-                ? candies
-                : candies.filter((c) => c.size === sizeFilter)
-            }
-            keyExtractor={(item) => item.name}
-            contentContainerStyle={styles.list}
-            renderItem={({ item, index }) => (
-              <View style={{ marginBottom: 8 }}>
-                <PixelBorder
-                  borderColor={item.isDailySpecial ? '#22c55e' : '#ff6b35'}
-                  borderWidth={3}
-                  backgroundColor={
-                    item.isDailySpecial
-                      ? 'rgba(34, 197, 94, 0.15)'
-                      : 'rgba(255, 255, 255, 0.9)'
-                  }
-                  innerPadding={12}
-                >
-                  <TouchableOpacity
-                    style={styles.item}
-                    onPress={() => openModal(index)}
-                    activeOpacity={0.8}
+            <FlatList
+              data={
+                sizeFilter === 'all'
+                  ? candies
+                  : candies.filter((c) => c.size === sizeFilter)
+              }
+              keyExtractor={(item) => item.name}
+              contentContainerStyle={styles.list}
+              renderItem={({ item, index }) => (
+                <View style={{ marginBottom: 8 }}>
+                  <PixelBorder
+                    borderColor={item.isDailySpecial ? '#22c55e' : '#ff6b35'}
+                    borderWidth={3}
+                    backgroundColor={
+                      item.isDailySpecial
+                        ? 'rgba(34, 197, 94, 0.15)'
+                        : 'rgba(255, 255, 255, 0.9)'
+                    }
+                    innerPadding={12}
                   >
-                    <View style={styles.itemHeader}>
-                      <View style={styles.nameRow}>
-                        <Text
-                          style={[
-                            styles.name,
-                            item.isDailySpecial && styles.nameSpecial,
-                          ]}
-                        >
-                          {item.name}
-                        </Text>
-                        {item.isDailySpecial && (
-                          <Text style={styles.saleTag}>
-                            SALE -{item.specialDiscount}%
+                    <TouchableOpacity
+                      style={styles.item}
+                      onPress={() => openModal(index)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.itemHeader}>
+                        <View style={styles.nameRow}>
+                          <Text
+                            style={[
+                              styles.name,
+                              item.isDailySpecial && styles.nameSpecial,
+                            ]}
+                          >
+                            {item.name}
                           </Text>
-                        )}
+                          {item.isDailySpecial && (
+                            <Text style={styles.saleTag}>
+                              SALE -{item.specialDiscount}%
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={styles.price}>
+                          ${formatCurrency(item.cost)}
+                        </Text>
                       </View>
-                      <Text style={styles.price}>
-                        ${formatCurrency(item.cost)}
-                      </Text>
-                    </View>
-                    <View style={styles.itemDetails}>
-                      <Text style={styles.owned}>
-                        Owned: {item.quantityOwned}
-                      </Text>
-                      <Text style={styles.avgPrice}>
-                        Avg Cost:{' '}
-                        {item.averagePrice !== null
-                          ? `$${formatCurrency(item.averagePrice)}`
-                          : '—'}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </PixelBorder>
-              </View>
-            )}
-          />
+                      <View style={styles.itemDetails}>
+                        <Text style={styles.owned}>
+                          Owned: {item.quantityOwned}
+                        </Text>
+                        <Text style={styles.avgPrice}>
+                          Avg Cost:{' '}
+                          {item.averagePrice !== null
+                            ? `$${formatCurrency(item.averagePrice)}`
+                            : '—'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  </PixelBorder>
+                </View>
+              )}
+            />
           </>
         ) : activeTab === 'joker' ? (
           <DeliJokerShop
@@ -550,7 +558,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
         )}
 
         {/* Footer */}
-        <View style={styles.buttonContainer}>
+        <View style={[styles.buttonContainer, { paddingTop: 8 }]}>
           <PixelBorder
             borderColor="rgba(185,28,28,1)"
             borderWidth={3}
@@ -601,7 +609,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    padding: 16,
+    padding: 8,
   },
   header: {
     alignItems: 'center',
@@ -656,7 +664,6 @@ const styles = StyleSheet.create({
   // Tab switcher
   tabRow: {
     flexDirection: 'row',
-    marginBottom: 8,
     gap: 8,
   },
   tab: {

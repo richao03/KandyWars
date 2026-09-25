@@ -10,7 +10,6 @@ import React, {
 import {
   Image,
   Pressable,
-  Animated as RNAnimated,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,10 +29,10 @@ import { scoreboardService } from '../../src/services/firebase';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
 import {
-  selectTxnProfitBoostCollapsed,
   selectTxnMultiplierCollapsed,
-  toggleTxnProfitBoostCollapsed,
+  selectTxnProfitBoostCollapsed,
   toggleTxnMultiplierCollapsed,
+  toggleTxnProfitBoostCollapsed,
 } from '../../src/store/slices/settingsSlice';
 import {
   advanceTutorial,
@@ -150,6 +149,121 @@ function formatSparkNumber(n: number): string {
   return Number(n.toFixed(2)).toString();
 }
 
+type BonusEntry = {
+  emoji: string;
+  name: string;
+  multiplier: number;
+  flatBonus?: number;
+};
+
+type BreakdownRowProps = {
+  bonus: BonusEntry;
+  isMult: boolean;
+  collapsed: boolean;
+  /** Resolved joker icon (image require) or undefined to fall back to emoji. */
+  iconSource: any;
+  valueText: string;
+  valueColor: string;
+  /** Reanimated per-icon animated style for this row's icon. */
+  scaleStyle: any;
+  isActive: boolean;
+  scoringActive: boolean;
+  /** Stable key used to register this row's icon in jokerIconRefs. */
+  iconKey: string;
+  /**
+   * Stable parent setter that writes a node into jokerIconRefs.current[key].
+   * The row wraps it in its own iconKey-keyed useCallback so the ref callback
+   * identity stays stable across re-renders (no detach/re-attach per commit).
+   */
+  registerIconRef: (key: string, node: any) => void;
+};
+
+// One row = icon + name + value. Memoized so the ~16 breakdown rows don't all
+// re-run on every render during the scoring cascade — only the active row (and
+// rows whose props actually change) re-render. The icon ref is on a tight inner
+// View so measureInWindow returns a snug center for the cascade arc trajectory.
+// When `collapsed` is true, render an icon-only cell for the horizontal row.
+const BreakdownRow = React.memo(function BreakdownRow({
+  bonus,
+  isMult,
+  collapsed,
+  iconSource,
+  valueText,
+  valueColor,
+  scaleStyle,
+  isActive,
+  scoringActive,
+  iconKey,
+  registerIconRef,
+}: BreakdownRowProps) {
+  // Own the ref-setter here, keyed by the stable iconKey prop, so the ref
+  // callback identity is stable across commits (avoids detach/re-attach).
+  const setIconRef = useCallback(
+    (node: any) => {
+      registerIconRef(iconKey, node);
+    },
+    [registerIconRef, iconKey]
+  );
+
+  const activeGlow =
+    isActive && scoringActive
+      ? {
+          shadowColor: '#ffd54a',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 16,
+          elevation: 14,
+        }
+      : undefined;
+
+  const iconElement = iconSource ? (
+    <Image source={iconSource} style={styles.receiptIcon} />
+  ) : (
+    <TextWithEmojis style={{ fontSize: 14 }} imageSize={18}>
+      {bonus.emoji}
+    </TextWithEmojis>
+  );
+
+  if (collapsed) {
+    // Compact cell for the horizontal icon row. Existing per-icon scale/glow
+    // animation in runScoringAnimation still drives this — measureInWindow on
+    // jokerIconRefs[iconKey] continues to work the same way.
+    return (
+      <Animated.View
+        style={[scaleStyle, activeGlow, { marginRight: 8 }]}
+        collapsable={false}
+      >
+        <View ref={setIconRef} collapsable={false}>
+          {iconElement}
+        </View>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <View style={styles.jokerBreakdownRow}>
+      <Animated.View
+        style={[scaleStyle, activeGlow, { marginRight: 8 }]}
+        collapsable={false}
+      >
+        <View ref={setIconRef} collapsable={false}>
+          {iconElement}
+        </View>
+      </Animated.View>
+      <Text
+        style={styles.jokerBreakdownName}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {bonus.name}
+      </Text>
+      <Text style={[styles.jokerBreakdownValue, { color: valueColor }]}>
+        {valueText}
+      </Text>
+    </View>
+  );
+});
+
 function TransactionModal({
   visible,
   onClose,
@@ -187,7 +301,6 @@ function TransactionModal({
   const [animatedProfit, setAnimatedProfit] = useState(0);
   const [animatedMult, setAnimatedMult] = useState(1);
   const [scoringDone, setScoringDone] = useState(false);
-  const pulseScale = useRef(new RNAnimated.Value(1)).current;
   const pendingConfirmRef = useRef<(() => void) | null>(null);
 
   // Phase 6 sequence: tracks pending timers (so they can be cleared on skip/unmount)
@@ -198,6 +311,13 @@ function TransactionModal({
   // Typed as `any` because the element may be a plain RN View or an
   // Animated.View — both expose measureInWindow at runtime.
   const jokerIconRefs = useRef<Record<string, any>>({});
+  // Stable setter shared by every BreakdownRow. Keeping a single identity here
+  // (and letting each row wrap it in an iconKey-keyed useCallback) means the
+  // ref callbacks no longer change every render, so the icon Views aren't
+  // detached/re-attached each commit during the scoring cascade.
+  const registerIconRef = useCallback((key: string, node: any) => {
+    jokerIconRefs.current[key] = node;
+  }, []);
   // Ref to running total ("You Pocket" value) for spark arc destination
   const totalDisplayRef = useRef<any>(null);
   // Refs to the running aggregate values shown in each section header.
@@ -661,7 +781,7 @@ function TransactionModal({
           const arcSymbol =
             bonus.bucket === 'boost'
               ? `+$${formatSparkNumber(bonus.flatBonus ?? 0)}`
-              : `×${formatSparkNumber(bonus.multiplier)}`;
+              : `+${formatSparkNumber(bonus.multiplier - 1)}`;
           const fireArc = (from: { x: number; y: number }) => {
             const target =
               bonus.bucket === 'boost'
@@ -997,25 +1117,6 @@ function TransactionModal({
     onClose();
   };
 
-  // Pulse animation when scoring step advances
-  useEffect(() => {
-    if (scoringActive && scoringStep >= 0) {
-      pulseScale.setValue(1);
-      RNAnimated.sequence([
-        RNAnimated.timing(pulseScale, {
-          toValue: 1.35,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(pulseScale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [scoringStep, scoringActive]);
-
   // Reset state when modal visibility changes
   useEffect(() => {
     if (visible) {
@@ -1275,9 +1376,10 @@ function TransactionModal({
   const isActiveBonus = (bonus: { name: string; emoji: string }) =>
     activeBonus?.name === bonus.name && activeBonus?.emoji === bonus.emoji;
 
-  // One row = icon + name + value. The icon ref is on a tight inner View so
-  // measureInWindow returns a snug center for the cascade arc trajectory.
-  // When `collapsed` is true, render an icon-only cell for the horizontal row.
+  // Resolve the stable props for a single breakdown row and hand them to the
+  // memoized BreakdownRow. The heavy JSX now lives in BreakdownRow (React.memo)
+  // so only the active row (and any row whose props actually change) re-renders
+  // during the scoring cascade.
   const renderRow = (
     bonus: (typeof boosts)[0],
     i: number,
@@ -1291,77 +1393,26 @@ function TransactionModal({
     const iconKey = `${bonus.name}-${globalIndex}`;
     const scaleStyle =
       iconStylesMemo[Math.min(globalIndex, iconStylesMemo.length - 1)];
-    const activeGlow =
-      isActive && scoringActive
-        ? {
-            shadowColor: '#ffd54a',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 1,
-            shadowRadius: 16,
-            elevation: 14,
-          }
-        : undefined;
     const valueText = isMult
-      ? `x${bonus.multiplier.toFixed(1)}`
+      ? `+${(bonus.multiplier - 1).toFixed(1)}`
       : `+$${formatCurrency(bonus.flatBonus ?? 0)}`;
     const valueColor = isMult ? '#d97706' : colors.green.success;
 
-    const iconElement = iconSource ? (
-      <Image source={iconSource} style={styles.receiptIcon} />
-    ) : (
-      <TextWithEmojis style={{ fontSize: 14 }} imageSize={18}>
-        {bonus.emoji}
-      </TextWithEmojis>
-    );
-
-    if (collapsed) {
-      // Compact cell for the horizontal icon row. Existing per-icon scale/glow
-      // animation in runScoringAnimation still drives this — measureInWindow on
-      // jokerIconRefs[iconKey] continues to work the same way.
-      return (
-        <Animated.View
-          key={`${prefix}-${i}`}
-          style={[scaleStyle, activeGlow, { marginRight: 8 }]}
-          collapsable={false}
-        >
-          <View
-            ref={(ref) => {
-              jokerIconRefs.current[iconKey] = ref;
-            }}
-            collapsable={false}
-          >
-            {iconElement}
-          </View>
-        </Animated.View>
-      );
-    }
-
     return (
-      <View key={`${prefix}-${i}`} style={styles.jokerBreakdownRow}>
-        <Animated.View
-          style={[scaleStyle, activeGlow, { marginRight: 8 }]}
-          collapsable={false}
-        >
-          <View
-            ref={(ref) => {
-              jokerIconRefs.current[iconKey] = ref;
-            }}
-            collapsable={false}
-          >
-            {iconElement}
-          </View>
-        </Animated.View>
-        <Text
-          style={styles.jokerBreakdownName}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {bonus.name}
-        </Text>
-        <Text style={[styles.jokerBreakdownValue, { color: valueColor }]}>
-          {valueText}
-        </Text>
-      </View>
+      <BreakdownRow
+        key={`${prefix}-${i}`}
+        bonus={bonus}
+        isMult={isMult}
+        collapsed={collapsed}
+        iconSource={iconSource}
+        valueText={valueText}
+        valueColor={valueColor}
+        scaleStyle={scaleStyle}
+        isActive={isActive}
+        scoringActive={scoringActive}
+        iconKey={iconKey}
+        registerIconRef={registerIconRef}
+      />
     );
   };
 
@@ -1414,428 +1465,430 @@ function TransactionModal({
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-            <PixelBorder
-              borderColor="#e5e7eb"
-              borderWidth={3}
-              backgroundColor="#ffffff"
-              innerPadding={0}
-              style={{ marginBottom: 8 }}
-            >
-              <View style={styles.priceInfoContainer}>
-                <View style={styles.priceRow}>
-                  <Text style={{ ...styles.priceValue, fontSize: 20 }}>
-                    {candy.name}
-                  </Text>
-                </View>
+              <PixelBorder
+                borderColor="#e5e7eb"
+                borderWidth={3}
+                backgroundColor="#ffffff"
+                innerPadding={0}
+                style={{ marginBottom: 8 }}
+              >
+                <View style={styles.priceInfoContainer}>
+                  <View style={styles.priceRow}>
+                    <Text style={{ ...styles.priceValue, fontSize: 20 }}>
+                      {candy.name}
+                    </Text>
+                  </View>
 
-                {/* Sell mode only: avg purchase + base profit. Buy mode hides
+                  {/* Sell mode only: avg purchase + base profit. Buy mode hides
                   these per the redesign — quantityOwned is already conveyed
                   by the slider's max value. */}
-                {mode === 'Sell' && candy.averagePrice !== null && (
-                  <>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceLabel}>avg purchase price</Text>
-                      <Text style={[styles.priceValue]}>
-                        ${formatCurrency(candy.averagePrice)}
-                      </Text>
-                    </View>
-                  </>
-                )}
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>current price</Text>
-                  {(() => {
-                    const isPositive = candy.cost > (candy.averagePrice ?? 0);
-                    return (
-                      <Text
-                        style={[
-                          styles.priceValue,
-                          { color: isPositive ? '#22c55e' : '#ef4444' },
-                        ]}
-                      >
-                        ${formatCurrency(candy.cost)}
-                      </Text>
-                    );
-                  })()}
+                  {mode === 'Sell' && candy.averagePrice !== null && (
+                    <>
+                      <View style={styles.priceRow}>
+                        <Text style={styles.priceLabel}>
+                          avg purchase price
+                        </Text>
+                        <Text style={[styles.priceValue]}>
+                          ${formatCurrency(candy.averagePrice)}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>current price</Text>
+                    {(() => {
+                      const isPositive = candy.cost > (candy.averagePrice ?? 0);
+                      return (
+                        <Text
+                          style={[
+                            styles.priceValue,
+                            { color: isPositive ? '#22c55e' : '#ef4444' },
+                          ]}
+                        >
+                          ${formatCurrency(candy.cost)}
+                        </Text>
+                      );
+                    })()}
+                  </View>
+                  {mode === 'Sell' && candy.averagePrice !== null && (
+                    <>
+                      <View style={styles.priceRow}>
+                        <Text style={styles.priceLabel}>you pocket</Text>
+                        {(() => {
+                          const baseProfit = candy.cost * quantity;
+                          const isPositive = candy.cost > candy.averagePrice;
+                          return (
+                            <Text
+                              style={[
+                                styles.priceValue,
+                                {
+                                  color: isPositive
+                                    ? '#22c55e'
+                                    : colors.brown.secondary,
+                                },
+                              ]}
+                            >
+                              +$
+                              {formatCurrency(Math.abs(baseProfit))}
+                            </Text>
+                          );
+                        })()}
+                      </View>
+                    </>
+                  )}
                 </View>
-                {mode === 'Sell' && candy.averagePrice !== null && (
-                  <>
-                    <View style={styles.priceRow}>
-                      <Text style={styles.priceLabel}>you pocket</Text>
-                      {(() => {
-                        const baseProfit = candy.cost * quantity;
-                        const isPositive = candy.cost > candy.averagePrice;
-                        return (
-                          <Text
-                            style={[
-                              styles.priceValue,
-                              {
-                                color: isPositive
-                                  ? '#22c55e'
-                                  : colors.brown.secondary,
-                              },
-                            ]}
-                          >
-                            +$
-                            {formatCurrency(Math.abs(baseProfit))}
-                          </Text>
-                        );
-                      })()}
-                    </View>
-                  </>
-                )}
-              </View>
-            </PixelBorder>
+              </PixelBorder>
 
-            {/* Sale breakdown — sell mode only.
+              {/* Sale breakdown — sell mode only.
               Layout: aggregate header rows + per-joker rows under each, all
               inside a height-capped ScrollView so many jokers don't push the
               "You Pocket" + footer off-screen. The cascade animates each
               joker's icon (bounce + glow) and ticks the section aggregates;
               "You Pocket" gets the climax burst. */}
-            {showBreakdown && (
-              <PixelBorder
-                borderColor="#fde047"
-                borderWidth={3}
-                backgroundColor="#fef3c7"
-                innerPadding={0}
-              >
-                <View style={styles.priceBreakdownContainer}>
-                  {/* Fixed-height wrapper around the ScrollView. `overflow:
+              {showBreakdown && (
+                <PixelBorder
+                  borderColor="#fde047"
+                  borderWidth={3}
+                  backgroundColor="#fef3c7"
+                  innerPadding={0}
+                >
+                  <View style={styles.priceBreakdownContainer}>
+                    {/* Fixed-height wrapper around the ScrollView. `overflow:
                       hidden` is the load-bearing rule — without it, the
                       ScrollView's overflowing rows render past the wrapper
                       and visually overlap the slider section below.
                       `height` on the ScrollView alone is treated as a hint
                       on some platforms; the wrapper makes the cap firm. */}
-                  <View
-                    style={{
-                      height: breakdownScrollHeight,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <ScrollView
-                      style={{ flex: 1 }}
-                      showsVerticalScrollIndicator={false}
-                      nestedScrollEnabled
-                    >
-                      {/* profit boost section */}
-                      <Pressable
-                        onPress={() =>
-                          tutorialDispatch(toggleTxnProfitBoostCollapsed())
-                        }
-                        style={styles.receiptRow}
-                        hitSlop={8}
-                      >
-                        <View style={styles.breakdownLabelGroup}>
-                          <Text style={styles.collapseChevron}>
-                            {profitBoostCollapsed ? '▶' : '▼'}
-                          </Text>
-                          <Text style={styles.breakdownLabel}>
-                            profit boost
-                          </Text>
-                        </View>
-                        <View
-                          ref={profitBoostValueRef}
-                          collapsable={false}
-                          style={{
-                            opacity:
-                              !profitBoostCollapsed || scoringActive ? 1 : 0,
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.breakdownValue,
-                              { color: colors.green.success },
-                            ]}
-                          >
-                            +${formatCurrency(displayBoost)}
-                          </Text>
-                        </View>
-                      </Pressable>
-                      {profitBoostCollapsed ? (
-                        boosts.length > 0 && (
-                          <View style={styles.collapsedIconRow}>
-                            {boosts.map((b, i) =>
-                              renderRow(b, i, 'b', i, false, true)
-                            )}
-                          </View>
-                        )
-                      ) : (
-                        boosts.map((b, i) => renderRow(b, i, 'b', i, false))
-                      )}
-
-                      {/* multiplier section */}
-                      <Pressable
-                        onPress={() =>
-                          tutorialDispatch(toggleTxnMultiplierCollapsed())
-                        }
-                        style={[styles.receiptRow, { marginTop: 8 }]}
-                        hitSlop={8}
-                      >
-                        <View style={styles.breakdownLabelGroup}>
-                          <Text style={styles.collapseChevron}>
-                            {multiplierCollapsed ? '▶' : '▼'}
-                          </Text>
-                          <Text style={styles.breakdownLabel}>multiplier</Text>
-                        </View>
-                        <Animated.View
-                          ref={multValueRef}
-                          style={[
-                            runningTotalPunchStyle,
-                            {
-                              opacity:
-                                !multiplierCollapsed || scoringActive ? 1 : 0,
-                            },
-                          ]}
-                          collapsable={false}
-                        >
-                          <Text
-                            style={[
-                              styles.breakdownValue,
-                              { color: '#d97706' },
-                            ]}
-                          >
-                            x{displayMult.toFixed(1)}
-                          </Text>
-                        </Animated.View>
-                      </Pressable>
-                      {multiplierCollapsed ? (
-                        mults.length > 0 && (
-                          <View style={styles.collapsedIconRow}>
-                            {mults.map((b, i) =>
-                              renderRow(
-                                b,
-                                i,
-                                'm',
-                                boosts.length + i,
-                                true,
-                                true
-                              )
-                            )}
-                          </View>
-                        )
-                      ) : (
-                        mults.map((b, i) =>
-                          renderRow(b, i, 'm', boosts.length + i, true)
-                        )
-                      )}
-                    </ScrollView>
-                  </View>
-
-                  {/* You Pocket */}
-                  <View
-                    style={{
-                      ...styles.receiptRow,
-                      borderTopColor: colors.brown.primary,
-                      borderTopWidth: 2,
-                      paddingTop: 2,
-                    }}
-                  >
-                    <Text style={styles.finalPriceLabel}>Grand Total</Text>
-                    <Animated.View
-                      ref={totalDisplayRef}
-                      style={[totalPunchStyle, { overflow: 'visible' }]}
-                      collapsable={false}
-                      onLayout={(e) => {
-                        const { width, height } = e.nativeEvent.layout;
-                        setTotalDisplaySize({ width, height });
+                    <View
+                      style={{
+                        height: breakdownScrollHeight,
+                        overflow: 'hidden',
                       }}
                     >
-                      {/* climaxExplosion — centered on the total Text. count
+                      <ScrollView
+                        style={{ flex: 1 }}
+                        showsVerticalScrollIndicator={false}
+                        nestedScrollEnabled
+                      >
+                        {/* profit boost section */}
+                        <Pressable
+                          onPress={() =>
+                            tutorialDispatch(toggleTxnProfitBoostCollapsed())
+                          }
+                          style={styles.receiptRow}
+                          hitSlop={8}
+                        >
+                          <View style={styles.breakdownLabelGroup}>
+                            <Text style={styles.collapseChevron}>
+                              {profitBoostCollapsed ? '-' : '+'}
+                            </Text>
+                            <Text style={styles.breakdownLabel}>
+                              profit boost
+                            </Text>
+                          </View>
+                          <View
+                            ref={profitBoostValueRef}
+                            collapsable={false}
+                            style={{
+                              opacity:
+                                !profitBoostCollapsed || scoringActive ? 1 : 0,
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.breakdownValue,
+                                { color: colors.green.success },
+                              ]}
+                            >
+                              +${formatCurrency(displayBoost)}
+                            </Text>
+                          </View>
+                        </Pressable>
+                        {profitBoostCollapsed
+                          ? boosts.length > 0 && (
+                              <View style={styles.collapsedIconRow}>
+                                {boosts.map((b, i) =>
+                                  renderRow(b, i, 'b', i, false, true)
+                                )}
+                              </View>
+                            )
+                          : boosts.map((b, i) =>
+                              renderRow(b, i, 'b', i, false)
+                            )}
+
+                        {/* multiplier section */}
+                        <Pressable
+                          onPress={() =>
+                            tutorialDispatch(toggleTxnMultiplierCollapsed())
+                          }
+                          style={[styles.receiptRow, { marginTop: 8 }]}
+                          hitSlop={8}
+                        >
+                          <View style={styles.breakdownLabelGroup}>
+                            <Text style={styles.collapseChevron}>
+                              {multiplierCollapsed ? '-' : '+'}
+                            </Text>
+                            <Text style={styles.breakdownLabel}>
+                              multiplier
+                            </Text>
+                          </View>
+                          <Animated.View
+                            ref={multValueRef}
+                            style={[
+                              runningTotalPunchStyle,
+                              {
+                                opacity:
+                                  !multiplierCollapsed || scoringActive ? 1 : 0,
+                              },
+                            ]}
+                            collapsable={false}
+                          >
+                            <Text
+                              style={[
+                                styles.breakdownValue,
+                                { color: '#d97706' },
+                              ]}
+                            >
+                              x{displayMult.toFixed(1)}
+                            </Text>
+                          </Animated.View>
+                        </Pressable>
+                        {multiplierCollapsed
+                          ? mults.length > 0 && (
+                              <View style={styles.collapsedIconRow}>
+                                {mults.map((b, i) =>
+                                  renderRow(
+                                    b,
+                                    i,
+                                    'm',
+                                    boosts.length + i,
+                                    true,
+                                    true
+                                  )
+                                )}
+                              </View>
+                            )
+                          : mults.map((b, i) =>
+                              renderRow(b, i, 'm', boosts.length + i, true)
+                            )}
+                      </ScrollView>
+                    </View>
+
+                    {/* You Pocket */}
+                    <View
+                      style={{
+                        ...styles.receiptRow,
+                        borderTopColor: colors.brown.primary,
+                        borderTopWidth: 2,
+                        paddingTop: 2,
+                      }}
+                    >
+                      <Text style={styles.finalPriceLabel}>Grand Total</Text>
+                      <Animated.View
+                        ref={totalDisplayRef}
+                        style={[totalPunchStyle, { overflow: 'visible' }]}
+                        collapsable={false}
+                        onLayout={(e) => {
+                          const { width, height } = e.nativeEvent.layout;
+                          setTotalDisplaySize({ width, height });
+                        }}
+                      >
+                        {/* climaxExplosion — centered on the total Text. count
                           + colors come from computeSparkScale (granular tier
                           lookup keyed by sale value). */}
-                      {climaxExplosionScale && totalDisplaySize.width > 0 && (
-                        <View
-                          pointerEvents="none"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: totalDisplaySize.width,
-                            height: totalDisplaySize.height,
-                            overflow: 'visible',
-                          }}
-                        >
-                          <SparkEffect
-                            mode="burst"
-                            numSparks={climaxExplosionScale.climaxCount}
-                            sparkColors={climaxExplosionScale.colors}
-                            origin={{
-                              x: totalDisplaySize.width / 2,
-                              y: totalDisplaySize.height / 2,
+                        {climaxExplosionScale && totalDisplaySize.width > 0 && (
+                          <View
+                            pointerEvents="none"
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: totalDisplaySize.width,
+                              height: totalDisplaySize.height,
+                              overflow: 'visible',
                             }}
-                            trigger={climaxExplosionTrigger}
-                            imageSource={require('../../assets/images/emojis/candy.png')}
-                          />
-                        </View>
-                      )}
-                      {scoringActive && scoringDone ? (
-                        <Text style={styles.finalPriceValue}>
-                          ${formatCurrency(finalTotalTarget)}
-                        </Text>
-                      ) : (
-                        <Text style={styles.finalPriceValue}>
-                          ${formatCurrency(displayTotal)}
-                        </Text>
-                      )}
-                    </Animated.View>
+                          >
+                            <SparkEffect
+                              mode="burst"
+                              numSparks={climaxExplosionScale.climaxCount}
+                              sparkColors={climaxExplosionScale.colors}
+                              origin={{
+                                x: totalDisplaySize.width / 2,
+                                y: totalDisplaySize.height / 2,
+                              }}
+                              trigger={climaxExplosionTrigger}
+                              imageSource={require('../../assets/images/emojis/candy.png')}
+                            />
+                          </View>
+                        )}
+                        {scoringActive && scoringDone ? (
+                          <Text style={styles.finalPriceValue}>
+                            ${formatCurrency(finalTotalTarget)}
+                          </Text>
+                        ) : (
+                          <Text style={styles.finalPriceValue}>
+                            ${formatCurrency(displayTotal)}
+                          </Text>
+                        )}
+                      </Animated.View>
+                    </View>
                   </View>
-                </View>
-              </PixelBorder>
-            )}
+                </PixelBorder>
+              )}
 
-            <View style={styles.sliderSection}>
-              <Text style={styles.quantityLabel}>
-                {mode === 'Buy' && maxQuantity <= 0
-                  ? playerBalance !== undefined && playerBalance < candy.cost
-                    ? 'Not Enough Money'
-                    : availableInventorySpace !== undefined &&
-                        availableInventorySpace <= 0
-                      ? 'Inventory Full'
-                      : 'Cannot Buy'
-                  : `Quantity: ${quantity} / ${maxQuantity}`}
-              </Text>
+              <View style={styles.sliderSection}>
+                <Text style={styles.quantityLabel}>
+                  {mode === 'Buy' && maxQuantity <= 0
+                    ? playerBalance !== undefined && playerBalance < candy.cost
+                      ? 'Not Enough Money'
+                      : availableInventorySpace !== undefined &&
+                          availableInventorySpace <= 0
+                        ? 'Inventory Full'
+                        : 'Cannot Buy'
+                    : `Quantity: ${quantity} / ${maxQuantity}`}
+                </Text>
 
-              {mode === 'Buy' ? (
-                maxQuantity > 0 ? (
+                {mode === 'Buy' ? (
+                  maxQuantity > 0 ? (
+                    <Slider
+                      key={`buy-${maxQuantity}`}
+                      style={styles.sliderStyle}
+                      minimumValue={0}
+                      maximumValue={maxQuantity}
+                      step={1}
+                      value={Math.max(0, Math.min(quantity, maxQuantity))}
+                      onValueChange={handleSliderChange}
+                      onSlidingComplete={handleSliderComplete}
+                      minimumTrackTintColor="#ef4444"
+                      maximumTrackTintColor="#ccc"
+                    />
+                  ) : (
+                    <Slider
+                      key="buy-disabled"
+                      style={styles.sliderStyle}
+                      minimumValue={0}
+                      maximumValue={1}
+                      step={1}
+                      value={0}
+                      onValueChange={() => {}}
+                      minimumTrackTintColor="#ef4444"
+                      maximumTrackTintColor="#ccc"
+                      disabled={true}
+                    />
+                  )
+                ) : maxQuantity > 0 ? (
                   <Slider
-                    key={`buy-${maxQuantity}`}
+                    key={`sell-${maxQuantity}`}
                     style={styles.sliderStyle}
-                    minimumValue={0}
-                    maximumValue={maxQuantity}
+                    minimumValue={10000}
+                    maximumValue={10000 + maxQuantity}
                     step={1}
-                    value={Math.max(0, Math.min(quantity, maxQuantity))}
-                    onValueChange={handleSliderChange}
-                    onSlidingComplete={handleSliderComplete}
-                    minimumTrackTintColor="#ef4444"
+                    value={10000 + Math.max(0, Math.min(quantity, maxQuantity))}
+                    onValueChange={(value) => handleSliderChange(value - 10000)}
+                    onSlidingComplete={(value) =>
+                      handleSliderComplete(value - 10000)
+                    }
+                    minimumTrackTintColor="#4ade80"
                     maximumTrackTintColor="#ccc"
                   />
                 ) : (
                   <Slider
-                    key="buy-disabled"
+                    key="sell-disabled"
                     style={styles.sliderStyle}
-                    minimumValue={0}
-                    maximumValue={1}
+                    minimumValue={10000}
+                    maximumValue={10001}
                     step={1}
-                    value={0}
+                    value={10000}
                     onValueChange={() => {}}
-                    minimumTrackTintColor="#ef4444"
+                    minimumTrackTintColor="#4ade80"
                     maximumTrackTintColor="#ccc"
                     disabled={true}
                   />
-                )
-              ) : maxQuantity > 0 ? (
-                <Slider
-                  key={`sell-${maxQuantity}`}
-                  style={styles.sliderStyle}
-                  minimumValue={10000}
-                  maximumValue={10000 + maxQuantity}
-                  step={1}
-                  value={10000 + Math.max(0, Math.min(quantity, maxQuantity))}
-                  onValueChange={(value) => handleSliderChange(value - 10000)}
-                  onSlidingComplete={(value) =>
-                    handleSliderComplete(value - 10000)
-                  }
-                  minimumTrackTintColor="#4ade80"
-                  maximumTrackTintColor="#ccc"
-                />
-              ) : (
-                <Slider
-                  key="sell-disabled"
-                  style={styles.sliderStyle}
-                  minimumValue={10000}
-                  maximumValue={10001}
-                  step={1}
-                  value={10000}
-                  onValueChange={() => {}}
-                  minimumTrackTintColor="#4ade80"
-                  maximumTrackTintColor="#ccc"
-                  disabled={true}
-                />
-              )}
-              {/* Hide tabs during tutorial: step 4 = buy only, step 7 = sell only */}
-              {tutorialStep !== 4 && tutorialStep !== 7 && (
-                <View style={styles.tabContainer}>
-                  <PixelBorder
-                    borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
-                    borderWidth={3}
-                    backgroundColor={mode === 'Buy' ? '#ffcc99' : '#f3f4f6'}
-                    style={{ flex: 1, marginRight: 6 }}
-                  >
-                    <TouchableOpacity
-                      style={styles.tab}
-                      onPress={() => changeMode('Buy')}
+                )}
+                {/* Hide tabs during tutorial: step 4 = buy only, step 7 = sell only */}
+                {tutorialStep !== 4 && tutorialStep !== 7 && (
+                  <View style={styles.tabContainer}>
+                    <PixelBorder
+                      borderColor={mode === 'Buy' ? '#cc7a00' : '#e5e7eb'}
+                      borderWidth={3}
+                      backgroundColor={mode === 'Buy' ? '#ffcc99' : '#f3f4f6'}
+                      style={{ flex: 1, marginRight: 6 }}
                     >
-                      <Text style={styles.tabText}>Buy</Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
-                  <PixelBorder
-                    borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
-                    borderWidth={3}
-                    backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
-                    style={{ flex: 1 }}
-                  >
-                    <TouchableOpacity
-                      style={styles.tab}
-                      onPress={() => {
-                        changeMode('Sell');
-                      }}
+                      <TouchableOpacity
+                        style={styles.tab}
+                        onPress={() => changeMode('Buy')}
+                      >
+                        <Text style={styles.tabText}>Buy</Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
+                    <PixelBorder
+                      borderColor={mode === 'Sell' ? '#cc7a00' : '#e5e7eb'}
+                      borderWidth={3}
+                      backgroundColor={mode === 'Sell' ? '#ffcc99' : '#f3f4f6'}
+                      style={{ flex: 1 }}
                     >
-                      <Text style={styles.tabText}>Sell</Text>
-                    </TouchableOpacity>
-                  </PixelBorder>
-                </View>
-              )}
-              {mode === 'Buy' ? (
-                <PixelBorder
-                  borderColor="#bae6fd"
-                  borderWidth={2}
-                  backgroundColor="#f0f9ff"
-                  innerPadding={0}
-                >
-                  <View style={styles.totalValueContainer}>
-                    <Text style={styles.totalValueLabel}>Total Cost:</Text>
-                    <Animated.Text
-                      style={[
-                        styles.totalValueAmount,
-                        { color: '#ef4444' },
-                        totalCostPunchStyle,
-                      ]}
-                    >
-                      ${formatCurrency(quantity * candy.cost)}
-                    </Animated.Text>
+                      <TouchableOpacity
+                        style={styles.tab}
+                        onPress={() => {
+                          changeMode('Sell');
+                        }}
+                      >
+                        <Text style={styles.tabText}>Sell</Text>
+                      </TouchableOpacity>
+                    </PixelBorder>
                   </View>
-                </PixelBorder>
-              ) : (
-                <PixelBorder
-                  borderColor="#bae6fd"
-                  borderWidth={2}
-                  backgroundColor="#f0f9ff"
-                  innerPadding={0}
-                >
-                  <View style={styles.totalValueContainer}>
-                    <Text style={styles.totalValueLabel}>Total Value:</Text>
-                    <Text
-                      style={[styles.totalValueAmount, { color: '#22c55e' }]}
-                    >
-                      ${pocketValue}
-                    </Text>
-                  </View>
-                </PixelBorder>
-              )}
+                )}
+                {mode === 'Buy' ? (
+                  <PixelBorder
+                    borderColor="#bae6fd"
+                    borderWidth={2}
+                    backgroundColor="#f0f9ff"
+                    innerPadding={0}
+                  >
+                    <View style={styles.totalValueContainer}>
+                      <Text style={styles.totalValueLabel}>Total Cost:</Text>
+                      <Animated.Text
+                        style={[
+                          styles.totalValueAmount,
+                          { color: '#ef4444' },
+                          totalCostPunchStyle,
+                        ]}
+                      >
+                        ${formatCurrency(quantity * candy.cost)}
+                      </Animated.Text>
+                    </View>
+                  </PixelBorder>
+                ) : (
+                  <PixelBorder
+                    borderColor="#bae6fd"
+                    borderWidth={2}
+                    backgroundColor="#f0f9ff"
+                    innerPadding={0}
+                  >
+                    <View style={styles.totalValueContainer}>
+                      <Text style={styles.totalValueLabel}>Total Value:</Text>
+                      <Text
+                        style={[styles.totalValueAmount, { color: '#22c55e' }]}
+                      >
+                        ${pocketValue}
+                      </Text>
+                    </View>
+                  </PixelBorder>
+                )}
 
-              {mode === 'Buy' && maxBuyQuantity === 0 && (
-                <TextWithEmojis style={styles.warningText}>
-                  {playerBalance !== undefined &&
-                  availableInventorySpace !== undefined
-                    ? playerBalance < candy.cost
-                      ? "⚠️ You don't have enough money!"
-                      : availableInventorySpace <= 0
-                        ? '⚠️ Your stash is full!'
-                        : "⚠️ You can't buy this item!"
-                    : '⚠️ Your stash is full!'}
-                </TextWithEmojis>
-              )}
-            </View>
+                {mode === 'Buy' && maxBuyQuantity === 0 && (
+                  <TextWithEmojis style={styles.warningText}>
+                    {playerBalance !== undefined &&
+                    availableInventorySpace !== undefined
+                      ? playerBalance < candy.cost
+                        ? "⚠️ You don't have enough money!"
+                        : availableInventorySpace <= 0
+                          ? '⚠️ Your stash is full!'
+                          : "⚠️ You can't buy this item!"
+                      : '⚠️ Your stash is full!'}
+                  </TextWithEmojis>
+                )}
+              </View>
             </ScrollView>
 
             {/* Tutorial hint banner */}
@@ -1844,7 +1897,8 @@ function TransactionModal({
                 style={[styles.tutorialHint, { zIndex: 10, elevation: 10 }]}
               >
                 <Text style={styles.tutorialHintText}>
-                  {tutorialStep === 4 && 'Smash that Buy button!'}
+                  {tutorialStep === 4 &&
+                    'Start your empire with your first purchase!'}
                   {tutorialStep === 7 &&
                     'Cash out! Hit Sell and watch the money roll in'}
                 </Text>

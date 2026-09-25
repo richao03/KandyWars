@@ -27,7 +27,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -1057,7 +1057,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -1075,25 +1075,17 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          padding: ResponsiveSpacing.containerPadding(),
-          paddingBottom: 12, // Fixed 12px from bottom
-        },
-      ]}
-    >
-      {/* Header */}
-      <MinigameHUD
+    <>
+      <MinigameScaffold
         theme="recess"
         title="Rock Paper Scissors"
         subtitle={``}
         leftInfo={`Stage ${stage}/3`}
         centerInfo={`Losses:${losses}/4`}
         rightInfo={`Wins:${wins}/3 `}
-      />
-
+        backgroundColor="#87CEEB"
+        onLeave={handleForfeit}
+      >
       {/* Game Area */}
       <View style={styles.gameArea}>
         {/* Timer Line */}
@@ -1248,33 +1240,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Buttons */}
-      <View
-        style={[
-          styles.bottomButtons,
-          {
-            gap: ResponsiveSpacing.buttonGap(),
-            paddingVertical: 0, // Remove vertical padding
-          },
-        ]}
-      >
-        <PixelBorder
-          borderColor="#4A90C1"
-          borderWidth={3}
-          backgroundColor="#6BB6E3"
-          innerPadding={0}
-          style={{ flex: 1 }}
-        >
-          <TouchableOpacity
-            style={styles.bottomButtonInner}
-            onPress={handleForfeit}
-          >
-            <TextWithEmojis style={styles.bottomButtonText} imageSize={28}>
-              🚪 Leave
-            </TextWithEmojis>
-          </TouchableOpacity>
-        </PixelBorder>
-      </View>
+      </MinigameScaffold>
 
       <GameModal
         visible={modal.visible}
@@ -1286,7 +1252,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
         dismissible={modal.dismissible}
         showCancelButton={modal.showCancelButton}
       />
-    </View>
+    </>
   );
 }
 

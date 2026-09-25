@@ -110,14 +110,18 @@ export const {
 export default candySalesSlice.reducer;
 
 // Selectors
+// Cache per-argument memoized selectors so repeated calls with the same period
+// return the SAME selector instance (preserving memoization across renders).
+const _salesByPeriodCache: Record<number, ReturnType<typeof createSelector>> = {};
 export const selectSalesByPeriod = (period: number) =>
-  createSelector(
+  (_salesByPeriodCache[period] ??= createSelector(
     [(state: { candySales: CandySalesState }) => state.candySales.sales],
     (sales) => sales.filter(sale => sale.period === period)
-  );
+  ));
 
+const _revenueByPeriodCache: Record<number, ReturnType<typeof createSelector>> = {};
 export const selectRevenueByPeriod = (period: number) =>
-  createSelector(
+  (_revenueByPeriodCache[period] ??= createSelector(
     [selectSalesByPeriod(period)],
     (periodSales) => periodSales.reduce((sum, sale) => sum + sale.total, 0)
-  );
+  ));

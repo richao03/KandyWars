@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { combineReducers } from '@reduxjs/toolkit';
+import { audioListenerMiddleware } from './middleware/audioListenerMiddleware';
 import gameReducer from './slices/gameSlice';
 import flavorTextReducer from './slices/flavorTextSlice';
 import jokerReducer from './slices/jokerSlice';
@@ -67,7 +68,7 @@ const rootReducer = combineReducers({
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 8, // Increment version to trigger migration
+  version: 9, // Increment version to trigger migration
   storage: AsyncStorage,
   whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial', 'hustle', 'quest', 'settings', 'jokerStats', 'shopkeeper', 'juiceSettings'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
@@ -193,6 +194,24 @@ const persistConfig = {
       }
     }
 
+    // Migration to version 9: Piggy bank model — stash now starts at 0 and holds
+    // positive savings (the adoption fee is a separate goal) instead of starting
+    // at -adoptionFee (debt). Convert an in-progress game's debt-style stash into
+    // the equivalent savings (deposits = oldStash + fee). Only touch saves with an
+    // active game (difficultyLevel set); a fresh/between-games wallet is already 0.
+    if (state && state._persist?.version < 9) {
+      if (__DEV__) console.log('🔄 Migrating to version 9: Piggy bank starts at 0 (savings, not debt)');
+      if (state.wallet) {
+        if (state.wallet.difficultyLevel != null) {
+          const fee = state.wallet.adoptionFee ?? 5000;
+          state.wallet.stashedAmount = (state.wallet.stashedAmount ?? 0) + fee;
+        }
+        if (!Array.isArray(state.wallet.stashHistory)) {
+          state.wallet.stashHistory = [];
+        }
+      }
+    }
+
     return Promise.resolve(state);
   },
 };
@@ -205,14 +224,20 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       // Optimize for production
-      immutableCheck: { warnAfter: 32 },
+      immutableCheck: {
+        warnAfter: 32,
+        // Skip deep-scanning the large pre-generated game data (15 candies x 40
+        // periods of prices + events) on every dispatch — it's what pushes the
+        // dev-only immutability check past its threshold. Dev-only middleware.
+        ignoredPaths: ['seed.gameData'],
+      },
       serializableCheck: {
         warnAfter: 32,
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         ignoredActionPaths: ['payload.timestamp'],
         ignoredPaths: ['seed.gameData'],
       },
-    }),
+    }).prepend(audioListenerMiddleware.middleware),
   // Enable devTools only in development
   devTools: process.env.NODE_ENV !== 'production',
 });

@@ -26,7 +26,7 @@ Title Screen → Difficulty Selection → Story Screen → Name Prompt
 - Name prompt (default: "Player")
 
 ### The Market (core loop)
-Each day has **8 periods** (or 6 with Time Crunch hall pass). Each period:
+Each day has **8 periods** (5 days × 8 = 40 total). Each period:
 
 1. Travel to a location (Gym, Cafeteria, Home Room, Library, Science Lab, School Yard, Bathroom, The Connect)
 2. Check for random events
@@ -41,7 +41,9 @@ After each day (except day 5), four options:
 - **Sleep** — end the day, receive daily allowance, advance to next day
 
 ### Game End
-After day 5 completes, final score = balance + stashed amount. Win if >= 0.
+After day 5 completes, final score = balance + stashed amount - adoption fee. Win if >= 0.
+
+**Early adoption**: the moment `balance + stash >= adoptionFee` (on the market or after-school screen), an `AdoptionReadyModal` offers "Adopt Now" (go straight to `/game-end`, which scores the run as a win and unlocks the next level) or "Keep Trading". It shows once per run; "Keep Trading" sets `game.adoptionPromptDismissed`, which resets with the rest of the game state on a new run. After dismissing, the player can still end early from the Settings tab: a featured `PickUpPetButton` (pet image, gold ticket) sits at the top while the fee is covered and confirms before routing to `/game-end`. Logic lives in `src/hooks/useAdoptionPrompt.ts`; pet names/images per level in `src/constants/petData.ts`.
 
 ---
 
@@ -49,13 +51,26 @@ After day 5 completes, final score = balance + stashed amount. Win if >= 0.
 
 16 levels, each with a pet and adoption fee (debt target):
 
-| Level | Debt Range |
-|-------|-----------|
-| 1     | $5,000    |
-| ...   | scales up |
-| 16    | $500,000  |
+| Level | Adoption Fee (debt) |
+|-------|--------------------|
+| 1     | $5,000             |
+| 2     | $12,000            |
+| 3     | $25,000            |
+| 4     | $50,000            |
+| 5     | $100,000           |
+| 6     | $175,000           |
+| 7     | $300,000           |
+| 8     | $500,000           |
+| 9     | $750,000           |
+| 10    | $1,000,000         |
+| 11    | $1,500,000         |
+| 12    | $2,500,000         |
+| 13    | $3,500,000         |
+| 14    | $5,000,000         |
+| 15    | $7,500,000         |
+| 16    | $10,000,000        |
 
-Each level must be beaten to unlock the next.
+Each level has its own pet and adoption fee. Starting balance is **$20**; the adoption fee is stored as negative debt in the stash (`stashedAmount = -adoptionFee`).
 
 ---
 
@@ -86,26 +101,28 @@ Every candy has exactly **2 types** from 6 possible types, and a **size**. Each 
 - See [CANDY.md](./CANDY.md) for full price generation details
 
 ### Multi-Type Stacking
-Since each candy has 2 types, it triggers **all matching type jokers independently**. A Gummy+Chocolate candy would trigger both Bear Market (Gummy 2x) and Cocoa Futures (Chocolate 2x) for a combined 4x multiplier.
+Since each candy has 2 types, it triggers **all matching type jokers independently**. Contributions add into a single bucket rather than multiplying joker-on-joker: a Gummy+Chocolate candy triggers both Bear Market (Gummy) and Cocoa Futures (Chocolate), and two such "2×" type jokers each add +1 to the profit-boost bucket for a combined **3×** boost (not 4×). See the Sale Calculation section below.
 
 ---
 
 ## Sale Calculation
 
-The profit formula is:
+The canonical profit formula (Balatro-style additive buckets — see `src/utils/saleCalculations.ts`) is:
 
 ```
-finalProfit = (baseProfit + flatBonuses) x productOfAllMultipliers
+profitBoost = 1 + Σ(profit-boost contributions)   // type jokers, hall pass %, scaling jokers, etc.
+multiplier  = 1 + Σ(multiplier contributions)      // size jokers, conditional mults, Final Exam, Lunchroom
+finalProfit = totalProfit × profitBoost × multiplier × finalExamPenalty × lunchroomPenalty
 ```
 
 Where:
-- **baseProfit** = `(salePrice - purchasePrice) x quantity`
-- **flatBonuses** = sum of all additive bonuses (Overclock, Art Auction, Hopscotch, Golden Hour, Swingset, Hall Pass, Influencer Shoutout)
-- **multipliers** = product of all type/size/conditional multipliers (stacked multiplicatively)
+- **totalProfit** = `(salePrice - purchasePrice) × quantity`
+- Both `profitBoost` and `multiplier` start at 1 and each per-joker contribution **adds** into its bucket (no joker-on-joker product).
+- Hall-pass *bonuses* (Final Exam in the last period, Lunchroom Monopoly in the cafeteria) fold into the additive multiplier bucket; their *penalties* (off-period 0.25×, off-site 0.5×) stay as final multiplicative factors.
 
-**Vacuum Sealer penalty:** Subtracts 2 from the final multiplier product (min 1x).
+**Vacuum Sealer penalty:** Subtracts 2 from the multiplier bucket (min 1×).
 
-**Total returned to player:** `purchaseValue + finalProfit` (you get your cost basis back plus profit)
+**Total returned to player:** `purchaseValue + finalProfit` on a profitable sale (cost basis back plus profit). Selling at a loss instead returns `currentPrice × quantity` (the market value).
 
 ---
 
@@ -115,15 +132,18 @@ Pre-generated per game seed. Trigger at random periods.
 
 | Event | Effect |
 |-------|--------|
-| **FOUND_MONEY** | +25% of current wallet balance, min $100 (multiplied by Hide and Seek joker) |
-| **LOSE_MONEY** | -50% of balance (blocked by Medieval Shield or 6th Grade Bodyguard) |
-| **STASH_LOCKED** | Confiscates all candy inventory (blocked by Secret Hideout or Hall Monitor Bribe; reduced to 25% with Teacher's Pet hall pass) |
-| **PRICE_SPIKE** | Candy prices increase (flavor text) |
-| **PRICE_DROP** | Candy prices decrease (flavor text) |
+| **FOUND_MONEY** | +25% of current wallet balance, min $100 (multiplied by Lucky Charm joker and Metal Detector merchant item) |
+| **LOSE_MONEY** | -50% of balance (blocked by Safe House or 6th Grade Bodyguard; Bully Bait joker converts it into a cash windfall) |
+| **STASH_LOCKED** | Confiscates all candy inventory (blocked by Safe House or Hall Monitor Bribe; reduced to 25% with Teacher's Pet hall pass). At most one confiscation per day. |
+| **PRICE_SPIKE** | Candy prices increase 5x for the affected candy/location (flavor text) |
+| **PRICE_DROP** | Candy prices drop to 0.2x for the affected candy/location (flavor text) |
+
+FOUND_MONEY, LOSE_MONEY, and STASH_LOCKED are the three "major" event types (one chosen at random per major-event slot); PRICE_SPIKE / PRICE_DROP are "minor" events.
 
 ### Event Protection Priority
-- **LOSE_MONEY:** Medieval Shield (joker) > 6th Grade Bodyguard (merchant item) — consumed on use
-- **STASH_LOCKED:** Secret Hideout (joker) > Hall Monitor Bribe (merchant item) — consumed on use
+- **LOSE_MONEY:** Safe House (joker, #67) > 6th Grade Bodyguard (merchant item). Safe House is a persistent aura — it is **not** consumed on use; the merchant bodyguard **is** consumed.
+- **STASH_LOCKED:** Safe House (joker, #67) > Hall Monitor Bribe (merchant item). Again Safe House is persistent (not consumed); the merchant bribe is consumed.
+- **Detention Dodge** (joker #81) grants full event immunity for the rest of the current day.
 
 ---
 
@@ -141,23 +161,23 @@ Pre-generated per game seed. Trigger at random periods.
 8. Gym (Misère Nim — take turns removing from piles, last to take loses)
 9. Recess
 
-Each minigame has 3 difficulty levels. Completing levels earns joker rewards. Playing minigames counts toward hall pass unlocks (e.g., Valedictorian Vendor requires all 9).
+Each minigame has 3 difficulty levels. Completing levels earns joker rewards. Playing minigames counts toward hall pass unlocks (e.g., The Valedictorian requires playing all 9).
 
 ---
 
 ## Day Transitions
 
 ### End of Day (Sleep)
-1. Daily allowance added ($100–$400 based on difficulty, modified by jokers)
+1. Daily allowance added (base $10, modified by hall passes, jokers, and merchant items — not difficulty-based)
 2. Joker interest applied (Mysterious Artifact: compound interest on stash)
 3. Inheritance hall pass transfer (10% of wallet to piggy bank)
 4. Daily tracking resets (minigame flags, etc.)
 
 ### Day Calculation
 ```
-periodsPerDay = 8 (or 6 with Time Crunch)
+periodsPerDay = 8 (fixed; getPeriodsPerDay always returns 8)
 day = Math.floor(periodCount / periodsPerDay) + 1
-lunchPeriod = Math.floor(periodsPerDay / 2)
+lunchPeriod = Math.floor(periodsPerDay / 2)   // = 4
 ```
 
 ---

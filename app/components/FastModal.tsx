@@ -30,6 +30,8 @@ interface FastModalProps {
   position?: 'center' | 'bottom';
   /** Mount children immediately (hidden) so the first open has no mounting delay */
   preMount?: boolean;
+  /** Standard dialogs render their visible surface with PixelBorder. */
+  presentation?: 'framed' | 'fullBleed';
 }
 
 export default function FastModal({
@@ -41,6 +43,7 @@ export default function FastModal({
   modalStyle,
   position = 'center',
   preMount = false,
+  presentation = 'framed',
 }: FastModalProps) {
   const animationValue = useSharedValue(0);
   const backdropValue = useSharedValue(0);
@@ -168,7 +171,12 @@ export default function FastModal({
         pointerEvents="box-none"
       >
         <Animated.View
-          style={[styles.modal, modalStyle, modalAnimatedStyle]}
+          style={[
+            styles.modal,
+            modalStyle,
+            presentation === 'framed' && styles.pixelModalHost,
+            modalAnimatedStyle,
+          ]}
           pointerEvents="auto"
         >
           {children}
@@ -198,8 +206,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   modal: {
-    backgroundColor: 'white',
-    borderRadius: 25,
+    maxWidth: '100%',
+    maxHeight: '90%',
+    flexShrink: 1,
     shadowColor: colors.black,
     shadowOffset: {
       width: 0,
@@ -209,5 +218,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 10001,
     zIndex: 10001,
+  },
+  // FastModal owns positioning, animation, and the shadow only. The visible
+  // surface belongs to the modal content. Keeping this host square prevents a
+  // rounded native shell from showing around stepped pixel corners, regardless
+  // of legacy modalStyle values. We intentionally do not set a background here
+  // so legacy full-bleed/image modals can continue supplying their own.
+  pixelModalHost: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    overflow: 'visible',
   },
 });

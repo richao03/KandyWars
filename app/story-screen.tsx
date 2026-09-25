@@ -19,10 +19,10 @@ import {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { formatNumber } from '../src/utils/priceUtils';
-import { useWallet } from '../src/hooks/useWallet';
 import { useGame } from '../src/hooks/useGame';
+import { useWallet } from '../src/hooks/useWallet';
 import { MusicController } from '../src/utils/musicController';
+import { formatNumber } from '../src/utils/priceUtils';
 import { SoundEffects } from '../src/utils/soundEffects';
 import NamePromptModal from './components/NamePromptModal';
 import PixelBorder from './components/PixelBorder';
@@ -902,7 +902,7 @@ const styles = StyleSheet.create({
   },
   dogImage: {
     position: 'absolute',
-    top: 36,
+    top: 12,
     left: '50%',
     marginLeft: -50,
     width: 100,
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     paddingHorizontal: 40,
-    paddingTop: 160,
+    paddingTop: 120,
     width: '100%',
     height: '100%',
     alignSelf: 'flex-start',

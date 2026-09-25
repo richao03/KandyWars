@@ -12,13 +12,11 @@ import {
   TRIVIA_QUESTIONS_PER_VISIT,
   NIGHTLY_QUEST_TEMPLATES,
   QUEST_DIFFICULTY,
-  QUEST_REWARDS,
   NightlyQuestType,
   SMALL_CANDY_NAMES,
   MEDIUM_CANDY_NAMES,
   BIG_CANDY_NAMES,
   CANDY_TYPES_FOR_QUESTS,
-  getQuestCashReward,
 } from '../../constants/shopkeeperData';
 import { CANDY_REGISTRY } from '../../constants/candyRegistry';
 
@@ -38,7 +36,7 @@ export interface NightlyQuest {
   };
   progress: number;
   goal: number;
-  reward: { xp: number; cash: number };
+  reward: { xp: number };
   day: number;
   expiresDay?: number;
   // Set to true when the player explicitly Accepts the quest from the deli's
@@ -234,17 +232,16 @@ function generateNightlyQuest(
     );
     if (remaining.length === 0) return null;
     const fallback = remaining[Math.floor(rng() * remaining.length)];
-    return buildQuest(fallback, `nq-${day}-${fallback.type}`, day, level, rng);
+    return buildQuest(fallback, `nq-${day}-${fallback.type}`, day, rng);
   }
 
-  return buildQuest(template, questId, day, level, rng);
+  return buildQuest(template, questId, day, rng);
 }
 
 function buildQuest(
   template: { type: NightlyQuestType; descriptionTemplate: string },
   questId: string,
   day: number,
-  level: number,
   rng: () => number,
 ): NightlyQuest {
   const isMultiDay = template.type === 'multi_day';
@@ -274,7 +271,6 @@ function buildQuest(
         goal: quantity,
         reward: {
           xp: isMultiDay ? XP_REWARDS.MULTI_DAY_QUEST_COMPLETE : XP_REWARDS.NIGHTLY_QUEST_COMPLETE,
-          cash: getQuestCashReward(day, isMultiDay),
         },
         day,
         ...(isMultiDay ? { expiresDay: day + 2 } : {}),
@@ -295,7 +291,6 @@ function buildQuest(
         goal: quantity,
         reward: {
           xp: XP_REWARDS.NIGHTLY_QUEST_COMPLETE,
-          cash: getQuestCashReward(day, false),
         },
         day,
       };
@@ -317,7 +312,6 @@ function buildQuest(
         goal: roundedAmount,
         reward: {
           xp: XP_REWARDS.NIGHTLY_QUEST_COMPLETE,
-          cash: getQuestCashReward(day, false),
         },
         day,
       };
@@ -338,7 +332,6 @@ function buildQuest(
         goal: quantity,
         reward: {
           xp: XP_REWARDS.NIGHTLY_QUEST_COMPLETE,
-          cash: getQuestCashReward(day, false),
         },
         day,
       };
@@ -355,7 +348,6 @@ function buildQuest(
         goal: 10,
         reward: {
           xp: XP_REWARDS.NIGHTLY_QUEST_COMPLETE,
-          cash: getQuestCashReward(day, false),
         },
         day,
       };

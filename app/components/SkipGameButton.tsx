@@ -212,6 +212,8 @@ const styles = StyleSheet.create({
   resultCard: {
     width: '100%',
     maxWidth: 360,
+    maxHeight: '90%',
+    flexShrink: 1,
   },
   resultTitle: {
     color: '#ffffff',

@@ -31,13 +31,16 @@ import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useShopkeeper } from '../../src/hooks/useShopkeeper';
 import { useWallet } from '../../src/hooks/useWallet';
+import { useAdoptionPrompt } from '../../src/hooks/useAdoptionPrompt';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { resetEarlySaleFlag } from '../../src/store/slices/candySalesSlice';
 import { getPeriodsPerDay } from '../../src/store/slices/gameSlice';
 import { MusicController } from '../../src/utils/musicController';
+import AdoptionReadyModal from '../components/AdoptionReadyModal';
 import FirstTimeHint from '../components/FirstTimeHint';
 import GameHUD from '../components/GameHUD';
 import GoingToSchoolModal from '../components/GoingToSchoolModal';
+import PiggyBankDetailModal from '../components/PiggyBankDetailModal';
 import PixelBorder from '../components/PixelBorder';
 import SleepConfirmModal from '../components/SleepConfirmModal';
 import StudySubjectSelector from '../components/StudySubjectSelector';
@@ -161,11 +164,18 @@ function AfterSchoolPage() {
   const [showStash, setShowStash] = useState(false);
   const [showDeli, setShowDeli] = useState(false);
   const [showInventory, setShowInventory] = useState(false);
+  const [showPiggyBank, setShowPiggyBank] = useState(false);
 
   useEffect(() => {
     setEvent('AFTER_SCHOOL');
     setLastActiveView('after-school');
   }, [setEvent, setLastActiveView]);
+
+  // Early-win prompt (e.g. after stashing or interest/allowance pushes the
+  // total over the fee). Held back during the sleep/going-to-school flow.
+  const adoptionPrompt = useAdoptionPrompt(
+    isFocused && !sleepConfirmModalVisible && !goingToSchoolModalVisible
+  );
 
   const handleStudy = useCallback(() => {
     if (!hasStudiedTonight) setShowStudySubjects(true);
@@ -346,6 +356,7 @@ function AfterSchoolPage() {
             customHeaderText={`After School - Day ${day}`}
             customLocationText="Home"
             onInventoryPress={() => setShowInventory(true)}
+            onPiggyBankPress={() => setShowPiggyBank(true)}
             showLunchMinigames={false}
           />
 
@@ -406,6 +417,16 @@ function AfterSchoolPage() {
           />
         </Suspense>
       )}
+      <PiggyBankDetailModal
+        visible={showPiggyBank}
+        onClose={() => setShowPiggyBank(false)}
+      />
+      <AdoptionReadyModal
+        visible={adoptionPrompt.visible}
+        pet={adoptionPrompt.pet}
+        onEndGame={adoptionPrompt.handleEndGame}
+        onContinue={adoptionPrompt.handleContinue}
+      />
     </View>
   );
 }

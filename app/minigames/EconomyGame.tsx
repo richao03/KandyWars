@@ -20,7 +20,7 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import { SoundEffects } from '../../src/utils/soundEffects';
 import GameModal, { useGameModal } from '../components/GameModal';
 import JokerSelection from '../components/JokerSelection';
-import MinigameHUD from '../components/MinigameHUD';
+import MinigameScaffold from '../components/MinigameScaffold';
 import PixelBorder from '../components/PixelBorder';
 import PressableButton from '../components/PressableButton';
 import SkipGameButton from '../components/SkipGameButton';
@@ -577,9 +577,9 @@ function Slot({
  *  ========================= */
 // Level configuration
 const LEVEL_CONFIG = [
-  { solutionSteps: 3, dummyTrades: 0, totalSlots: 6 }, // Level 1: 3 solution steps, no dummy trades, 6 slots total
-  { solutionSteps: 4, dummyTrades: 4, totalSlots: 6 }, // Level 2: 4 solution steps, 4 dummy trades, 6 slots total
-  { solutionSteps: 5, dummyTrades: 7, totalSlots: 6 }, // Level 3: 5 solution steps, 7 dummy trades, 6 slots total
+  { solutionSteps: 3, dummyTrades: 0, totalSlots: 6 }, // Level 1: 3 trades total (3 solution + 0 dummy)
+  { solutionSteps: 4, dummyTrades: 2, totalSlots: 6 }, // Level 2: 6 trades total (4 solution + 2 dummy)
+  { solutionSteps: 5, dummyTrades: 4, totalSlots: 6 }, // Level 3: 9 trades total (5 solution + 4 dummy)
 ];
 
 export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
@@ -1039,7 +1039,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
           }}
           shadowOpacity={0}
           elevation={0}
-          style={{ marginBottom: 16, width: '100%' }}
+          style={{ marginBottom: 16, width: '100%', paddingHorizontal: 20 }}
         >
           <PixelBorder
             borderColor="#999"
@@ -1058,171 +1058,136 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View
-        style={[
-          styles.container,
-          {
-            padding: ResponsiveSpacing.containerPadding(),
-            paddingBottom: ResponsiveSpacing.containerPaddingBottom(),
-          },
-        ]}
-      >
-        {/* Header */}
-        <MinigameHUD
-          theme="economy"
-          title="The Trading Post"
-          subtitle="Trade your way to the goal candy!"
-          leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
-          centerInfo={`Start: ${Object.keys(puzzle.startInventory)
-            .map((item) => CATALOG[item as Item])
-            .join('')}`}
-          rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
-        />
-
-        {/* Slots - 2 rows of 3 */}
-        <View style={styles.paletteWrapper}>
-          <Text style={styles.sectionTitle}>Plan:</Text>
-          <View style={styles.paletteGrid}>
-            {slots.map((slot, index) => (
-              <Slot
-                key={`slot-${index}`}
-                slot={slot}
-                slotIndex={index}
-                onMeasure={handleSlotMeasure}
-                onRemove={handleRemoveFromSlot}
-                onDragFromSlot={handleDragFromSlot}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-                isHighlighted={highlightedSlot === index}
-                style={styles.tile}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Palette */}
-        <View style={styles.paletteWrapper}>
-          <Text style={styles.sectionTitle}>Available Trades:</Text>
-          <View style={styles.paletteGrid}>
-            {paletteTiles.map((tile) => (
-              <DraggableTile
-                key={tile.id}
-                tile={tile}
-                onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-                style={styles.tile}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Execute Button */}
-        <View
-          style={[
-            styles.footer,
-            {
-              gap: ResponsiveSpacing.buttonGap(),
-              paddingVertical: ResponsiveSpacing.buttonPadding(),
-            },
-          ]}
-        >
-          <PixelBorder
-            borderColor="#76a06b"
-            borderWidth={3}
-            backgroundColor="#9bc18a"
-            innerPadding={0}
-            style={styles.footerBtn}
-          >
-            <TouchableOpacity
-              style={styles.footerBtnInner}
-              onPress={executePlan}
-            >
-              <Text style={styles.footerPrimaryText}>Execute Trade</Text>
-            </TouchableOpacity>
-          </PixelBorder>
-          <PixelBorder
-            borderColor="#a4c391"
-            borderWidth={3}
-            backgroundColor="#6f9772"
-            innerPadding={0}
-            style={styles.footerBtn}
-          >
-            <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
-              <TextWithEmojis style={styles.footerSecondaryText} imageSize={16}>
-                Clear
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
-        </View>
-
-        {/* Footer */}
-        <View
-          style={[
-            styles.footer,
-            {
-              gap: ResponsiveSpacing.buttonGap(),
-              paddingVertical: ResponsiveSpacing.buttonPadding(),
-            },
-          ]}
-        >
-          <PixelBorder
-            borderColor="#a4c391"
-            borderWidth={3}
-            backgroundColor="#6f9772"
-            innerPadding={0}
-            style={styles.footerBtn}
-          >
-            <TouchableOpacity
-              style={styles.footerBtnInner}
-              onPress={handleForfeit}
-            >
-              <TextWithEmojis style={styles.footerBackText} imageSize={28}>
-                🚪 Leave
-              </TextWithEmojis>
-            </TouchableOpacity>
-          </PixelBorder>
-        </View>
-
-        {/* Dragging overlay - centered on finger with slight upward offset */}
-        {draggingTile && dragPosition.x > 0 && dragPosition.y > 0 && (
+      <MinigameScaffold
+        theme="economy"
+        title="The Trading Post"
+        subtitle="Trade your way to the goal!"
+        leftInfo={`Lvl ${levelIndex + 1}/3 Time: ${timeLeft}`}
+        centerInfo={`Start: ${Object.keys(puzzle.startInventory)
+          .map((item) => CATALOG[item as Item])
+          .join('')}`}
+        rightInfo={`Goal: ${CATALOG[puzzle.goal]}`}
+        backgroundColor="#3d6a4a"
+        onLeave={handleForfeit}
+        footer={
           <View
             style={[
-              styles.dragOverlay,
+              styles.footer,
               {
-                left: dragPosition.x - 48, // Half of tile width (96/2)
-                top: dragPosition.y - 60, // Offset above finger so tile is visible
+                gap: ResponsiveSpacing.buttonGap(),
+                paddingVertical: ResponsiveSpacing.buttonPadding(),
               },
             ]}
-            pointerEvents="none"
           >
             <PixelBorder
-              borderColor="#ffd700"
+              borderColor="#76a06b"
+              borderWidth={3}
+              backgroundColor="#9bc18a"
+              innerPadding={0}
+              style={styles.footerBtn}
+            >
+              <TouchableOpacity
+                style={styles.footerBtnInner}
+                onPress={executePlan}
+              >
+                <Text style={styles.footerPrimaryText}>Execute Trade</Text>
+              </TouchableOpacity>
+            </PixelBorder>
+            <PixelBorder
+              borderColor="#a4c391"
               borderWidth={3}
               backgroundColor="#6f9772"
               innerPadding={0}
-              style={{ width: 96, height: 48 }}
+              style={styles.footerBtn}
             >
-              <View style={styles.tileInner}>
-                <TradeLabel
-                  label={draggingTile.label}
-                  style={styles.tileLabel}
-                />
-              </View>
+              <TouchableOpacity style={styles.footerBtnInner} onPress={clearAll}>
+                <TextWithEmojis
+                  style={styles.footerSecondaryText}
+                  imageSize={16}
+                >
+                  Clear
+                </TextWithEmojis>
+              </TouchableOpacity>
             </PixelBorder>
           </View>
-        )}
+        }
+      >
+        <View style={styles.body}>
+          {/* Slots - 2 rows of 3 */}
+          <View style={styles.paletteWrapper}>
+            <Text style={styles.sectionTitle}>Plan:</Text>
+            <View style={styles.paletteGrid}>
+              {slots.map((slot, index) => (
+                <Slot
+                  key={`slot-${index}`}
+                  slot={slot}
+                  slotIndex={index}
+                  onMeasure={handleSlotMeasure}
+                  onRemove={handleRemoveFromSlot}
+                  onDragFromSlot={handleDragFromSlot}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                  isHighlighted={highlightedSlot === index}
+                  style={styles.tile}
+                />
+              ))}
+            </View>
+          </View>
 
-        <GameModal
-          visible={modal.visible}
-          title={modal.title}
-          message={modal.message}
-          emoji={modal.emoji}
-          onClose={hideModal}
-          onConfirm={modal.onConfirm}
-          showCancelButton={modal.showCancelButton}
-        />
-      </View>
+          {/* Palette */}
+          <View style={styles.paletteWrapper}>
+            <Text style={styles.sectionTitle}>Available Trades:</Text>
+            <View style={styles.paletteGrid}>
+              {paletteTiles.map((tile) => (
+                <DraggableTile
+                  key={tile.id}
+                  tile={tile}
+                  onDragStart={handleDragStart}
+                  onDragMove={handleDragMove}
+                  onDragEnd={handleDragEnd}
+                  style={styles.tile}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </MinigameScaffold>
+
+      {/* Dragging overlay - centered on finger with slight upward offset */}
+      {draggingTile && dragPosition.x > 0 && dragPosition.y > 0 && (
+        <View
+          style={[
+            styles.dragOverlay,
+            {
+              left: dragPosition.x - 48, // Half of tile width (96/2)
+              top: dragPosition.y - 100, // Offset above finger so tile is visible
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <PixelBorder
+            borderColor="#ffd700"
+            borderWidth={3}
+            backgroundColor="#6f9772"
+            innerPadding={0}
+            style={{ width: 96, height: 48 }}
+          >
+            <View style={styles.tileInner}>
+              <TradeLabel label={draggingTile.label} style={styles.tileLabel} />
+            </View>
+          </PixelBorder>
+        </View>
+      )}
+
+      <GameModal
+        visible={modal.visible}
+        title={modal.title}
+        message={modal.message}
+        emoji={modal.emoji}
+        onClose={hideModal}
+        onConfirm={modal.onConfirm}
+        showCancelButton={modal.showCancelButton}
+      />
     </GestureHandlerRootView>
   );
 }
@@ -1368,6 +1333,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  body: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   paletteWrapper: { marginBottom: 16 },
   paletteGrid: {
     flexDirection: 'row',

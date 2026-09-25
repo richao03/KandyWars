@@ -78,6 +78,7 @@ export default function GoingToSchoolModal({
       animationType="spring"
       backdropOpacity={1}
       modalStyle={styles.container}
+      presentation="fullBleed"
     >
       <ImageBackground
         source={require('../../assets/images/goingToSchool.png')}

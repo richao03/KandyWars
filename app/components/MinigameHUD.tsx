@@ -5,27 +5,29 @@ import { ResponsiveSpacing } from '../../src/utils/responsive';
 import PixelBorder from './PixelBorder';
 import TextWithEmojis from './TextWithEmojis';
 
+export type MinigameTheme =
+  | 'math'
+  | 'computer'
+  | 'logic'
+  | 'history'
+  | 'homeec'
+  | 'gym'
+  | 'economy'
+  | 'recess'
+  | 'geography'
+  | 'art'
+  | 'nim';
+
 interface MinigameHUDProps {
   title: string;
   subtitle?: string;
   leftInfo?: string;
   rightInfo?: string;
   centerInfo?: string;
-  theme?:
-    | 'math'
-    | 'computer'
-    | 'logic'
-    | 'history'
-    | 'homeec'
-    | 'gym'
-    | 'economy'
-    | 'recess'
-    | 'geography'
-    | 'art'
-    | 'nim';
+  theme?: MinigameTheme;
 }
 
-const THEME_COLORS = {
+export const THEME_COLORS = {
   math: {
     background: '#0d2818', // Very dark chalkboard green
     border: '#f5f5dc', // Chalk-colored border

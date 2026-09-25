@@ -21,8 +21,16 @@ candyWarz/
 │   ├── story-screen.tsx          # Narrative intro before Day 1
 │   ├── game-end.tsx              # Final results screen
 │   ├── deli.tsx                  # After-school corner store
+│   ├── leaderboard.tsx          # Leaderboard screen
+│   ├── merchant-shop.tsx        # The Connect merchant shop
+│   ├── piggy-bank.tsx           # Stash management screen
+│   ├── title-settings.tsx       # Settings reachable from title
+│   ├── debug-jokers.tsx         # DEV joker debug
+│   ├── debug-minigames.tsx      # DEV minigame debug
+│   ├── debug-tier-preview.tsx   # DEV tier preview
 │   ├── (tabs)/                   # Tab navigator (main game)
-│   │   ├── _layout.tsx           # Tab config, GameHUD, ad banner
+│   │   ├── _layout.tsx           # Tab config, GameHUD
+│   │   ├── home.tsx             # Home tab (after-school hub)
 │   │   ├── market.tsx            # Core trading screen (8 periods/day)
 │   │   ├── after-school.tsx      # Evening activities
 │   │   ├── jokers.tsx            # Joker inventory view
@@ -44,7 +52,7 @@ candyWarz/
 │   │   ├── TutorialProvider.tsx  # Tutorial context (layout measurements)
 │   │   ├── AvailableJokersModal.tsx # Joker preview in minigame instructions
 │   │   └── SparkEffect.tsx       # Visual effects
-│   └── minigames/                # 9 minigame screens
+│   └── minigames/                # 10 screen files = 9 subjects (Gym = GymGame + NimGame)
 │       ├── MathGame.tsx
 │       ├── ComputerGame.tsx
 │       ├── LogicGame.tsx
@@ -52,12 +60,13 @@ candyWarz/
 │       ├── EconomyGame.tsx
 │       ├── GeographyGame.tsx
 │       ├── HomeEcGame.tsx
+│       ├── GymGame.tsx
 │       ├── NimGame.tsx           # Gym minigame (Misère Nim)
 │       └── RecessGame.tsx
 ├── src/                          # Business logic
 │   ├── constants/
 │   │   ├── candyRegistry.ts      # 15 candy definitions (single source of truth)
-│   │   └── jokerIds.ts           # All 47 joker ID constants
+│   │   └── jokerIds.ts           # All 76 joker ID constants (JOKER_IDS)
 │   ├── hooks/                    # React hooks (bridge Redux ↔ UI)
 │   │   ├── useGame.ts            # Period/day/location state
 │   │   ├── useWallet.ts          # Balance, stash, difficulty
@@ -78,7 +87,7 @@ candyWarz/
 │   │   ├── useAdVisibility.ts    # Ad banner visibility
 │   │   └── useTabBar.ts          # Tab navigation state
 │   ├── store/
-│   │   ├── store.ts              # Redux store config (persist v5)
+│   │   ├── store.ts              # Redux store config (persist v8)
 │   │   └── slices/
 │   │       ├── gameSlice.ts      # Periods, days, locations
 │   │       ├── walletSlice.ts    # Money, difficulty, player info
@@ -86,7 +95,7 @@ candyWarz/
 │   │       ├── eventHandlerSlice.ts
 │   │       ├── candySalesSlice.ts
 │   │       ├── inventorySlice.ts    # Candy inventory state
-│   │       ├── hallPassSlice.ts     # 17 hall pass definitions, unlock/select
+│   │       ├── hallPassSlice.ts     # Hall pass definitions, unlock/select
 │   │       ├── hallPassModifiersSlice.ts # Computed modifiers for active game
 │   │       ├── merchantSlice.ts     # The Connect merchant items/effects
 │   │       ├── seedSlice.ts         # Game seed for RNG
@@ -97,18 +106,28 @@ candyWarz/
 │   │       ├── flavorTextSlice.ts   # Event flavor text display
 │   │       ├── tabBarSlice.ts       # Tab navigation state
 │   │       ├── localAnalyticsSlice.ts # Local analytics
-│   │       └── userObjectSlice.ts   # User profile state
+│   │       ├── userObjectSlice.ts   # User profile state
+│   │       ├── tutorialSlice.ts     # Tutorial step/progress
+│   │       ├── hustleSlice.ts       # Hustle (spare-period income) state
+│   │       ├── questSlice.ts        # Daily quests
+│   │       ├── settingsSlice.ts     # Game settings
+│   │       ├── jokerStatsSlice.ts   # Per-joker stats tracking
+│   │       ├── shopkeeperSlice.ts   # Shopkeeper NPC level/XP (persists across runs)
+│   │       └── juiceSettingsSlice.ts # "Juice"/visual FX settings
 │   ├── types/
 │   │   └── candy.tsx             # CandyTypeName, CandySize types
 │   └── utils/
-│       ├── jokerEffectEngine.ts  # 54 joker effect factories, JokerEffectEngine class
+│       ├── jokerEffectEngine.ts  # 76 joker effect factories (JOKER_EFFECT_FACTORIES)
 │       ├── jokerService.ts       # Joker business logic helpers
 │       ├── saleCalculations.ts   # Profit formula implementation
 │       ├── musicController.ts    # Background music (singleton player + replace())
+│       ├── menuMusicManager.ts   # Menu music helper
+│       ├── dayMusicManager.ts    # Per-day music selection helper
 │       ├── soundEffects.ts       # SFX pools (pop, coin, achievement, etc.)
 │       ├── audioConfig.ts        # Global audio mode init
 │       ├── merchantUtils.ts      # Merchant item helpers
-│       └── computeHallPassModifiers.ts
+│       ├── computeHallPassModifiers.ts
+│       └── hallPassUtils.ts      # Hall pass helpers
 ├── utils/
 │   └── generateSeededGameData.tsx # Seeded RNG for prices & events
 ├── assets/
@@ -137,9 +156,24 @@ candyWarz/
 | `seedSlice` | gameSeed | Seeded RNG for price/event generation |
 | `minigameTrackingSlice` | Played minigames per subject | Minigame completion |
 | `dailyStatsSlice` | Per-day profit, sales, locations visited | Daily tracking |
+| `tutorialSlice` | Tutorial step/progress | Tutorial flow |
+| `hustleSlice` | Hustle / spare-period income state | Spare-period income |
+| `questSlice` | Daily quests | Quests |
+| `settingsSlice` | Game settings | Settings |
+| `jokerStatsSlice` | Per-joker usage stats | Joker stats |
+| `shopkeeperSlice` | Shopkeeper NPC level/XP (persists across runs) | Shopkeeper NPC |
+| `juiceSettingsSlice` | Visual "juice"/FX settings | FX settings |
+| `scoreboardSlice` | Leaderboard/scores | Scoreboard |
+| `flavorTextSlice` | Event flavor text (not persisted) | Flavor text |
+| `tabBarSlice` | Tab bar visibility (not persisted) | Tab navigation |
+| `localAnalyticsSlice` | Local analytics | Analytics |
+| `userObjectSlice` | User profile state | User profile |
 
 ### Persistence
-- `redux-persist` v5 with whitelist/blacklist pattern
+- `redux-persist` (package v6) with `version: 8` migration chain and a whitelist/blacklist pattern
+- **Whitelisted (persisted):** game, wallet, inventory, joker, seed, dailyStats, priceDoubling, hallPass, hallPassModifiers, minigameTracking, scoreboard, localAnalytics, userObject, merchant, tutorial, hustle, quest, settings, jokerStats, shopkeeper, juiceSettings
+- **Blacklisted (not persisted):** flavorText, eventHandler, candySales, tabBar
+- The `game` slice has its own per-slice persist config blacklisting `showLunchMinigames` (transient lunch-modal UI flag)
 - Persists across app restarts (continue game feature)
 
 ---

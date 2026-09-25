@@ -466,6 +466,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
         'allowance_bonus',
         'joker_bonus',
         'minigame_skip_chance',
+        'extra_active_slot',
         'special',
       ];
 
@@ -481,7 +482,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const allPasses = selectAllHallPasses(store.getState());
 
       console.log(`Total hall passes: ${allPasses.length}`);
-      expect(allPasses.length).toBe(18); // Exactly 18 hall passes
+      expect(allPasses.length).toBe(19); // Exactly 19 hall passes
     });
 
     it('should have proper rarity distribution', () => {

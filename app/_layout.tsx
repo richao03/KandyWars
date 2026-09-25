@@ -1,26 +1,26 @@
+import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { InteractionManager, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { persistor, store } from '../src/store/store';
-import GameEffectsManager from './components/GameEffectsManager';
-import JuiceLayer from './components/JuiceLayer';
-import ScreenFX from './components/ScreenFX';
 import { AdVisibilityProvider } from '../src/context/AdVisibilityContext';
 import { ToastProvider } from '../src/context/ToastContext';
-import { initializeAudioMode } from '../src/utils/audioConfig';
-import { registerHapticSettingsGetter } from '../src/utils/hapticTier';
 import { useAppSelector } from '../src/store/hooks';
 import {
   selectHaptics,
   selectReduceMotion,
 } from '../src/store/slices/juiceSettingsSlice';
-import Constants from 'expo-constants';
+import { persistor, store } from '../src/store/store';
+import { initializeAudioMode } from '../src/utils/audioConfig';
+import { registerHapticSettingsGetter } from '../src/utils/hapticTier';
+import GameEffectsManager from './components/GameEffectsManager';
+import JuiceLayer from './components/JuiceLayer';
+import ScreenFX from './components/ScreenFX';
 
 // Lazy-load AdBanner so it doesn't block the initial render.
 const AdBanner = lazy(() => import('./components/AdBanner'));
@@ -55,6 +55,7 @@ export default function RootLayout() {
     Graffiti: require('../assets/fonts/Graffiti.ttf'),
     DonGraffiti: require('../assets/fonts/DonGraffiti.otf'),
     PlayMeGames: require('../assets/fonts/PlayMeGames.otf'),
+    Bubble3D: require('../assets/fonts/Bubble3D.ttf'),
   });
 
   // Initialize Google Mobile Ads (only in dev/production builds, not Expo Go)
@@ -62,7 +63,8 @@ export default function RootLayout() {
     const isExpoGo = Constants.appOwnership === 'expo';
 
     if (isExpoGo) {
-      if (__DEV__) console.log('📱 Running in Expo Go - skipping AdMob initialization');
+      if (__DEV__)
+        console.log('📱 Running in Expo Go - skipping AdMob initialization');
       return;
     }
 
@@ -86,7 +88,8 @@ export default function RootLayout() {
         if (__DEV__) console.log('🎵 App-level audio mode initialized');
       })
       .catch((error) => {
-        if (__DEV__) console.error('🎵 Failed to initialize audio mode:', error);
+        if (__DEV__)
+          console.error('🎵 Failed to initialize audio mode:', error);
       });
   }, []);
 
@@ -106,106 +109,106 @@ export default function RootLayout() {
         <GameEffectsManager />
         <HapticRegistrar />
         <ToastProvider>
-        <AdVisibilityProvider>
-          <SafeAreaProvider>
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <ScreenFX>
-                <View style={{ flex: 1 }}>
-                <GlobalAdBanner />
-                <Stack
-                  screenOptions={{
-                    animation: 'none',
-                    animationEnabled: false,
-                  }}
-                >
-                  <RouteTracker />
-                      <Stack.Screen
-                        name="index"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{
-                          headerShown: false,
-                        }}
-                      />
-                      <Stack.Screen
-                        name="title-screen"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="story-screen"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="computer-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="economy-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="history-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="home-ec-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="logic-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="math-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="art-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="recess-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="geography-game"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="leaderboard"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="title-settings"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="piggy-bank"
-                        options={{
-                          presentation: 'modal',
-                          headerShown: false,
+          <AdVisibilityProvider>
+            <SafeAreaProvider>
+              <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <ScreenFX>
+                    <View style={{ flex: 1 }}>
+                      <GlobalAdBanner />
+                      <Stack
+                        screenOptions={{
                           animation: 'none',
+                          animationEnabled: false,
                         }}
-                      />
-                      <Stack.Screen
-                        name="deli"
-                        options={{
-                          presentation: 'modal',
-                          headerShown: false,
-                          animation: 'none',
-                        }}
-                      />
-                </Stack>
-                </View>
-                </ScreenFX>
-                <JuiceLayer />
-              </GestureHandlerRootView>
-            </SafeAreaView>
-          </SafeAreaProvider>
-        </AdVisibilityProvider>
+                      >
+                        <RouteTracker />
+                        <Stack.Screen
+                          name="index"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(tabs)"
+                          options={{
+                            headerShown: false,
+                          }}
+                        />
+                        <Stack.Screen
+                          name="title-screen"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="story-screen"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="computer-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="economy-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="history-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="home-ec-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="logic-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="math-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="art-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="recess-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="geography-game"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="leaderboard"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="title-settings"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="piggy-bank"
+                          options={{
+                            presentation: 'modal',
+                            headerShown: false,
+                            animation: 'none',
+                          }}
+                        />
+                        <Stack.Screen
+                          name="deli"
+                          options={{
+                            presentation: 'modal',
+                            headerShown: false,
+                            animation: 'none',
+                          }}
+                        />
+                      </Stack>
+                    </View>
+                  </ScreenFX>
+                  <JuiceLayer />
+                </GestureHandlerRootView>
+              </SafeAreaView>
+            </SafeAreaProvider>
+          </AdVisibilityProvider>
         </ToastProvider>
       </PersistGate>
     </Provider>
@@ -246,7 +249,9 @@ function GlobalAdBanner() {
   }, []);
   if (!shouldRender) return null;
   return (
-    <Suspense fallback={<View style={{ height: 50, backgroundColor: '#000' }} />}>
+    <Suspense
+      fallback={<View style={{ height: 50, backgroundColor: '#000' }} />}
+    >
       <AdBanner />
     </Suspense>
   );

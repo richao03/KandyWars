@@ -1,9 +1,11 @@
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Stack, router } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Image,
   ImageBackground,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -47,6 +49,7 @@ export default function GameEndScreen() {
     allPasses,
     unlockedPasses,
     newlyUnlockedPasses,
+    selectedPasses,
     clearNewlyUnlocked,
     checkUnlockRequirements,
   } = useHallPass();
@@ -64,9 +67,13 @@ export default function GameEndScreen() {
   const playthroughStats = getPlaythroughStats();
   const bestSale = getBestSale();
   const mostSoldCandy = getMostSoldCandy();
-  const finalScore = balance + stashedAmount;
-  // Win condition: paid off the debt (stashedAmount >= 0)
-  // The game starts with stashedAmount = -adoptionFee (negative = debt)
+  // Piggy bank now starts at 0 and holds positive savings; the adoption fee is
+  // the goal. finalScore keeps its original meaning (net worth minus the fee, i.e.
+  // profit left after paying the fee) so all downstream profit/score math is
+  // unchanged. Win = net worth reaches the fee, evaluated here whenever the run
+  // ends: after day 5, or earlier if the player accepts the "Adopt Now" prompt
+  // (useAdoptionPrompt) once the fee is covered.
+  const finalScore = balance + stashedAmount - adoptionFee;
   const gameResult = finalScore >= 0 ? 'won' : 'lost';
 
   // Track total wins from Firebase for hall pass progress
@@ -188,6 +195,18 @@ export default function GameEndScreen() {
           label: 'late profit*',
           isThisGame: true,
           isPercentage: true,
+        };
+      }
+      case 'overachiever': {
+        // Unlock: win this run with 3 hall passes active (earns the 4th slot).
+        const achieved =
+          gameResult === 'won' && selectedPasses.length >= 3 ? 1 : 0;
+        return {
+          current: achieved,
+          required: 1,
+          label: achieved ? 'Achieved!' : '3 passes + win',
+          isBoolean: true,
+          isThisGame: true,
         };
       }
       default:
@@ -356,6 +375,7 @@ export default function GameEndScreen() {
           earlyPeriodProfit: candySalesState.earlyPeriodProfit,
           latePeriodProfit: candySalesState.latePeriodProfit,
           transactionCount: candySalesState.transactionCount,
+          activePassCount: selectedPasses.length,
         };
 
         if (__DEV__) {
@@ -567,6 +587,115 @@ export default function GameEndScreen() {
     );
   };
 
+  // ── Auto-scroll the results to the bottom ──────────────────────────────────
+  // Slowly scrolls down on its own. While the user is dragging it pauses; on
+  // release it resumes from the current position. Once the bottom is reached
+  // even once, auto-scroll is permanently disabled and the user scrolls freely.
+  const AUTO_SCROLL_SPEED = 70; // px/sec
+  const scrollRef = useRef<ScrollView>(null);
+  const offsetRef = useRef(0); // latest scroll y
+  const contentHeightRef = useRef(0);
+  const viewHeightRef = useRef(0);
+  const draggingRef = useRef(false);
+  const reachedBottomRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
+
+  const tick = useCallback(function tick(ts: number) {
+    if (draggingRef.current || reachedBottomRef.current) {
+      rafRef.current = null;
+      return;
+    }
+    const ch = contentHeightRef.current;
+    const vh = viewHeightRef.current;
+    if (ch <= 0 || vh <= 0) {
+      // Not measured yet — wait a frame.
+      rafRef.current = requestAnimationFrame(tick);
+      return;
+    }
+    const maxY = ch - vh;
+    if (maxY <= 0) {
+      // Content fits — nothing to scroll; treat as "already at bottom".
+      reachedBottomRef.current = true;
+      rafRef.current = null;
+      return;
+    }
+    const last = lastTsRef.current ?? ts;
+    const dt = Math.min(64, ts - last) / 1000; // clamp dt (tab-away / first frame)
+    lastTsRef.current = ts;
+
+    const next = offsetRef.current + AUTO_SCROLL_SPEED * dt;
+    if (next >= maxY - 0.5) {
+      scrollRef.current?.scrollTo({ y: maxY, animated: false });
+      offsetRef.current = maxY;
+      reachedBottomRef.current = true; // reached bottom once → free scroll
+      rafRef.current = null;
+      return;
+    }
+    scrollRef.current?.scrollTo({ y: next, animated: false });
+    offsetRef.current = next;
+    rafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const startAutoScroll = useCallback(() => {
+    if (rafRef.current != null || reachedBottomRef.current) return;
+    lastTsRef.current = null; // reset dt baseline so resume doesn't jump
+    rafRef.current = requestAnimationFrame(tick);
+  }, [tick]);
+
+  const stopAutoScroll = useCallback(() => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    lastTsRef.current = null;
+  }, []);
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+      offsetRef.current = contentOffset.y;
+      // Latch reachedBottom if the user themselves scrolls to the bottom.
+      if (
+        !reachedBottomRef.current &&
+        contentOffset.y + layoutMeasurement.height >= contentSize.height - 2
+      ) {
+        reachedBottomRef.current = true;
+        stopAutoScroll();
+      }
+    },
+    [stopAutoScroll]
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    draggingRef.current = true;
+    stopAutoScroll();
+  }, [stopAutoScroll]);
+
+  const handleScrollEndDrag = useCallback(() => {
+    draggingRef.current = false;
+    startAutoScroll(); // resume toward the bottom on release
+  }, [startAutoScroll]);
+
+  const handleContentSizeChange = useCallback(
+    (_w: number, h: number) => {
+      contentHeightRef.current = h;
+      startAutoScroll();
+    },
+    [startAutoScroll]
+  );
+
+  const handleScrollViewLayout = useCallback(
+    (e: NativeSyntheticEvent<{ layout: { height: number } }>) => {
+      viewHeightRef.current = e.nativeEvent.layout.height;
+      startAutoScroll();
+    },
+    [startAutoScroll]
+  );
+
+  // Cancel the loop on unmount.
+  useEffect(() => () => stopAutoScroll(), [stopAutoScroll]);
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -575,7 +704,16 @@ export default function GameEndScreen() {
         style={styles.background}
         resizeMode="cover"
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          onContentSizeChange={handleContentSizeChange}
+          onLayout={handleScrollViewLayout}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScrollEndDrag={handleScrollEndDrag}
+        >
           <View style={styles.container}>
             {/* Title */}
             <PixelBorder
@@ -644,10 +782,10 @@ export default function GameEndScreen() {
 
               <View style={styles.statItemRow}>
                 <TextWithEmojis style={styles.statLabelLeft} imageSize={24}>
-                  {stashedAmount >= 0 ? '⚖️ Savings' : '⚖️ Debt'}
+                  🐷 Piggy Bank
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${formatCurrency(Math.abs(stashedAmount))}
+                  ${formatCurrency(Math.max(0, stashedAmount))}
                 </Text>
               </View>
 
@@ -657,8 +795,8 @@ export default function GameEndScreen() {
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
                   {gameResult === 'won'
-                    ? 'All debt paid off!'
-                    : `$${formatCurrency(Math.abs(stashedAmount) - balance)} remaining`}
+                    ? 'Goal reached!'
+                    : `$${formatCurrency(Math.max(0, adoptionFee - balance - stashedAmount))} to goal`}
                 </Text>
               </View>
             </PixelBorder>

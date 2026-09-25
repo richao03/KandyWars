@@ -94,7 +94,12 @@ export default function NamePromptModal({
       backdropOpacity={0.7}
       modalStyle={styles.modalContainer}
     >
-      <>
+      <PixelBorder
+        borderColor="#d4a574"
+        borderWidth={3}
+        backgroundColor="#ffffff"
+        innerPadding={30}
+      >
         <Text style={styles.subtitle}>What&apos;s your name?</Text>
 
         <TextInput
@@ -169,21 +174,16 @@ export default function NamePromptModal({
             </PixelBorder>
           </PressableButton>
         </View>
-      </>
+      </PixelBorder>
     </FastModal>
   );
 }
 
 const styles = StyleSheet.create({
   modalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 30,
     width: '85%',
     maxWidth: 400,
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#d4a574', // School theme border
   },
   subtitle: {
     fontSize: 20,

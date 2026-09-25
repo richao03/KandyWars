@@ -76,10 +76,10 @@ describe('walletSlice', () => {
     // Balance is always reset to 20
     expect(state.balance).toBe(20);
     expect(state.difficultyLevel).toBe(3);
-    // Level 3 adoption fee is 25000
+    // Level 3 adoption fee is 25000 (the goal)
     expect(state.adoptionFee).toBe(25000);
-    // Stash set to negative adoption fee (debt)
-    expect(state.stashedAmount).toBe(-25000);
+    // Piggy bank starts empty; the fee is a separate goal, not debt
+    expect(state.stashedAmount).toBe(0);
     expect(state.isFirstTimeDifficultySelection).toBe(false);
   });
 
@@ -95,10 +95,10 @@ describe('walletSlice', () => {
 
     store.dispatch(resetWallet());
     const state = store.getState().wallet;
-    // resetWallet sets balance to 20, adoptionFee to 5000, stash to -adoptionFee
+    // resetWallet sets balance to 20, adoptionFee to 5000, stash to 0 (empty piggy bank)
     expect(state.balance).toBe(20);
     expect(state.adoptionFee).toBe(5000);
-    expect(state.stashedAmount).toBe(-5000);
+    expect(state.stashedAmount).toBe(0);
     // difficultyLevel is preserved (resetWallet does NOT touch difficultyLevel)
     expect(state.difficultyLevel).toBe(7);
   });

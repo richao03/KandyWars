@@ -550,8 +550,8 @@
     "typeLabel": "Aura",
     "maxLevel": 3,
     "flavorText": "",
-    "description": "+50%/+100%/+200% profit when 3+ candy types in inventory",
-    "descriptionStripped": "+50%/+100%/+200% profit when 3+ candy types in inventory",
+    "description": "+50%/+100%/+200% profit when >3 candy in inventory",
+    "descriptionStripped": "+50%/+100%/+200% profit when >3 candy in inventory",
     "perLevelDescriptions": {
       "1": "+50% profit when 3+ candy types in inventory",
       "2": "+100% profit when 3+ candy types in inventory",
@@ -975,12 +975,12 @@
     "typeLabel": "Aura",
     "maxLevel": 3,
     "flavorText": "Bring an apple, hear the gossip",
-    "description": "See next-period price arrow on 1/2/3 candies (biggest movers)",
-    "descriptionStripped": "See next-period price arrow on 1/2/3 candies (biggest movers)",
+    "description": "10%/20%/30% chance per candy size to reveal one candy's next-period price arrow",
+    "descriptionStripped": "10%/20%/30% chance per candy size to reveal one candy's next-period price arrow",
     "perLevelDescriptions": {
-      "1": "See next-period price arrow on 1 candies (biggest movers)",
-      "2": "See next-period price arrow on 2 candies (biggest movers)",
-      "3": "See next-period price arrow on 3 candies (biggest movers)"
+      "1": "10% chance per candy size to reveal one candy's next-period price arrow (biggest mover)",
+      "2": "20% chance per candy size to reveal one candy's next-period price arrow (biggest mover)",
+      "3": "30% chance per candy size to reveal one candy's next-period price arrow (biggest mover)"
     },
     "icon": "student.png",
     "canLevel": true
@@ -1111,12 +1111,12 @@
     "typeLabel": "Aura",
     "maxLevel": 3,
     "flavorText": "Uncle Sam wants his cut... and so do you",
-    "description": "5%/8%/12% of sale as bonus cash",
-    "descriptionStripped": "5%/8%/12% of sale as bonus cash",
+    "description": "5%/8%/12% of profit as bonus cash",
+    "descriptionStripped": "5%/8%/12% of profit as bonus cash",
     "perLevelDescriptions": {
-      "1": "5% of sale as bonus cash",
-      "2": "8% of sale as bonus cash",
-      "3": "12% of sale as bonus cash"
+      "1": "5% of profit as bonus cash",
+      "2": "8% of profit as bonus cash",
+      "3": "12% of profit as bonus cash"
     },
     "icon": "moneyWithWings.png",
     "canLevel": true

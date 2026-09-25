@@ -1,13 +1,21 @@
-import React, { memo, useCallback, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import PressableScale from './PressableScale';
+import React, { memo, useCallback } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import colors from '../../src/constants/colors';
-import { JOKER_SHOP, getJokerPriceForReroll } from '../../src/constants/shopkeeperData';
+import {
+  JOKER_SHOP,
+  getJokerPriceForReroll,
+} from '../../src/constants/shopkeeperData';
+import { useJokers } from '../../src/hooks/useJokers';
 import { STANDARDIZED_JOKERS } from '../../src/utils/jokerEffectEngine';
 import { formatCurrency } from '../../src/utils/priceUtils';
-import { useJokers } from '../../src/hooks/useJokers';
-import PixelBorder from './PixelBorder';
 import JokerCard from './JokerCard';
+import PressableScale from './PressableScale';
 
 interface DeliJokerShopProps {
   deliJokerIds: number[];
@@ -36,18 +44,15 @@ function DeliJokerShop({
 
   const getJokerData = useCallback(
     (jokerId: number) => {
-      const standardized = STANDARDIZED_JOKERS.find(
-        (j) => j.id === jokerId
-      );
+      const standardized = STANDARDIZED_JOKERS.find((j) => j.id === jokerId);
       if (!standardized) return null;
 
-      const owned = jokers.find(
-        (j) => j.id.toString() === jokerId.toString()
-      );
+      const owned = jokers.find((j) => j.id.toString() === jokerId.toString());
       const currentLevel = owned?.level ?? 0;
       const isOwned = !!owned;
       const isPurchased = deliJokersPurchased.includes(jokerId);
-      const isMaxLevel = isOwned && currentLevel >= (standardized.maxLevel || 3);
+      const isMaxLevel =
+        isOwned && currentLevel >= (standardized.maxLevel || 3);
 
       // Calculate price
       let basePrice: number;
@@ -84,67 +89,87 @@ function DeliJokerShop({
 
   return (
     <View style={styles.container}>
-      {/* Joker Cards */}
-      <View style={styles.jokerRow}>
-        {deliJokerIds.map((jokerId) => {
-          const data = getJokerData(jokerId);
-          if (!data) return null;
+      {/* Joker Cards — scrollable so they never overflow the footer on shorter
+          devices (the row is fixed-height and would otherwise push past the
+          bottom border). */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.jokerRow}>
+          {deliJokerIds.map((jokerId) => {
+            const data = getJokerData(jokerId);
+            if (!data) return null;
 
-          const { standardized, isOwned, currentLevel, isPurchased, isMaxLevel, price } = data;
-          const canAfford = balance >= price;
-          const canBuy = !isPurchased && !isMaxLevel && canAfford;
+            const {
+              standardized,
+              isOwned,
+              currentLevel,
+              isPurchased,
+              isMaxLevel,
+              price,
+            } = data;
+            const canAfford = balance >= price;
+            const canBuy = !isPurchased && !isMaxLevel && canAfford;
 
-          return (
-            <View key={jokerId} style={styles.jokerItem}>
-              <View style={styles.cardWrapper}>
-                <JokerCard
-                  joker={standardized}
-                  isAfterSchool={true}
-                  isCompact={true}
-                  disableActivation={true}
-                />
-                {isPurchased && (
-                  <View style={styles.soldOverlay}>
-                    <Text style={styles.soldText}>SOLD</Text>
-                  </View>
+            return (
+              <View key={jokerId} style={styles.jokerItem}>
+                <View style={styles.cardWrapper}>
+                  <JokerCard
+                    joker={standardized}
+                    isAfterSchool={true}
+                    variant="tile"
+                    disableActivation={true}
+                  />
+                  {isPurchased && (
+                    <View style={styles.soldOverlay}>
+                      <Text style={styles.soldText}>SOLD</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Status labels */}
+                {isOwned && !isMaxLevel && !isPurchased && (
+                  <Text style={styles.upgradeLabel}>
+                    Upgrade L{currentLevel} → L{currentLevel + 1}
+                  </Text>
+                )}
+                {isMaxLevel && <Text style={styles.maxLabel}>MAX LEVEL</Text>}
+
+                {/* Buy button */}
+                {/* PressableScale for press-down spring feedback (I3 game-feel) */}
+                {!isPurchased && !isMaxLevel && (
+                  <PressableScale
+                    style={[
+                      styles.buyButton,
+                      !canBuy && styles.buyButtonDisabled,
+                    ]}
+                    onPress={() => canBuy && onBuyJoker(jokerId, price)}
+                    disabled={!canBuy}
+                  >
+                    <Text
+                      style={[
+                        styles.buyButtonText,
+                        !canBuy && styles.buyButtonTextDisabled,
+                      ]}
+                    >
+                      {isOwned ? 'Upgrade' : 'Buy'} ${formatCurrency(price)}
+                    </Text>
+                    {discount > 0 && (
+                      <Text style={styles.discountTag}>
+                        -{Math.round(discount * 100)}%
+                      </Text>
+                    )}
+                  </PressableScale>
                 )}
               </View>
+            );
+          })}
+        </View>
+      </ScrollView>
 
-              {/* Status labels */}
-              {isOwned && !isMaxLevel && !isPurchased && (
-                <Text style={styles.upgradeLabel}>
-                  Upgrade L{currentLevel} → L{currentLevel + 1}
-                </Text>
-              )}
-              {isMaxLevel && (
-                <Text style={styles.maxLabel}>MAX LEVEL</Text>
-              )}
-
-              {/* Buy button */}
-              {/* PressableScale for press-down spring feedback (I3 game-feel) */}
-              {!isPurchased && !isMaxLevel && (
-                <PressableScale
-                  style={[
-                    styles.buyButton,
-                    !canBuy && styles.buyButtonDisabled,
-                  ]}
-                  onPress={() => canBuy && onBuyJoker(jokerId, price)}
-                  disabled={!canBuy}
-                >
-                  <Text style={[styles.buyButtonText, !canBuy && styles.buyButtonTextDisabled]}>
-                    {isOwned ? 'Upgrade' : 'Buy'} ${formatCurrency(price)}
-                  </Text>
-                  {discount > 0 && (
-                    <Text style={styles.discountTag}>-{Math.round(discount * 100)}%</Text>
-                  )}
-                </PressableScale>
-              )}
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Reroll section */}
+      {/* Reroll section — pinned below the scroll area so it stays reachable */}
       <View style={styles.rerollRow}>
         <TouchableOpacity
           style={[
@@ -156,11 +181,14 @@ function DeliJokerShop({
           disabled={!canReroll || balance < rerollCost}
         >
           <Text style={styles.rerollButtonText}>
-            {canReroll ? `Reroll $${formatCurrency(rerollCost)}` : 'No rerolls left'}
+            {canReroll
+              ? `Reroll $${formatCurrency(rerollCost)}`
+              : 'No rerolls left'}
           </Text>
         </TouchableOpacity>
         <Text style={styles.rerollCounter}>
-          {JOKER_SHOP.MAX_REROLLS_PER_VISIT - rerollCount}/{JOKER_SHOP.MAX_REROLLS_PER_VISIT} left
+          {JOKER_SHOP.MAX_REROLLS_PER_VISIT - rerollCount}/
+          {JOKER_SHOP.MAX_REROLLS_PER_VISIT} left
         </Text>
       </View>
     </View>
@@ -170,6 +198,13 @@ function DeliJokerShop({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center', // center cards when they fit, scroll when they don't
   },
   emptyContainer: {
     padding: 20,
@@ -182,13 +217,14 @@ const styles = StyleSheet.create({
   },
   jokerRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap', // wrap to a new row; width below caps it at 2 per row
     justifyContent: 'center',
     gap: 12,
     paddingVertical: 8,
   },
   jokerItem: {
     alignItems: 'center',
-    flex: 1,
+    width: '46%', // ~half width so at most 2 fit side by side; extras wrap
     maxWidth: 180,
   },
   cardWrapper: {
@@ -251,11 +287,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   rerollRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    gap: 10,
+    marginTop: 4,
+    gap: 4,
+    marginBottom: 4,
   },
   rerollButton: {
     backgroundColor: colors.purple.primary,

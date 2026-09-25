@@ -37,7 +37,10 @@ import {
   selectShowLunchMinigames,
   setShowLunchMinigames as setShowLunchMinigamesAction,
 } from '../../src/store/slices/gameSlice';
-import { spendBalance, selectDifficultyLevel } from '../../src/store/slices/walletSlice';
+import {
+  spendBalance,
+  selectDifficultyLevel,
+} from '../../src/store/slices/walletSlice';
 import { consumeEffect } from '../../src/store/slices/merchantSlice';
 import {
   advanceTutorial,
@@ -53,6 +56,7 @@ import { useHustle } from '../../src/hooks/useHustle';
 import { usePeriodEventFlavorText } from '../../src/hooks/usePeriodEventFlavorText';
 import { usePeriodAdvance } from '../../src/hooks/usePeriodAdvance';
 import { useTransactionHandler } from '../../src/hooks/useTransactionHandler';
+import { useAdoptionPrompt } from '../../src/hooks/useAdoptionPrompt';
 import { computeEndDayBonuses } from '../../src/utils/endDayBonuses';
 import {
   clearLastCompletedHustle,
@@ -70,6 +74,7 @@ import {
   clearPendingJokerChoices,
 } from '../../src/store/slices/questSlice';
 import { setCurrentEvent } from '../../src/store/slices/eventHandlerSlice';
+import AdoptionReadyModal from '../components/AdoptionReadyModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import FirstTimeHint from '../components/FirstTimeHint';
 import EventModal from '../components/EventModal';
@@ -80,8 +85,23 @@ import TransactionModalManager, {
   TransactionModalHandle,
 } from '../components/TransactionModalManager';
 import { Candy } from '../types';
-import { CANDY_REGISTRY, getCandyDefinition } from '../../src/constants/candyRegistry';
+import {
+  CANDY_REGISTRY,
+  getCandyDefinition,
+} from '../../src/constants/candyRegistry';
 import { CandySize } from '../../src/types/candy';
+
+// Deterministic [0,1) roll from a string key — used so probabilistic joker
+// effects stay stable across re-renders within a period but vary per period.
+function seededUnitRoll(key: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // Map to [0,1) using the unsigned 32-bit hash.
+  return (h >>> 0) / 4294967296;
+}
 
 // Debug panel for testing joker acquisition channels (DEV only)
 function DebugJokerPanel({
@@ -102,7 +122,15 @@ function DebugJokerPanel({
   if (!visible) {
     return (
       <TouchableOpacity
-        style={{ position: 'absolute', top: 50, right: 10, backgroundColor: '#ff0', borderRadius: 4, padding: 4, zIndex: 999 }}
+        style={{
+          position: 'absolute',
+          top: 50,
+          right: 10,
+          backgroundColor: '#ff0',
+          borderRadius: 4,
+          padding: 4,
+          zIndex: 999,
+        }}
         onPress={() => setVisible(true)}
       >
         <Text style={{ fontSize: 10, fontWeight: 'bold' }}>DBG</Text>
@@ -111,15 +139,47 @@ function DebugJokerPanel({
   }
 
   return (
-    <View style={{ position: 'absolute', top: 40, right: 5, width: 180, backgroundColor: '#1a1a2e', borderRadius: 8, padding: 8, zIndex: 999, borderWidth: 1, borderColor: '#fbbf24' }}>
-      <TouchableOpacity onPress={() => setVisible(false)} style={{ alignSelf: 'flex-end', marginBottom: 4 }}>
-        <Text style={{ color: '#fbbf24', fontSize: 12, fontWeight: 'bold' }}>X</Text>
+    <View
+      style={{
+        position: 'absolute',
+        top: 40,
+        right: 5,
+        width: 180,
+        backgroundColor: '#1a1a2e',
+        borderRadius: 8,
+        padding: 8,
+        zIndex: 999,
+        borderWidth: 1,
+        borderColor: '#fbbf24',
+      }}
+    >
+      <TouchableOpacity
+        onPress={() => setVisible(false)}
+        style={{ alignSelf: 'flex-end', marginBottom: 4 }}
+      >
+        <Text style={{ color: '#fbbf24', fontSize: 12, fontWeight: 'bold' }}>
+          X
+        </Text>
       </TouchableOpacity>
-      <Text style={{ color: '#fbbf24', fontSize: 11, fontWeight: 'bold', marginBottom: 6 }}>Joker Debug</Text>
+      <Text
+        style={{
+          color: '#fbbf24',
+          fontSize: 11,
+          fontWeight: 'bold',
+          marginBottom: 6,
+        }}
+      >
+        Joker Debug
+      </Text>
 
       {/* 1. Trigger Hustle Joker Selection */}
       <TouchableOpacity
-        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        style={{
+          backgroundColor: '#2d2d4e',
+          padding: 6,
+          borderRadius: 4,
+          marginBottom: 4,
+        }}
         onPress={() => {
           generateHustlesAction(seed, day, periodsPerDay);
           setShowHustleJokerSelection(true);
@@ -130,10 +190,17 @@ function DebugJokerPanel({
 
       {/* 2. Trigger Quest Joker Selection */}
       <TouchableOpacity
-        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        style={{
+          backgroundColor: '#2d2d4e',
+          padding: 6,
+          borderRadius: 4,
+          marginBottom: 4,
+        }}
         onPress={() => {
           const ownedIds = new Set(jokers.map((j: any) => j.id?.toString()));
-          const unowned = STANDARDIZED_JOKERS.filter((sj) => !ownedIds.has(sj.id.toString()));
+          const unowned = STANDARDIZED_JOKERS.filter(
+            (sj) => !ownedIds.has(sj.id.toString())
+          );
           const choices = unowned.slice(0, 2);
           if (choices.length > 0) {
             dispatch(setPendingJokerChoices(choices));
@@ -146,23 +213,33 @@ function DebugJokerPanel({
 
       {/* 3. Trigger Detention Discovery (fake bully event) */}
       <TouchableOpacity
-        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        style={{
+          backgroundColor: '#2d2d4e',
+          padding: 6,
+          borderRadius: 4,
+          marginBottom: 4,
+        }}
         onPress={() => {
           setVisible(false); // Close debug panel so EventModal is visible
           setTimeout(() => {
-            dispatch(setCurrentEvent({
-              id: `debug-bully-${Date.now()}`,
-              effect: 'LOSE_MONEY',
-              category: 'bad',
-              title: 'Bullied! (Debug)',
-              description: 'A bully stole your lunch money!',
-              backgroundImage: 'bully',
-              dollarAmount: 100,
-              hasJokerDrop: true,
-              detentionJokerChoices: STANDARDIZED_JOKERS.filter(
-                (sj) => !jokers.some((j: any) => j.id?.toString() === sj.id.toString())
-              ).slice(0, 2),
-            }));
+            dispatch(
+              setCurrentEvent({
+                id: `debug-bully-${Date.now()}`,
+                effect: 'LOSE_MONEY',
+                category: 'bad',
+                title: 'Bullied! (Debug)',
+                description: 'A bully stole your lunch money!',
+                backgroundImage: 'bully',
+                dollarAmount: 100,
+                hasJokerDrop: true,
+                detentionJokerChoices: STANDARDIZED_JOKERS.filter(
+                  (sj) =>
+                    !jokers.some(
+                      (j: any) => j.id?.toString() === sj.id.toString()
+                    )
+                ).slice(0, 2),
+              })
+            );
           }, 100);
         }}
       >
@@ -171,13 +248,20 @@ function DebugJokerPanel({
 
       {/* 4. Trigger Merchant (navigate) */}
       <TouchableOpacity
-        style={{ backgroundColor: '#2d2d4e', padding: 6, borderRadius: 4, marginBottom: 4 }}
+        style={{
+          backgroundColor: '#2d2d4e',
+          padding: 6,
+          borderRadius: 4,
+          marginBottom: 4,
+        }}
         onPress={() => router.push('/merchant-shop')}
       >
         <Text style={{ color: '#fff', fontSize: 10 }}>Merchant Shop</Text>
       </TouchableOpacity>
 
-      <Text style={{ color: '#888', fontSize: 8, marginTop: 2 }}>Day {day} P{period} | {jokers.length} jokers</Text>
+      <Text style={{ color: '#888', fontSize: 8, marginTop: 2 }}>
+        Day {day} P{period} | {jokers.length} jokers
+      </Text>
     </View>
   );
 }
@@ -188,6 +272,9 @@ const SchoolsOutModal = lazy(() => import('../components/SchoolsOutModal'));
 const SleepConfirmModal = lazy(() => import('../components/SleepConfirmModal'));
 const StashMoneyModal = lazy(() => import('../components/StashMoneyModal'));
 const InventoryModal = lazy(() => import('../components/InventoryModal'));
+const PiggyBankDetailModal = lazy(
+  () => import('../components/PiggyBankDetailModal')
+);
 const LocationModal = lazy(() => import('../components/LocationModal'));
 const JokerSelection = lazy(() => import('../components/JokerSelection'));
 
@@ -261,7 +348,12 @@ function Market(props) {
 
   // Adjust all measurements by subtracting container offset
   const tutorialMeasurements = useMemo(() => {
-    const adjust = (rect?: { x: number; y: number; width: number; height: number }) => {
+    const adjust = (rect?: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }) => {
       if (!rect) return undefined;
       return {
         x: rect.x - containerOffset.x,
@@ -377,7 +469,8 @@ function Market(props) {
     completeHustle: completeHustleAction,
     getHustleForLocation,
   } = useHustle();
-  const [showHustleJokerSelection, setShowHustleJokerSelection] = useState(false);
+  const [showHustleJokerSelection, setShowHustleJokerSelection] =
+    useState(false);
   const lastCompletedHustle = useAppSelector(selectLastCompletedHustle);
   const hustleNotEnoughCandy = useAppSelector(selectNotEnoughCandyMessage);
 
@@ -440,17 +533,22 @@ function Market(props) {
   useEffect(() => {
     if (seed && day > 0 && day !== lastHustleDayRef.current) {
       lastHustleDayRef.current = day;
-      const unlockedHustleCandies = CANDY_REGISTRY
-        .filter((c) => {
-          if (c.size === 'medium' && !mediumUnlocked) return false;
-          if (c.size === 'big' && !bigUnlocked) return false;
-          return true;
-        })
-        .map((c) => c.name);
+      const unlockedHustleCandies = CANDY_REGISTRY.filter((c) => {
+        if (c.size === 'medium' && !mediumUnlocked) return false;
+        if (c.size === 'big' && !bigUnlocked) return false;
+        return true;
+      }).map((c) => c.name);
       generateHustlesAction(seed, day, periodsPerDay, unlockedHustleCandies);
       if (__DEV__) console.log(`🤝 HUSTLE: Generated hustles for day ${day}`);
     }
-  }, [seed, day, periodsPerDay, generateHustlesAction, mediumUnlocked, bigUnlocked]);
+  }, [
+    seed,
+    day,
+    periodsPerDay,
+    generateHustlesAction,
+    mediumUnlocked,
+    bigUnlocked,
+  ]);
 
   // Show hustle "not enough candy" message in scroller
   useEffect(() => {
@@ -464,15 +562,14 @@ function Market(props) {
   useEffect(() => {
     if (seed && day > 0 && period === 1 && day !== lastQuestDayRef.current) {
       lastQuestDayRef.current = day;
-      const unlockedCandies = CANDY_REGISTRY
-        .filter((c) => {
-          if (c.size === 'medium' && !mediumUnlocked) return false;
-          if (c.size === 'big' && !bigUnlocked) return false;
-          return true;
-        })
-        .map((c) => c.name);
+      const unlockedCandies = CANDY_REGISTRY.filter((c) => {
+        if (c.size === 'medium' && !mediumUnlocked) return false;
+        if (c.size === 'big' && !bigUnlocked) return false;
+        return true;
+      }).map((c) => c.name);
       dispatch(generateQuest({ seed, day, unlockedCandies }));
-      if (__DEV__) console.log(`📦 QUEST: Attempted quest generation for day ${day}`);
+      if (__DEV__)
+        console.log(`📦 QUEST: Attempted quest generation for day ${day}`);
     }
   }, [seed, day, period, dispatch, mediumUnlocked, bigUnlocked]);
 
@@ -503,7 +600,15 @@ function Market(props) {
       dispatch(failQuest());
       if (__DEV__) console.log('📦 QUEST: Failed - day changed');
     }
-  }, [activeQuest, day, period, dispatch, setHint, mediumUnlocked, bigUnlocked]);
+  }, [
+    activeQuest,
+    day,
+    period,
+    dispatch,
+    setHint,
+    mediumUnlocked,
+    bigUnlocked,
+  ]);
 
   // Ref for transaction modal manager (prevents parent re-renders)
   const transactionModalRef = useRef<TransactionModalHandle>(null);
@@ -554,7 +659,12 @@ function Market(props) {
     if (!mediumUnlocked && day >= 2 && selectedSize === 'small') {
       return { size: 'medium' as const, cost: 500 };
     }
-    if (mediumUnlocked && !bigUnlocked && day >= 3 && selectedSize === 'medium') {
+    if (
+      mediumUnlocked &&
+      !bigUnlocked &&
+      day >= 3 &&
+      selectedSize === 'medium'
+    ) {
       return { size: 'big' as const, cost: 5000 };
     }
     return null;
@@ -565,24 +675,42 @@ function Market(props) {
   const calculatedCandies = useMemo(() => {
     const eventPrices = gameData.eventPrices || {};
 
-    // Teacher's Pet — peek the direction of next-period price on the top N biggest movers.
-    // N = 1/2/3 depending on joker level. Shown as ↑ or ↓ next to the candy row.
+    // Teacher's Pet — per candy size, a small level-scaled chance to peek the
+    // next-period price direction on ONE candy (the biggest mover in that size).
+    // 10%/20%/30% chance at level 1/2/3. Each size rolls independently; the
+    // market list shows one size at a time, so only the selected size's hint
+    // renders. Shown as ↑ or ↓ next to the candy row.
     const teachersPet = jokers.find(
-      (j: any) => j.id === JOKER_IDS.TEACHERS_PET || j.id === String(JOKER_IDS.TEACHERS_PET)
+      (j: any) =>
+        j.id === JOKER_IDS.TEACHERS_PET ||
+        j.id === String(JOKER_IDS.TEACHERS_PET)
     );
     const peekHints: Record<string, 'up' | 'down'> = {};
     if (teachersPet) {
-      const peekCount = (teachersPet as any).level === 3 ? 3 : (teachersPet as any).level === 2 ? 2 : 1;
-      const movers: Array<{ name: string; delta: number }> = [];
-      for (const candy of visibleCandies) {
-        const curr = gameData.candyPrices[candy.name]?.[periodCount] ?? 0;
-        const next = gameData.candyPrices[candy.name]?.[periodCount + 1] ?? curr;
-        const delta = next - curr;
-        if (delta !== 0) movers.push({ name: candy.name, delta });
-      }
-      movers.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-      for (const m of movers.slice(0, peekCount)) {
-        peekHints[m.name] = m.delta > 0 ? 'up' : 'down';
+      const level =
+        (teachersPet as any).level === 3
+          ? 3
+          : (teachersPet as any).level === 2
+            ? 2
+            : 1;
+      const revealChance = level * 0.1;
+      // Deterministic per-seed-per-period-per-size roll so the hint doesn't
+      // flicker on re-render but is re-rolled each period and per size tab.
+      const roll = seededUnitRoll(
+        `${seed}:teacherspet:${periodCount}:${selectedSize}`
+      );
+      if (roll < revealChance) {
+        const movers: Array<{ name: string; delta: number }> = [];
+        for (const candy of visibleCandies) {
+          const curr = gameData.candyPrices[candy.name]?.[periodCount] ?? 0;
+          const next =
+            gameData.candyPrices[candy.name]?.[periodCount + 1] ?? curr;
+          const delta = next - curr;
+          if (delta !== 0) movers.push({ name: candy.name, delta });
+        }
+        movers.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+        const top = movers[0];
+        if (top) peekHints[top.name] = top.delta > 0 ? 'up' : 'down';
       }
     }
 
@@ -609,7 +737,12 @@ function Market(props) {
       // Calculate freshness remaining (periods until melt)
       const MELT_WINDOW = 5;
       let freshnessRemaining: number | undefined;
-      if (inventoryItem && inventoryItem.quantity && inventoryItem.quantity > 0 && inventoryItem.purchasedAt !== undefined) {
+      if (
+        inventoryItem &&
+        inventoryItem.quantity &&
+        inventoryItem.quantity > 0 &&
+        inventoryItem.purchasedAt !== undefined
+      ) {
         const periodsHeld = periodCount - inventoryItem.purchasedAt;
         freshnessRemaining = Math.max(0, MELT_WINDOW - periodsHeld);
       }
@@ -632,6 +765,8 @@ function Market(props) {
     inventory,
     visibleCandies,
     jokers,
+    seed,
+    selectedSize,
   ]);
 
   // Sync memoized candies to state only when they change
@@ -653,6 +788,16 @@ function Market(props) {
   const [stashMoneyModalVisible, setStashMoneyModalVisible] = useState(false);
   const [sleepConfirmModalVisible, setSleepConfirmModalVisible] =
     useState(false);
+
+  // Early-win prompt: offer to end the run once the adoption fee is covered.
+  // Held back while the day-transition modals are up so it never fights them.
+  const adoptionPrompt = useAdoptionPrompt(
+    isFocused &&
+      !dayStatsModalVisible &&
+      !schoolsOutModalVisible &&
+      !sleepConfirmModalVisible &&
+      !stashMoneyModalVisible
+  );
   const [confirmationModal, setConfirmationModal] = useState<{
     visible: boolean;
     title: string;
@@ -670,12 +815,15 @@ function Market(props) {
   const [endDayConfirmVisible, setEndDayConfirmVisible] = useState(false);
   const [isEarlyEndDay, setIsEarlyEndDay] = useState(false);
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
+  const [piggyBankModalVisible, setPiggyBankModalVisible] = useState(false);
   const [lunchConfirmVisible, setLunchConfirmVisible] = useState(false);
   const [isDroneDeposit, setIsDroneDeposit] = useState(false);
 
   // Candy melt modal state
   const [meltModalVisible, setMeltModalVisible] = useState(false);
-  const [meltedCandies, setMeltedCandies] = useState<{ name: string; quantity: number; value: number }[]>([]);
+  const [meltedCandies, setMeltedCandies] = useState<
+    { name: string; quantity: number; value: number }[]
+  >([]);
 
   // Candy size unlock modal state
   const [unlockModalVisible, setUnlockModalVisible] = useState(false);
@@ -697,7 +845,8 @@ function Market(props) {
         setSelectedSize('medium');
         setUnlockModalContent({
           title: 'New Candy Unlocked!',
-          message: "You've earned the big kids' candy shelf! Medium candies are now available in the market.",
+          message:
+            "You've earned the big kids' candy shelf! Medium candies are now available in the market.",
           emoji: '🍬',
         });
       } else {
@@ -705,7 +854,8 @@ function Market(props) {
         setSelectedSize('big');
         setUnlockModalContent({
           title: 'Premium Candy Unlocked!',
-          message: 'Welcome to the top shelf! Big candies are now available. Time to make some serious money!',
+          message:
+            'Welcome to the top shelf! Big candies are now available. Time to make some serious money!',
           emoji: '🍫',
         });
       }
@@ -735,13 +885,16 @@ function Market(props) {
     }
   }, [schoolsOutModalVisible]);
 
-  const openModal = useCallback((index: number) => {
-    transactionModalRef.current?.open(index);
-    // Advance tutorial when tapping candy during step 3 (buy) or step 6 (sell)
-    if (tutorialStep === 3 || tutorialStep === 6) {
-      dispatch(advanceTutorial());
-    }
-  }, [tutorialStep, dispatch]);
+  const openModal = useCallback(
+    (index: number) => {
+      transactionModalRef.current?.open(index);
+      // Advance tutorial when tapping candy during step 3 (buy) or step 6 (sell)
+      if (tutorialStep === 3 || tutorialStep === 6) {
+        dispatch(advanceTutorial());
+      }
+    },
+    [tutorialStep, dispatch]
+  );
 
   const closeModal = useCallback(() => {
     transactionModalRef.current?.close();
@@ -758,8 +911,6 @@ function Market(props) {
     setShowQuestJokerSelection,
     onGlassCannonShatter: () => setGlassCannonShattered(true),
   });
-
-
 
   const handleNextDay = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -799,6 +950,11 @@ function Market(props) {
     setLunchConfirmVisible(false);
     setShowLunchMinigames(true);
   }, []);
+
+  const handleGlassCannonClose = useCallback(
+    () => setGlassCannonShattered(false),
+    []
+  );
 
   const handleEndDay = useCallback(() => {
     setEndDayConfirmVisible(true);
@@ -934,6 +1090,7 @@ function Market(props) {
       onCandyPress: openModal,
       onLunchBack: handleLunchBack,
       onInventoryPress: handleInventoryPress,
+      onPiggyBankPress: () => setPiggyBankModalVisible(true),
       onNextPeriod: handleNextDay,
       onEndDay: handleEndDay,
       unlockButton,
@@ -983,7 +1140,12 @@ function Market(props) {
   );
 
   return (
-    <View ref={marketContainerRef} collapsable={false} style={styles.container} onLayout={handleContainerLayout}>
+    <View
+      ref={marketContainerRef}
+      collapsable={false}
+      style={styles.container}
+      onLayout={handleContainerLayout}
+    >
       {showLunchMinigames && (
         <FirstTimeHint
           hintKey="lunch_minigame"
@@ -1085,6 +1247,19 @@ function Market(props) {
         theme={'market' as const}
       />
 
+      {/* Glass Cannon shatter notice — rendered BEFORE the interactive confirm
+          modals so that, even if it lingers, they always stack on top and stay
+          tappable (a stuck shatter notice used to block the lunch confirm). */}
+      <GameModal
+        visible={glassCannonShattered}
+        title="Glass Cannon Shattered!"
+        message="Your Glass Cannon went out with a bang and broke after that sale. It's gone for the rest of the run."
+        emoji="💥"
+        theme="market"
+        dismissible
+        onClose={handleGlassCannonClose}
+      />
+
       <ConfirmationModal
         visible={lunchConfirmVisible}
         title="Time for Lunch!"
@@ -1128,7 +1303,9 @@ function Market(props) {
       <ConfirmationModal
         visible={meltModalVisible}
         title="Candy Melted!"
-        message={meltedCandies.map(c => `${c.name} x${c.quantity} ($${c.value.toFixed(2)} lost)`).join('\n')}
+        message={meltedCandies
+          .map((c) => `${c.name} x${c.quantity} ($${c.value.toFixed(2)} lost)`)
+          .join('\n')}
         emoji="🫠"
         confirmText="OK"
         onConfirm={() => setMeltModalVisible(false)}
@@ -1160,6 +1337,15 @@ function Market(props) {
         </Suspense>
       )}
 
+      {piggyBankModalVisible && (
+        <Suspense fallback={null}>
+          <PiggyBankDetailModal
+            visible={piggyBankModalVisible}
+            onClose={() => setPiggyBankModalVisible(false)}
+          />
+        </Suspense>
+      )}
+
       {/* Hallway Hustle Joker Selection */}
       {showHustleJokerSelection && (
         <TouchableOpacity
@@ -1172,7 +1358,11 @@ function Market(props) {
             dispatch(clearLastCompletedHustle());
           }}
         >
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ flex: 1 }}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{ flex: 1 }}
+          >
             <Suspense fallback={<View />}>
               <JokerSelection
                 jokers={STANDARDIZED_JOKERS}
@@ -1207,7 +1397,11 @@ function Market(props) {
             dispatch(clearActiveQuest());
           }}
         >
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ flex: 1 }}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{ flex: 1 }}
+          >
             <Suspense fallback={<View />}>
               <JokerSelection
                 jokers={STANDARDIZED_JOKERS}
@@ -1229,15 +1423,12 @@ function Market(props) {
       {/* EventModal for special events */}
       <EventModal />
 
-      {/* Glass Cannon shatter notice */}
-      <GameModal
-        visible={glassCannonShattered}
-        title="Glass Cannon Shattered!"
-        message="Your Glass Cannon went out with a bang and broke after that sale. It's gone for the rest of the run."
-        emoji="💥"
-        theme="market"
-        dismissible
-        onClose={() => setGlassCannonShattered(false)}
+      {/* Early-win prompt: rendered last so it stacks above other overlays */}
+      <AdoptionReadyModal
+        visible={adoptionPrompt.visible}
+        pet={adoptionPrompt.pet}
+        onEndGame={adoptionPrompt.handleEndGame}
+        onContinue={adoptionPrompt.handleContinue}
       />
 
       {/* Debug Panel — DEV only */}
@@ -1256,7 +1447,6 @@ function Market(props) {
           jokers={jokers}
         />
       )}
-
     </View>
   );
 }

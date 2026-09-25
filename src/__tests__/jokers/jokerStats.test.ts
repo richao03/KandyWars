@@ -233,16 +233,25 @@ describe('getLiveJokerValueText', () => {
   it('returns null when the variable joker has zero stacks', () => {
     expect(getLiveJokerValueText(JOKER_IDS.CLEARANCE_SALE, 1, ZERO_CTX)).toBeNull();
     expect(getLiveJokerValueText(JOKER_IDS.HOARDER, 2, ZERO_CTX)).toBeNull();
+    expect(getLiveJokerValueText(JOKER_IDS.SURVIVOR, 1, ZERO_CTX)).toBeNull();
     expect(getLiveJokerValueText(JOKER_IDS.PENNY_WISE, 3, ZERO_CTX)).toBeNull();
     expect(getLiveJokerValueText(JOKER_IDS.TRADE_ROUTES, 1, ZERO_CTX)).toBeNull();
     expect(getLiveJokerValueText(JOKER_IDS.MOMENTUM, 1, ZERO_CTX)).toBeNull();
   });
 
+  it('accepts string joker ids (inventory cards pass ids as strings)', () => {
+    expect(
+      getLiveJokerValueText(String(JOKER_IDS.HOARDER), 1, {
+        jokerStats: { ...ZERO_STATS, hoarderMaxHits: 2 },
+      })
+    ).toBe('+0.6 mult');
+  });
+
   describe('Trade Routes (39)', () => {
     it.each([
-      [1, 3, 'currently +6 inventory'], // 2 per period × 3 periods
-      [2, 4, 'currently +12 inventory'], // 3 × 4
-      [3, 5, 'currently +20 inventory'], // 4 × 5
+      [1, 3, '+6 inventory'], // 2 per period × 3 periods
+      [2, 4, '+12 inventory'], // 3 × 4
+      [3, 5, '+20 inventory'], // 4 × 5
     ])('L%i × %i periods → %s', (level, stacks, expected) => {
       expect(
         getLiveJokerValueText(JOKER_IDS.TRADE_ROUTES, level, {
@@ -254,9 +263,9 @@ describe('getLiveJokerValueText', () => {
 
   describe('Clearance Sale (73)', () => {
     it.each([
-      [1, 3, 'currently +30% mult'], // 0.10 * 3 = 0.30 = 30%
-      [2, 4, 'currently +60% mult'], // 0.15 * 4 = 0.60
-      [3, 5, 'currently +100% mult'], // 0.20 * 5 = 1.00
+      [1, 3, '+30% mult'], // 0.10 * 3 = 0.30 = 30%
+      [2, 4, '+60% mult'], // 0.15 * 4 = 0.60
+      [3, 5, '+100% mult'], // 0.20 * 5 = 1.00
     ])('L%i × %i loss sales → %s', (level, stacks, expected) => {
       expect(
         getLiveJokerValueText(JOKER_IDS.CLEARANCE_SALE, level, {
@@ -267,20 +276,20 @@ describe('getLiveJokerValueText', () => {
   });
 
   describe('Reputation (64)', () => {
-    it('L1 × 3 unique candies → currently +60%', () => {
+    it('L1 × 3 unique candies → +60%', () => {
       expect(
         getLiveJokerValueText(JOKER_IDS.REPUTATION, 1, {
           jokerStats: { ...ZERO_STATS, reputationTypesSold: 3 },
         })
-      ).toBe('currently +60%');
+      ).toBe('+60%');
     });
   });
 
   describe('Street Smarts (65)', () => {
     it.each([
-      [1, 3, 'currently +1.5 mult'],
-      [2, 4, 'currently +3 mult'],
-      [3, 2, 'currently +2 mult'],
+      [1, 3, '+1.5 mult'],
+      [2, 4, '+3 mult'],
+      [3, 2, '+2 mult'],
     ])('L%i × %i events → %s', (level, stacks, expected) => {
       expect(
         getLiveJokerValueText(JOKER_IDS.STREET_SMARTS, level, {
@@ -292,9 +301,9 @@ describe('getLiveJokerValueText', () => {
 
   describe('Momentum (89)', () => {
     it.each([
-      [1, 2, 'currently +0.6 mult'], // 0.3 × 2
-      [2, 3, 'currently +1.5 mult'], // 0.5 × 3
-      [3, 4, 'currently +3.2 mult'], // 0.8 × 4
+      [1, 2, '+0.6 mult'], // 0.3 × 2
+      [2, 3, '+1.5 mult'], // 0.5 × 3
+      [3, 4, '+3.2 mult'], // 0.8 × 4
     ])(
       'L%i × %i consecutive sale periods → %s',
       (level, consecutive, expected) => {
@@ -309,20 +318,20 @@ describe('getLiveJokerValueText', () => {
   });
 
   describe('Hoarder (95)', () => {
-    it('L1 × 2 hits → currently +0.6 mult', () => {
+    it('L1 × 2 hits → +0.6 mult', () => {
       expect(
         getLiveJokerValueText(JOKER_IDS.HOARDER, 1, {
           jokerStats: { ...ZERO_STATS, hoarderMaxHits: 2 },
         })
-      ).toBe('currently +0.6 mult');
+      ).toBe('+0.6 mult');
     });
   });
 
   describe('Penny Wise (96)', () => {
     it.each([
-      [1, 2, 'currently +30%'], // 0.15 * 2
-      [2, 3, 'currently +75%'], // 0.25 * 3
-      [3, 1, 'currently +40%'], // 0.40 * 1
+      [1, 2, '+30%'], // 0.15 * 2
+      [2, 3, '+75%'], // 0.25 * 3
+      [3, 1, '+40%'], // 0.40 * 1
     ])('L%i × %i stashes → %s', (level, stacks, expected) => {
       expect(
         getLiveJokerValueText(JOKER_IDS.PENNY_WISE, level, {
@@ -333,12 +342,12 @@ describe('getLiveJokerValueText', () => {
   });
 
   describe('Survivor (97)', () => {
-    it('L2 × 4 melts → currently +3 mult', () => {
+    it('L2 × 4 melts → +3 mult', () => {
       expect(
         getLiveJokerValueText(JOKER_IDS.SURVIVOR, 2, {
           jokerStats: { ...ZERO_STATS, survivorCandiesMelted: 4 },
         })
-      ).toBe('currently +3 mult');
+      ).toBe('+3 mult');
     });
   });
 
@@ -349,7 +358,7 @@ describe('getLiveJokerValueText', () => {
         getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
           jokerStats: { ...ZERO_STATS, compoundInterestDays: 1 },
         })
-      ).toBe('currently +20%');
+      ).toBe('+20%');
     });
 
     it('scales by +20%/+30%/+40% per day after day 1', () => {
@@ -358,13 +367,13 @@ describe('getLiveJokerValueText', () => {
         getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
           jokerStats: { ...ZERO_STATS, compoundInterestDays: 3 },
         })
-      ).toBe('currently +60%');
+      ).toBe('+60%');
       // L3 day 3: 1.6 + 0.4*2 = 2.4 → +140%
       expect(
         getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 3, {
           jokerStats: { ...ZERO_STATS, compoundInterestDays: 3 },
         })
-      ).toBe('currently +140%');
+      ).toBe('+140%');
     });
 
     it('caps at 3x / 4x / 5x (level 1 / 2 / 3)', () => {
@@ -373,13 +382,13 @@ describe('getLiveJokerValueText', () => {
         getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 1, {
           jokerStats: { ...ZERO_STATS, compoundInterestDays: 100 },
         })
-      ).toBe('currently +200%');
+      ).toBe('+200%');
       // L3 cap = 5x → +400% even after many days
       expect(
         getLiveJokerValueText(JOKER_IDS.COMPOUND_INTEREST, 3, {
           jokerStats: { ...ZERO_STATS, compoundInterestDays: 100 },
         })
-      ).toBe('currently +400%');
+      ).toBe('+400%');
     });
 
     it('returns null when compoundInterestDays === 0', () => {
