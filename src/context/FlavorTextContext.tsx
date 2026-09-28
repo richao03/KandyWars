@@ -36,7 +36,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
   JOKER_UNLOCKED: [
     'You feel smarter... luckier... gum-ier.',
     'Things were never the same again',
-    'That joker changed everything.',
+    'That wildcard changed everything.',
   ],
   // HINT removed - hints now only come from generateSeededGameData event templates
   AFTERNOON: ['The afternoon bell rings...'],
@@ -81,7 +81,7 @@ const flavorLibrary: Record<FlavorEvent, string[]> = {
   ],
   STUDY_TIME: [
     'Time to hit the books!',
-    'Knowledge is power... and better jokers!',
+    'Knowledge is power... and better wildcards!',
     'Study hard, earn smarter tools.',
     'The lamplight flickers as you crack open your textbook.',
     'Tonight we study, tomorrow we hustle harder.',

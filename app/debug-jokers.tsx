@@ -66,7 +66,7 @@ export default function DebugJokersScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
-        <Text style={styles.title}>Debug: Joker Picker</Text>
+        <Text style={styles.title}>Debug: Wildcard Picker</Text>
       </View>
 
       <Text style={styles.subtitle}>

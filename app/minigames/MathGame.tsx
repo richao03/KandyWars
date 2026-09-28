@@ -251,7 +251,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
       showModal(
         'Game Over!',
-        `A number reached the edge!\n Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
+        `A number reached the edge!\n Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} wildcard${jokerCount > 1 ? 's' : ''}${rerollText}!`,
         '⚠️',
         () => {
           setGameState('jokerSelection');
@@ -428,7 +428,7 @@ export default function MathGame({ onComplete, onBack }: MathGameProps) {
 
       showModal(
         "Time's Up!",
-        `Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} joker${jokerCount > 1 ? 's' : ''}${rerollText}!`,
+        `Since you completed Level ${levelsCompleted}, you'll receive ${jokerCount} wildcard${jokerCount > 1 ? 's' : ''}${rerollText}!`,
         '🎁',
         () => {
           setGameState('jokerSelection');

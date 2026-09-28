@@ -427,7 +427,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
             showModal(
               'Nice Effort!',
-              `You lost but completed ${jokerText}!\n\nYou'll receive ${completedLevel} joker${completedLevel > 1 ? 's' : ''}!`,
+              `You lost but completed ${jokerText}!\n\nYou'll receive ${completedLevel} wildcard${completedLevel > 1 ? 's' : ''}!`,
               '✊',
               () => {
                 setGameState('jokerSelection');
@@ -565,7 +565,7 @@ export default function RecessGame({ onComplete }: RecessGameProps) {
 
             showModal(
               'Nice Effort!',
-              `You lost but completed ${jokerText}!\n\nYou'll receive ${completedLevel} joker${completedLevel > 1 ? 's' : ''}!`,
+              `You lost but completed ${jokerText}!\n\nYou'll receive ${completedLevel} wildcard${completedLevel > 1 ? 's' : ''}!`,
               '✊',
               () => {
                 setGameState('jokerSelection');

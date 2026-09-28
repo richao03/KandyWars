@@ -318,6 +318,12 @@ function TransactionModal({
   const registerIconRef = useCallback((key: string, node: any) => {
     jokerIconRefs.current[key] = node;
   }, []);
+  // Breakdown list scroller + its fixed-height viewport. During the cascade
+  // we auto-scroll so the row whose money effect is firing is always on
+  // screen (long joker lists used to animate rows below the fold).
+  const breakdownScrollRef = useRef<ScrollView>(null);
+  const breakdownViewportRef = useRef<View>(null);
+  const breakdownScrollYRef = useRef(0);
   // Ref to running total ("You Pocket" value) for spark arc destination
   const totalDisplayRef = useRef<any>(null);
   // Refs to the running aggregate values shown in each section header.
@@ -684,6 +690,42 @@ function TransactionModal({
     // Phase 4 count-up goes from "base total" -> "full total".
     setFinalTotalTarget(baseProfit + saleResult.purchaseValue);
 
+    // Start the cascade from the top of the breakdown list.
+    breakdownScrollRef.current?.scrollTo({ y: 0, animated: false });
+    breakdownScrollYRef.current = 0;
+
+    // Keep the row about to fire inside the height-capped breakdown viewport.
+    // Measures the icon and the viewport in window space and nudges the
+    // scroller only when the icon sits above/below the visible band, leaving
+    // one row of look-ahead below so the next beat is already peeking in.
+    const scrollBonusIntoView = (iconKey: string) => {
+      const iconRef = jokerIconRefs.current[iconKey];
+      const viewport = breakdownViewportRef.current;
+      const scroller = breakdownScrollRef.current;
+      if (!iconRef || !viewport || !scroller) return;
+      viewport.measureInWindow((vx, vy, vw, vh) => {
+        if (!vh) return;
+        iconRef.measureInWindow((x: number, y: number, w: number, h: number) => {
+          const PAD = 6;
+          const LOOKAHEAD = 26; // ~one breakdown row
+          const relTop = y - vy;
+          const relBottom = relTop + h;
+          let nextY: number | null = null;
+          if (relBottom > vh - PAD) {
+            nextY =
+              breakdownScrollYRef.current + (relBottom - (vh - PAD)) + LOOKAHEAD;
+          } else if (relTop < PAD) {
+            nextY = breakdownScrollYRef.current + (relTop - PAD);
+          }
+          if (nextY !== null) {
+            const clamped = Math.max(0, nextY);
+            breakdownScrollYRef.current = clamped;
+            scroller.scrollTo({ y: clamped, animated: !reduceMotion });
+          }
+        });
+      });
+    };
+
     // Tier classification up front — drives climax flair gating
     const maxJokerMult = scoringSteps.reduce(
       (acc, s) => (s.bucket === 'mult' ? Math.max(acc, s.multiplier) : acc),
@@ -750,6 +792,17 @@ function TransactionModal({
       beatOffsets.push(beatStart);
 
       // Pre-pulse removed — only one bounce per joker (in the next block).
+
+      // Bring this row into view slightly ahead of its beat so the bounce,
+      // glow and particle arc all happen on-screen. Fires ~ms(80) before the
+      // bounce; the scroll is a one-row nudge so it settles in time.
+      scheduleSequence(
+        () => {
+          if (skipRef.current) return;
+          scrollBonusIntoView(`${bonus.name}-${i}`);
+        },
+        Math.max(0, beatStart + ms(100) - ms(80))
+      );
 
       // Bounce: single pop + SFX + particle arc + score punch
       scheduleSequence(
@@ -1560,15 +1613,23 @@ function TransactionModal({
                       `height` on the ScrollView alone is treated as a hint
                       on some platforms; the wrapper makes the cap firm. */}
                     <View
+                      ref={breakdownViewportRef}
+                      collapsable={false}
                       style={{
                         height: breakdownScrollHeight,
                         overflow: 'hidden',
                       }}
                     >
                       <ScrollView
+                        ref={breakdownScrollRef}
                         style={{ flex: 1 }}
                         showsVerticalScrollIndicator={false}
                         nestedScrollEnabled
+                        scrollEventThrottle={16}
+                        onScroll={(e) => {
+                          breakdownScrollYRef.current =
+                            e.nativeEvent.contentOffset.y;
+                        }}
                       >
                         {/* profit boost section */}
                         <Pressable

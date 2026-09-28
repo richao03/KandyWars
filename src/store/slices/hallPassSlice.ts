@@ -43,7 +43,7 @@ export const BASE_MAX_ACTIVE_HALL_PASSES = 3;
 /**
  * Effective active-pass cap for a given set of passes: the base limit plus any
  * `extra_active_slot` bonuses the passes themselves grant (e.g. an "extension"
- * pass that raises the cap from 3 → 4). Extensible — any future pass with an
+ * pass that raises the cap from 3 → 5). Extensible — any future pass with an
  * `extra_active_slot` effect widens the cap automatically.
  */
 export const getHallPassActiveLimit = (
@@ -101,7 +101,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       {
         type: 'minigame_skip_chance',
         value: 0.5,
-        description: 'Skip a minigame and go straight to a joker reward (50% chance)',
+        description: 'Skip a minigame and go straight to a wildcard reward (50% chance)',
       },
     ],
     rarity: 'magical',
@@ -129,7 +129,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       {
         type: 'special',
         value: 2,
-        description: 'All jokers obtained start at Level 2',
+        description: 'All wildcards obtained start at Level 2',
       },
     ],
     rarity: 'magical',
@@ -168,12 +168,12 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     id: 'forged_pass',
     name: 'Forged Pass',
     description: 'Fake it till you make it.',
-    unlockRequirement: 'Win the game with 8+ jokers',
+    unlockRequirement: 'Win the game with 8+ wildcards',
     effects: [
       {
         type: 'special',
         value: 1,
-        description: '+1 reroll in joker selection',
+        description: '+1 reroll in wildcard selection',
       },
     ],
     rarity: 'rare',
@@ -235,7 +235,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
     id: 'minimalist_master',
     name: 'Minimalist Master',
     description: 'Les is mor.',
-    unlockRequirement: 'Win without using any jokers',
+    unlockRequirement: 'Win without using any wildcards',
     effects: [
       {
         type: 'sale_price_bonus',
@@ -273,7 +273,7 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
       {
         type: 'minigame_skip_chance',
         value: 0.75,
-        description: 'Skip a minigame and go straight to a joker reward (75% chance)',
+        description: 'Skip a minigame and go straight to a wildcard reward (75% chance)',
       },
     ],
     rarity: 'legendary',
@@ -323,14 +323,14 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   },
   {
     id: 'joker_monopoly',
-    name: 'Joker Monopoly',
+    name: 'Wildcard Monopoly',
     description: 'You\'ve mastered the meta — minigames are a formality.',
     unlockRequirement: 'Win 100 minigames (lifetime)',
     effects: [
       {
         type: 'minigame_skip_chance',
         value: 0.9,
-        description: 'Skip a minigame and go straight to a joker reward (90% chance)',
+        description: 'Skip a minigame and go straight to a wildcard reward (90% chance)',
       },
     ],
     rarity: 'legendary',
@@ -338,13 +338,13 @@ const ALL_HALL_PASSES: Omit<HallPass, 'isUnlocked' | 'unlockedAt'>[] = [
   {
     id: 'overachiever',
     name: 'Overachiever',
-    description: 'Why stop at three when you can carry four?',
+    description: 'Why stop at three when you can carry five?',
     unlockRequirement: 'Win the game with 3 hall passes active',
     effects: [
       {
         type: 'extra_active_slot',
-        value: 1,
-        description: 'Carry one extra hall pass (max active 3 → 4)',
+        value: 2,
+        description: 'Carry two extra hall passes (max active 3 → 5)',
       },
     ],
     rarity: 'legendary',
@@ -673,7 +673,7 @@ export const selectSelectedHallPass = createSelector(
 );
 
 // Effective number of hall passes that can be active at once, accounting for
-// any selected pass that grants extra slots (e.g. Overachiever: 3 → 4).
+// any selected pass that grants extra slots (e.g. Overachiever: 3 → 5).
 export const selectMaxActiveHallPasses = createSelector(
   [selectSelectedHallPasses],
   (selectedPasses) => getHallPassActiveLimit(selectedPasses)

@@ -424,7 +424,7 @@ const DailyJokerSection = React.memo(function DailyJokerSection({
   return (
     <View style={styles.dailyJokerContainer}>
       <View style={styles.dailyJokerTitleRow}>
-        <Text style={styles.dailyJokerTitle}>Joker of the Day</Text>
+        <Text style={styles.dailyJokerTitle}>Wildcard of the Day</Text>
         {!isMaxed && !dailyJoker.purchased && (
           <Text
             style={[
@@ -575,7 +575,7 @@ export default function MerchantShopPage() {
 
       if (__DEV__)
         console.log(
-          `✅ Daily Joker "${jokerName}" ${ownedLevel > 0 ? 'upgraded to L' + (ownedLevel + 1) : 'purchased'}`
+          `✅ Daily Wildcard "${jokerName}" ${ownedLevel > 0 ? 'upgraded to L' + (ownedLevel + 1) : 'purchased'}`
         );
     },
     [balance, spend, dispatch]

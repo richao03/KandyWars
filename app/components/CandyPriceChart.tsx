@@ -253,6 +253,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    borderRadius: 20,
   },
   cardContainer: {
     backgroundColor: '#0f0f0f',

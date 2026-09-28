@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   kicker: {
+    fontFamily: 'PixeloidMono',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.2,
@@ -169,12 +170,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   title: {
+    fontFamily: 'PixeloidMono',
     fontSize: 18,
     fontWeight: 'bold',
     color: '#5a3a00',
     marginBottom: 4,
   },
   subtitle: {
+    fontFamily: 'PixeloidMono',
     fontSize: 12,
     lineHeight: 16,
     color: '#7a5200',

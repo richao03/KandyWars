@@ -7,8 +7,8 @@ import {
   View,
 } from 'react-native';
 import { GAME_TIPS } from '../../src/constants/gameTips';
-import { formatCurrency } from '../../src/utils/priceUtils';
 import { useTabBar } from '../../src/hooks/useTabBar';
+import { formatCurrency } from '../../src/utils/priceUtils';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 
@@ -19,7 +19,7 @@ interface GoingToSchoolModalProps {
   guaranteedEventWarnings?: string[]; // Array of warning messages for guaranteed events
 }
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function GoingToSchoolModal({
   visible,
@@ -75,9 +75,8 @@ export default function GoingToSchoolModal({
     <FastModal
       visible={visible}
       onClose={undefined}
-      animationType="spring"
+      animationType="fade"
       backdropOpacity={1}
-      modalStyle={styles.container}
       presentation="fullBleed"
     >
       <ImageBackground
@@ -93,12 +92,12 @@ export default function GoingToSchoolModal({
             innerPadding={0}
           >
             <View style={styles.textBox}>
-              {allowanceAmount && (
+              {allowanceAmount ? (
                 <Text style={styles.allowanceText}>
-                  Received ${formatCurrency(allowanceAmount)} for allowance for the
-                  day! Yay!
+                  Received ${formatCurrency(allowanceAmount)} for allowance for
+                  the day! Yay!
                 </Text>
-              )}
+              ) : null}
 
               {guaranteedEventWarnings.length > 0 && (
                 <>
@@ -121,17 +120,15 @@ export default function GoingToSchoolModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: width,
-    height: height,
-  },
   backgroundImage: {
-    width: width,
-    height: height,
+    flex: 1,
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
   contentContainer: {
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,

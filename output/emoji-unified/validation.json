@@ -1,0 +1,534 @@
+{
+  "diamondHand": {
+    "source": "raw/diamondHand.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 18,
+    "alpha": "binary",
+    "bounds": [
+      10,
+      4,
+      53,
+      60
+    ]
+  },
+  "msuic": {
+    "source": "raw/msuic.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 18,
+    "alpha": "binary",
+    "bounds": [
+      8,
+      4,
+      56,
+      60
+    ]
+  },
+  "cafeteria": {
+    "source": "raw/cafeteria.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 25,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      7,
+      60,
+      56
+    ]
+  },
+  "lab": {
+    "source": "raw/lab.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 15,
+    "alpha": "binary",
+    "bounds": [
+      15,
+      4,
+      48,
+      60
+    ]
+  },
+  "book": {
+    "source": "raw/book.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 15,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      9,
+      60,
+      54
+    ]
+  },
+  "good": {
+    "source": "raw/good.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 16,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      6,
+      60,
+      58
+    ]
+  },
+  "refresh": {
+    "source": "raw/refresh.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 18,
+    "alpha": "binary",
+    "bounds": [
+      5,
+      4,
+      59,
+      60
+    ]
+  },
+  "slowcooker": {
+    "source": "raw/slowcooker.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 15,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      11,
+      60,
+      53
+    ]
+  },
+  "gym": {
+    "source": "raw/gym.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 23,
+    "alpha": "binary",
+    "bounds": [
+      7,
+      4,
+      57,
+      60
+    ]
+  },
+  "recess": {
+    "source": "raw/recess.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 22,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      9,
+      60,
+      54
+    ]
+  },
+  "logic": {
+    "source": "raw/logic.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 21,
+    "alpha": "binary",
+    "bounds": [
+      6,
+      4,
+      58,
+      60
+    ]
+  },
+  "economy": {
+    "source": "raw/economy.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 19,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      6,
+      60,
+      57
+    ]
+  },
+  "art": {
+    "source": "raw/art.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 24,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      4,
+      59,
+      60
+    ]
+  },
+  "geography": {
+    "source": "raw/geography.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 16,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      4,
+      60,
+      60
+    ]
+  },
+  "loveheart": {
+    "source": "raw/loveheart.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 18,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      6,
+      60,
+      58
+    ]
+  },
+  "hallpass": {
+    "source": "raw/hallpass.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 18,
+    "alpha": "binary",
+    "bounds": [
+      16,
+      4,
+      48,
+      60
+    ]
+  },
+  "crystalBall": {
+    "source": "raw/crystalBall.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 16,
+    "alpha": "binary",
+    "bounds": [
+      6,
+      4,
+      58,
+      60
+    ]
+  },
+  "mountain": {
+    "source": "raw/mountain.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 16,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      11,
+      60,
+      53
+    ]
+  },
+  "theater": {
+    "source": "raw/theater.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 12,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      9,
+      60,
+      54
+    ]
+  },
+  "talkingHead": {
+    "source": "raw/talkingHead.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 21,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      7,
+      60,
+      56
+    ]
+  },
+  "horse": {
+    "source": "raw/horse.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 19,
+    "alpha": "binary",
+    "bounds": [
+      5,
+      4,
+      58,
+      60
+    ]
+  },
+  "sunrise": {
+    "source": "raw/sunrise.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 15,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      6,
+      60,
+      58
+    ]
+  },
+  "dice": {
+    "source": "raw/dice.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 16,
+    "alpha": "binary",
+    "bounds": [
+      6,
+      4,
+      57,
+      60
+    ]
+  },
+  "newspaper": {
+    "source": "raw/newspaper.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 16,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      5,
+      60,
+      58
+    ]
+  },
+  "student": {
+    "source": "raw/student.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 19,
+    "alpha": "binary",
+    "bounds": [
+      18,
+      4,
+      46,
+      60
+    ]
+  },
+  "warning": {
+    "source": "raw/warning.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 12,
+    "alpha": "binary",
+    "bounds": [
+      4,
+      5,
+      60,
+      58
+    ]
+  },
+  "door": {
+    "source": "raw/door.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 17,
+    "alpha": "binary",
+    "bounds": [
+      13,
+      4,
+      50,
+      60
+    ]
+  },
+  "celebrate": {
+    "source": "raw/celebrate.png",
+    "native": [
+      64,
+      64
+    ],
+    "export": [
+      256,
+      256
+    ],
+    "colors": 20,
+    "alpha": "binary",
+    "bounds": [
+      6,
+      4,
+      58,
+      60
+    ]
+  }
+}

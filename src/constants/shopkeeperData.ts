@@ -373,7 +373,7 @@ export const TRIVIA_POOL: TriviaQuestion[] = [
   },
   {
     id: 'gk4',
-    question: 'How many persistent joker slots can you have?',
+    question: 'How many persistent wildcard slots can you have?',
     choices: ['3', '4', '5', '6'],
     correctIndex: 2,
     category: 'game_knowledge',
@@ -394,7 +394,7 @@ export const TRIVIA_POOL: TriviaQuestion[] = [
   },
   {
     id: 'gk7',
-    question: 'What does the Vacuum Sealer joker do?',
+    question: 'What does the Vacuum Sealer wildcard do?',
     choices: ['Doubles prices', 'Increases inventory', 'Gives free candy', 'Prevents melting'],
     correctIndex: 1,
     category: 'game_knowledge',

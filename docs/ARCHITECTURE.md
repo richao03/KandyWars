@@ -1,5 +1,7 @@
 # SugarWars — Architecture
 
+> **Naming:** players see this system as **Wildcards** ("Wildcard", "Wildcards tab", "Wildcard Shop"). Code identifiers, file names, Redux keys (`joker`, `jokerStats`), analytics events, and Firebase collections keep the legacy `joker` name. Any new player-facing string must say Wildcard.
+
 ## Tech Stack
 - **React Native / Expo** (managed workflow)
 - **TypeScript** throughout

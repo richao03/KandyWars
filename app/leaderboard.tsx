@@ -267,11 +267,11 @@ export default function LeaderboardScreen() {
 
           <View style={styles.analyticsSection}>
             <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>Most Obtained Jokers</Text>
+              <Text style={styles.sectionTitle}>Most Obtained Wildcards</Text>
             </View>
             {topJokersFromMinigames.length === 0 ? (
               <Text style={styles.emptyAnalyticsText}>
-                No joker data yet - win some minigames to see stats!
+                No wildcard data yet - win some minigames to see stats!
               </Text>
             ) : (
               topJokersFromMinigames.map((joker, index) => (

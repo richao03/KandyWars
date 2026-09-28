@@ -1,4 +1,3 @@
-import colors from '@/src/constants/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
@@ -14,29 +13,36 @@ import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 import UpgradeJokersModal from './UpgradeJokersModal';
 
+// Neutral palette for tiles that are NOT the picked game.
+const MUTED = {
+  border: '#c9c2b4',
+  bg: '#efeae0',
+  accent: '#a39c8f',
+};
+
 // Each subject carries its own route so renaming the display name can never
 // break navigation (the route is no longer keyed by name).
 const subjects = [
   {
-    name: 'Add',
+    name: 'Math',
     route: '/math-game',
     color: { bg: '#e6f7ff', border: '#1890ff' },
     icon: require('../../assets/images/emojis/math.png'),
   },
   {
-    name: 'Pick',
+    name: 'Captain',
     route: '/history-game',
     color: { bg: '#e6f2ff', border: '#4169e1' },
     icon: require('../../assets/images/emojis/gym.png'),
   },
   {
-    name: 'Sort',
+    name: 'Cooking',
     route: '/home-ec-game',
     color: { bg: '#f6ffed', border: '#52c41a' },
     icon: require('../../assets/images/emojis/cooking.png'),
   },
   {
-    name: 'Trade',
+    name: 'Trades',
     route: '/economy-game',
     color: { bg: '#fff1f0', border: '#f5222d' },
     icon: require('../../assets/images/emojis/economy.png'),
@@ -48,7 +54,7 @@ const subjects = [
     icon: require('../../assets/images/emojis/logic.png'),
   },
   {
-    name: 'Luck',
+    name: 'R.P.S',
     route: '/recess-game',
     color: { bg: '#fff0f6', border: '#eb2f96' },
     icon: require('../../assets/images/emojis/recess.png'),
@@ -141,12 +147,15 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
   const { setMinigameContext, selectedMinigame, setSelectedMinigame } =
     useGame();
   const { jokersOwned } = useJokers();
+  const [gridHeight, setGridHeight] = React.useState(300);
+  const tileHeight = Math.max(0, Math.min(92, (gridHeight - 28) / 3 - 8));
   const balance = useAppSelector(selectBalance);
   // How many owned jokers are below max level (total) and how many of those the
   // player can currently afford. Drives the button badge / pulse state.
   const upgradeInfo = React.useMemo(() => {
     let total = 0;
     let affordable = 0;
+    let minimumCost = Infinity;
     for (const owned of jokersOwned) {
       const std = STANDARDIZED_JOKERS.find(
         (sj) => sj.id.toString() === owned.id.toString()
@@ -158,9 +167,10 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
       const cost = UPGRADE_COSTS[currentLevel];
       if (!cost) continue;
       total += 1;
+      minimumCost = Math.min(minimumCost, cost);
       if (balance >= cost) affordable += 1;
     }
-    return { total, affordable };
+    return { total, affordable, minimumCost };
   }, [jokersOwned, balance]);
   // The button is only interactive when there's a joker to upgrade AND the
   // wallet can pay for at least one of them.
@@ -397,10 +407,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
   const isLockedIn = !!selectedMinigame && !isSpinning;
   const buttonsDisabled =
     disabled || (isLunchPeriod && hasPlayedLunchMinigame) || isSpinning;
-  const displayMessage =
-    isLunchPeriod && hasPlayedLunchMinigame
-      ? 'Game Complete!'
-      : disabledMessage;
+  const isComplete = isLunchPeriod && hasPlayedLunchMinigame;
 
   const renderSubject = (
     subject: (typeof subjects)[number],
@@ -409,11 +416,18 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
     const isHighlighted = highlightedIndex === globalIndex;
     const isWinner = selectedSubject === subject.name;
     const isLocked = isLockedIn && subject.name !== selectedMinigame;
-    const shouldDim =
-      disabled ||
-      (isLunchPeriod && hasPlayedLunchMinigame) ||
-      isLocked ||
-      (!isHighlighted && !isWinner && highlightedIndex !== null);
+    const isActive = isHighlighted || isWinner;
+    // Only the picked (or currently spinning-highlighted) game keeps its
+    // color. Every other tile drops to neutral greys and fades as a whole —
+    // border, background, footer and shadow included — so the pick reads at
+    // a glance.
+    const isMuted =
+      !isActive &&
+      (disabled ||
+        (isLunchPeriod && hasPlayedLunchMinigame) ||
+        isLocked ||
+        highlightedIndex !== null);
+    const accent = isMuted ? MUTED.accent : subject.color.border;
 
     return (
       <Animated.View
@@ -421,50 +435,72 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         style={[
           styles.subjectButtonWrapper,
           isHighlighted && { transform: [{ scale: highlightScale }] },
+          isMuted && styles.mutedWrapper,
         ]}
       >
         <PressableButton
           onPress={() => handleSubjectSelect(subject.name)}
           disabled={buttonsDisabled || isLocked}
-          shadowColor={
-            isHighlighted || isWinner ? '#FFD700' : subject.color.border
-          }
-          shadowOffset={{ width: 0, height: isHighlighted || isWinner ? 6 : 4 }}
-          shadowOpacity={isHighlighted || isWinner ? 0.9 : 0.5}
-          shadowRadius={isHighlighted || isWinner ? 12 : 6}
-          elevation={isHighlighted || isWinner ? 16 : 8}
+          shadowColor={isActive ? '#FFD700' : accent}
+          shadowOffset={{ width: 0, height: isActive ? 6 : isMuted ? 2 : 4 }}
+          shadowOpacity={0.9}
+          shadowRadius={isActive ? 12 : isMuted ? 2 : 6}
+          elevation={isActive ? 16 : isMuted ? 2 : 8}
           style={{ flex: 1 }}
         >
           <View style={styles.subjectContainer}>
-            <Image
-              source={subject.icon}
-              style={[styles.subjectIcon, shouldDim && styles.dimmedIcon]}
-            />
             <View style={styles.subjectBorderWrapper}>
               <PixelBorder
                 borderColor={
-                  isHighlighted || isWinner ? '#FFD700' : subject.color.border
+                  isActive
+                    ? '#FFD700'
+                    : isMuted
+                      ? MUTED.border
+                      : subject.color.border
                 }
-                borderWidth={isHighlighted || isWinner ? 4 : 3}
+                borderWidth={3}
                 backgroundColor={
-                  isHighlighted || isWinner ? '#FFF8DC' : subject.color.bg
+                  isActive ? '#FFF8DC' : isMuted ? MUTED.bg : subject.color.bg
                 }
                 innerPadding={0}
               >
                 <View
-                  style={[
-                    styles.subjectButtonInner,
-                    shouldDim && styles.dimmedButton,
-                  ]}
+                  style={[styles.subjectButtonInner, { height: tileHeight }]}
                 >
+                  <View style={styles.tileTopline}>
+                    <Text style={[styles.tileNumber, { color: accent }]}>
+                      {String(globalIndex + 1).padStart(2, '0')}
+                    </Text>
+                    <View
+                      style={[styles.tileLight, { backgroundColor: accent }]}
+                    />
+                  </View>
+                  <Image
+                    source={subject.icon}
+                    style={[styles.subjectIcon, isMuted && styles.dimmedIcon]}
+                  />
                   <Text
                     style={[
                       styles.subjectText,
-                      (isHighlighted || isWinner) && styles.highlightedText,
+                      isActive && styles.highlightedText,
+                      isMuted && styles.dimmedText,
                     ]}
                   >
                     {subject.name}
                   </Text>
+                  <View
+                    style={[styles.tileFooter, { backgroundColor: accent }]}
+                  >
+                    <Text style={styles.tileFooterText}>
+                      {isComplete
+                        ? 'CLOSED'
+                        : disabled || isLocked
+                          ? 'LOCKED'
+                          : isActive
+                            ? 'PICKED!'
+                            : 'PLAY'}
+                    </Text>
+                  </View>
                 </View>
               </PixelBorder>
             </View>
@@ -476,15 +512,24 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
 
   return (
     <View style={styles.studyContainer}>
-      {buttonsDisabled && isLunchPeriod && !isSpinning && !selectedSubject && (
-        <View style={styles.studyHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.alreadyStudiedText}>{displayMessage}</Text>
-          </View>
+      <View style={styles.studyHeader}>
+        <View style={styles.headerTopline}>
+          <Text style={styles.arcadeEyebrow}>
+            {isLunchPeriod ? 'LUNCH BREAK' : 'AFTER SCHOOL'}
+          </Text>
+          <Text style={styles.sessionBadge}>
+            {isComplete ? 'COMPLETE' : disabled ? 'REST TIME' : 'LETS GO!'}
+          </Text>
         </View>
-      )}
+        <Text style={styles.alreadyStudiedText}>
+          {isComplete ? 'GG. WELL DONE!' : 'WHAT TO PLAY?'}
+        </Text>
+      </View>
 
-      <View style={styles.subjectsContainer}>
+      <View
+        style={styles.subjectsContainer}
+        onLayout={({ nativeEvent }) => setGridHeight(nativeEvent.layout.height)}
+      >
         {/* First Row - 3 subjects */}
         <View style={styles.subjectsRow}>
           {subjects.slice(0, 3).map((subject, i) => renderSubject(subject, i))}
@@ -505,16 +550,12 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         </View>
       </View>
 
-      {/* Floating Upgrade-Jokers FAB, anchored bottom-right so it reads as the
-          standout call-to-action above the Next Period / End Day row (lunch) or
-          above the Back button (after-school). */}
+      {/* Reserve a separate row so upgrades never overlap the subject grid. */}
       <Animated.View
         style={[
-          styles.upgradeFab,
+          styles.upgradeRow,
           {
             transform: [{ scale: upgradePulse }],
-            opacity: canUpgrade ? 1 : 0.5,
-            bottom: !isLunchPeriod && backButtonVisible ? 92 : 16,
           },
         ]}
       >
@@ -529,7 +570,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         >
           <RainbowPixelBorder
             active={canUpgrade}
-            backgroundColor={canUpgrade ? '#FFD700' : '#7c7c70'}
+            backgroundColor={canUpgrade ? '#FFD700' : '#eeeadd'}
           >
             <View style={[styles.upgradeButtonInner, styles.fabClip]}>
               <Image
@@ -537,14 +578,16 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                 style={styles.upgradeButtonJokerIcon}
                 resizeMode="contain"
               />
-              <Text
-                style={[
-                  styles.upgradeButtonText,
-                  !canUpgrade && styles.upgradeButtonTextDim,
-                ]}
-              >
-                {upgradeInfo.total > 0 ? 'Upgrade' : '0'}
-              </Text>
+              <View style={styles.upgradeCopy}>
+                <Text style={styles.upgradeButtonText}>WILDCARD POWER-UP</Text>
+                <Text style={styles.upgradeCaption}>
+                  {upgradeInfo.total === 0
+                    ? 'No wildcards ready to level up'
+                    : canUpgrade
+                      ? 'Ready to level up!'
+                      : `Save $${upgradeInfo.minimumCost.toLocaleString('en-US')} to upgrade`}
+                </Text>
+              </View>
               {canUpgrade && (
                 <View
                   style={[
@@ -555,7 +598,7 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
                   ]}
                 >
                   <Text style={styles.upgradeCountBadgeText}>
-                    {upgradeInfo.total}
+                    {upgradeInfo.affordable}
                   </Text>
                 </View>
               )}
@@ -591,27 +634,37 @@ const StudySubjectSelector = React.memo(function StudySubjectSelector({
         </PressableButton>
       </Animated.View>
 
-      {!isLunchPeriod && backButtonVisible && (
-        <PressableButton
-          onPress={onBack}
-          shadowColor="rgba(185,28,28,1)"
-          shadowOffset={{ width: 0, height: 4 }}
-          shadowOpacity={0.5}
-          shadowRadius={5}
-          elevation={8}
-          style={{ marginBottom: 20, width: '90%', alignSelf: 'center' }}
+      {!isLunchPeriod && (
+        <View
+          style={!backButtonVisible && styles.hiddenBackButton}
+          pointerEvents={backButtonVisible ? 'auto' : 'none'}
+          accessibilityElementsHidden={!backButtonVisible}
+          importantForAccessibility={
+            backButtonVisible ? 'auto' : 'no-hide-descendants'
+          }
         >
-          <PixelBorder
-            borderColor="rgba(185,28,28,1)"
-            borderWidth={3}
-            backgroundColor="rgba(239,68,68,1)"
-            innerPadding={0}
+          <PressableButton
+            onPress={onBack}
+            disabled={!backButtonVisible}
+            shadowColor="rgba(185,28,28,1)"
+            shadowOffset={{ width: 0, height: 4 }}
+            shadowOpacity={0.5}
+            shadowRadius={5}
+            elevation={8}
+            style={{ marginBottom: 20, width: '90%', alignSelf: 'center' }}
           >
-            <View style={styles.backButtonInner}>
-              <Text style={styles.backButtonText}>Back</Text>
-            </View>
-          </PixelBorder>
-        </PressableButton>
+            <PixelBorder
+              borderColor="rgba(185,28,28,1)"
+              borderWidth={3}
+              backgroundColor="rgba(239,68,68,1)"
+              innerPadding={0}
+            >
+              <View style={styles.backButtonInner}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </View>
+            </PixelBorder>
+          </PressableButton>
+        </View>
       )}
 
       <UpgradeJokersModal
@@ -630,35 +683,100 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   studyHeader: {
-    alignItems: 'center',
-    marginBottom: 4,
-    borderRadius: 3,
-    borderWidth: 3,
-    borderColor: colors.gold.light,
-    padding: 4,
+    marginHorizontal: 16,
     marginTop: 4,
-    backgroundColor: 'white',
+    marginBottom: 4,
+    padding: 8,
+    borderWidth: 2,
+    borderColor: '#d6ab52',
+    borderRadius: 12,
+    backgroundColor: '#fff6d9',
+  },
+  headerTopline: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  arcadeEyebrow: {
+    fontFamily: 'PixeloidMono',
+    fontSize: 9,
+    color: '#94602b',
+    flexShrink: 1,
+  },
+  sessionBadge: {
+    fontFamily: 'PixeloidMono',
+    fontSize: 8,
+    color: '#fff9e8',
+    backgroundColor: '#80512d',
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   alreadyStudiedText: {
-    color: colors.brown.primary,
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#70421f',
+    fontSize: 17,
     fontFamily: 'PixeloidMono',
+    marginTop: 4,
+  },
+  headerCaption: {
+    color: '#88683e',
+    fontSize: 10,
+    lineHeight: 15,
+    fontFamily: 'PixeloidMono',
+    marginTop: 5,
+  },
+  tileTopline: {
+    position: 'absolute',
+    top: 4,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 7,
+  },
+  tileNumber: { fontFamily: 'PixeloidMono', fontSize: 8 },
+  tileLight: { width: 5, height: 5, borderRadius: 1 },
+  tileFooter: {
+    alignSelf: 'stretch',
+    paddingVertical: 1,
+    marginTop: 1,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  tileFooterText: {
+    fontFamily: 'PixeloidMono',
+    fontSize: 8,
+    color: '#fff',
     textAlign: 'center',
-    textShadowColor: 'rgba(125,125,125,0.3)',
+    textShadowColor: '#594325',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 1,
+  },
+  upgradeCopy: { flex: 1, gap: 5 },
+  upgradeCaption: {
+    fontFamily: 'PixeloidMono',
+    fontSize: 9,
+    lineHeight: 13,
+    color: '#775b38',
   },
   subjectsContainer: {
     flex: 1,
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 30,
+    minHeight: 0,
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
   },
   subjectsRow: {
+    flex: 1,
+    minHeight: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 15,
+    gap: 12,
   },
   subjectDayTimeButtonWrapper: {
     flex: 1,
@@ -666,57 +784,56 @@ const styles = StyleSheet.create({
   },
   subjectButtonWrapper: {
     flex: 1,
-    aspectRatio: 1,
+    minWidth: 0,
   },
   subjectContainer: {
     width: '100%',
-    height: '90%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   subjectIcon: {
-    width: 50,
-    height: 50,
+    width: '88%',
+    flex: 1,
+    minHeight: 0,
+    maxHeight: 72,
     resizeMode: 'contain',
-    position: 'absolute',
-    top: 0,
-    zIndex: 10,
+    marginVertical: 0,
   },
   disabledIcon: {
     opacity: 0.5,
   },
   dimmedIcon: {
-    opacity: 0.4,
+    opacity: 0.72,
   },
   dimmedButton: {
-    opacity: 0.4,
+    opacity: 0.72,
+  },
+  // Whole-tile fade for unpicked games (border, bg, footer, shadow included).
+  mutedWrapper: {
+    opacity: 0.95,
   },
   dimmedText: {
-    color: '#999',
+    color: '#8a8378',
   },
   highlightedText: {
     color: '#B8860B',
-    fontSize: 13,
+    fontSize: 11,
   },
   subjectBorderWrapper: {
-    width: '90%',
-    marginTop: 25, // Position below the icon
+    width: '100%',
   },
   subjectButtonInner: {
-    height: 68,
-    borderRadius: 12,
+    paddingTop: 2,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    paddingTop: 36, // Space for the icon overlap
-    paddingBottom: 18,
-    paddingHorizontal: 12,
   },
   disabledSubjectButton: {
     opacity: 0.5,
   },
   subjectText: {
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 14,
     fontWeight: 'bold',
     color: '#000000',
     fontFamily: 'PixeloidMono',
@@ -740,10 +857,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
-  upgradeFab: {
-    position: 'absolute',
-    right: 30,
-    zIndex: 30,
+  hiddenBackButton: {
+    opacity: 0,
+  },
+  upgradeRow: {
+    alignSelf: 'stretch',
+    flexShrink: 0,
+    marginHorizontal: 18,
+    marginTop: 4,
+    marginBottom: 6,
   },
   fabClip: {
     borderRadius: 12,
@@ -759,7 +881,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 10,
     gap: 12,
     backgroundColor: 'transparent',
@@ -772,14 +894,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     fontFamily: 'PixeloidMono',
-    textAlign: 'center',
+    textAlign: 'left',
     textShadowColor: 'rgba(255,255,255,0.35)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
   },
   upgradeButtonJokerIcon: {
-    width: 20,
-    height: 20,
+    width: 32,
+    height: 32,
   },
   upgradeButtonTextDim: {
     color: '#2e2e28',

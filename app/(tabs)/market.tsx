@@ -169,7 +169,7 @@ function DebugJokerPanel({
           marginBottom: 6,
         }}
       >
-        Joker Debug
+        Wildcard Debug
       </Text>
 
       {/* 1. Trigger Hustle Joker Selection */}
@@ -185,7 +185,7 @@ function DebugJokerPanel({
           setShowHustleJokerSelection(true);
         }}
       >
-        <Text style={{ color: '#fff', fontSize: 10 }}>Hustle Joker</Text>
+        <Text style={{ color: '#fff', fontSize: 10 }}>Hustle Wildcard</Text>
       </TouchableOpacity>
 
       {/* 2. Trigger Quest Joker Selection */}
@@ -208,7 +208,7 @@ function DebugJokerPanel({
           }
         }}
       >
-        <Text style={{ color: '#fff', fontSize: 10 }}>Quest Joker</Text>
+        <Text style={{ color: '#fff', fontSize: 10 }}>Quest Wildcard</Text>
       </TouchableOpacity>
 
       {/* 3. Trigger Detention Discovery (fake bully event) */}
@@ -1149,7 +1149,7 @@ function Market(props) {
       {showLunchMinigames && (
         <FirstTimeHint
           hintKey="lunch_minigame"
-          message="It's lunch! Play a minigame to earn a Joker that boosts your profits."
+          message="It's lunch! Play a minigame to earn a Wildcard that boosts your profits."
         />
       )}
       <MarketContent {...marketProps} />

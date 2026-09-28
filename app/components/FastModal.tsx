@@ -166,13 +166,15 @@ export default function FastModal({
       <View
         style={[
           styles.modalContainer,
-          position === 'bottom' && styles.modalContainerBottom
+          position === 'bottom' && styles.modalContainerBottom,
+          presentation === 'fullBleed' && styles.modalContainerFullBleed,
         ]}
         pointerEvents="box-none"
       >
         <Animated.View
           style={[
             styles.modal,
+            presentation === 'fullBleed' && styles.modalFullBleed,
             modalStyle,
             presentation === 'framed' && styles.pixelModalHost,
             modalAnimatedStyle,
@@ -204,6 +206,19 @@ const styles = StyleSheet.create({
   modalContainerBottom: {
     justifyContent: 'flex-end',
     paddingBottom: 20,
+  },
+  // Full-bleed scenes (image backdrops) own the whole screen: no side gutter,
+  // no 90% height cap. Without this a screen-sized child overflows the padded
+  // container and its centered content lands off-center.
+  modalContainerFullBleed: {
+    paddingHorizontal: 0,
+  },
+  modalFullBleed: {
+    width: '100%',
+    height: '100%',
+    maxHeight: '100%',
+    flexShrink: 0,
+    justifyContent: 'center',
   },
   modal: {
     maxWidth: '100%',

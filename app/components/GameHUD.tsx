@@ -26,6 +26,7 @@ import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
 import {
   selectBalance,
   selectStashedAmount,
+  selectPiggyBankDisplay,
 } from '../../src/store/slices/walletSlice';
 import { triggerTieredHaptic } from '../../src/utils/hapticTier';
 import {
@@ -142,6 +143,7 @@ function GameHUD({
   // wallet/game state changes. Narrow reads keep GameHUD rerenders tied to what it actually displays.
   const balance = useAppSelector(selectBalance);
   const stashedAmount = useAppSelector(selectStashedAmount);
+  const piggyBankDisplay = useAppSelector(selectPiggyBankDisplay);
   const day = useAppSelector(selectDay);
   const period = useAppSelector(selectPeriod);
   const currentLocation = useAppSelector(selectCurrentLocation);
@@ -461,7 +463,8 @@ function GameHUD({
   }, [locationText]);
 
   // Calculate dynamic font size for piggy bank amount based on text length
-  const piggyAmountText = `$${formatCurrency(stashedAmount || 0)}`;
+  // Debt-style readout: savings minus adoption fee (starts at -fee).
+  const piggyAmountText = `$${formatCurrency(piggyBankDisplay || 0)}`;
   const piggyFontSize = useMemo(() => {
     const textLength = piggyAmountText.length;
     if (textLength <= 8) return 16; // Normal size for amounts like $1000.00

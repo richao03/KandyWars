@@ -82,6 +82,7 @@ export const EMOJI_IMAGES = {
   talkingHead: require('../assets/images/emojis/talkingHead.png'),
   horse: require('../assets/images/emojis/horse.png'),
   sunrise: require('../assets/images/emojis/sunrise.png'),
+  sunset: require('../assets/images/emojis/sunset.png'),
   crystalBall: require('../assets/images/emojis/crystalBall.png'),
   mountain: require('../assets/images/emojis/mountain.png'),
   theater: require('../assets/images/emojis/theater.png'),
@@ -139,6 +140,7 @@ export const EMOJI_TO_IMAGE_MAP = {
   '🗣️': 'talkingHead', // Talking head emoji
   '🐴': 'horse', // Horse emoji
   '🌅': 'sunrise', // Sunrise emoji
+  '🌇': 'sunset', // Sunset emoji
   '🔮': 'crystalBall', // Crystal ball emoji
   '🏔️': 'mountain', // Mountain emoji
   '🎭': 'theater', // Theater masks emoji

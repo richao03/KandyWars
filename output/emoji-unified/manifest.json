@@ -1,0 +1,52 @@
+{
+  "targets": [
+    "diamondHand",
+    "msuic",
+    "cafeteria",
+    "lab",
+    "book",
+    "good",
+    "refresh",
+    "slowcooker",
+    "gym",
+    "recess",
+    "logic",
+    "economy",
+    "art",
+    "geography",
+    "loveheart",
+    "hallpass",
+    "crystalBall",
+    "mountain",
+    "theater",
+    "talkingHead",
+    "horse",
+    "sunrise",
+    "dice",
+    "newspaper",
+    "student",
+    "warning",
+    "door",
+    "celebrate"
+  ],
+  "styleAnchors": [
+    "ice",
+    "mediumRare",
+    "crown",
+    "deli",
+    "sleep",
+    "magic",
+    "homemade",
+    "artifact"
+  ],
+  "generationReferences": [
+    "/Users/Richao/KandyWarz/candyWarz/assets/images/emojis/magic.png",
+    "/Users/Richao/KandyWarz/candyWarz/assets/images/emojis/homemade.png",
+    "/Users/Richao/KandyWarz/candyWarz/assets/images/emojis/crown.png",
+    "/Users/Richao/KandyWarz/candyWarz/assets/images/emojis/artifact.png"
+  ],
+  "prompt": "Use case: style-transfer. Image 1 is the edit target: preserve its identity, recognizable subject, pose, and essential components. All remaining images are FIXED STYLE ANCHORS, not additional subjects. Redraw ONLY the target as one cohesive game inventory sprite matching the anchors: dark teal outlines, pale aqua and mint midtones, salmon/coral pink accents, warm cream highlights and restrained golden accents. Friendly candy-school game theme. Crisp hard-edged pixel art on a 64x64 conceptual grid, single-pixel logical outlines, simple two/three-tone stepped shading, top-left lighting, no gradients, no smooth vector curves, no texture noise. Use larger simple pixel clusters like Magic/Homemade with enough detail to preserve target meaning, not the original target's brown/black-heavy palette. Center ONE icon occupying about 80-88% of a square canvas. TRUE transparent background with alpha; no white/black background, no border frame, no drop shadow, no ground plane, no extra decorations or sparkles unless essential to the target. Do not reproduce the anchor subjects. Output exactly one square icon, not a contact sheet. All lettering that already belongs to the target must remain concise, legible pixel lettering. Assign coherent base colors per material; avoid random multicolored patchwork. Coral only where useful, teal structural outlines, cream highlights. ",
+  "mode": "built-in image_gen",
+  "nativeSize": 64,
+  "exportSize": 256
+}

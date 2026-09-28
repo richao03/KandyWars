@@ -244,7 +244,7 @@ export default function LogicGame({ onComplete }: LogicGameProps) {
       if (completedLevel > 0) {
         // Player completed at least one level, award jokers based on completion
         const jokerCount = completedLevel;
-        const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+        const jokerText = jokerCount > 1 ? `${jokerCount} wildcards` : '1 wildcard';
 
         showModal(
           'Good Try!',

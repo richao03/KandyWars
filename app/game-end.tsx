@@ -113,7 +113,7 @@ export default function GameEndScreen() {
         return {
           current: jokers.length,
           required: 8,
-          label: 'jokers*',
+          label: 'wildcards*',
         };
       case 'minimalist_master':
         return {
@@ -122,7 +122,7 @@ export default function GameEndScreen() {
           label:
             jokers.length === 0 && gameResult === 'won'
               ? 'Achieved!'
-              : 'Used jokers',
+              : 'Used wildcards',
           isBoolean: true,
         };
       case 'high_roller':
@@ -785,7 +785,7 @@ export default function GameEndScreen() {
                   🐷 Piggy Bank
                 </TextWithEmojis>
                 <Text style={styles.statValueRight}>
-                  ${formatCurrency(Math.max(0, stashedAmount))}
+                  ${formatCurrency(stashedAmount - adoptionFee)}
                 </Text>
               </View>
 
@@ -1032,7 +1032,7 @@ export default function GameEndScreen() {
                   imageSize={30}
                   numberOfLines={1}
                 >
-                  🃏 All Jokers Obtained
+                  🃏 All Wildcards Obtained
                 </TextWithEmojis>
 
                 <View style={{ ...styles.jokerGrid }}>
@@ -1052,7 +1052,7 @@ export default function GameEndScreen() {
                   ))}
                 </View>
                 <Text style={{ ...styles.subtitle, fontSize: 14 }}>
-                  Try out different combinations of jokers for different play
+                  Try out different combinations of wildcards for different play
                   styles!
                 </Text>
               </PixelBorder>

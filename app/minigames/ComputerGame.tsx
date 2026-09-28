@@ -369,7 +369,7 @@ export default function ComputerGame({ onComplete }: ComputerGameProps) {
               );
               const jokerCount = completedLevel;
               const jokerText =
-                jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+                jokerCount > 1 ? `${jokerCount} wildcards` : '1 wildcard';
               showModal(
                 'Breach Partial Success!',
                 `You ran out of errors but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,

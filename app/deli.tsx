@@ -421,7 +421,7 @@ export default function Deli({ onBack }: DeliPageProps = {}) {
                 activeTab === 'joker' && styles.tabTextActive,
               ]}
             >
-              Jokers
+              Wildcards
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

@@ -82,7 +82,7 @@ function DeliJokerShop({
   if (deliJokerIds.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No jokers available</Text>
+        <Text style={styles.emptyText}>No wildcards available</Text>
       </View>
     );
   }

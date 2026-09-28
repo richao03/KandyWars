@@ -44,7 +44,9 @@ export default function AdoptionReadyModal({
             style={styles.petImage}
             resizeMode="contain"
           />
-          <TextWithEmojis style={styles.title}>You did it! 🎉</TextWithEmojis>
+          <TextWithEmojis style={styles.title}>
+            🎉 You did it! 🎉
+          </TextWithEmojis>
           <TextWithEmojis style={styles.message} imageSize={12}>
             {`You've made enough money to adopt ${pet.name}!\n\nDo you want to go get them now, or keep trading to run up the score?`}
           </TextWithEmojis>
@@ -117,6 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
+    fontFamily: 'PixeloidMono',
     fontSize: 22,
     fontWeight: 'bold',
     color: '#6b4423',
@@ -124,7 +127,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   message: {
-    fontSize: 15,
+    fontFamily: 'PixeloidMono',
+    fontSize: 13,
     color: '#8b4513',
     textAlign: 'center',
     lineHeight: 22,
@@ -140,6 +144,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmButtonText: {
+    fontFamily: 'PixeloidMono',
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
@@ -150,8 +155,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
+    fontFamily: 'PixeloidMono',
     color: '#374151',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

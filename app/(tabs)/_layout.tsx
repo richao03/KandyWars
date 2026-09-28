@@ -1,18 +1,24 @@
-import { Tabs, usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Tabs, usePathname } from 'expo-router';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Animated, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useGame } from '../../src/hooks/useGame';
 import { useTabBar } from '../../src/hooks/useTabBar';
-import { SoundEffects } from '../../src/utils/soundEffects';
-import GameHUD from '../components/GameHUD';
-import TutorialOverlay from '../components/TutorialOverlay';
+import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import {
   advanceTutorial,
   selectTutorialStep,
   skipTutorial,
 } from '../../src/store/slices/tutorialSlice';
-import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
+import { SoundEffects } from '../../src/utils/soundEffects';
+import GameHUD from '../components/GameHUD';
+import TutorialOverlay from '../components/TutorialOverlay';
 
 // AdBanner is rendered globally in the root layout (app/_layout.tsx) so it
 // shows on every screen except the title-screen flow.
@@ -205,12 +211,37 @@ export default function TabLayout() {
     // Map routes to their GameHUD configurations (using actual pathname format)
     const routeConfig: Record<
       string,
-      { header: string; location: string; bgColor: string; theme: 'school' | 'evening' }
+      {
+        header: string;
+        location: string;
+        bgColor: string;
+        theme: 'school' | 'evening';
+      }
     > = {
-      '/jokers': { header: 'JOKERS', location: 'Collection', bgColor: '#00512C', theme: 'evening' },
-      '/price-history': { header: 'Price History', location: 'History', bgColor: '#1a1a1a', theme: 'evening' },
-      '/settings': { header: 'Game Settings', location: 'Office', bgColor: '#fef7e7', theme: 'school' },
-      '/home': { header: 'Home', location: 'Home', bgColor: '#00512C', theme: 'evening' },
+      '/jokers': {
+        header: 'WILDCARDS',
+        location: 'Collection',
+        bgColor: '#00512C',
+        theme: 'evening',
+      },
+      '/price-history': {
+        header: 'Price Trends',
+        location: 'Data Center',
+        bgColor: '#1a1a1a',
+        theme: 'evening',
+      },
+      '/settings': {
+        header: 'Game Settings',
+        location: 'Office',
+        bgColor: '#fef7e7',
+        theme: 'school',
+      },
+      '/home': {
+        header: 'Home',
+        location: 'Home',
+        bgColor: '#00512C',
+        theme: 'evening',
+      },
     };
 
     const config = routeConfig[pathname];
@@ -263,7 +294,13 @@ export default function TabLayout() {
       style={{ flex: 1, backgroundColor: layoutBgColor }}
     >
       {/* Shared GameHUD - stays mounted across tab switches for smooth marquee */}
-      <View style={{ opacity: gameHUDConfig.visible ? 1 : 0, height: gameHUDConfig.visible ? undefined : 0, overflow: 'hidden' }}>
+      <View
+        style={{
+          opacity: gameHUDConfig.visible ? 1 : 0,
+          height: gameHUDConfig.visible ? undefined : 0,
+          overflow: 'hidden',
+        }}
+      >
         <GameHUD
           theme={gameHUDConfig.theme}
           customHeaderText={gameHUDConfig.customHeaderText}
@@ -302,7 +339,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="jokers"
           options={{
-            title: 'Jokers',
+            title: 'Wildcards',
             tabBarIcon: ({ color, size }) => (
               <Image
                 source={require('../../assets/images/emojis/joker.png')}
@@ -328,7 +365,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="price-history"
           options={{
-            title: 'History',
+            title: 'Trends',
             tabBarIcon: ({ color, size }) => (
               <Image
                 source={require('../../assets/images/emojis/chart.png')}
@@ -378,9 +415,7 @@ export default function TabLayout() {
           spotlight), and 11 (congrats). Step 9 (All-tab spotlight) is rendered
           inside jokers.tsx where the tab lives. Rendered at the layout level
           so it persists across tab switches. */}
-      {(tutorialStep === 8 ||
-        tutorialStep === 10 ||
-        tutorialStep === 11) && (
+      {(tutorialStep === 8 || tutorialStep === 10 || tutorialStep === 11) && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <TutorialOverlay
             tutorialStep={tutorialStep}
@@ -393,4 +428,3 @@ export default function TabLayout() {
     </View>
   );
 }
-

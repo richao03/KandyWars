@@ -416,7 +416,7 @@ export default function HomeEcGame({ onComplete }: HomeEcGameProps) {
           `Game ended after completing level ${currentCompletedLevel}`
         );
       const jokerCount = currentCompletedLevel;
-      const jokerText = jokerCount === 1 ? '1 joker' : `${jokerCount} jokers`;
+      const jokerText = jokerCount === 1 ? '1 wildcard' : `${jokerCount} wildcards`;
 
       showModal(
         'Great Effort!',

@@ -125,7 +125,8 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
   const hasBonus = !!depositBonusJoker && mode === 'deposit' && amount > 0;
   const displayAmount = hasBonus ? amount * 1.1 : amount;
 
-  const stashedText = formatCurrency(stashedAmount);
+  // Headline is debt-style: savings minus fee (starts at -fee, climbs to 0).
+  const stashedText = formatCurrency(stashedAmount - adoptionFee);
   const stashedFontSize = useMemo(() => {
     if (stashedText.length <= 8) return 28;
     if (stashedText.length <= 10) return 24;
@@ -133,11 +134,13 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
     return 18;
   }, [stashedText]);
 
-  // Debt progress
-  const debtPaid = stashedAmount + adoptionFee; // how much of the fee is paid (stash starts negative)
-  const debtProgress =
-    adoptionFee > 0 ? Math.max(0, Math.min(1, debtPaid / adoptionFee)) : 0;
-  const isDebtFree = stashedAmount >= 0;
+  // Adoption-goal progress. The piggy bank holds positive savings (it starts at
+  // 0); the adoption fee is the target. The win check is balance + stash >= fee,
+  // so progress counts both, matching PiggyBankDetailModal.
+  const netWorth = balance + stashedAmount;
+  const goalProgress =
+    adoptionFee > 0 ? Math.max(0, Math.min(1, netWorth / adoptionFee)) : 0;
+  const goalReached = adoptionFee > 0 && netWorth >= adoptionFee;
 
   const handleSliderChange = (pct: number) => {
     let val = Math.round((pct / 100) * maxAmount * 100) / 100;
@@ -220,25 +223,27 @@ export default function PiggyBankPage({ onBack }: PiggyBankPageProps) {
                   >
                     {stashedText}
                   </Text>
-                  {/* Debt progress bar */}
-                  {!isDebtFree && (
+                  {/* Adoption-goal progress bar */}
+                  {!goalReached && (
                     <View style={styles.debtBarContainer}>
                       <View style={styles.debtBarBg}>
                         <View
                           style={[
                             styles.debtBarFill,
-                            { width: `${debtProgress * 100}%` },
+                            { width: `${goalProgress * 100}%` },
                           ]}
                         />
                       </View>
                       <Text style={styles.debtLabel}>
-                        {formatCurrency(Math.max(0, debtPaid))} /{' '}
-                        {formatCurrency(adoptionFee)} paid
+                        {formatCurrency(Math.max(0, netWorth))} /{' '}
+                        {formatCurrency(adoptionFee)} toward adoption
                       </Text>
                     </View>
                   )}
-                  {isDebtFree && (
-                    <Text style={styles.debtFreeLabel}>Debt Free!</Text>
+                  {goalReached && (
+                    <Text style={styles.debtFreeLabel}>
+                      Adoption fee covered! 🎉
+                    </Text>
                   )}
                 </Animated.View>
                 {stashedChange !== null && (

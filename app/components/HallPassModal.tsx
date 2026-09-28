@@ -15,7 +15,6 @@ import {
   getHallPassActiveLimit,
   HallPass,
 } from '../../src/store/slices/hallPassSlice';
-import { computeHallPassModifiers } from '../../src/utils/computeHallPassModifiers';
 import FastModal from './FastModal';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
@@ -128,7 +127,6 @@ export default function HallPassModal({
   const [localSelectedIds, setLocalSelectedIds] = useState<string[]>(
     selectedPassIds || []
   );
-  const [expandedPassId, setExpandedPassId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'unlocked'>('all');
 
   const isSelectionMode = viewMode === 'selection' && !!onSelectPass;
@@ -137,7 +135,6 @@ export default function HallPassModal({
   React.useEffect(() => {
     if (visible) {
       setLocalSelectedIds(selectedPassIds || []);
-      setExpandedPassId(null);
     }
   }, [visible, selectedPassIds]);
 
@@ -146,14 +143,8 @@ export default function HallPassModal({
     [allPasses, localSelectedIds]
   );
 
-  const computedModifiers = useMemo(() => {
-    if (!visible || !isSelectionMode || selectedPasses.length === 0)
-      return null;
-    return computeHallPassModifiers(selectedPasses);
-  }, [visible, isSelectionMode, selectedPasses]);
-
   // Effective cap on simultaneously-active passes, given the current
-  // selection (an extension pass like Overachiever raises it from 3 → 4).
+  // selection (an extension pass like Overachiever raises it from 3 → 5).
   const maxActivePasses = useMemo(
     () => getHallPassActiveLimit(selectedPasses),
     [selectedPasses]
@@ -239,9 +230,6 @@ export default function HallPassModal({
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const toggleExpand = (passId: string) =>
-    setExpandedPassId((cur) => (cur === passId ? null : passId));
-
   const toggleSelect = (passId: string) => {
     if (!isSelectionMode) return;
     const isCurrentlySelected = localSelectedIds.includes(passId);
@@ -331,43 +319,9 @@ export default function HallPassModal({
           </Animated.Text>
         </View>
 
-        {computedModifiers ? (
-          <View style={styles.chipRow}>
-            {computedModifiers.salePriceBonusPercent > 0 && (
-              <Chip
-                text={`💰 +${(computedModifiers.salePriceBonusPercent * 5).toFixed(0)}% profit`}
-              />
-            )}
-            {computedModifiers.inventoryBonusSlots > 0 && (
-              <Chip
-                text={`🎒 +${computedModifiers.inventoryBonusSlots} slots`}
-              />
-            )}
-            {computedModifiers.allowanceBonusPercent > 0 && (
-              <Chip
-                text={`💵 +${computedModifiers.allowanceBonusPercent}% allowance`}
-              />
-            )}
-            {computedModifiers.jokerBonusCount > 0 && (
-              <Chip
-                text={`🃏 +${computedModifiers.jokerBonusCount} joker${
-                  computedModifiers.jokerBonusCount !== 1 ? 's' : ''
-                }`}
-              />
-            )}
-            {computedModifiers.rerollBonusCount > 0 && (
-              <Chip
-                text={`🔄 +${computedModifiers.rerollBonusCount} reroll${
-                  computedModifiers.rerollBonusCount !== 1 ? 's' : ''
-                }`}
-              />
-            )}
-          </View>
-        ) : (
-          <Text style={styles.slotsHint}>
-            Clip up to {maxActivePasses} passes to your backpack
-          </Text>
-        )}
+        <Text style={styles.slotsHint}>
+          Choose up to {maxActivePasses} abilities
+        </Text>
       </View>
     );
   };
@@ -378,148 +332,94 @@ export default function HallPassModal({
     const isSelected = isSelectionMode
       ? localSelectedIds.includes(pass.id)
       : selectedPassIds.includes(pass.id);
-    const isExpanded = expandedPassId === pass.id;
     const summary = pass.effects.map((e) => e.description).join(' · ');
 
     return (
       <View key={pass.id} style={styles.cardWrap}>
         <PixelBorder
-          borderColor={isUnlocked ? rs.border : '#c9c9c9'}
+          borderColor={
+            isSelected ? '#15803d' : isUnlocked ? rs.border : '#c9c9c9'
+          }
           borderWidth={isSelected ? 4 : 3}
           backgroundColor={isUnlocked ? rs.bg : '#f1f1f1'}
           innerPadding={0}
         >
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => toggleExpand(pass.id)}
+            onPress={() => toggleSelect(pass.id)}
+            disabled={!isSelectionMode || !isUnlocked}
+            accessibilityRole={
+              isSelectionMode && isUnlocked ? 'button' : undefined
+            }
+            accessibilityState={{ selected: isSelected, disabled: !isUnlocked }}
+            accessibilityLabel={`${pass.name}. ${summary}${!isUnlocked ? `. Unlock: ${pass.unlockRequirement}` : ''}`}
             style={styles.card}
           >
-            {/* Left punched stripe */}
             <View
               style={[
-                styles.stripe,
-                { backgroundColor: isUnlocked ? rs.stripe : '#d4d4d4' },
+                styles.passBanner,
+                { backgroundColor: isUnlocked ? rs.border : '#737373' },
               ]}
             >
-              <View style={styles.punchHole} />
+              <Text style={styles.passName}>{pass.name}</Text>
             </View>
-
-            {/* Icon */}
-            <View
-              style={[
-                styles.iconFrame,
-                { borderColor: isUnlocked ? rs.border : '#bdbdbd' },
-                !isUnlocked && styles.iconFrameLocked,
-              ]}
-            >
-              <Image
-                source={isUnlocked ? iconFor(pass.id) : LOCK_ICON}
-                style={[styles.icon, !isUnlocked && { opacity: 0.55 }]}
-              />
-            </View>
-
-            {/* Text */}
-            <View style={styles.cardText}>
-              <View style={styles.nameRow}>
-                <Text
-                  style={[
-                    styles.passName,
-                    { color: isUnlocked ? rs.text : '#8a8a8a' },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {pass.name}
-                </Text>
+            <View style={styles.abilityBody}>
+              <View
+                style={[
+                  styles.artStage,
+                  { backgroundColor: isUnlocked ? rs.bg : '#e5e5e5' },
+                ]}
+              >
                 <View
                   style={[
-                    styles.rarityPill,
-                    { backgroundColor: isUnlocked ? rs.border : '#bdbdbd' },
+                    styles.artStripe,
+                    { backgroundColor: isUnlocked ? rs.stripe : '#d4d4d4' },
                   ]}
-                >
-                  <Text style={styles.rarityPillText}>
-                    {rs.label.toUpperCase()}
-                  </Text>
+                />
+                <View style={styles.iconSticker}>
+                  <Image
+                    source={iconFor(pass.id)}
+                    style={[styles.icon, !isUnlocked && { opacity: 0.45 }]}
+                  />
                 </View>
+                {!isUnlocked && (
+                  <Image source={LOCK_ICON} style={styles.lockIcon} />
+                )}
               </View>
-              <Text
-                style={[
-                  styles.summary,
-                  { color: isUnlocked ? colors.gray.dark : '#9a9a9a' },
-                ]}
-                numberOfLines={isExpanded ? undefined : 2}
-              >
-                {summary}
-              </Text>
-              {!isUnlocked && (
-                <Text
-                  style={styles.howToEarn}
-                  numberOfLines={isExpanded ? undefined : 1}
-                >
-                  🔒 {pass.unlockRequirement}
-                </Text>
-              )}
-
-              {isExpanded && (
-                <View style={styles.expanded}>
-                  <Text style={styles.flavor}>“{pass.description}”</Text>
-                  {isUnlocked && (
-                    <Text style={styles.earnedLine}>
-                      ✓ Earned: {pass.unlockRequirement}
-                    </Text>
-                  )}
-                </View>
-              )}
+              <View style={styles.cardText}>
+                <Text style={styles.summary}>{summary}</Text>
+                {!isUnlocked && (
+                  <Text style={styles.howToEarn}>
+                    Unlock: {pass.unlockRequirement}
+                  </Text>
+                )}
+              </View>
             </View>
-
-            {/* Right action */}
-            <View style={styles.cardRight}>
-              {isSelectionMode && isUnlocked ? (
-                <TouchableOpacity
-                  onPress={() => toggleSelect(pass.id)}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            {isUnlocked && (isSelectionMode || isSelected) && (
+              <View style={styles.passFooter}>
+                <View
                   style={[
-                    styles.clipButton,
-                    isSelected
-                      ? {
-                          backgroundColor: colors.green.success,
-                          borderColor: '#15803d',
-                        }
-                      : { backgroundColor: '#fffaf0', borderColor: rs.border },
+                    styles.selectionPill,
+                    { backgroundColor: isSelected ? '#15803d' : rs.bg },
                   ]}
                 >
                   <Text
                     style={[
-                      styles.clipText,
+                      styles.selectionText,
                       { color: isSelected ? '#fff' : rs.text },
                     ]}
                   >
-                    {isSelected ? '✓' : 'CLIP'}
+                    {isSelected
+                      ? isSelectionMode
+                        ? 'Selected'
+                        : 'Active'
+                      : 'Use this pass'}
                   </Text>
-                </TouchableOpacity>
-              ) : isSelected ? (
-                <View
-                  style={[
-                    styles.clipButton,
-                    {
-                      backgroundColor: colors.green.success,
-                      borderColor: '#15803d',
-                    },
-                  ]}
-                >
-                  <Text style={[styles.clipText, { color: '#fff' }]}>✓</Text>
                 </View>
-              ) : null}
-              <Text style={styles.chevron}>{isExpanded ? '▾' : '▸'}</Text>
-            </View>
+              </View>
+            )}
           </TouchableOpacity>
         </PixelBorder>
-
-        {isSelected && (
-          <View style={styles.clippedTag} pointerEvents="none">
-            <Text style={styles.clippedTagText}>CLIPPED</Text>
-          </View>
-        )}
 
         {rejectedPassId === pass.id && (
           <Animated.View
@@ -557,10 +457,8 @@ export default function HallPassModal({
         <View style={styles.header}>
           <Image source={DEFAULT_ICON} style={styles.titleIcon} />
           <View>
-            <Text style={styles.title}>Hall Pass Binder</Text>
-            <Text style={styles.subtitle}>
-              Permanent perks. Pick your loadout.
-            </Text>
+            <Text style={styles.title}>Hall Passes</Text>
+            <Text style={styles.subtitle}>Small pass. Big perks.</Text>
           </View>
         </View>
 
@@ -714,14 +612,6 @@ export default function HallPassModal({
 // ─────────────────────────────────────────────────────────────────────────────
 // Bits
 // ─────────────────────────────────────────────────────────────────────────────
-function Chip({ text }: { text: string }) {
-  return (
-    <View style={styles.chip}>
-      <Text style={styles.chipText}>{text}</Text>
-    </View>
-  );
-}
-
 function FilterChip({
   label,
   active,
@@ -857,26 +747,6 @@ const styles = StyleSheet.create({
     color: colors.brown.secondary,
     fontStyle: 'italic',
   },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
-  },
-  chip: {
-    backgroundColor: '#fffaf0',
-    borderWidth: 2,
-    borderColor: colors.brown.secondary,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  chipText: {
-    fontFamily: MONO,
-    fontSize: 10,
-    color: colors.brown.primary,
-    fontWeight: 'bold',
-  },
 
   // Filter
   filterRow: { flexDirection: 'row', gap: 6, marginBottom: 6 },
@@ -936,121 +806,92 @@ const styles = StyleSheet.create({
   },
 
   // Card
-  cardWrap: { marginBottom: 10 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingRight: 8,
-    paddingLeft: 0,
+  cardWrap: {
+    marginBottom: 14,
+    shadowColor: '#694522',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.16,
+    shadowRadius: 0,
+    elevation: 2,
   },
-  stripe: {
-    width: 14,
-    alignSelf: 'stretch',
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-    alignItems: 'center',
-    paddingTop: 6,
-    marginRight: 8,
-  },
-  punchHole: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fef7e7',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.25)',
-  },
-  iconFrame: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    backgroundColor: '#fffaf0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  iconFrameLocked: { backgroundColor: '#e5e5e5' },
-  icon: { width: 28, height: 28, resizeMode: 'contain' },
-  cardText: { flex: 1 },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 2,
+  card: { paddingVertical: 6 },
+  passBanner: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginHorizontal: 5,
   },
   passName: {
-    flexShrink: 1,
-    fontSize: 14,
-    fontWeight: 'bold',
-    fontFamily: MONO,
-  },
-  rarityPill: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 },
-  rarityPillText: {
-    fontFamily: MONO,
-    fontSize: 7,
-    fontWeight: 'bold',
+    fontSize: 13,
+    lineHeight: 18,
     color: '#fff',
-    letterSpacing: 1,
+    fontWeight: 'bold',
+    fontFamily: MONO,
   },
-  summary: { fontFamily: MONO, fontSize: 10, lineHeight: 14 },
+  abilityBody: { flexDirection: 'row', alignItems: 'stretch', minHeight: 108 },
+  artStage: {
+    width: 86,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginLeft: 5,
+  },
+  artStripe: {
+    position: 'absolute',
+    width: 160,
+    height: 34,
+    transform: [{ rotate: '-40deg' }],
+    opacity: 0.5,
+  },
+  iconSticker: {
+    width: 68,
+    height: 68,
+    borderRadius: 12,
+    backgroundColor: '#fffaf0',
+    borderWidth: 3,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '-6deg' }],
+  },
+  icon: { width: 56, height: 56, resizeMode: 'contain' },
+  lockIcon: {
+    position: 'absolute',
+    right: 5,
+    bottom: 8,
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
+  },
+  cardText: {
+    flex: 1,
+    minWidth: 0,
+    padding: 12,
+    justifyContent: 'center',
+    backgroundColor: '#fffaf0',
+    marginRight: 5,
+  },
+  summary: {
+    fontFamily: MONO,
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#4b301d',
+    fontWeight: 'bold',
+  },
+  passFooter: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  selectionPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 5 },
+  selectionText: { fontFamily: MONO, fontSize: 11, fontWeight: 'bold' },
   howToEarn: {
     fontFamily: MONO,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 16,
     color: '#7a5200',
     marginTop: 3,
     fontWeight: 'bold',
-  },
-  expanded: {
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.12)',
-    gap: 3,
-  },
-  flavor: {
-    fontFamily: MONO,
-    fontSize: 10,
-    fontStyle: 'italic',
-    color: colors.gray.medium,
-  },
-  earnedLine: {
-    fontFamily: MONO,
-    fontSize: 10,
-    color: '#15803d',
-    fontWeight: 'bold',
-  },
-  cardRight: { alignItems: 'center', marginLeft: 6, gap: 4 },
-  clipButton: {
-    minWidth: 40,
-    height: 28,
-    paddingHorizontal: 6,
-    borderRadius: 6,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clipText: { fontFamily: MONO, fontSize: 11, fontWeight: 'bold' },
-  chevron: { fontSize: 12, color: colors.gray.medium, fontFamily: MONO },
-  clippedTag: {
-    position: 'absolute',
-    top: -6,
-    right: 10,
-    backgroundColor: colors.green.success,
-    borderWidth: 2,
-    borderColor: '#15803d',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    transform: [{ rotate: '3deg' }],
-  },
-  clippedTagText: {
-    fontFamily: MONO,
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 1,
   },
   rejectFlash: { backgroundColor: 'rgba(220, 38, 38, 0.55)', borderRadius: 10 },
 

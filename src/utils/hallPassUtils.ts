@@ -113,7 +113,7 @@ export class HallPassUtils {
       .filter(effect => effect.type === 'joker_bonus')
       .reduce((sum, effect) => sum + effect.value, 0);
     if (jokerBonus > 0) {
-      summary.push(`+${jokerBonus}% joker finding chance`);
+      summary.push(`+${jokerBonus}% wildcard finding chance`);
     }
 
     const specialEffects = hallPassEffects.filter(effect => effect.type === 'special');

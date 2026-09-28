@@ -68,7 +68,7 @@ const rootReducer = combineReducers({
 // Persist configuration
 const persistConfig = {
   key: 'root',
-  version: 9, // Increment version to trigger migration
+  version: 10, // Increment version to trigger migration
   storage: AsyncStorage,
   whitelist: ['game', 'wallet', 'inventory', 'joker', 'seed', 'dailyStats', 'priceDoubling', 'hallPass', 'hallPassModifiers', 'minigameTracking', 'scoreboard', 'localAnalytics', 'userObject', 'merchant', 'tutorial', 'hustle', 'quest', 'settings', 'jokerStats', 'shopkeeper', 'juiceSettings'], // Only persist these slices
   blacklist: ['flavorText', 'eventHandler', 'candySales', 'tabBar'], // Don't persist these
@@ -209,6 +209,15 @@ const persistConfig = {
         if (!Array.isArray(state.wallet.stashHistory)) {
           state.wallet.stashHistory = [];
         }
+      }
+    }
+
+    // Migration to version 10: Overachiever now grants +2 active slots (3 → 5).
+    // Pass definitions are persisted, so force a refresh from static data.
+    if (state && state._persist?.version < 10) {
+      if (__DEV__) console.log('🔄 Migrating to version 10: Refreshing hall pass definitions (Overachiever +2)');
+      if (state.hallPass) {
+        state.hallPass.isLoaded = false;
       }
     }
 

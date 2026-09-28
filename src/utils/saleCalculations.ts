@@ -888,7 +888,7 @@ const JOKER_EMOJI_MAP: Record<number, string> = {
   [JOKER_IDS.TROPICAL_IMPORT]: '🍍',
   [JOKER_IDS.EVEN_STEVENS]: '⚖️',
   [JOKER_IDS.ODD_TODD]: '🎭',
-  [JOKER_IDS.GOLDEN_HOUR]: '🌅',
+  [JOKER_IDS.GOLDEN_HOUR]: '🌇',
   [JOKER_IDS.PURSUASION]: '🗣️',
   [JOKER_IDS.VACUUM_SEALER]: '📦',
   [JOKER_IDS.EARLY_BIRD]: '🌅',
@@ -929,5 +929,5 @@ function _getJokerName(id: number): string {
   // Use the canonical id→name registry so every joker (incl. multiplier
   // jokers like Hoarder/Survivor) resolves to its real name — which the
   // transaction modal then keys its icon lookup off of.
-  return JOKER_NAMES[id] || 'Joker';
+  return JOKER_NAMES[id] || 'Wildcard';
 }

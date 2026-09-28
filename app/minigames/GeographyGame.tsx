@@ -322,7 +322,7 @@ export default function GeographyGame({ onComplete }: GeographyGameProps) {
 
     if (completedLevel > 0) {
       const jokerCount = completedLevel;
-      const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+      const jokerText = jokerCount > 1 ? `${jokerCount} wildcards` : '1 wildcard';
 
       showModal(
         'Nice Try!',

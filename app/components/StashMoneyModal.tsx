@@ -42,7 +42,7 @@ function StashMoneyModal({
   onConfirm,
   isDroneMode = false,
 }: StashMoneyModalProps) {
-  const { balance, stashedAmount, stashMoney } = useWallet();
+  const { balance, stashedAmount, adoptionFee, stashMoney } = useWallet();
   const { jokers } = useJokers();
   const dispatch = useAppDispatch();
 
@@ -261,7 +261,7 @@ function StashMoneyModal({
               <Text style={styles.stashedLabel}>Currently Stashed</Text>
               <Animated.View style={animatedShakeStyle}>
                 <Text style={styles.stashedAmount}>
-                  ${formatCurrency(stashedAmount)}
+                  ${formatCurrency(stashedAmount - adoptionFee)}
                 </Text>
               </Animated.View>
 
@@ -420,8 +420,10 @@ export default React.memo(StashMoneyModal);
 
 const styles = StyleSheet.create({
   background: {
-    width: '100%',
+    alignSelf: 'stretch',
+    marginHorizontal: 10,
     minHeight: 700,
+    maxHeight: '90%',
     borderRadius: 20,
     overflow: 'hidden',
   },

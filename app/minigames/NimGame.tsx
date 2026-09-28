@@ -312,7 +312,7 @@ export default function NimGame({ onComplete }: NimGameProps) {
         if (completedLevel > 0) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           const jokerCount = completedLevel;
-          const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+          const jokerText = jokerCount > 1 ? `${jokerCount} wildcards` : '1 wildcard';
           showModal(
             'You Took the Last Student!',
             `You lost, but you completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,

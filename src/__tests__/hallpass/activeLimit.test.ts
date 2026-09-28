@@ -20,8 +20,8 @@ describe('Hall pass active-slot limit', () => {
     expect(getHallPassActiveLimit([])).toBe(3);
   });
 
-  it('Overachiever raises the limit from 3 to 4', () => {
-    expect(getHallPassActiveLimit([byId('overachiever')])).toBe(4);
+  it('Overachiever raises the limit from 3 to 5', () => {
+    expect(getHallPassActiveLimit([byId('overachiever')])).toBe(5);
     expect(byId('overachiever').effects[0].type).toBe('extra_active_slot');
   });
 
@@ -36,20 +36,25 @@ describe('Hall pass active-slot limit', () => {
     expect(state.selectedPassIds).not.toContain('junior_genius');
   });
 
-  it('allows a 4th pass once Overachiever is active', () => {
+  it('allows a 4th and 5th pass once Overachiever is active', () => {
     const state = select(initialState, [
       'no_longer_freshman',
       'sophomore_swagger',
       'maximalist',
-      'overachiever', // raises cap to 4 — allowed as the 4th
+      'overachiever', // raises cap to 5 — allowed as the 4th
     ]);
     expect(state.selectedPassIds).toHaveLength(4);
     expect(state.selectedPassIds).toContain('overachiever');
 
-    // A 5th is still rejected.
-    const more = select(state, ['junior_genius']);
-    expect(more.selectedPassIds).toHaveLength(4);
-    expect(more.selectedPassIds).not.toContain('junior_genius');
+    // A 5th is allowed.
+    const five = select(state, ['junior_genius']);
+    expect(five.selectedPassIds).toHaveLength(5);
+    expect(five.selectedPassIds).toContain('junior_genius');
+
+    // A 6th is still rejected.
+    const six = select(five, ['senior_executive']);
+    expect(six.selectedPassIds).toHaveLength(5);
+    expect(six.selectedPassIds).not.toContain('senior_executive');
   });
 
   it('deselecting always works even at the cap', () => {

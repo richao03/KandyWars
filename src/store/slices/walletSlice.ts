@@ -249,6 +249,14 @@ export default walletSlice.reducer;
 export const selectBalance = (state: { wallet: WalletState }) => state.wallet.balance;
 export const selectStashedAmount = (state: { wallet: WalletState }) => state.wallet.stashedAmount;
 export const selectAdoptionFee = (state: { wallet: WalletState }) => state.wallet.adoptionFee;
+/**
+ * Debt-style number shown on every piggy bank readout: savings minus the
+ * adoption fee. A fresh run reads -fee (e.g. -12,000.00) and climbs toward 0
+ * as the player deposits; positive once the fee is covered. Internally the
+ * stash stays a positive savings figure (see initialState).
+ */
+export const selectPiggyBankDisplay = (state: { wallet: WalletState }) =>
+  state.wallet.stashedAmount - state.wallet.adoptionFee;
 const EMPTY_STASH_HISTORY: StashEntry[] = [];
 export const selectStashHistory = (state: { wallet: WalletState }) =>
   state.wallet.stashHistory ?? EMPTY_STASH_HISTORY;

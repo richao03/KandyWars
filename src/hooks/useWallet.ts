@@ -162,7 +162,7 @@ export const useWallet = () => {
     if (jokers && jokers.length > 0 && stashedAmount > 0) {
       const stashBonusEffects = processEffectsByTarget(jokers, 'stash_allowance_bonus');
       for (const effect of stashBonusEffects) {
-        // stashedAmount can be negative (debt), only apply if positive
+        // Guard against a zero/negative stash (e.g. legacy saves); only apply if positive
         if (stashedAmount > 0) {
           const bonus = Math.round(stashedAmount * effect.amount);
           finalAllowance += bonus;

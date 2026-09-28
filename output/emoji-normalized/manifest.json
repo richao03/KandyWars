@@ -1,0 +1,107 @@
+{
+  "streetSmart": {
+    "original_size": [
+      256,
+      256
+    ],
+    "native_size": [
+      64,
+      64
+    ],
+    "export_size": [
+      256,
+      256
+    ],
+    "opaque_bounds": [
+      13,
+      4,
+      51,
+      60
+    ],
+    "backup": "originals/streetSmart.png"
+  },
+  "rushing": {
+    "original_size": [
+      256,
+      256
+    ],
+    "native_size": [
+      64,
+      64
+    ],
+    "export_size": [
+      256,
+      256
+    ],
+    "opaque_bounds": [
+      4,
+      11,
+      60,
+      52
+    ],
+    "backup": "originals/rushing.png"
+  },
+  "trident": {
+    "original_size": [
+      112,
+      256
+    ],
+    "native_size": [
+      64,
+      64
+    ],
+    "export_size": [
+      256,
+      256
+    ],
+    "opaque_bounds": [
+      20,
+      4,
+      44,
+      60
+    ],
+    "backup": "originals/trident.png"
+  },
+  "mediumRare": {
+    "original_size": [
+      256,
+      256
+    ],
+    "native_size": [
+      64,
+      64
+    ],
+    "export_size": [
+      256,
+      256
+    ],
+    "opaque_bounds": [
+      4,
+      15,
+      60,
+      49
+    ],
+    "backup": "originals/mediumRare.png"
+  },
+  "minimalist": {
+    "original_size": [
+      256,
+      256
+    ],
+    "native_size": [
+      64,
+      64
+    ],
+    "export_size": [
+      256,
+      256
+    ],
+    "opaque_bounds": [
+      4,
+      5,
+      60,
+      58
+    ],
+    "backup": "originals/minimalist.png"
+  }
+}

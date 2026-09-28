@@ -65,13 +65,13 @@ const STEP_CONFIG: Record<
   8: {
     target: 'jokersTab',
     message:
-      'Now meet your Jokers — the secret sauce for big profits. Tap the Jokers tab!',
+      'Now meet your Wildcards — the secret sauce for big profits. Tap the Wildcards tab!',
     tapThrough: true,
   },
   9: {
     target: 'allJokersTab',
     message:
-      "Jokers can affect your profit and multiplier count — it's the key to making real dough. Tap the All tab!",
+      "Wildcards can affect your profit and multiplier count — it's the key to making real dough. Tap the All tab!",
     tapThrough: true,
   },
   10: {

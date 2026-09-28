@@ -643,13 +643,11 @@ export default function StoryScreen() {
   const handleNameSubmit = async (name: string) => {
     setShowNameModal(false);
 
+    // Only record the name. The wallet was already initialized by the
+    // startNewGame thunk (including hall-pass perks like Senior Executive's
+    // $2,000 start); re-running initializeWallet here would reset it.
     if (wallet?.setPlayerName) {
       wallet.setPlayerName(name);
-    }
-
-    // Initialize wallet with the name and go to market
-    if (wallet?.difficultyLevel) {
-      wallet?.initializeWallet(wallet.difficultyLevel, name);
     }
 
     // Reset isAfterSchool to false when starting Day 1
@@ -667,10 +665,10 @@ export default function StoryScreen() {
   const handleNameSkip = () => {
     setShowNameModal(false);
 
-    // Initialize wallet with default name and go to market
-    if (wallet?.difficultyLevel) {
-      wallet?.initializeWallet(wallet.difficultyLevel, 'Player');
-      wallet?.setPlayerName('Player');
+    // Default name only — see handleNameSubmit for why the wallet is not
+    // re-initialized here.
+    if (wallet?.setPlayerName) {
+      wallet.setPlayerName('Player');
     }
 
     // Reset isAfterSchool to false when starting Day 1

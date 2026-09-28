@@ -496,10 +496,10 @@ export function getJokerDescription(
         break;
       }
       case 'collector_boost':
-        parts.push(`+${e.amount} mult per unique joker owned`);
+        parts.push(`+${e.amount} mult per unique wildcard owned`);
         break;
       case 'minimalist_boost':
-        parts.push(`+${e.amount - 1} mult if exactly 3 jokers owned`);
+        parts.push(`+${e.amount - 1} mult if exactly 3 wildcards owned`);
         break;
       case 'lucky_seven_boost':
         parts.push(`+${e.amount} mult on sales during every 7th period`);
@@ -554,7 +554,7 @@ export function getJokerDescription(
         parts.push('fill entire inventory with any 1 candy');
         break;
       case 'extra_joker_choice':
-        parts.push(`+${e.amount} joker choice after minigames`);
+        parts.push(`+${e.amount} wildcard choice after minigames`);
         break;
       case 'extra_aura_slot':
         parts.push(`+${e.amount} aura slot`);
@@ -2060,7 +2060,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 1,
       flavorText: 'Always doing extra',
-      description: '+1 joker choice after minigames',
+      description: '+1 wildcard choice after minigames',
     },
     JOKER_EFFECT_FACTORIES[55]
   ),
@@ -2071,7 +2071,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       name: 'Sixth Sense',
       type: 'persistent',
       maxLevel: 1,
-      flavorText: 'I see dead... jokers?',
+      flavorText: 'I see dead... wildcards?',
       description: '10% chance per sale to add +6 mult',
     },
     JOKER_EFFECT_FACTORIES[56]
@@ -2347,7 +2347,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Gotta catch em all',
-      description: '+0.3/+0.5/+0.7 mult per unique joker owned',
+      description: '+0.3/+0.5/+0.7 mult per unique wildcard owned',
     },
     JOKER_EFFECT_FACTORIES[82]
   ),
@@ -2359,7 +2359,7 @@ export const STANDARDIZED_JOKERS: StandardizedJoker[] = [
       type: 'persistent',
       maxLevel: 3,
       flavorText: 'Less is more... way more',
-      description: '+2/+4/+7 mult if exactly 3 jokers owned',
+      description: '+2/+4/+7 mult if exactly 3 wildcards owned',
     },
     JOKER_EFFECT_FACTORIES[83]
   ),

@@ -10,7 +10,7 @@ Hall passes are **permanent unlockable modifiers** that persist across games. Pl
 
 A run can have at most **3 hall passes active at once** (`BASE_MAX_ACTIVE_HALL_PASSES` in `hallPassSlice.ts`). The cap is **data-driven and extensible**: any pass carrying an `extra_active_slot` effect widens it.
 
-- **Overachiever** (legendary) grants `extra_active_slot: 1`, raising the cap from 3 → 4. The expander itself occupies a slot, so a build with Overachiever runs *Overachiever + 3 others = 4 total*.
+- **Overachiever** (legendary) grants `extra_active_slot: 2`, raising the cap from 3 → 5. The expander itself occupies a slot, so a build with Overachiever runs *Overachiever + 4 others = 5 total*.
 - The effective cap is `getHallPassActiveLimit(passes)` = `3 + Σ(extra_active_slot values)`.
 - Enforced centrally in the `selectHallPass` reducer (the candidate pass is included in the limit calc, so an extension pass can always be added to raise its own cap). The selection modal (`app/components/HallPassModal.tsx`, the "Hall Pass Binder") mirrors this: it renders one backpack slot per allowed pass (filled slots show the pass icon and can be tapped to unclip), an `X/max` counter, and flashes the card red on a rejected tap past the cap.
 - Adding a new cap-extending pass requires **no code changes** beyond the pass definition — just give it an `extra_active_slot` effect.
@@ -61,7 +61,7 @@ A run can have at most **3 hall passes active at once** (`BASE_MAX_ACTIVE_HALL_P
 | **Final Exam** | Win with 50%+ profit from periods 7–8 | Period 8 = 15x profit, periods 1–7 = -75% profit |
 | **Speedrun Champion** | Win a run with a single sale over $10,000 | +100% sales profit |
 | **Joker Monopoly** | Win 100 minigames (lifetime) | 90% chance to skip a minigame and go straight to a joker reward |
-| **Overachiever** | Win a run with 3 hall passes active | +1 active-pass slot (max active 3 → 4) |
+| **Overachiever** | Win a run with 3 hall passes active | +2 active-pass slots (max active 3 → 5) |
 
 ---
 
@@ -82,7 +82,7 @@ Hall pass effects fall into these categories:
 | `allowance_bonus` | Additive (%) | Maximalist (+1000%), Candy Kingpin (+100%) |
 | `joker_bonus` | Additive | (no pass currently uses this effect) |
 | `minigame_skip_chance` | Max (not sum) | The Valedictorian (0.5), Perfect Scholar (0.75), Joker Monopoly (0.9) |
-| `extra_active_slot` | Additive | Overachiever (+1 active-pass slot) — selection-time only, no in-game modifier |
+| `extra_active_slot` | Additive | Overachiever (+2 active-pass slots) — selection-time only, no in-game modifier |
 | `special` | Varies | Finance Club, Teacher's Pet, Time Crunch, Final Exam, etc. |
 
 ### Internal Value Multiplier

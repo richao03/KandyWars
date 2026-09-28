@@ -112,7 +112,7 @@ export default function AvailableJokersModal({
                   style={[styles.emptyText, { color: themeColors.textColor }]}
                   imageSize={32}
                 >
-                  🎉 All Jokers Collected!
+                  🎉 All Wildcards Collected!
                 </TextWithEmojis>
                 <Text
                   style={[

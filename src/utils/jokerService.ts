@@ -475,7 +475,7 @@ function _getEmoji(id: number): string {
     [JOKER_IDS.TROPICAL_IMPORT]: '🍍',
     [JOKER_IDS.EVEN_STEVENS]: '⚖️',
     [JOKER_IDS.ODD_TODD]: '🎭',
-    [JOKER_IDS.GOLDEN_HOUR]: '🌅',
+    [JOKER_IDS.GOLDEN_HOUR]: '🌇',
     [JOKER_IDS.PURSUASION]: '🗣️',
   };
   return map[id] || '🃏';

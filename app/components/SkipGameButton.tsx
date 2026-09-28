@@ -173,7 +173,7 @@ export default function SkipGameButton({ onSkipSuccess }: SkipGameButtonProps) {
             rewardTier={1}
             completionLevel={3}
             showSellAndUpgrade={false}
-            headerText="Skipped! Pick a Joker"
+            headerText="Skipped! Pick a Wildcard"
           />
         </View>
       </Modal>

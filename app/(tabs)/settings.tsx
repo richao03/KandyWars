@@ -55,6 +55,7 @@ import { SoundEffects, playLeverClick } from '../../src/utils/soundEffects';
 import { generateSeededGameData } from '../../utils/generateSeededGameData';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PickUpPetButton from '../components/PickUpPetButton';
+import AdoptionReadyModal from '../components/AdoptionReadyModal';
 import PixelBorder from '../components/PixelBorder';
 import {
   ListRow,
@@ -137,6 +138,8 @@ function Settings() {
     cachedName ??
     'Player';
   const [isRestarting, setIsRestarting] = useState(false);
+  // Dev-only: preview the "You did it!" adoption prompt without meeting the fee.
+  const [debugAdoptVisible, setDebugAdoptVisible] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isValidatingName, setIsValidatingName] = useState(false);
@@ -346,7 +349,7 @@ function Settings() {
       visible: true,
       title: 'Clear All Data',
       message:
-        'WARNING: This will delete ALL saved data including game progress, player name, joker cards, and settings. You will start as a completely new player. This action cannot be undone!',
+        'WARNING: This will delete ALL saved data including game progress, player name, wildcard cards, and settings. You will start as a completely new player. This action cannot be undone!',
       emoji: '',
       confirmText: 'DELETE EVERYTHING',
       cancelText: 'Cancel',
@@ -798,6 +801,11 @@ function Settings() {
             subtitle="Dev builds only"
           >
             <ListRow
+              label="Preview Adopt Now Modal"
+              sub={'Opens the "You did it!" prompt for the current pet'}
+              onPress={() => setDebugAdoptVisible(true)}
+            />
+            <ListRow
               label="Jump to Day 5"
               sub="Skip to day 5 for testing"
               tone="orange"
@@ -826,7 +834,7 @@ function Settings() {
               onPress={() => router.push('/debug-tier-preview' as any)}
             />
             <ListRow
-              label="Joker Picker"
+              label="Wildcard Picker"
               onPress={() => router.push('/debug-jokers' as any)}
             />
             <ListRow
@@ -854,6 +862,18 @@ function Settings() {
           <Text style={styles.aboutTitle}>H U S T L E</Text>
         </View>
       </ScrollView>
+
+      {__DEV__ && (
+        <AdoptionReadyModal
+          visible={debugAdoptVisible}
+          pet={adoptionPet}
+          onEndGame={() => {
+            setDebugAdoptVisible(false);
+            goAdopt();
+          }}
+          onContinue={() => setDebugAdoptVisible(false)}
+        />
+      )}
 
       <ConfirmationModal
         visible={confirmModal.visible}

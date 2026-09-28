@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import colors from '../../src/constants/colors';
 import { useFlavorText } from '../../src/context/FlavorTextContext';
+import { useAdoptionPrompt } from '../../src/hooks/useAdoptionPrompt';
 import { useCandySales } from '../../src/hooks/useCandySales';
 import { useDailyStats } from '../../src/hooks/useDailyStats';
 import { useGame } from '../../src/hooks/useGame';
@@ -31,7 +32,6 @@ import { useScoreboard } from '../../src/hooks/useScoreboard';
 import { useSeed } from '../../src/hooks/useSeed';
 import { useShopkeeper } from '../../src/hooks/useShopkeeper';
 import { useWallet } from '../../src/hooks/useWallet';
-import { useAdoptionPrompt } from '../../src/hooks/useAdoptionPrompt';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
 import { resetEarlySaleFlag } from '../../src/store/slices/candySalesSlice';
 import { getPeriodsPerDay } from '../../src/store/slices/gameSlice';
@@ -286,7 +286,7 @@ function AfterSchoolPage() {
         title: 'Study',
         desc: hasStudiedTonight
           ? "You've already studied tonight!"
-          : 'Earn jokers by studying',
+          : 'Earn wildcards by studying',
         onPress: handleStudy,
         disabled: hasStudiedTonight,
       },
@@ -338,7 +338,7 @@ function AfterSchoolPage() {
       <StatusBar style="light" backgroundColor="#2a1845" />
       <FirstTimeHint
         hintKey="after_school"
-        message="School's out! Study to earn Jokers, deposit money, visit the deli, or sleep to start a new day."
+        message="School's out! Study to earn Wildcards, deposit money, visit the deli, or sleep to start a new day."
       />
 
       {showStash ? (

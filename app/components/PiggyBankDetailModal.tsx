@@ -122,7 +122,7 @@ const PiggyBankDetailModal = React.memo(function PiggyBankDetailModal({
             <View style={styles.row}>
               <Text style={styles.rowLabel}>🐷 Piggy Bank</Text>
               <Text style={styles.rowValue}>
-                ${formatCurrency(Math.max(0, stashedAmount))}
+                ${formatCurrency(stashedAmount - goal)}
               </Text>
             </View>
             <View style={styles.row}>
@@ -130,9 +130,9 @@ const PiggyBankDetailModal = React.memo(function PiggyBankDetailModal({
               <Text style={styles.rowValue}>${formatCurrency(balance)}</Text>
             </View>
             <View style={[styles.row, styles.rowTotal]}>
-              <Text style={styles.rowLabelTotal}>Net Worth</Text>
+              <Text style={styles.rowLabelTotal}>After Adoption Fee</Text>
               <Text style={styles.rowValueTotal}>
-                ${formatCurrency(netWorth)}
+                ${formatCurrency(netWorth - goal)}
               </Text>
             </View>
           </PixelBorder>

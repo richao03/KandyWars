@@ -657,7 +657,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
     if (completedLevel > 0) {
       showModal(
         "Time's Up!",
-        `${reason}\n\nYou completed ${completedLevel} level${completedLevel !== 1 ? 's' : ''}!\n\nYou've earned ${completedLevel} joker${completedLevel !== 1 ? 's' : ''} for your efforts!`,
+        `${reason}\n\nYou completed ${completedLevel} level${completedLevel !== 1 ? 's' : ''}!\n\nYou've earned ${completedLevel} wildcard${completedLevel !== 1 ? 's' : ''} for your efforts!`,
         '🎯',
         () => {
           hideModal();
@@ -670,7 +670,7 @@ export default function CandyTraderSequencer({ onComplete }: EconomyGameProps) {
       // No levels completed - no reward
       showModal(
         'Game Over!',
-        `${reason}\n\nYou didn't complete any levels. Try again to earn joker rewards!`,
+        `${reason}\n\nYou didn't complete any levels. Try again to earn wildcard rewards!`,
         '❌',
         () => {
           navigateBackToContext();

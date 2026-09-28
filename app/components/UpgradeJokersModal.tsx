@@ -136,7 +136,7 @@ const UpgradeJokersModal = React.memo(function UpgradeJokersModal({
 
         {/* Fixed header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Level Up Jokers</Text>
+          <Text style={styles.title}>Level Up Wildcards</Text>
           <Text style={styles.subtitle}>Balance: ${formatNumber(balance)}</Text>
         </View>
 

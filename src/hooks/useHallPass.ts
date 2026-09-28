@@ -292,7 +292,7 @@ export const useHallPass = () => {
             break;
           case 'inheritance':
             // Unlock if player won with $50,000+ in piggy bank
-            // Note: stashedAmount starts negative (debt), so need to check if >= 50000 after paying off debt
+            // Piggy bank holds positive savings (starts at 0), so this is a direct check.
             if (
               gameStats.stashedAmount &&
               gameStats.stashedAmount >= 50000 &&

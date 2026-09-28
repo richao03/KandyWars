@@ -6,35 +6,35 @@ import React, {
   useState,
 } from 'react';
 import {
-  Animated as RNAnimated,
   Dimensions,
+  Animated as RNAnimated,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { triggerTieredHaptic } from '../../src/utils/hapticTier';
-import { SparkController } from '../../src/utils/sparkController';
 import { JOKER_IDS, hasJokerById } from '../../src/constants/jokerIds';
 import { Joker as JokerType, useJokers } from '../../src/hooks/useJokers';
 import { useAppDispatch, useAppSelector } from '../../src/store/hooks';
-import { addBalance, selectBalance } from '../../src/store/slices/walletSlice';
 import { selectReduceMotion } from '../../src/store/slices/juiceSettingsSlice';
+import { addBalance, selectBalance } from '../../src/store/slices/walletSlice';
+import { triggerTieredHaptic } from '../../src/utils/hapticTier';
 import {
   STANDARDIZED_JOKERS,
   StandardizedJoker,
   getJokerEffectsAtLevel,
 } from '../../src/utils/jokerEffectEngine';
 import { MusicController } from '../../src/utils/musicController';
-import { SoundEffects, playCoinCascade } from '../../src/utils/soundEffects';
 import { formatNumber } from '../../src/utils/priceUtils';
+import { SoundEffects, playCoinCascade } from '../../src/utils/soundEffects';
+import { SparkController } from '../../src/utils/sparkController';
 import JokerCard from './JokerCard';
 import PixelBorder from './PixelBorder';
 import PressableButton from './PressableButton';
 // PressableScale for press-down spring feedback (I3 game-feel) —
 // applied via JokerCard's onPress CardWrapper (PressableScale internally)
 
-import { UPGRADE_COSTS, LEVEL_COLORS } from '../../src/constants/jokerUpgrades';
+import { LEVEL_COLORS, UPGRADE_COSTS } from '../../src/constants/jokerUpgrades';
 
 interface JokerSelectionProps {
   jokers: StandardizedJoker[];
@@ -849,8 +849,8 @@ export default function JokerSelection({
           <>
             <Text style={[styles.grantedLabel, themeStyles.subtitle]}>
               {chosenJokerId === null
-                ? 'Choose 1 joker to keep:'
-                : 'Joker obtained!'}
+                ? 'Choose 1 wildcard to keep:'
+                : 'Wildcard obtained!'}
             </Text>
             {availableJokers.map((joker) => {
               const isOneTime = joker.type === 'one-time';

@@ -497,7 +497,7 @@ export default function ArtGame({ onComplete }: ArtGameProps) {
     if (completedLevel > 0) {
       // Player completed at least one stage, show success modal before joker selection
       const jokerCount = completedLevel;
-      const jokerText = jokerCount > 1 ? `${jokerCount} jokers` : '1 joker';
+      const jokerText = jokerCount > 1 ? `${jokerCount} wildcards` : '1 wildcard';
       showModal(
         'Great Effort!',
         `You ran out of chances but completed Level ${completedLevel}!\n\nYou'll receive ${jokerText}!`,

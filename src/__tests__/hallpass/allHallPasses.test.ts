@@ -136,7 +136,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
 
       expect(pass?.name).toBe('Minimalist Master');
       expect(pass?.rarity).toBe('legendary');
-      expect(pass?.unlockRequirement).toBe('Win without using any jokers');
+      expect(pass?.unlockRequirement).toBe('Win without using any wildcards');
       expect(pass?.effects[0].type).toBe('sale_price_bonus');
       expect(pass?.effects[0].value).toBe(30);
 
@@ -567,7 +567,7 @@ describe('All Hall Passes - Comprehensive Tests', () => {
       const pass = passes.find((p) => p.id === 'joker_monopoly');
 
       expect(pass).toBeDefined();
-      expect(pass?.name).toBe('Joker Monopoly');
+      expect(pass?.name).toBe('Wildcard Monopoly');
       expect(pass?.rarity).toBe('legendary');
       expect(pass?.unlockRequirement).toBe('Win 100 minigames (lifetime)');
       expect(pass?.effects[0].type).toBe('minigame_skip_chance');

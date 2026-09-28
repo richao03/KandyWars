@@ -219,7 +219,7 @@ function JokersPage() {
       if (__DEV__) console.log('🐛 Debug mode ENABLED');
       handleShowConfirmation(
         'Debug Mode Enabled!',
-        'Tap any joker in the "All" tab to add it to your inventory.',
+        'Tap any wildcard in the "All" tab to add it to your inventory.',
         '🐛',
         () => {}
       );
@@ -619,7 +619,7 @@ function JokersPage() {
     return (
       <View style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Loading jokers...</Text>
+          <Text style={styles.emptyText}>Loading wildcards...</Text>
         </View>
       </View>
     );
@@ -635,7 +635,7 @@ function JokersPage() {
       {!tutorialActive && (
         <FirstTimeHint
           hintKey="jokers_tab"
-          message="These are your Jokers. Each one gives a special profit bonus when selling candy."
+          message="These are your Wildcards. Each one gives a special profit bonus when selling candy."
         />
       )}
       <View style={headerStyles}>
@@ -647,7 +647,7 @@ function JokersPage() {
                 style={styles.titleIcon}
               />
             </TouchableOpacity>
-            <Text style={titleStyles}> Jokers</Text>
+            <Text style={titleStyles}> Wildcards</Text>
           </View>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>
@@ -771,7 +771,7 @@ function JokersPage() {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No jokers in inventory</Text>
+            <Text style={styles.emptyText}>No wildcards in inventory</Text>
             <Text style={styles.emptySubtext}>
               Play minigames to earn jokers!
             </Text>
@@ -830,6 +830,8 @@ function JokersPage() {
             borderWidth={3}
             backgroundColor={colors.darkGray1}
             innerPadding={20}
+            style={styles.candyModalFrame}
+            contentStyle={styles.candyModalFrameContent}
           >
             <View
               style={{
@@ -857,9 +859,17 @@ function JokersPage() {
             </TextWithEmojis>
 
             <ScrollView
-              style={{ flexShrink: 1 }}
+              // Shrinks inside the capped modal; the hard maxHeight guards the
+              // case where flex can't propagate the cap (title + cancel button
+              // + padding ≈ 230px of fixed chrome).
+              style={{
+                flexGrow: 0,
+                flexShrink: 1,
+                maxHeight: Math.max(120, screenHeight * 0.7 - 230),
+              }}
               contentContainerStyle={{ paddingBottom: 4 }}
               showsVerticalScrollIndicator={true}
+              nestedScrollEnabled
             >
               {unlockedCandyNames.map((candyType) => (
                 <PressableButton
@@ -1118,6 +1128,14 @@ const styles = StyleSheet.create({
   // Candy Selector Modal styles
   modalContent: {
     width: '80%',
+  },
+  candyModalFrame: {
+    flexShrink: 1,
+    maxHeight: '100%',
+  },
+  candyModalFrameContent: {
+    flexShrink: 1,
+    overflow: 'hidden',
   },
   modalTitle: {
     fontSize: 20,

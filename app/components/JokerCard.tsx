@@ -3,6 +3,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +38,9 @@ import ConfirmationModal from './ConfirmationModal';
 import PixelBorder from './PixelBorder';
 import PressableScale from './PressableScale';
 import TextWithEmojis from './TextWithEmojis';
+
+// Border color for an owned wildcard in the tile grid ("All" tab).
+const OWNED_BORDER = '#38bdf8';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -734,8 +738,8 @@ function JokerCard({
     joker.type === 'persistent'
       ? 'Aura'
       : usedTodayJokerIds.includes(joker.id.toString())
-        ? 'Used'
-        : 'Instant';
+        ? 'USED'
+        : 'USE';
   const flavorText =
     joker.flavorText ||
     STANDARDIZED_JOKERS.find((sj) => sj.id === numericJokerId)?.flavorText ||
@@ -842,13 +846,66 @@ function JokerCard({
       </View>
     ) : null;
 
-  const renderTypeBadge = () => (
-    <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
-      <TextWithEmojis style={styles.typeText} imageSize={12}>
-        {`${typeEmoji} ${typeText}`}
-      </TextWithEmojis>
-    </View>
-  );
+  // A usable (one-time) wildcard that hasn't fired yet can be activated
+  // right from its type badge (strip variant). Once used the badge greys out
+  // and reads USED.
+  const canActivate =
+    joker.type === 'one-time' &&
+    !disableActivation &&
+    !isAfterSchool &&
+    !isUsedToday;
+
+  const renderTypeBadge = (interactive = false) => {
+    const actionable = interactive && canActivate;
+    const badgeColor = isUsedToday ? '#9ca3af' : typeColor;
+    const label =
+      variant === 'tile' ? typeEmoji : `${typeEmoji} ${typeText}`;
+
+    if (!actionable) {
+      return (
+        <View
+          style={[
+            styles.typeBadge,
+            variant === 'tile' && styles.tileCompactBadge,
+            { borderColor: badgeColor, borderWidth: 1 },
+            isUsedToday && styles.typeBadgeUsed,
+          ]}
+        >
+          <TextWithEmojis
+            style={{ ...styles.typeText, color: badgeColor }}
+            imageSize={20}
+          >
+            {label}
+          </TextWithEmojis>
+        </View>
+      );
+    }
+
+    // Tappable USE chip: red fill, gold border, visible pressed state (darker
+    // fill + 1px push-down) that doesn't depend on the reduce-motion setting,
+    // a generous hit area, and a haptic tick on press-in.
+    return (
+      <Pressable
+        onPress={handleActivate}
+        onPressIn={() => triggerTieredHaptic(0.2, 'selection')}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={`Use ${joker.name}`}
+        style={({ pressed }) => [
+          styles.typeBadge,
+          styles.typeBadgeAction,
+          pressed && styles.typeBadgeActionPressed,
+        ]}
+      >
+        <TextWithEmojis
+          style={{ ...styles.typeText, color: '#ffffff' }}
+          imageSize={20}
+        >
+          {label}
+        </TextWithEmojis>
+      </Pressable>
+    );
+  };
 
   const renderUseButton = () =>
     joker.type === 'one-time' &&
@@ -867,7 +924,7 @@ function JokerCard({
           <Text style={styles.selectedBadgeText}>✓</Text>
         </View>
       )}
-      {showOwned && (
+      {showOwned && variant !== 'tile' && (
         <View style={styles.ownedBadge}>
           <Text style={styles.ownedBadgeText}>OWNED ✓</Text>
         </View>
@@ -904,7 +961,15 @@ function JokerCard({
     <>
       <View ref={cardContainerRef} collapsable={false}>
         <PixelBorder
-          borderColor={isSelected ? '#10b981' : '#d4af37'}
+          // Selected = green; owned tile = sky blue (replaces the corner
+          // OWNED tag on tiles); default = gold.
+          borderColor={
+            isSelected
+              ? '#10b981'
+              : showOwned && variant === 'tile'
+                ? OWNED_BORDER
+                : '#d4af37'
+          }
           borderWidth={3}
           innerPadding={0}
         >
@@ -937,10 +1002,10 @@ function JokerCard({
                     </View>
                     {renderDescription()}
                     {renderSynergyBadge()}
-                    <Text style={styles.jokerFlavorText}>{flavorText}</Text>
                   </View>
                   <View style={styles.posterArtStage}>
                     <View style={styles.artBurst} />
+                    <View style={styles.artBurst1} />
                     <Image
                       source={jokerArt}
                       style={styles.posterArt}
@@ -955,6 +1020,7 @@ function JokerCard({
               <View style={styles.stripBody}>
                 <View style={styles.stripArtStage}>
                   <View style={styles.artBurst} />
+                  <View style={styles.artBurst1} />
                   <Image
                     source={jokerArt}
                     style={styles.stripArt}
@@ -967,11 +1033,15 @@ function JokerCard({
                   </Text>
                   {renderDescription()}
                   {renderSynergyBadge()}
+                  <Text style={styles.jokerFlavorText}>{flavorText}</Text>
                 </View>
                 <View style={styles.stripMeta}>
                   {renderLevelDots()}
-                  {renderTypeBadge()}
-                  {renderUseButton()}
+                  {/* Badge always sits at the bottom of the column, with or
+                      without level dots above it. */}
+                  <View style={styles.stripBadgeSlot}>
+                    {renderTypeBadge(true)}
+                  </View>
                 </View>
               </View>
             )}
@@ -980,11 +1050,13 @@ function JokerCard({
               <>
                 <View style={styles.tileArtStage}>
                   <View style={styles.artBurst} />
+                  <View style={styles.artBurst1} />
                   <Image
                     source={jokerArt}
                     style={styles.tileArt}
                     resizeMode="contain"
                   />
+                  <View style={styles.tileTypeBadge}>{renderTypeBadge()}</View>
                   <View style={styles.tileDots}>{renderLevelDots()}</View>
                 </View>
                 <View style={styles.tileHeader}>
@@ -993,10 +1065,14 @@ function JokerCard({
                   </Text>
                 </View>
                 <View style={styles.tileInfo}>
-                  <View style={styles.tileBadgeRow}>
-                    {renderTypeBadge()}
-                    {renderUseButton()}
-                  </View>
+                  {joker.type === 'one-time' &&
+                    !disableActivation &&
+                    !isAfterSchool &&
+                    !isUsedToday && (
+                      <View style={styles.tileBadgeRow}>
+                        {renderUseButton()}
+                      </View>
+                    )}
                   {renderDescription()}
                   {renderSynergyBadge()}
                 </View>
@@ -1020,10 +1096,7 @@ function JokerCard({
             borderWidth={3}
             backgroundColor={isAfterSchool ? '#1f2937' : '#ffffff'}
             innerPadding={24}
-            style={[
-              styles.modalContent,
-              styles.jokerModalContent,
-            ]}
+            style={[styles.modalContent, styles.jokerModalContent]}
           >
             <>
               <Text style={styles.modalTitle}>🍭 Select Candy to Convert</Text>
@@ -1211,7 +1284,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f3d77a',
     paddingHorizontal: 12,
     paddingVertical: 8,
     minHeight: 36,
@@ -1219,15 +1292,12 @@ const styles = StyleSheet.create({
   jokerName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#d4af37',
+    color: '#70501c',
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     flex: 1,
     textAlign: 'left',
-    textShadowColor: '#000',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   levelBadgeContainer: {
     flexDirection: 'row',
@@ -1255,6 +1325,31 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
   },
+  typeBadgeAction: {
+    backgroundColor: '#dc2626',
+    borderWidth: 2,
+    borderColor: '#fbbf24',
+    minWidth: 56,
+    minHeight: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#7f1d1d',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 0,
+    elevation: 3,
+  },
+  typeBadgeActionPressed: {
+    backgroundColor: '#991b1b',
+    borderColor: '#fde68a',
+    transform: [{ translateY: 1 }],
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  typeBadgeUsed: {
+    backgroundColor: '#f3f4f6',
+    borderStyle: 'dashed',
+  },
   typeText: {
     fontSize: 8,
     fontWeight: '700',
@@ -1274,7 +1369,6 @@ const styles = StyleSheet.create({
   useButtonText: {
     fontSize: 8,
     fontWeight: '700',
-    color: '#fbbf24',
     fontFamily: 'PixeloidMono',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1287,6 +1381,7 @@ const styles = StyleSheet.create({
   jokerDescription: {
     fontSize: 12,
     color: '#2c3e50',
+    marginLeft: 8,
     lineHeight: 14,
     fontFamily: 'PixeloidMono',
     fontWeight: '500',
@@ -1323,15 +1418,27 @@ const styles = StyleSheet.create({
     opacity: 1,
     zIndex: 1,
   },
+  // Slanted accent stripe behind the art. Oversized so the rotated band spans
+  // the whole stage corner to corner; the stage's overflow:hidden trims it.
   artBurst: {
     position: 'absolute',
-    width: '140%',
-    height: '140%',
-    borderRadius: 999,
-    backgroundColor: 'rgba(250, 204, 21, 0.18)',
-    borderWidth: 18,
-    borderColor: 'rgba(255, 255, 255, 0.42)',
-    transform: [{ rotate: '18deg' }],
+    width: '220%',
+    height: '38%',
+    backgroundColor: 'rgba(250, 204, 21, 0.28)',
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    transform: [{ rotate: '-40deg' }],
+  },
+  artBurst1: {
+    position: 'absolute',
+    width: '220%',
+    height: '58%',
+    backgroundColor: 'rgba(250, 204, 21, 0.28)',
+    borderTopWidth: 6,
+    borderBottomWidth: 6,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    transform: [{ rotate: '-40deg' }],
   },
   stripBody: {
     minHeight: 92,
@@ -1355,18 +1462,18 @@ const styles = StyleSheet.create({
   stripCopy: {
     flex: 1,
     minWidth: 0,
-    paddingHorizontal: 10,
     paddingVertical: 8,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   stripName: {
-    color: '#d4af37',
-    backgroundColor: '#1a1a1a',
-    marginHorizontal: -10,
+    flex: 0,
+    alignSelf: 'center',
+    width: '100%',
+    backgroundColor: '#f3d77a',
     marginTop: -8,
     marginBottom: 6,
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 4,
   },
   stripDescription: {
     fontSize: 11,
@@ -1377,9 +1484,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     backgroundColor: '#eeeadd',
     gap: 5,
+  },
+  stripBadgeSlot: {
+    marginTop: 'auto',
+    alignItems: 'center',
   },
   tileArtStage: {
     flex: 1,
@@ -1395,6 +1506,16 @@ const styles = StyleSheet.create({
     opacity: 1,
     zIndex: 1,
   },
+  tileTypeBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    zIndex: 2,
+  },
+  tileCompactBadge: {
+    paddingHorizontal: 2,
+    paddingVertical: 2,
+  },
   tileDots: {
     position: 'absolute',
     top: 6,
@@ -1407,7 +1528,7 @@ const styles = StyleSheet.create({
   tileHeader: {
     minHeight: 28,
     justifyContent: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f3d77a',
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
@@ -1419,7 +1540,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: 7,
     paddingVertical: 5,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   tileBadgeRow: {
     flexDirection: 'row',

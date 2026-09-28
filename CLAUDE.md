@@ -52,6 +52,7 @@ Jest is configured with `testEnvironment: jsdom` and maps `react-native` → `re
 
 ### Core Systems and Single-Source-of-Truth Files
 - **Candy Registry** — `src/constants/candyRegistry.ts`: 15 candies, each with exactly 2 types (from 6) and 1 size (small/medium/big). A multi-type candy triggers ALL matching type jokers independently (stacked multiplicatively).
+- **Jokers are called "Wildcards" in the UI** — every player-facing string says Wildcard/Wildcards; code, files, Redux keys, and Firebase names keep `joker`. Don't rename identifiers.
 - **Joker IDs** — `src/constants/jokerIds.ts`: constants for all jokers.
 - **Joker Effect Engine** — `src/utils/jokerEffectEngine.ts`: `JOKER_EFFECT_FACTORIES` keyed by joker ID, returns level-dependent effects (levels 1–3). `getJokerEffectsAtLevel(id, level)` is the canonical lookup.
 - **Sale Calculations** — `src/utils/saleCalculations.ts`: canonical profit formula
@@ -84,7 +85,7 @@ Pre-generated per seed. Protection has priority — the **Safe House** joker (#6
 - `STASH_LOCKED`: Safe House (joker) > Monitor Bribe (`hall_monitor_bribe` merchant); Teacher's Pet hall pass reduces to 25% loss. At most one confiscation per day.
 
 ### Win Condition
-`balance + stashedAmount >= 0` at end of day 5 (adoption fee starts as negative debt).
+`balance + stashedAmount >= adoptionFee` at end of day 5, or earlier via the Adopt Now prompt (piggy bank starts at $0; the fee is the goal).
 
 ## Gotchas
 

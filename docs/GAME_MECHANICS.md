@@ -4,7 +4,7 @@
 
 SugarWars is a candy trading game set in a school. You play as a kid trying to earn enough money in 5 school days to adopt a pet. Buy candy cheap, sell it high, collect joker power-ups, dodge random events, and stash your profits.
 
-**Win condition:** `balance + stashedAmount >= 0` (your adoption fee starts as negative debt)
+**Win condition:** `balance + stashedAmount >= adoptionFee` (the piggy bank starts at $0 and holds positive savings; the adoption fee is the goal)
 
 ---
 
@@ -49,9 +49,9 @@ After day 5 completes, final score = balance + stashed amount - adoption fee. Wi
 
 ## Difficulty System
 
-16 levels, each with a pet and adoption fee (debt target):
+16 levels, each with a pet and adoption fee (savings goal):
 
-| Level | Adoption Fee (debt) |
+| Level | Adoption Fee (goal) |
 |-------|--------------------|
 | 1     | $5,000             |
 | 2     | $12,000            |
@@ -70,7 +70,7 @@ After day 5 completes, final score = balance + stashed amount - adoption fee. Wi
 | 15    | $7,500,000         |
 | 16    | $10,000,000        |
 
-Each level has its own pet and adoption fee. Starting balance is **$20**; the adoption fee is stored as negative debt in the stash (`stashedAmount = -adoptionFee`).
+Each level has its own pet and adoption fee. Starting balance is **$20** and the piggy bank starts at **$0** internally, but every piggy bank readout (HUD, piggy bank page, stash modal, detail modal, results) shows the **debt-style** value `stash - fee` via `selectPiggyBankDisplay` — a new Level 2 run reads **-12,000.00** and climbs to 0; the adoption fee is a separate goal (`wallet.adoptionFee`). Saves from before persist version 9 stored the fee as negative stash; the v9 migration in `src/store/store.ts` converts them (`stash + fee`), which is why an old in-progress save shows a $0 piggy bank after upgrading.
 
 ---
 
